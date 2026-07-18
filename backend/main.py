@@ -33,9 +33,9 @@ LAST_UPDATE = "2026-07-18"
 # Setup default users on startup from environment variables
 @app.on_event("startup")
 def startup_event():
-    print(BANNER)
-    print(f"Version: {VERSION}")
-    print(f"Senaste uppdatering: {LAST_UPDATE}")
+    print(BANNER, flush=True)
+    print(f"Version: {VERSION}", flush=True)
+    print(f"Senaste uppdatering: {LAST_UPDATE}", flush=True)
     
     db_path = "/data/rss.db"
     
@@ -82,10 +82,10 @@ def startup_event():
         conn.close()
         
         size_kb = os.path.getsize(db_path) / 1024
-        print(f"Databasstorlek: {size_kb:.2f} KB")
+        print(f"Databasstorlek: {size_kb:.2f} KB", flush=True)
     else:
-        print("Databasstorlek: 0 KB (Skapas nu)")
-    print("-" * 50)
+        print("Databasstorlek: 0 KB (Skapas nu)", flush=True)
+    print("-" * 50, flush=True)
 
     db = database.SessionLocal()
     
