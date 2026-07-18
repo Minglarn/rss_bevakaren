@@ -11,9 +11,38 @@ models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="RSS Bevakaren API")
 
+BANNER = """
+██████  ███████ ███████                                                    
+██   ██ ██      ██                                                         
+██████  ███████ ███████                                                    
+██   ██      ██      ██                                                    
+██   ██ ███████ ███████                                                    
+                                                                           
+                                                                           
+██████  ███████ ██    ██  █████  ██   ██  █████  ██████  ███████ ███    ██ 
+██   ██ ██      ██    ██ ██   ██ ██  ██  ██   ██ ██   ██ ██      ████   ██ 
+██████  █████   ██    ██ ███████ █████   ███████ ██████  █████   ██ ██  ██ 
+██   ██ ██       ██  ██  ██   ██ ██  ██  ██   ██ ██   ██ ██      ██  ██ ██ 
+██████  ███████   ████   ██   ██ ██   ██ ██   ██ ██   ██ ███████ ██   ████ 
+"""
+VERSION = "v2026.07.1"
+LAST_UPDATE = "2026-07-18"
+
 # Setup default users on startup from environment variables
 @app.on_event("startup")
 def startup_event():
+    print(BANNER)
+    print(f"Version: {VERSION}")
+    print(f"Senaste uppdatering: {LAST_UPDATE}")
+    
+    db_path = "/data/rss.db"
+    if os.path.exists(db_path):
+        size_kb = os.path.getsize(db_path) / 1024
+        print(f"Databasstorlek: {size_kb:.2f} KB")
+    else:
+        print("Databasstorlek: 0 KB (Skapas nu)")
+    print("-" * 50)
+
     db = database.SessionLocal()
     
     usernames_env = os.environ.get("APP_USERNAME", "")
