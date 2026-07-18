@@ -137,8 +137,8 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(dat
             item["feed_id"] = f.id
         all_items.extend(items)
     
-    # Sort items by published date
-    all_items.sort(key=lambda x: x.get("published", ""), reverse=True)
+    # Sort items by published timestamp instead of string alphabetically
+    all_items.sort(key=lambda x: x.get("published_ts", 0), reverse=True)
     return all_items
 
 import requests

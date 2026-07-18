@@ -1,4 +1,5 @@
 import feedparser
+import time
 
 def fetch_feed_items(url: str):
     """Fetches and parses an RSS feed, returning a list of items."""
@@ -7,10 +8,16 @@ def fetch_feed_items(url: str):
         items = []
         for entry in parsed.entries:
             categories = [tag.get('term') for tag in entry.get('tags', []) if tag.get('term')]
+            
+            published_ts = 0
+            if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                published_ts = time.mktime(entry.published_parsed)
+                
             items.append({
                 "title": entry.get("title", "No Title"),
                 "link": entry.get("link", ""),
                 "published": entry.get("published", ""),
+                "published_ts": published_ts,
                 "summary": entry.get("summary", ""),
                 "categories": categories,
             })
