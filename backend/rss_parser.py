@@ -6,11 +6,13 @@ def fetch_feed_items(url: str):
         parsed = feedparser.parse(url)
         items = []
         for entry in parsed.entries:
+            categories = [tag.get('term') for tag in entry.get('tags', []) if tag.get('term')]
             items.append({
                 "title": entry.get("title", "No Title"),
                 "link": entry.get("link", ""),
                 "published": entry.get("published", ""),
                 "summary": entry.get("summary", ""),
+                "categories": categories,
             })
         return items
     except Exception as e:

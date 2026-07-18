@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2 } from 'lucide-react';
+import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 
 const Dashboard = () => {
@@ -10,12 +11,15 @@ const Dashboard = () => {
   const [page, setPage] = useState(1);
   const itemsPerPage = 15;
   const observer = useRef();
+  const [searchParams] = useSearchParams();
+  const feedId = searchParams.get('feedId');
 
   const fetchFeeds = async () => {
     setLoading(true);
     setPage(1);
     try {
-      const res = await api.get('/dashboard-feeds');
+      const url = feedId ? `/dashboard-feeds?feed_id=${feedId}` : '/dashboard-feeds';
+      const res = await api.get(url);
       setAllFeeds(res.data);
       setDisplayedFeeds(res.data.slice(0, itemsPerPage));
     } catch (err) {
@@ -27,7 +31,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchFeeds();
-  }, []);
+  }, [feedId]);
 
   // Infinite Scroll logic
   const lastElementRef = useCallback(node => {
@@ -61,9 +65,16 @@ const Dashboard = () => {
   return (
     <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ color: 'var(--primary)', margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
-          IDAG
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {feedId && (
+            <Link to="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', textDecoration: 'none', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border-color)' }} title="Visa alla flöden">
+              <ArrowLeft size={20} />
+            </Link>
+          )}
+          <h1 style={{ color: 'var(--primary)', margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
+            {feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'IDAG'}
+          </h1>
+        </div>
         <button 
           onClick={fetchFeeds} 
           disabled={loading}
@@ -156,8 +167,8 @@ const Dashboard = () => {
                     }}>
                       <MapPin size={12} /> {item.source_title}
                     </div>
-                    {item.title && item.title.split(' ').slice(0, 2).map((word, wIdx) => (
-                      <div key={wIdx} style={{ 
+                    {item.categories && item.categories.map((cat, cIdx) => (
+                      <div key={cIdx} style={{ 
                         backgroundColor: 'var(--bg-app)', 
                         border: '1px solid var(--border-color)',
                         color: 'var(--text-muted)', 
@@ -165,7 +176,7 @@ const Dashboard = () => {
                         borderRadius: '20px',
                         fontSize: '0.85rem'
                       }}>
-                        {word.replace(/[^a-zA-ZåäöÅÄÖ]/g, '')}
+                        {cat}
                       </div>
                     ))}
                   </div>
