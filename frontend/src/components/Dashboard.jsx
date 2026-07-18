@@ -194,6 +194,7 @@ const Dashboard = () => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.2 }}
+                  onClick={() => handleExpand(index, item.link)}
                 style={{
                   backgroundColor: 'var(--bg-card)',
                   borderRadius: '12px',
@@ -202,7 +203,8 @@ const Dashboard = () => {
                   display: 'flex',
                   overflow: 'hidden',
                   textDecoration: 'none',
-                  color: 'inherit'
+                  color: 'inherit',
+                  cursor: 'pointer'
                 }}
               >
                 {/* Left colored bar */}
@@ -258,22 +260,19 @@ const Dashboard = () => {
 
                   {/* Title / Content */}
                   <h3 
-                    onClick={() => handleExpand(index, item.link)}
-                    style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', fontSize: '1.15rem', fontWeight: 400, lineHeight: '1.5', cursor: 'pointer' }}
+                    style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', fontSize: '1.15rem', fontWeight: 400, lineHeight: '1.5' }}
                   >
                     {item.title}
                   </h3>
                   
                   {item.image_url && (
                     <div 
-                      onClick={() => handleExpand(index, item.link)}
                       style={{ 
                         width: '100%', 
                         height: '200px', 
                         marginBottom: '1rem', 
                         borderRadius: '8px', 
-                        overflow: 'hidden', 
-                        cursor: 'pointer' 
+                        overflow: 'hidden'
                       }}
                     >
                       <img src={item.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -298,7 +297,7 @@ const Dashboard = () => {
                       )}
                       
                       <div style={{ marginTop: '1rem' }}>
-                        <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
+                        <a href={item.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
                           <ExternalLink size={16} /> Läs på original-sidan
                         </a>
                       </div>
@@ -307,8 +306,7 @@ const Dashboard = () => {
 
                   {/* Footer */}
                   <div 
-                    onClick={() => handleExpand(index, item.link)}
-                    style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                    style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600 }}
                   >
                     <span style={{ backgroundColor: color, color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
                       {formatTime(item.published)}

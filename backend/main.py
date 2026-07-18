@@ -133,6 +133,7 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(dat
     feeds = query.all()
     
     all_items = []
+    print(f"Hämtar {len(feeds)} RSS-flöden för användare {current_user.username}...")
     for f in feeds:
         items = rss_parser.fetch_feed_items(f.url)
         # Append a source indicator to each item
@@ -151,6 +152,7 @@ from bs4 import BeautifulSoup
 
 @app.get("/scrape")
 def scrape_article(url: str, current_user: models.User = Depends(auth.get_current_user)):
+    print(f"Skrapning påbörjad för URL: {url}")
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"

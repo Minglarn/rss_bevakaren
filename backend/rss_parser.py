@@ -3,6 +3,7 @@ import time
 
 def fetch_feed_items(url: str):
     """Fetches and parses an RSS feed, returning a list of items."""
+    print(f"Laddar och tolkar RSS-flöde: {url}")
     try:
         parsed = feedparser.parse(url)
         items = []
