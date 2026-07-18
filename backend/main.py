@@ -70,10 +70,12 @@ def get_feeds(db: Session = Depends(database.get_db), current_user: models.User 
 
 @app.post("/feeds", response_model=schemas.FeedResponse)
 def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    db_feed = models.Feed(url=feed.url, title=feed.title, polling_interval=feed.polling_interval, user_id=current_user.id)
+    db_feed = models.Feed(url=feed.url, title=feed.title, polling_interval=feed.polling_interval, scrape_enabled=int(feed.scrape_enabled), user_id=current_user.id)
     db.add(db_feed)
     db.commit()
     db.refresh(db_feed)
+    # Convert integer to boolean for response
+    db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
     return db_feed
 
 @app.put("/feeds/{feed_id}", response_model=schemas.FeedResponse)
@@ -84,8 +86,10 @@ def update_feed(feed_id: int, feed: schemas.FeedCreate, db: Session = Depends(da
     db_feed.url = feed.url
     db_feed.title = feed.title
     db_feed.polling_interval = feed.polling_interval
+    db_feed.scrape_enabled = int(feed.scrape_enabled)
     db.commit()
     db.refresh(db_feed)
+    db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
     return db_feed
 
 @app.delete("/feeds/{feed_id}", response_model=dict)
@@ -135,6 +139,7 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(dat
         for item in items:
             item["source_title"] = f.title or f.url
             item["feed_id"] = f.id
+            item["scrape_enabled"] = bool(f.scrape_enabled) if hasattr(f, 'scrape_enabled') else True
         all_items.extend(items)
     
     # Sort items by published timestamp instead of string alphabetically

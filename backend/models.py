@@ -20,6 +20,7 @@ class Feed(Base):
     url = Column(String, index=True)
     title = Column(String, default="")
     polling_interval = Column(Integer, default=60)
+    scrape_enabled = Column(Integer, default=1) # SQLite doesn't have native Boolean, use Integer
     user_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="feeds")

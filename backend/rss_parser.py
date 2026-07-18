@@ -13,12 +13,34 @@ def fetch_feed_items(url: str):
             if hasattr(entry, 'published_parsed') and entry.published_parsed:
                 published_ts = time.mktime(entry.published_parsed)
                 
+            summary_html = entry.get("summary", "")
+            image_url = ""
+            clean_summary = summary_html
+            
+            # Use BeautifulSoup to find image and clean text
+            if summary_html:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(summary_html, "html.parser")
+                img_tag = soup.find("img")
+                if img_tag and img_tag.has_attr("src"):
+                    image_url = img_tag["src"]
+                
+                # Also try to extract from media enclosures if no image in summary
+                if not image_url and "media_content" in entry:
+                    for media in entry.media_content:
+                        if media.get("medium") == "image":
+                            image_url = media.get("url", "")
+                            break
+                            
+                clean_summary = soup.get_text(separator=" ", strip=True)
+                
             items.append({
                 "title": entry.get("title", "No Title"),
                 "link": entry.get("link", ""),
                 "published": entry.get("published", ""),
                 "published_ts": published_ts,
-                "summary": entry.get("summary", ""),
+                "summary": clean_summary,
+                "image_url": image_url,
                 "categories": categories,
             })
         return items

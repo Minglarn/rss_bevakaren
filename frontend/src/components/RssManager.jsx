@@ -8,6 +8,7 @@ const RssManager = () => {
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [pollingInterval, setPollingInterval] = useState(60);
+  const [scrapeEnabled, setScrapeEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const fetchFeeds = async () => {
@@ -29,10 +30,11 @@ const RssManager = () => {
     if (!url) return;
     setLoading(true);
     try {
-      await api.post('/feeds', { url, title, polling_interval: parseInt(pollingInterval, 10) });
+      await api.post('/feeds', { url, title, polling_interval: parseInt(pollingInterval, 10), scrape_enabled: scrapeEnabled });
       setUrl('');
       setTitle('');
       setPollingInterval(60);
+      setScrapeEnabled(true);
       fetchFeeds();
     } catch (err) {
       console.error(err);
@@ -119,6 +121,18 @@ const RssManager = () => {
             />
             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>min</span>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', marginTop: '0.5rem' }}>
+            <input 
+              type="checkbox" 
+              id="scrapeCheck" 
+              checked={scrapeEnabled} 
+              onChange={(e) => setScrapeEnabled(e.target.checked)} 
+              style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+            />
+            <label htmlFor="scrapeCheck" style={{ color: 'var(--text-main)', cursor: 'pointer', fontSize: '0.9rem' }}>
+              Auto-skrapning (hämta hela artikeln när du klickar på den)
+            </label>
+          </div>
           <button 
             type="submit" 
             disabled={loading}
@@ -132,7 +146,8 @@ const RssManager = () => {
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem'
+              gap: '0.5rem',
+              marginTop: '0.5rem'
             }}
           >
             <Plus size={18} /> Lägg till
@@ -167,7 +182,7 @@ const RssManager = () => {
                     placeholder="[Ingen titel angiven, klicka för att lägga till]"
                     onBlur={(e) => {
                       if (e.target.value !== feed.title) {
-                        api.put(`/feeds/${feed.id}`, { title: e.target.value, url: feed.url, polling_interval: feed.polling_interval }).then(fetchFeeds);
+                        api.put(`/feeds/${feed.id}`, { title: e.target.value, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled }).then(fetchFeeds);
                       }
                     }}
                     style={{
@@ -192,7 +207,7 @@ const RssManager = () => {
                       onBlur={(e) => {
                         const newVal = parseInt(e.target.value, 10);
                         if (newVal !== feed.polling_interval && !isNaN(newVal)) {
-                          api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: newVal }).then(fetchFeeds);
+                          api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: newVal, scrape_enabled: feed.scrape_enabled }).then(fetchFeeds);
                         }
                       }}
                       style={{
@@ -208,6 +223,16 @@ const RssManager = () => {
                       onMouseLeave={(e) => { if(document.activeElement !== e.target) e.target.style.borderBottom = '1px solid transparent'; }}
                     /> min
                   </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '0.1rem 0.5rem', borderRadius: '10px', cursor: 'pointer' }} title="Stäng av om flödet inte går att skrapa korrekt">
+                    <input
+                      type="checkbox"
+                      defaultChecked={feed.scrape_enabled}
+                      onChange={(e) => {
+                        api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: e.target.checked }).then(fetchFeeds);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    /> Auto-skrap
+                  </label>
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   <input
@@ -215,7 +240,7 @@ const RssManager = () => {
                     defaultValue={feed.url}
                     onBlur={(e) => {
                       if (e.target.value !== feed.url) {
-                        api.put(`/feeds/${feed.id}`, { title: feed.title, url: e.target.value, polling_interval: feed.polling_interval }).then(fetchFeeds);
+                        api.put(`/feeds/${feed.id}`, { title: feed.title, url: e.target.value, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled }).then(fetchFeeds);
                       }
                     }}
                     style={{

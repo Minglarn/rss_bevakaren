@@ -77,15 +77,23 @@ const Dashboard = () => {
     
     // If expanding and content not scraped yet
     if (!expandedItems[index] && !scrapedContents[url]) {
-      setScrapingUrls(prev => ({ ...prev, [url]: true }));
-      try {
-        const res = await api.get(`/scrape?url=${encodeURIComponent(url)}`);
-        setScrapedContents(prev => ({ ...prev, [url]: res.data.content }));
-      } catch (err) {
-        console.error("Scrape error", err);
-        setScrapedContents(prev => ({ ...prev, [url]: 'Det gick inte att ladda artikeln automatisk. Läs mer på original-sidan.' }));
-      } finally {
-        setScrapingUrls(prev => ({ ...prev, [url]: false }));
+      const feedItems = allFeeds.filter(f => f.link === url);
+      const isScrapeEnabled = feedItems.length > 0 && feedItems[0].scrape_enabled !== false;
+      
+      if (isScrapeEnabled) {
+        setScrapingUrls(prev => ({ ...prev, [url]: true }));
+        try {
+          const res = await api.get(`/scrape?url=${encodeURIComponent(url)}`);
+          setScrapedContents(prev => ({ ...prev, [url]: res.data.content }));
+        } catch (err) {
+          console.error("Scrape error", err);
+          setScrapedContents(prev => ({ ...prev, [url]: 'Det gick inte att ladda artikeln automatiskt. Läs mer på original-sidan.' }));
+        } finally {
+          setScrapingUrls(prev => ({ ...prev, [url]: false }));
+        }
+      } else {
+        // Just use the local summary
+        setScrapedContents(prev => ({ ...prev, [url]: feedItems[0]?.summary || 'Läs mer på original-sidan.' }));
       }
     }
   };
@@ -255,6 +263,22 @@ const Dashboard = () => {
                   >
                     {item.title}
                   </h3>
+                  
+                  {item.image_url && (
+                    <div 
+                      onClick={() => handleExpand(index, item.link)}
+                      style={{ 
+                        width: '100%', 
+                        height: '200px', 
+                        marginBottom: '1rem', 
+                        borderRadius: '8px', 
+                        overflow: 'hidden', 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      <img src={item.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  )}
                   
                   {/* Expanded Content */}
                   {expandedItems[index] && (
