@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft } from 'lucide-react';
+import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft, List } from 'lucide-react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 
@@ -210,7 +210,7 @@ const Dashboard = () => {
                 {/* Left colored bar */}
                 <div style={{
                   backgroundColor: color,
-                  width: '80px',
+                  width: '65px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -218,13 +218,13 @@ const Dashboard = () => {
                   color: 'white',
                   flexShrink: 0
                 }}>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 'bold' }}>
                     {formatTime(item.published)}
                   </div>
-                  <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', letterSpacing: '1px' }}>
+                  <div style={{ fontSize: '0.7rem', marginTop: '0.25rem', letterSpacing: '0.5px' }}>
                     {formatDateLabel(item.published)}
                   </div>
-                  <MapPin size={24} style={{ marginTop: 'auto', opacity: 0.7 }} />
+                  <List size={22} style={{ marginTop: 'auto', opacity: 0.8 }} />
                 </div>
 
                 {/* Right content area */}
