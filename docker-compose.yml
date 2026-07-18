@@ -4,12 +4,15 @@ services:
   backend:
     image: ghcr.io/minglarn/rss_bevakaren_backend:latest
     ports:
-      - "8000:8000"
+      - "8093:8000"
     volumes:
       # Lagra databasen i en dedikerad data-mapp på hosten så den överlever omstarter
       - ./data:/data
     environment:
       - DATABASE_URL=sqlite:////data/rss.db
+      # Multi-user setup: Separera med kommatecken. Ordningen matchar.
+      - APP_USERNAME=admin,wife
+      - APP_PASSWORD=admin_password,wife_password
     restart: unless-stopped
 
   frontend:

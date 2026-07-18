@@ -10,15 +10,38 @@ models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="RSS Bevakaren API")
 
-# Setup default user on startup if no users exist
+# Setup default users on startup from environment variables
 @app.on_event("startup")
 def startup_event():
     db = database.SessionLocal()
-    if db.query(models.User).count() == 0:
-        hashed_password = auth.get_password_hash("admin")
-        default_user = models.User(username="admin", password_hash=hashed_password)
-        db.add(default_user)
-        db.commit()
+    
+    usernames_env = os.environ.get("APP_USERNAME", "")
+    passwords_env = os.environ.get("APP_PASSWORD", "")
+    
+    if usernames_env and passwords_env:
+        usernames = [u.strip() for u in usernames_env.split(",") if u.strip()]
+        passwords = [p.strip() for p in passwords_env.split(",")]
+        
+        for i, username in enumerate(usernames):
+            password = passwords[i] if i < len(passwords) else "changeme"
+            
+            user = db.query(models.User).filter(models.User.username == username).first()
+            if not user:
+                hashed_password = auth.get_password_hash(password)
+                new_user = models.User(username=username, password_hash=hashed_password)
+                db.add(new_user)
+            else:
+                # Update password if it doesn't match the current environment setting
+                if not auth.verify_password(password, user.password_hash):
+                    user.password_hash = auth.get_password_hash(password)
+    else:
+        # Fallback if no environment variables are set and database is empty
+        if db.query(models.User).count() == 0:
+            hashed_password = auth.get_password_hash("admin")
+            default_user = models.User(username="admin", password_hash=hashed_password)
+            db.add(default_user)
+            
+    db.commit()
     db.close()
 
 @app.post("/token", response_model=schemas.Token)
