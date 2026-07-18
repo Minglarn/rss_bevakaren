@@ -1,61 +1,131 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
-import { Rss, List, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash } from 'lucide-react';
 import Login from './Login';
 import Dashboard from './components/Dashboard';
 import RssManager from './components/RssManager';
 import Settings from './components/Settings';
+import api from './api';
 import './App.css';
 import './index.css';
 
 // Layout Component with Sidebar
 const AppLayout = ({ children, onLogout }) => {
   const location = useLocation();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [myFeeds, setMyFeeds] = useState([]);
+
+  useEffect(() => {
+    const fetchMyFeeds = async () => {
+      try {
+        const res = await api.get('/feeds');
+        setMyFeeds(res.data);
+      } catch (err) {
+        console.error("Kunde inte hämta flöden till sidomenyn", err);
+      }
+    };
+    fetchMyFeeds();
+  }, [location]); // Re-fetch occasionally or on navigation
 
   return (
-    <div className="app-container" style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-app)' }}>
+    <div className="app-container" style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-app)', transition: 'all 0.3s' }}>
       {/* Sidebar */}
       <div style={{
-        width: '250px',
+        width: isCollapsed ? '80px' : '260px',
         backgroundColor: 'var(--bg-card)',
         borderRight: '1px solid var(--border-color)',
         display: 'flex',
         flexDirection: 'column',
-        padding: '1.5rem 0'
+        padding: '1.5rem 0',
+        transition: 'width 0.3s ease',
+        position: 'relative'
       }}>
-        <div style={{ padding: '0 1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--primary)' }}>
+        {/* Toggle Collapse Button */}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          style={{
+            position: 'absolute',
+            right: '-16px',
+            top: '2rem',
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--primary)',
+            color: 'white',
+            border: '4px solid var(--bg-app)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            padding: 0,
+            zIndex: 10
+          }}
+        >
+          {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
+
+        <div style={{ 
+          padding: isCollapsed ? '0 1rem' : '0 1.5rem', 
+          marginBottom: '2rem', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
+          gap: '0.75rem', 
+          color: 'var(--primary)' 
+        }}>
           <Rss size={28} />
-          <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS-Bevakaren</h2>
+          {!isCollapsed && <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS-Bevakaren</h2>}
         </div>
 
-        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0 1rem' }}>
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0 1rem', overflowY: 'auto', overflowX: 'hidden' }}>
           <Link to="/" style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem',
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
             borderRadius: '8px', textDecoration: 'none',
             color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-muted)',
             backgroundColor: location.pathname === '/' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             fontWeight: location.pathname === '/' ? 600 : 400
           }}>
-            <Rss size={20} /> Dashboard
+            <Rss size={20} /> {!isCollapsed && "Dashboard"}
           </Link>
           <Link to="/manage" style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem',
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
             borderRadius: '8px', textDecoration: 'none',
             color: location.pathname === '/manage' ? 'var(--primary)' : 'var(--text-muted)',
             backgroundColor: location.pathname === '/manage' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             fontWeight: location.pathname === '/manage' ? 600 : 400
           }}>
-            <List size={20} /> Hantera RSS
+            <List size={20} /> {!isCollapsed && "Hantera RSS"}
           </Link>
           <Link to="/settings" style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem',
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
             borderRadius: '8px', textDecoration: 'none',
             color: location.pathname === '/settings' ? 'var(--primary)' : 'var(--text-muted)',
             backgroundColor: location.pathname === '/settings' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             fontWeight: location.pathname === '/settings' ? 600 : 400
           }}>
-            <SettingsIcon size={20} /> Inställningar
+            <SettingsIcon size={20} /> {!isCollapsed && "Inställningar"}
           </Link>
+
+          {/* Feeds List */}
+          {!isCollapsed && myFeeds.length > 0 && (
+            <div style={{ marginTop: '2rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', paddingLeft: '1rem' }}>
+                Mina Flöden
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {myFeeds.map(feed => (
+                  <div key={feed.id} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem',
+                    color: 'var(--text-main)', fontSize: '0.9rem',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                  }}>
+                    <Hash size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} /> 
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{feed.title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </nav>
 
         <div style={{ padding: '0 1rem', marginTop: 'auto' }}>
@@ -63,13 +133,13 @@ const AppLayout = ({ children, onLogout }) => {
             onClick={onLogout}
             style={{
               width: '100%',
-              display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem',
+              display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
               borderRadius: '8px', border: 'none', background: 'none',
               color: '#ef4444', cursor: 'pointer', textAlign: 'left',
               fontSize: '1rem'
             }}
           >
-            <LogOut size={20} /> Logga ut
+            <LogOut size={20} /> {!isCollapsed && "Logga ut"}
           </button>
         </div>
       </div>
