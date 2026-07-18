@@ -19,7 +19,7 @@ const Login = ({ onLogin }) => {
       formData.append('username', username);
       formData.append('password', password);
 
-      const res = await fetch(import.meta.env.VITE_API_URL + '/token', {
+      const res = await fetch('/api/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData
