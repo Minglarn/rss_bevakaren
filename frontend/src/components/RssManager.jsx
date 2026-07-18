@@ -163,6 +163,7 @@ const RssManager = () => {
                   <input
                     type="text"
                     defaultValue={feed.title}
+                    placeholder="[Ingen titel angiven, klicka för att lägga till]"
                     onBlur={(e) => {
                       if (e.target.value !== feed.title) {
                         api.put(`/feeds/${feed.id}`, { title: e.target.value, url: feed.url, polling_interval: feed.polling_interval }).then(fetchFeeds);
