@@ -144,13 +144,48 @@ const Dashboard = () => {
             const color = getBorderColor(index);
             const isLast = index === displayedFeeds.length - 1;
             
+            let showDivider = false;
+            let dividerText = '';
+            
+            const currentD = new Date(item.published);
+            if (!isNaN(currentD.getTime())) {
+                if (index === 0) {
+                    showDivider = true;
+                } else {
+                    const prevD = new Date(displayedFeeds[index - 1].published);
+                    // Check if day changed
+                    if (!isNaN(prevD.getTime()) && 
+                       (currentD.getDate() !== prevD.getDate() || currentD.getMonth() !== prevD.getMonth() || currentD.getFullYear() !== prevD.getFullYear())) {
+                        showDivider = true;
+                    }
+                }
+                if (showDivider) {
+                    let text = currentD.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
+                    // Capitalize first letter
+                    dividerText = text.charAt(0).toUpperCase() + text.slice(1);
+                }
+            }
+            
             return (
-              <motion.div 
-                ref={isLast ? lastElementRef : null}
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.2 }}
+              <React.Fragment key={index}>
+                {showDivider && (
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '1rem', 
+                    margin: '1.5rem 0 1rem 0'
+                  }}>
+                    <div style={{ fontWeight: 'bold', color: '#2563eb', fontSize: '1.2rem' }}>
+                      {dividerText}
+                    </div>
+                    <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
+                  </div>
+                )}
+                <motion.div 
+                  ref={isLast ? lastElementRef : null}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2 }}
                 style={{
                   backgroundColor: 'var(--bg-card)',
                   borderRadius: '12px',
