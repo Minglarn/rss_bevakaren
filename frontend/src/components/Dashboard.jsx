@@ -18,23 +18,66 @@ const Dashboard = () => {
   const [scrapedContents, setScrapedContents] = useState({});
   const [scrapingUrls, setScrapingUrls] = useState({});
 
-  const fetchFeeds = async () => {
-    setLoading(true);
-    setPage(1);
+  const fetchFeeds = async (isBackground = false) => {
+    if (!isBackground) {
+      setLoading(true);
+      setPage(1);
+    }
     try {
       const url = feedId ? `/dashboard-feeds?feed_id=${feedId}` : '/dashboard-feeds';
       const res = await api.get(url);
       setAllFeeds(res.data);
-      setDisplayedFeeds(res.data.slice(0, itemsPerPage));
+      if (!isBackground) {
+        setDisplayedFeeds(res.data.slice(0, itemsPerPage));
+      } else {
+        // Update displayed feeds while keeping the current page visible
+        setDisplayedFeeds(res.data.slice(0, page * itemsPerPage));
+      }
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchFeeds();
+    
+    // Logic for auto-polling
+    let intervalId;
+    const setupPolling = async () => {
+      try {
+        const res = await api.get('/feeds');
+        const userFeeds = res.data;
+        if (userFeeds && userFeeds.length > 0) {
+          // Find minimum polling interval in minutes
+          const minInterval = Math.min(...userFeeds.map(f => f.polling_interval || 60));
+          // Convert to milliseconds
+          const intervalMs = minInterval * 60 * 1000;
+          
+          intervalId = setInterval(() => {
+            fetchFeeds(true); // background fetch
+          }, intervalMs);
+        }
+      } catch (e) {
+        console.error("Could not setup polling", e);
+      }
+    };
+    
+    setupPolling();
+    
+    const handleFeedsUpdated = () => {
+      if (intervalId) clearInterval(intervalId);
+      fetchFeeds();
+      setupPolling();
+    };
+    
+    window.addEventListener('feedsUpdated', handleFeedsUpdated);
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      window.removeEventListener('feedsUpdated', handleFeedsUpdated);
+    };
   }, [feedId]);
 
   // Infinite Scroll logic
