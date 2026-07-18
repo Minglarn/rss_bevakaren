@@ -293,6 +293,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               </motion.div>
+              </React.Fragment>
             );
           })}
           
