@@ -3,7 +3,7 @@ uvicorn
 feedparser
 apscheduler
 SQLAlchemy
-passlib[bcrypt]
+bcrypt
 python-jose[cryptography]
 python-multipart
 pywebpush
