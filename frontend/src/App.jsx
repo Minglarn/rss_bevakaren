@@ -74,7 +74,12 @@ const AppLayout = ({ children, onLogout }) => {
           color: 'var(--primary)' 
         }}>
           <Rss size={28} />
-          {!isCollapsed && <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS-Bevakaren</h2>}
+          {!isCollapsed && (
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS-Bevakaren</h2>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v2026.07.1</span>
+            </div>
+          )}
         </div>
 
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0 1rem', overflowY: 'auto', overflowX: 'hidden' }}>
@@ -114,14 +119,23 @@ const AppLayout = ({ children, onLogout }) => {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 {myFeeds.map(feed => (
-                  <div key={feed.id} style={{
-                    display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem',
-                    color: 'var(--text-main)', fontSize: '0.9rem',
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                  }}>
+                  <Link 
+                    to={`/?feedId=${feed.id}`} 
+                    key={feed.id} 
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem',
+                      color: location.search.includes(`feedId=${feed.id}`) ? 'var(--primary)' : 'var(--text-main)', 
+                      fontSize: '0.9rem',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      textDecoration: 'none',
+                      backgroundColor: location.search.includes(`feedId=${feed.id}`) ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+                      borderRadius: '8px',
+                      fontWeight: location.search.includes(`feedId=${feed.id}`) ? 600 : 400
+                    }}
+                  >
                     <Hash size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} /> 
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{feed.title}</span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>

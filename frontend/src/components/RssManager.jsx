@@ -7,6 +7,7 @@ const RssManager = () => {
   const [feeds, setFeeds] = useState([]);
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
+  const [pollingInterval, setPollingInterval] = useState(60);
   const [loading, setLoading] = useState(false);
 
   const fetchFeeds = async () => {
@@ -27,9 +28,10 @@ const RssManager = () => {
     if (!url) return;
     setLoading(true);
     try {
-      await api.post('/feeds', { url, title });
+      await api.post('/feeds', { url, title, polling_interval: parseInt(pollingInterval, 10) });
       setUrl('');
       setTitle('');
+      setPollingInterval(60);
       fetchFeeds();
     } catch (err) {
       console.error(err);
@@ -74,7 +76,7 @@ const RssManager = () => {
             onChange={(e) => setTitle(e.target.value)}
             style={{
               flex: '1',
-              minWidth: '200px',
+              minWidth: '150px',
               padding: '0.75rem 1rem',
               borderRadius: '8px',
               border: '1px solid var(--border-color)',
@@ -90,7 +92,7 @@ const RssManager = () => {
             required
             style={{
               flex: '2',
-              minWidth: '250px',
+              minWidth: '200px',
               padding: '0.75rem 1rem',
               borderRadius: '8px',
               border: '1px solid var(--border-color)',
@@ -98,6 +100,24 @@ const RssManager = () => {
               color: 'var(--text-main)'
             }}
           />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1', minWidth: '120px' }}>
+            <input 
+              type="number" 
+              min="1"
+              value={pollingInterval}
+              onChange={(e) => setPollingInterval(e.target.value)}
+              title="Pollningstid i minuter"
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-app)',
+                color: 'var(--text-main)'
+              }}
+            />
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>min</span>
+          </div>
           <button 
             type="submit" 
             disabled={loading}
@@ -138,9 +158,77 @@ const RssManager = () => {
                 alignItems: 'center'
               }}
             >
-              <div>
-                <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{feed.title || 'Utan titel'}</div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{feed.url}</div>
+              <div style={{ flex: 1, marginRight: '1rem' }}>
+                <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="text"
+                    defaultValue={feed.title}
+                    onBlur={(e) => {
+                      if (e.target.value !== feed.title) {
+                        api.put(`/feeds/${feed.id}`, { title: e.target.value, url: feed.url, polling_interval: feed.polling_interval }).then(fetchFeeds);
+                      }
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid transparent',
+                      color: 'inherit',
+                      fontSize: 'inherit',
+                      fontWeight: 'inherit',
+                      width: '100%',
+                      padding: '2px 4px',
+                      borderRadius: '4px',
+                    }}
+                    onFocus={(e) => e.target.style.border = '1px solid var(--primary)'}
+                    onMouseLeave={(e) => { if(document.activeElement !== e.target) e.target.style.border = '1px solid transparent'; }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '0.1rem 0.5rem', borderRadius: '10px' }} title="Pollningstid i minuter">
+                    ⏱ 
+                    <input
+                      type="number"
+                      min="1"
+                      defaultValue={feed.polling_interval || 60}
+                      onBlur={(e) => {
+                        const newVal = parseInt(e.target.value, 10);
+                        if (newVal !== feed.polling_interval && !isNaN(newVal)) {
+                          api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: newVal }).then(fetchFeeds);
+                        }
+                      }}
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid transparent',
+                        color: 'inherit',
+                        fontSize: 'inherit',
+                        width: '40px',
+                        padding: '0',
+                        textAlign: 'right'
+                      }}
+                      onFocus={(e) => e.target.style.borderBottom = '1px solid var(--primary)'}
+                      onMouseLeave={(e) => { if(document.activeElement !== e.target) e.target.style.borderBottom = '1px solid transparent'; }}
+                    /> min
+                  </div>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  <input
+                    type="text"
+                    defaultValue={feed.url}
+                    onBlur={(e) => {
+                      if (e.target.value !== feed.url) {
+                        api.put(`/feeds/${feed.id}`, { title: feed.title, url: e.target.value, polling_interval: feed.polling_interval }).then(fetchFeeds);
+                      }
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid transparent',
+                      color: 'inherit',
+                      fontSize: 'inherit',
+                      width: '100%',
+                      padding: '2px 4px',
+                      borderRadius: '4px',
+                    }}
+                    onFocus={(e) => e.target.style.border = '1px solid var(--primary)'}
+                    onMouseLeave={(e) => { if(document.activeElement !== e.target) e.target.style.border = '1px solid transparent'; }}
+                  />
+                </div>
               </div>
               <button 
                 onClick={() => handleDelete(feed.id)}
@@ -151,10 +239,12 @@ const RssManager = () => {
                   cursor: 'pointer',
                   padding: '0.5rem',
                   borderRadius: '50%',
-                  transition: 'background-color 0.2s'
+                  transition: 'background-color 0.2s',
+                  flexShrink: 0
                 }}
                 onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'}
                 onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                title="Ta bort flöde"
               >
                 <Trash2 size={20} />
               </button>

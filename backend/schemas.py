@@ -22,6 +22,7 @@ class TokenData(BaseModel):
 class FeedBase(BaseModel):
     url: str
     title: Optional[str] = ""
+    polling_interval: int = 60
 
 class FeedCreate(FeedBase):
     pass

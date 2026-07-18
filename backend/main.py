@@ -70,8 +70,20 @@ def get_feeds(db: Session = Depends(database.get_db), current_user: models.User 
 
 @app.post("/feeds", response_model=schemas.FeedResponse)
 def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    db_feed = models.Feed(url=feed.url, title=feed.title, user_id=current_user.id)
+    db_feed = models.Feed(url=feed.url, title=feed.title, polling_interval=feed.polling_interval, user_id=current_user.id)
     db.add(db_feed)
+    db.commit()
+    db.refresh(db_feed)
+    return db_feed
+
+@app.put("/feeds/{feed_id}", response_model=schemas.FeedResponse)
+def update_feed(feed_id: int, feed: schemas.FeedCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    db_feed = db.query(models.Feed).filter(models.Feed.id == feed_id, models.Feed.user_id == current_user.id).first()
+    if not db_feed:
+        raise HTTPException(status_code=404, detail="Feed not found")
+    db_feed.url = feed.url
+    db_feed.title = feed.title
+    db_feed.polling_interval = feed.polling_interval
     db.commit()
     db.refresh(db_feed)
     return db_feed
@@ -107,18 +119,25 @@ def delete_keyword(keyword_id: int, db: Session = Depends(database.get_db), curr
     return {"status": "ok"}
 
 import rss_parser
+from typing import Optional
+
 @app.get("/dashboard-feeds")
-def get_dashboard_feeds(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    feeds = db.query(models.Feed).filter(models.Feed.user_id == current_user.id).all()
+def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    query = db.query(models.Feed).filter(models.Feed.user_id == current_user.id)
+    if feed_id:
+        query = query.filter(models.Feed.id == feed_id)
+    feeds = query.all()
+    
     all_items = []
     for f in feeds:
         items = rss_parser.fetch_feed_items(f.url)
         # Append a source indicator to each item
         for item in items:
             item["source_title"] = f.title or f.url
+            item["feed_id"] = f.id
         all_items.extend(items)
     
-    # Sort items by published date (simplified, string comparison might not be perfect for all RSS dates)
+    # Sort items by published date
     all_items.sort(key=lambda x: x.get("published", ""), reverse=True)
     return all_items
 
