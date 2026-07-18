@@ -172,7 +172,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
         manager.disconnect(websocket, user.id)
 
 async def polling_loop():
-    print("Background polling loop started")
+    print("Background polling loop started", flush=True)
     while True:
         try:
             db = database.SessionLocal()
@@ -186,7 +186,7 @@ async def polling_loop():
                 # Check if it's time to poll
                 if current_time - feed.last_polled >= interval_sec:
                     # Time to poll!
-                    print(f"Polling feed {feed.id} ({feed.url})...")
+                    print(f"Polling feed {feed.id} ({feed.url})...", flush=True)
                     items = rss_parser.fetch_feed_items(feed.url)
                     
                     new_articles = []
@@ -217,7 +217,7 @@ async def polling_loop():
                             new_articles.append(new_article)
                     
                     if new_articles:
-                        print(f"Found {len(new_articles)} new articles for feed {feed.id}")
+                        print(f"Found {len(new_articles)} new articles for feed {feed.id}", flush=True)
                         db.commit()
                         # Send WS update
                         await manager.send_personal_message("NEW_ARTICLES", feed.user_id)
@@ -228,7 +228,7 @@ async def polling_loop():
             
             db.close()
         except Exception as e:
-            print(f"Polling error: {e}")
+            print(f"Polling error: {e}", flush=True)
         
         await asyncio.sleep(30) # Check every 30 seconds
 
