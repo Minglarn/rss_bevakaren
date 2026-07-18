@@ -45,6 +45,9 @@ const Dashboard = () => {
     
     // Setup WebSocket connection
     let ws;
+    let isCleaningUp = false;
+    let reconnectTimeout;
+    
     const connectWebSocket = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -66,8 +69,10 @@ const Dashboard = () => {
       };
       
       ws.onclose = () => {
-        console.log("WebSocket frånkopplad. Försöker igen om 5 sekunder...");
-        setTimeout(connectWebSocket, 5000);
+        if (!isCleaningUp) {
+          console.log("WebSocket frånkopplad. Försöker igen om 5 sekunder...");
+          reconnectTimeout = setTimeout(connectWebSocket, 5000);
+        }
       };
       
       ws.onerror = (err) => {
@@ -85,6 +90,8 @@ const Dashboard = () => {
     window.addEventListener('feedsUpdated', handleFeedsUpdated);
     
     return () => {
+      isCleaningUp = true;
+      clearTimeout(reconnectTimeout);
       if (ws) ws.close();
       window.removeEventListener('feedsUpdated', handleFeedsUpdated);
     };
