@@ -6,9 +6,10 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./data:/app/data
+      # Lagra databasen i en dedikerad data-mapp på hosten så den överlever omstarter
+      - ./data:/data
     environment:
-      - DATABASE_URL=sqlite:////app/data/rss.db
+      - DATABASE_URL=sqlite:////data/rss.db
     restart: unless-stopped
 
   frontend:
