@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
+import asyncio
+import time
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List
@@ -61,11 +63,9 @@ def startup_event():
                 new_user = models.User(username=username, password_hash=hashed_password)
                 db.add(new_user)
             else:
-                # Update password if it doesn't match the current environment setting
                 if not auth.verify_password(password, user.password_hash):
                     user.password_hash = auth.get_password_hash(password)
     else:
-        # Fallback if no environment variables are set and database is empty
         if db.query(models.User).count() == 0:
             hashed_password = auth.get_password_hash("admin")
             default_user = models.User(username="admin", password_hash=hashed_password)
@@ -73,6 +73,123 @@ def startup_event():
             
     db.commit()
     db.close()
+    
+    # Start the background polling task
+    asyncio.create_task(polling_loop())
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: dict[int, List[WebSocket]] = {}
+
+    async def connect(self, websocket: WebSocket, user_id: int):
+        await websocket.accept()
+        if user_id not in self.active_connections:
+            self.active_connections[user_id] = []
+        self.active_connections[user_id].append(websocket)
+
+    def disconnect(self, websocket: WebSocket, user_id: int):
+        if user_id in self.active_connections:
+            self.active_connections[user_id].remove(websocket)
+            if not self.active_connections[user_id]:
+                del self.active_connections[user_id]
+
+    async def send_personal_message(self, message: str, user_id: int):
+        if user_id in self.active_connections:
+            for connection in self.active_connections[user_id]:
+                try:
+                    await connection.send_text(message)
+                except Exception as e:
+                    print(f"Error sending ws message: {e}")
+
+manager = ConnectionManager()
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket, token: str):
+    try:
+        payload = auth.jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+    except auth.JWTError:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    db = database.SessionLocal()
+    user = db.query(models.User).filter(models.User.username == username).first()
+    db.close()
+    if not user:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    await manager.connect(websocket, user.id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, user.id)
+
+async def polling_loop():
+    print("Background polling loop started")
+    while True:
+        try:
+            db = database.SessionLocal()
+            feeds = db.query(models.Feed).all()
+            current_time = int(time.time())
+            
+            for feed in feeds:
+                # polling_interval is in minutes
+                interval_sec = feed.polling_interval * 60
+                
+                # Check if it's time to poll
+                if current_time - feed.last_polled >= interval_sec:
+                    # Time to poll!
+                    print(f"Polling feed {feed.id} ({feed.url})...")
+                    items = rss_parser.fetch_feed_items(feed.url)
+                    
+                    new_articles = []
+                    for item in items:
+                        # Use link or title as GUID if GUID is missing
+                        guid = item.get("link") or item.get("title")
+                        
+                        # Check if article exists
+                        existing = db.query(models.Article).filter(
+                            models.Article.feed_id == feed.id,
+                            models.Article.guid == guid
+                        ).first()
+                        
+                        if not existing:
+                            cat_str = ",".join(item.get("categories", []))
+                            new_article = models.Article(
+                                feed_id=feed.id,
+                                guid=guid,
+                                title=item.get("title"),
+                                link=item.get("link"),
+                                published=item.get("published"),
+                                published_ts=item.get("published_ts"),
+                                summary=item.get("summary"),
+                                image_url=item.get("image_url"),
+                                categories=cat_str
+                            )
+                            db.add(new_article)
+                            new_articles.append(new_article)
+                    
+                    if new_articles:
+                        print(f"Found {len(new_articles)} new articles for feed {feed.id}")
+                        db.commit()
+                        # Send WS update
+                        await manager.send_personal_message("NEW_ARTICLES", feed.user_id)
+                    
+                    # Update last polled time
+                    feed.last_polled = current_time
+                    db.commit()
+            
+            db.close()
+        except Exception as e:
+            print(f"Polling error: {e}")
+        
+        await asyncio.sleep(30) # Check every 30 seconds
+
 
 @app.post("/token", response_model=schemas.Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
@@ -154,27 +271,35 @@ def delete_keyword(keyword_id: int, db: Session = Depends(database.get_db), curr
 import rss_parser
 from typing import Optional
 
-@app.get("/dashboard-feeds")
+@app.get("/dashboard-feeds", response_model=List[schemas.ArticleResponse])
 def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    query = db.query(models.Feed).filter(models.Feed.user_id == current_user.id)
+    query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == current_user.id)
     if feed_id:
         query = query.filter(models.Feed.id == feed_id)
-    feeds = query.all()
+        
+    articles = query.order_by(models.Article.published_ts.desc()).limit(150).all()
     
-    all_items = []
-    print(f"Hämtar {len(feeds)} RSS-flöden för användare {current_user.username}...")
-    for f in feeds:
-        items = rss_parser.fetch_feed_items(f.url)
-        # Append a source indicator to each item
-        for item in items:
-            item["source_title"] = f.title or f.url
-            item["feed_id"] = f.id
-            item["scrape_enabled"] = bool(f.scrape_enabled) if hasattr(f, 'scrape_enabled') else True
-        all_items.extend(items)
-    
-    # Sort items by published timestamp instead of string alphabetically
-    all_items.sort(key=lambda x: x.get("published_ts", 0), reverse=True)
-    return all_items
+    # Enhance articles with feed info for the UI
+    response_items = []
+    for art in articles:
+        cats = art.categories.split(",") if art.categories else []
+        art_dict = {
+            "id": art.id,
+            "feed_id": art.feed_id,
+            "guid": art.guid,
+            "title": art.title,
+            "link": art.link,
+            "published": art.published,
+            "published_ts": art.published_ts,
+            "summary": art.summary,
+            "image_url": art.image_url,
+            "categories": cats,
+            "source_title": art.feed.title or art.feed.url,
+            "scrape_enabled": bool(art.feed.scrape_enabled)
+        }
+        response_items.append(art_dict)
+        
+    return response_items
 
 import requests
 from bs4 import BeautifulSoup

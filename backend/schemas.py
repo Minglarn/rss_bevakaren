@@ -62,3 +62,20 @@ class PushSubscriptionResponse(PushSubscriptionBase):
 
     class Config:
         from_attributes = True
+
+class ArticleResponse(BaseModel):
+    id: int
+    feed_id: int
+    guid: Optional[str] = None
+    title: Optional[str] = None
+    link: Optional[str] = None
+    published: Optional[str] = None
+    published_ts: Optional[int] = 0
+    summary: Optional[str] = None
+    image_url: Optional[str] = None
+    categories: Optional[str] = None
+    source_title: Optional[str] = None
+    scrape_enabled: Optional[bool] = True
+
+    class Config:
+        from_attributes = True

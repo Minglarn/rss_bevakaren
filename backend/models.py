@@ -21,9 +21,11 @@ class Feed(Base):
     title = Column(String, default="")
     polling_interval = Column(Integer, default=60)
     scrape_enabled = Column(Integer, default=1) # SQLite doesn't have native Boolean, use Integer
+    last_polled = Column(Integer, default=0) # timestamp
     user_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="feeds")
+    articles = relationship("Article", back_populates="feed", cascade="all, delete-orphan")
 
 class Keyword(Base):
     __tablename__ = "keywords"
@@ -44,3 +46,19 @@ class PushSubscription(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="push_subscriptions")
+
+class Article(Base):
+    __tablename__ = "articles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    feed_id = Column(Integer, ForeignKey("feeds.id"))
+    guid = Column(String, index=True) # To prevent duplicates
+    title = Column(String)
+    link = Column(String)
+    published = Column(String)
+    published_ts = Column(Integer, index=True)
+    summary = Column(String)
+    image_url = Column(String)
+    categories = Column(String)
+
+    feed = relationship("Feed", back_populates="articles")

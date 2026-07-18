@@ -43,39 +43,49 @@ const Dashboard = () => {
   useEffect(() => {
     fetchFeeds();
     
-    // Logic for auto-polling
-    let intervalId;
-    const setupPolling = async () => {
-      try {
-        const res = await api.get('/feeds');
-        const userFeeds = res.data;
-        if (userFeeds && userFeeds.length > 0) {
-          // Find minimum polling interval in minutes
-          const minInterval = Math.min(...userFeeds.map(f => f.polling_interval || 60));
-          // Convert to milliseconds
-          const intervalMs = minInterval * 60 * 1000;
-          
-          intervalId = setInterval(() => {
-            fetchFeeds(true); // background fetch
-          }, intervalMs);
+    // Setup WebSocket connection
+    let ws;
+    const connectWebSocket = () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/api/ws?token=${token}`;
+      
+      ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log("WebSocket ansluten!");
+      };
+      
+      ws.onmessage = (event) => {
+        if (event.data === "NEW_ARTICLES") {
+          console.log("Nya artiklar mottagna via WebSocket! Uppdaterar UI...");
+          fetchFeeds(true);
         }
-      } catch (e) {
-        console.error("Could not setup polling", e);
-      }
+      };
+      
+      ws.onclose = () => {
+        console.log("WebSocket frånkopplad. Försöker igen om 5 sekunder...");
+        setTimeout(connectWebSocket, 5000);
+      };
+      
+      ws.onerror = (err) => {
+        console.error("WebSocket fel:", err);
+        ws.close();
+      };
     };
     
-    setupPolling();
+    connectWebSocket();
     
     const handleFeedsUpdated = () => {
-      if (intervalId) clearInterval(intervalId);
       fetchFeeds();
-      setupPolling();
     };
     
     window.addEventListener('feedsUpdated', handleFeedsUpdated);
     
     return () => {
-      if (intervalId) clearInterval(intervalId);
+      if (ws) ws.close();
       window.removeEventListener('feedsUpdated', handleFeedsUpdated);
     };
   }, [feedId]);
