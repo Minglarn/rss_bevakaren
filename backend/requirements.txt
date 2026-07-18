@@ -9,5 +9,5 @@ python-multipart
 pywebpush
 beautifulsoup4
 requests
-websockets==12.0  
+wsproto  
  
