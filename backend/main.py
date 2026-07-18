@@ -141,3 +141,35 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(dat
     all_items.sort(key=lambda x: x.get("published", ""), reverse=True)
     return all_items
 
+import requests
+from bs4 import BeautifulSoup
+
+@app.get("/scrape")
+def scrape_article(url: str, current_user: models.User = Depends(auth.get_current_user)):
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        res = requests.get(url, headers=headers, timeout=10)
+        res.raise_for_status()
+        
+        soup = BeautifulSoup(res.text, "html.parser")
+        
+        # Simple extraction: find all paragraphs inside main or article tags, 
+        # fallback to all paragraphs if not found
+        article_body = soup.find("article") or soup.find("main") or soup.find("body")
+        if article_body:
+            paragraphs = article_body.find_all("p")
+        else:
+            paragraphs = soup.find_all("p")
+            
+        text_content = "\n\n".join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
+        
+        if not text_content:
+            text_content = "Kunde inte extrahera artikeltexten från denna sida."
+            
+        return {"content": text_content}
+    except Exception as e:
+        print(f"Scrape error for {url}: {e}")
+        return {"content": "Det gick inte att ladda artikeln automatiskt."}
+

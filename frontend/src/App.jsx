@@ -25,7 +25,11 @@ const AppLayout = ({ children, onLogout }) => {
       }
     };
     fetchMyFeeds();
-  }, [location]); // Re-fetch occasionally or on navigation
+    
+    // Listen for custom event to refresh feeds without reloading window
+    window.addEventListener('feedsUpdated', fetchMyFeeds);
+    return () => window.removeEventListener('feedsUpdated', fetchMyFeeds);
+  }, [location]);
 
   return (
     <div className="app-container" style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-app)', transition: 'all 0.3s' }}>

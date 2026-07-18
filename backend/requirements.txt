@@ -7,3 +7,5 @@ bcrypt
 python-jose[cryptography]
 python-multipart
 pywebpush
+beautifulsoup4
+requests

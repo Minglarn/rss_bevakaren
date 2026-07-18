@@ -14,6 +14,7 @@ const RssManager = () => {
     try {
       const res = await api.get('/feeds');
       setFeeds(res.data);
+      window.dispatchEvent(new Event('feedsUpdated'));
     } catch (err) {
       console.error("Kunde inte hämta flöden", err);
     }
