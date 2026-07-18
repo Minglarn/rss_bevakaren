@@ -1,17 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight } from 'lucide-react';
+import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2 } from 'lucide-react';
 import api from '../api';
 
 const Dashboard = () => {
-  const [feeds, setFeeds] = useState([]);
+  const [allFeeds, setAllFeeds] = useState([]);
+  const [displayedFeeds, setDisplayedFeeds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 15;
+  const observer = useRef();
 
   const fetchFeeds = async () => {
     setLoading(true);
+    setPage(1);
     try {
       const res = await api.get('/dashboard-feeds');
-      setFeeds(res.data);
+      setAllFeeds(res.data);
+      setDisplayedFeeds(res.data.slice(0, itemsPerPage));
     } catch (err) {
       console.error(err);
     } finally {
@@ -23,9 +29,26 @@ const Dashboard = () => {
     fetchFeeds();
   }, []);
 
+  // Infinite Scroll logic
+  const lastElementRef = useCallback(node => {
+    if (loading) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && displayedFeeds.length < allFeeds.length) {
+        const nextPage = page + 1;
+        setPage(nextPage);
+        setDisplayedFeeds(allFeeds.slice(0, nextPage * itemsPerPage));
+      }
+    });
+    
+    if (node) observer.current.observe(node);
+  }, [loading, displayedFeeds.length, allFeeds.length, page, allFeeds]);
+
   // Helper to format date
   const formatTime = (dateString) => {
     const d = new Date(dateString);
+    if (isNaN(d.getTime())) return 'N/A';
     return d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
   };
 
@@ -64,22 +87,25 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {loading ? (
+      {loading && allFeeds.length === 0 ? (
         <p style={{ color: 'var(--text-muted)' }}>Laddar nyheter...</p>
-      ) : feeds.length === 0 ? (
+      ) : allFeeds.length === 0 ? (
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', textAlign: 'center' }}>
           <p style={{ color: 'var(--text-muted)' }}>Inga nyheter hittades. Kanske behöver du lägga till flöden i RSS-hanteraren?</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {feeds.map((item, index) => {
+          {displayedFeeds.map((item, index) => {
             const color = getBorderColor(index);
+            const isLast = index === displayedFeeds.length - 1;
+            
             return (
               <motion.div 
+                ref={isLast ? lastElementRef : null}
                 key={index}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.03 }}
+                transition={{ duration: 0.2 }}
                 style={{
                   backgroundColor: 'var(--bg-card)',
                   borderRadius: '12px',
@@ -130,7 +156,7 @@ const Dashboard = () => {
                     }}>
                       <MapPin size={12} /> {item.source_title}
                     </div>
-                    {item.title.split(' ').slice(0, 2).map((word, wIdx) => (
+                    {item.title && item.title.split(' ').slice(0, 2).map((word, wIdx) => (
                       <div key={wIdx} style={{ 
                         backgroundColor: 'var(--bg-app)', 
                         border: '1px solid var(--border-color)',
@@ -160,6 +186,12 @@ const Dashboard = () => {
               </motion.div>
             );
           })}
+          
+          {displayedFeeds.length < allFeeds.length && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+              <Loader2 className="spin" size={24} />
+            </div>
+          )}
         </div>
       )}
     </div>
