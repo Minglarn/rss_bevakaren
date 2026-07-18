@@ -285,7 +285,7 @@ const Dashboard = () => {
                       gap: '0.25rem',
                       fontWeight: 500
                     }}>
-                      <MapPin size={12} /> {item.source_title}
+                      <Rss size={12} /> {item.source_title}
                     </div>
                     {item.categories && item.categories.map((cat, cIdx) => (
                       <div key={cIdx} style={{ 
