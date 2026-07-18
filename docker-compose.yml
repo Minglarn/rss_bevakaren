@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  backend:
+    image: ghcr.io/minglarn/rss_bevakaren_backend:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:////app/data/rss.db
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/minglarn/rss_bevakaren_frontend:latest
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    restart: unless-stopped
+    depends_on:
+      - backend

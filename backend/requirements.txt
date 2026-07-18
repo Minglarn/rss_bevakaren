@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+feedparser
+apscheduler
+SQLAlchemy
+passlib[bcrypt]
+python-jose[cryptography]
+python-multipart
+pywebpush
