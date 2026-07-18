@@ -38,7 +38,49 @@ def startup_event():
     print(f"Senaste uppdatering: {LAST_UPDATE}")
     
     db_path = "/data/rss.db"
+    
+    # Run automatic DB migrations
     if os.path.exists(db_path):
+        import sqlite3
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        
+        # Migration 1: Add scrape_enabled
+        try:
+            cur.execute("ALTER TABLE feeds ADD COLUMN scrape_enabled INTEGER DEFAULT 1;")
+        except sqlite3.OperationalError:
+            pass
+            
+        # Migration 2: Add last_polled
+        try:
+            cur.execute("ALTER TABLE feeds ADD COLUMN last_polled INTEGER DEFAULT 0;")
+        except sqlite3.OperationalError:
+            pass
+            
+        # Migration 3: Create articles table
+        try:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS articles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    feed_id INTEGER,
+                    guid VARCHAR,
+                    title VARCHAR,
+                    link VARCHAR,
+                    published VARCHAR,
+                    published_ts INTEGER,
+                    summary VARCHAR,
+                    image_url VARCHAR,
+                    categories VARCHAR,
+                    FOREIGN KEY(feed_id) REFERENCES feeds(id)
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS ix_articles_guid ON articles (guid);")
+        except Exception as e:
+            print(f"Migration error: {e}")
+            
+        conn.commit()
+        conn.close()
+        
         size_kb = os.path.getsize(db_path) / 1024
         print(f"Databasstorlek: {size_kb:.2f} KB")
     else:
