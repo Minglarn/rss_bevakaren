@@ -281,36 +281,39 @@ const Dashboard = () => {
                 </div>
 
                 {/* Right content area */}
-                <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  {/* Tags */}
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                    <div style={{ 
-                      backgroundColor: 'rgba(37, 99, 235, 0.1)', 
-                      color: 'var(--primary)', 
-                      padding: '0.25rem 0.75rem', 
-                      borderRadius: '20px',
-                      fontSize: '0.85rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      fontWeight: 500
-                    }}>
-                      <Rss size={12} /> {item.source_title}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  {/* Toppbar */}
+                  <div style={{
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.75rem', 
+                    padding: '0.5rem 1.5rem',
+                    backgroundColor: 'rgba(0,0,0,0.02)',
+                    borderBottom: '1px solid var(--border-color)',
+                    fontSize: '0.85rem'
+                  }}>
+                    {/* Source */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
+                      <Rss size={14} /> {item.source_title}
                     </div>
+                    
+                    {/* Categories */}
                     {item.categories && item.categories.map((cat, cIdx) => (
                       <div key={cIdx} style={{ 
-                        backgroundColor: 'var(--bg-app)', 
-                        border: '1px solid var(--border-color)',
                         color: 'var(--text-muted)', 
-                        padding: '0.25rem 0.75rem', 
-                        borderRadius: '20px',
-                        fontSize: '0.85rem'
+                        padding: '0.1rem 0.5rem', 
+                        backgroundColor: 'var(--bg-app)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem'
                       }}>
                         {cat}
                       </div>
                     ))}
                   </div>
 
+                  {/* Main content padding wrapper */}
+                  <div style={{ padding: '1.25rem 1.5rem 1.5rem 1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   {/* Title / Content */}
                   <h3 
                     style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', fontSize: '1.15rem', fontWeight: 400, lineHeight: '1.5' }}
@@ -365,6 +368,7 @@ const Dashboard = () => {
                       {formatTime(item.published)}
                     </span>
                     {expandedItems[index] ? 'Fäll ihop' : 'Läs hela notisen'} <ChevronRight size={16} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+                  </div>
                   </div>
                 </div>
               </motion.div>
