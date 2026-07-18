@@ -73,7 +73,7 @@ class ArticleResponse(BaseModel):
     published_ts: Optional[int] = 0
     summary: Optional[str] = None
     image_url: Optional[str] = None
-    categories: Optional[str] = None
+    categories: Optional[List[str]] = []
     source_title: Optional[str] = None
     scrape_enabled: Optional[bool] = True
 
