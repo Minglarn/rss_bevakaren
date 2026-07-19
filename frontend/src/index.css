@@ -1339,3 +1339,5 @@ input:checked + .toggle-slider:before {
 .spin-animation {
   animation: spin 1s linear infinite;
 }
+@ k e y f r a m e s   s l i d e U p   {   f r o m   {   o p a c i t y :   0 ;   t r a n s f o r m :   t r a n s l a t e Y ( 2 0 p x ) ;   }   t o   {   o p a c i t y :   1 ;   t r a n s f o r m :   t r a n s l a t e Y ( 0 ) ;   }   }  
+ 
