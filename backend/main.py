@@ -331,6 +331,8 @@ async def polling_loop():
                                         if ex.response and ex.response.status_code in [404, 410]:
                                             db.delete(sub)
                                             db.commit()
+                    else:
+                        print(f"Polling done for feed {feed.id}: 0 new articles.", flush=True)
                     
                     # Update last polled time
                     feed.last_polled = current_time
