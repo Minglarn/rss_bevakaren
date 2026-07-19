@@ -152,8 +152,8 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections: dict[int, List[WebSocket]] = {}
 
-    async def connect(self, websocket: WebSocket, user_id: int):
-        await websocket.accept()
+    async def connect(self, websocket: WebSocket, user_id: int, subprotocol: str = None):
+        await websocket.accept(subprotocol=subprotocol)
         if user_id not in self.active_connections:
             self.active_connections[user_id] = []
         self.active_connections[user_id].append(websocket)
@@ -175,7 +175,19 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, token: str):
+async def websocket_endpoint(websocket: WebSocket):
+    token = None
+    if "sec-websocket-protocol" in websocket.headers:
+        token = websocket.headers.get("sec-websocket-protocol")
+        if "," in token:
+            token = token.split(",")[0].strip()
+    elif "token" in websocket.query_params:
+        token = websocket.query_params.get("token")
+        
+    if not token:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+        
     try:
         payload = auth.jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
         username: str = payload.get("sub")
@@ -193,7 +205,8 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    await manager.connect(websocket, user.id)
+    subprotocol = token if "sec-websocket-protocol" in websocket.headers else None
+    await manager.connect(websocket, user.id, subprotocol=subprotocol)
     try:
         while True:
             data = await websocket.receive_text()

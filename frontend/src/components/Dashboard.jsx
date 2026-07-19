@@ -82,9 +82,9 @@ const Dashboard = () => {
       if (!token) return;
       
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/api/ws?token=${token}`;
+      const wsUrl = `${protocol}//${window.location.host}/api/ws`;
       
-      ws = new WebSocket(wsUrl);
+      ws = new WebSocket(wsUrl, [token]);
       
       ws.onopen = () => {
         console.log("WebSocket ansluten!");
