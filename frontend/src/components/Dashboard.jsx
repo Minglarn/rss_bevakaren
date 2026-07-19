@@ -419,7 +419,7 @@ const Dashboard = () => {
                 )}
                 <motion.div 
                   initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: readItems.has(item.id) || item.is_read ? 0.5 : 1, x: 0 }}
+                  animate={{ opacity: (!showRead && (readItems.has(item.id) || item.is_read)) ? 0.5 : 1, x: 0 }}
                   transition={{ duration: 0.2 }}
                   onPointerDown={() => {
                     longPressTimers.current[item.id] = setTimeout(() => {
@@ -444,8 +444,8 @@ const Dashboard = () => {
                     }
                   }}
                   onClick={() => handleExpand(index, item.link, item.id)}
-                  className={`feed-card ${readItems.has(item.id) || item.is_read ? 'read' : ''}`}
-                  style={{ filter: readItems.has(item.id) || item.is_read ? 'grayscale(100%)' : 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
+                  className={`feed-card ${(!showRead && (readItems.has(item.id) || item.is_read)) ? 'read' : ''}`}
+                  style={{ filter: (!showRead && (readItems.has(item.id) || item.is_read)) ? 'grayscale(100%)' : 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
                 >
                 {/* Left colored bar */}
                 <div 
