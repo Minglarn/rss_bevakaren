@@ -608,3 +608,22 @@ def test_push(req: Optional[TestPushRequest] = None, db: Session = Depends(datab
                 db.commit()
                 
     return {"status": "ok", "sent": success_count}
+
+@app.get("/system/info")
+def get_system_info(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    db_size = 0
+    if os.path.exists("/data/rss.db"):
+        db_size = os.path.getsize("/data/rss.db")
+    elif os.path.exists("rss.db"):
+        db_size = os.path.getsize("rss.db")
+        
+    total_feeds = db.query(models.Feed).count()
+    total_articles = db.query(models.Article).count()
+    
+    return {
+        "version": VERSION,
+        "last_update": LAST_UPDATE,
+        "database_size_bytes": db_size,
+        "total_feeds": total_feeds,
+        "total_articles": total_articles
+    }

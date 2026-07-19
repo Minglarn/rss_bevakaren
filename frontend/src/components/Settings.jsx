@@ -1,24 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText } from 'lucide-react';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush } from '../utils/notifications';
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState('notifications');
+  const [activeTab, setActiveTab] = useState('general');
   const [keywords, setKeywords] = useState([]);
   const [newKeyword, setNewKeyword] = useState('');
   const [pushEnabled, setPushEnabled] = useState(false);
   const [feeds, setFeeds] = useState([]);
+  const [sysInfo, setSysInfo] = useState(null);
 
   const fetchData = async () => {
     try {
-      const [kwRes, feedsRes] = await Promise.all([
+      const [kwRes, feedsRes, sysRes] = await Promise.all([
         api.get('/keywords'),
-        api.get('/feeds')
+        api.get('/feeds'),
+        api.get('/system/info')
       ]);
       setKeywords(kwRes.data);
       setFeeds(feedsRes.data);
+      setSysInfo(sysRes.data);
     } catch (err) {
       console.error(err);
     }
@@ -105,8 +108,42 @@ const Settings = () => {
       </div>
 
       {activeTab === 'general' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <p style={{ color: 'var(--text-muted)' }}>Här kommer framtida globala inställningar att hamna (t.ex. temaväljare, lösenordsbyte).</p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+            <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Info size={20} /> Systeminformation
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              Teknisk information om din installation av RSS Bevakaren.
+            </p>
+            
+            {sysInfo ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Server size={14} /> Server Version</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--primary)' }}>{sysInfo.version}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Uppdaterad: {sysInfo.last_update}</div>
+                </div>
+                
+                <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Database size={14} /> Databas</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{(sysInfo.database_size_bytes / 1024 / 1024).toFixed(2)} MB</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>SQLite Lagring</div>
+                </div>
+
+                <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><FileText size={14} /> Innehåll</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{sysInfo.total_articles} artiklar</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Från {sysInfo.total_feeds} flöden</div>
+                </div>
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-muted)' }}>Laddar systeminformation...</p>
+            )}
+          </div>
+
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Fler allmänna inställningar kommer i framtida uppdateringar.</p>
         </motion.div>
       )}
 
