@@ -14,6 +14,9 @@ const RssManager = () => {
   const [editingFeedId, setEditingFeedId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editUrl, setEditUrl] = useState('');
+  const [editPollingInterval, setEditPollingInterval] = useState(60);
+  const [editScrapeEnabled, setEditScrapeEnabled] = useState(true);
+  const [editIncludeInDashboard, setEditIncludeInDashboard] = useState(true);
   const [deletingFeedId, setDeletingFeedId] = useState(null);
   
   const [showAddForm, setShowAddForm] = useState(false);
@@ -373,7 +376,7 @@ const RssManager = () => {
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
                       <button 
                         onClick={() => {
-                          api.put(`/feeds/${feed.id}`, { title: editTitle, url: editUrl, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
+                          api.put(`/feeds/${feed.id}`, { title: editTitle, url: editUrl, polling_interval: editPollingInterval, scrape_enabled: editScrapeEnabled, include_in_dashboard: editIncludeInDashboard }).then(fetchFeeds);
                           setEditingFeedId(null);
                         }} 
                         style={{ padding: '0.3rem 0.6rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem' }}
@@ -412,11 +415,18 @@ const RssManager = () => {
                     <input
                       type="number"
                       min="1"
-                      defaultValue={feed.polling_interval || 60}
+                      value={editingFeedId === feed.id ? editPollingInterval : (feed.polling_interval || 60)}
+                      onChange={(e) => {
+                        if (editingFeedId === feed.id) {
+                          setEditPollingInterval(parseInt(e.target.value, 10));
+                        }
+                      }}
                       onBlur={(e) => {
-                        const newVal = parseInt(e.target.value, 10);
-                        if (newVal !== feed.polling_interval && !isNaN(newVal)) {
-                          api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: newVal, scrape_enabled: feed.scrape_enabled, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
+                        if (editingFeedId !== feed.id) {
+                          const newVal = parseInt(e.target.value, 10);
+                          if (newVal !== feed.polling_interval && !isNaN(newVal)) {
+                            api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: newVal, scrape_enabled: feed.scrape_enabled, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
+                          }
                         }
                       }}
                       style={{
@@ -439,9 +449,13 @@ const RssManager = () => {
                   <div className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
                     <input
                       type="checkbox"
-                      defaultChecked={feed.scrape_enabled}
+                      checked={editingFeedId === feed.id ? editScrapeEnabled : feed.scrape_enabled}
                       onChange={(e) => {
-                        api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: e.target.checked, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
+                        if (editingFeedId === feed.id) {
+                          setEditScrapeEnabled(e.target.checked);
+                        } else {
+                          api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: e.target.checked, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
+                        }
                       }}
                     />
                     <span className="toggle-slider"></span>
@@ -453,9 +467,13 @@ const RssManager = () => {
                   <div className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
                     <input
                       type="checkbox"
-                      defaultChecked={feed.include_in_dashboard}
+                      checked={editingFeedId === feed.id ? editIncludeInDashboard : feed.include_in_dashboard}
                       onChange={(e) => {
-                        api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled, include_in_dashboard: e.target.checked }).then(fetchFeeds);
+                        if (editingFeedId === feed.id) {
+                          setEditIncludeInDashboard(e.target.checked);
+                        } else {
+                          api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled, include_in_dashboard: e.target.checked }).then(fetchFeeds);
+                        }
                       }}
                     />
                     <span className="toggle-slider"></span>
@@ -476,7 +494,14 @@ const RssManager = () => {
                 ) : (
                   <>
                     <button 
-                      onClick={() => { setEditingFeedId(feed.id); setEditTitle(feed.title); setEditUrl(feed.url); }}
+                      onClick={() => { 
+                        setEditingFeedId(feed.id); 
+                        setEditTitle(feed.title); 
+                        setEditUrl(feed.url); 
+                        setEditPollingInterval(feed.polling_interval || 60);
+                        setEditScrapeEnabled(feed.scrape_enabled);
+                        setEditIncludeInDashboard(feed.include_in_dashboard);
+                      }}
                       style={{
                         background: 'transparent',
                         border: 'none',
