@@ -251,6 +251,33 @@ async def polling_loop():
                         db.commit()
                         # Send WS update
                         await manager.send_personal_message("NEW_ARTICLES", feed.user_id)
+                        
+                        # Check keywords and send push
+                        if feed.notify_enabled:
+                            user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == feed.user_id).all()
+                            if user_keywords:
+                                kw_texts = [kw.keyword.lower() for kw in user_keywords]
+                                for art in new_articles:
+                                    search_text = f"{art.title or ''} {art.summary or ''}".lower()
+                                    matched_kws = [k for k in kw_texts if k in search_text]
+                                    if matched_kws:
+                                        subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
+                                        for sub in subs:
+                                            try:
+                                                webpush(
+                                                    subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
+                                                    data=json.dumps({
+                                                        "title": "Nytt larmord hittat!",
+                                                        "body": f"Larmord '{matched_kws[0]}' hittades i: {art.title}",
+                                                        "url": art.link
+                                                    }),
+                                                    vapid_private_key=vapid_keys.VAPID_PRIVATE_KEY,
+                                                    vapid_claims=vapid_keys.VAPID_CLAIMS
+                                                )
+                                            except WebPushException as ex:
+                                                if ex.response and ex.response.status_code in [404, 410]:
+                                                    db.delete(sub)
+                                                    db.commit()
                     
                     # Update last polled time
                     feed.last_polled = current_time
@@ -464,3 +491,60 @@ def scrape_article(url: str, current_user: models.User = Depends(auth.get_curren
         print(f"Scrape error for {url}: {e}")
         return {"content": "Det gick inte att ladda artikeln automatiskt."}
 
+from pywebpush import webpush, WebPushException
+import json
+import vapid_keys
+
+@app.get("/push/vapid-public-key")
+def get_vapid_public_key():
+    return {"public_key": vapid_keys.VAPID_PUBLIC_KEY}
+
+@app.post("/push/subscribe", response_model=dict)
+def subscribe_push(sub: schemas.PushSubscriptionCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    # Check if exists
+    existing = db.query(models.PushSubscription).filter(
+        models.PushSubscription.endpoint == sub.endpoint,
+        models.PushSubscription.user_id == current_user.id
+    ).first()
+    
+    if not existing:
+        db_sub = models.PushSubscription(
+            endpoint=sub.endpoint,
+            p256dh=sub.p256dh,
+            auth=sub.auth,
+            user_id=current_user.id
+        )
+        db.add(db_sub)
+        db.commit()
+    
+    return {"status": "ok"}
+
+@app.post("/push/test")
+def test_push(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == current_user.id).all()
+    if not subs:
+        raise HTTPException(status_code=400, detail="Ingen push-prenumeration hittades för denna användare.")
+        
+    success_count = 0
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": sub.endpoint,
+                    "keys": {
+                        "p256dh": sub.p256dh,
+                        "auth": sub.auth
+                    }
+                },
+                data=json.dumps({"title": "Test från Servern!", "body": "Web Push fungerar nu perfekt!"}),
+                vapid_private_key=vapid_keys.VAPID_PRIVATE_KEY,
+                vapid_claims=vapid_keys.VAPID_CLAIMS
+            )
+            success_count += 1
+        except WebPushException as ex:
+            print(f"Web Push Error: {repr(ex)}")
+            if ex.response and ex.response.status_code in [404, 410]:
+                db.delete(sub)
+                db.commit()
+                
+    return {"status": "ok", "sent": success_count}

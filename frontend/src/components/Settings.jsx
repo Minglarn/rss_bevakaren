@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight } from 'lucide-react';
 import api from '../api';
-import { requestNotificationPermission, sendNotification } from '../utils/notifications';
+import { requestNotificationPermission, sendNotification, subscribeToWebPush } from '../utils/notifications';
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('notifications');
@@ -53,17 +53,25 @@ const Settings = () => {
   };
 
   const togglePush = async () => {
-    if (Notification.permission !== 'granted') {
-      const granted = await requestNotificationPermission();
-      if (granted) {
-        setPushEnabled(true);
-        sendNotification('Notiser aktiverade!', { body: 'Du kommer nu få larm när dina nyckelord nämns.' });
+    let granted = Notification.permission === 'granted';
+    if (!granted) {
+      granted = await requestNotificationPermission();
+    }
+    
+    if (granted) {
+      setPushEnabled(true);
+      const subSuccess = await subscribeToWebPush();
+      if (subSuccess) {
+        try {
+          await api.post('/push/test');
+        } catch (e) {
+          console.error("Test push misslyckades", e);
+        }
+      } else {
+        alert("Kunde inte registrera prenumerationen på servern.");
       }
-    } else {
-      sendNotification('Test Notis', { body: 'Detta är ett test från RSS Bevakare.' });
     }
   };
-
   const toggleFeedNotification = async (feed) => {
     try {
       const updatedFeed = { ...feed, notify_enabled: !feed.notify_enabled };

@@ -1,0 +1,5 @@
+VAPID_PUBLIC_KEY = "BKNIIQbOFLt6bFt4FLOIhtcx3N3q3e6aFo_YTbKBomylSuiP43C5YVM3oSOkvYLGZqIRXpHxVBuyRbIvI2zDbhA"
+VAPID_PRIVATE_KEY = "rcJ_lB8Q3xBmgW8QSSkO5zB-oSwkEu3NO1NpBHEXXqQ"
+VAPID_CLAIMS = {
+    "sub": "mailto:admin@example.com"
+}
