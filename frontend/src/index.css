@@ -147,7 +147,7 @@ input, textarea, .card-content-text, .card-summary {
 
 .main-content {
   flex: 1;
-  max-width: 1600px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 2rem;
   box-sizing: border-box;
