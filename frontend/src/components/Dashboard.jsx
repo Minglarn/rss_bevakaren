@@ -51,8 +51,8 @@ const Dashboard = () => {
       if (!isBackground) {
         setDisplayedFeeds(res.data.slice(0, itemsPerPage));
       } else {
-        // Update displayed feeds while keeping the current page visible
-        setDisplayedFeeds(res.data.slice(0, page * itemsPerPage));
+        // Update displayed feeds based on current length to avoid stale closure
+        setDisplayedFeeds(prev => res.data.slice(0, Math.max(prev.length, itemsPerPage)));
       }
       if (feedId) {
         try {
@@ -93,6 +93,7 @@ const Dashboard = () => {
       ws.onmessage = (event) => {
         if (event.data === "NEW_ARTICLES") {
           console.log("Nya artiklar mottagna via WebSocket! Uppdaterar UI...");
+          window.dispatchEvent(new Event('feedsUpdated')); // Ensure sidebar unread count updates
           fetchFeeds(true);
         }
       };
@@ -187,10 +188,12 @@ const Dashboard = () => {
     }
   };
 
-  // Assign a color based on source or index
-  const getBorderColor = (index) => {
-    const colors = ['#2563eb', '#e11d48', '#0ea5e9', '#16a34a', '#d97706'];
-    return colors[index % colors.length];
+  // Assign a color based on feed_id to keep it consistent per source
+  const getBorderColor = (feedId) => {
+    const colors = ['#2563eb', '#e11d48', '#0ea5e9', '#16a34a', '#d97706', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#6366f1'];
+    // Use feedId as the seed for selecting a color
+    const index = (feedId * 13) % colors.length;
+    return colors[index];
   };
 
   return (
@@ -217,7 +220,7 @@ const Dashboard = () => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {displayedFeeds.map((item, index) => {
-            const color = getBorderColor(index);
+            const color = getBorderColor(item.feed_id || 1);
             const isLast = index === displayedFeeds.length - 1;
             
             let showDivider = false;
