@@ -396,7 +396,7 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(dat
     else:
         query = query.filter(models.Feed.include_in_dashboard == 1)
         
-    articles = query.order_by(models.Article.received_ts.desc()).limit(150).all()
+    articles = query.order_by(models.Article.published_ts.desc()).limit(150).all()
     
     # Enhance articles with feed info for the UI
     response_items = []

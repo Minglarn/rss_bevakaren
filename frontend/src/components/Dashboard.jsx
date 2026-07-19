@@ -223,14 +223,14 @@ const Dashboard = () => {
             let showDivider = false;
             let dividerText = '';
             
-            const currentTs = item.received_ts ? item.received_ts * 1000 : (item.published_ts ? item.published_ts * 1000 : new Date(item.published).getTime());
+            const currentTs = (item.published_ts && item.published_ts > 0) ? item.published_ts * 1000 : (item.received_ts ? item.received_ts * 1000 : new Date(item.published).getTime());
             const currentD = new Date(currentTs);
             if (!isNaN(currentD.getTime())) {
                 if (index === 0) {
                     showDivider = true;
                 } else {
                     const prevItem = displayedFeeds[index - 1];
-                    const prevTs = prevItem.received_ts ? prevItem.received_ts * 1000 : (prevItem.published_ts ? prevItem.published_ts * 1000 : new Date(prevItem.published).getTime());
+                    const prevTs = (prevItem.published_ts && prevItem.published_ts > 0) ? prevItem.published_ts * 1000 : (prevItem.received_ts ? prevItem.received_ts * 1000 : new Date(prevItem.published).getTime());
                     const prevD = new Date(prevTs);
                     // Check if day changed
                     if (!isNaN(prevD.getTime()) && 
@@ -274,10 +274,10 @@ const Dashboard = () => {
                   style={{ backgroundColor: color }}
                 >
                   <div className="feed-card-time">
-                    {formatTime(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
+                    {formatTime((item.published_ts && item.published_ts > 0) ? new Date(item.published_ts * 1000) : (item.received_ts ? new Date(item.received_ts * 1000) : item.published))}
                   </div>
                   <div className="feed-card-date">
-                    {formatDateLabel(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
+                    {formatDateLabel((item.published_ts && item.published_ts > 0) ? new Date(item.published_ts * 1000) : (item.received_ts ? new Date(item.received_ts * 1000) : item.published))}
                   </div>
                   <List size={22} style={{ marginTop: 'auto', opacity: 0.8 }} />
                 </div>
