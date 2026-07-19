@@ -141,6 +141,41 @@ const Settings = () => {
             ) : (
               <p style={{ color: 'var(--text-muted)' }}>Laddar systeminformation...</p>
             )}
+
+            <div style={{ marginTop: '2rem', padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                Felsökning
+              </h4>
+              <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                Om appen känns utdaterad eller om du har problem med sparad data kan du tvinga fram en uppdatering. Detta rensar webbläsarens lokala minne för appen.
+              </p>
+              <button 
+                onClick={() => {
+                  if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                      for(let registration of registrations) {
+                        registration.unregister();
+                      }
+                      window.location.reload(true);
+                    });
+                  } else {
+                    window.location.reload(true);
+                  }
+                }}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: 'transparent',
+                  color: 'var(--primary)',
+                  border: '1px solid var(--primary)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.85rem'
+                }}
+              >
+                Tvinga App-uppdatering
+              </button>
+            </div>
           </div>
 
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Fler allmänna inställningar kommer i framtida uppdateringar.</p>
