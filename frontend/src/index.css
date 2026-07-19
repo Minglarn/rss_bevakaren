@@ -1422,3 +1422,11 @@ input:checked + .toggle-slider:before {
 @media (min-width: 1024px) {
   .desktop-only { display: flex !important; }
 }
+
+@media (max-width: 600px) {
+  .my-toast-container > div {
+    top: 16px !important;
+    bottom: auto !important;
+    justify-content: flex-start !important;
+  }
+}
