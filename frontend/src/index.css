@@ -9,6 +9,10 @@
   --border-color: rgba(0, 0, 0, 0.08);
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -1261,6 +1265,7 @@ select:focus, input:focus {
   display: inline-block;
   width: 44px;
   height: 24px;
+  flex-shrink: 0;
 }
 
 .toggle-switch input {
