@@ -500,7 +500,7 @@ import requests
 from bs4 import BeautifulSoup
 
 @app.get("/scrape")
-def scrape_article(url: str, current_user: models.User = Depends(auth.get_current_user)):
+def scrape_article(url: str, current_username: str = Depends(auth.get_current_username)):
     print(f"Skrapning påbörjad för URL: {url}")
     try:
         headers = {
