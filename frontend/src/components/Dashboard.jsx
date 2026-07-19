@@ -657,33 +657,8 @@ const Dashboard = () => {
       {/* Gå till Toppen knapp */}
       {showScrollTop && (
         <button
+          className="scroll-to-top"
           onClick={scrollToTop}
-          style={{
-            position: 'fixed',
-            bottom: '2rem',
-            right: '2rem',
-            backgroundColor: 'var(--primary)',
-            color: 'white',
-            width: '50px',
-            height: '50px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)',
-            border: 'none',
-            cursor: 'pointer',
-            zIndex: 1000,
-            transition: 'transform 0.2s, backgroundColor 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.backgroundColor = 'var(--primary-dark)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.backgroundColor = 'var(--primary)';
-          }}
           title="Till toppen"
         >
           <ArrowUp size={24} />
