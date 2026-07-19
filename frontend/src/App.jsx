@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
-import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash } from 'lucide-react';
+import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash, Filter, Home, Menu } from 'lucide-react';
 import Login from './Login';
 import Dashboard from './components/Dashboard';
 import RssManager from './components/RssManager';
@@ -14,6 +14,7 @@ const AppLayout = ({ children, onLogout }) => {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [myFeeds, setMyFeeds] = useState([]);
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
   useEffect(() => {
     const fetchMyFeeds = async () => {
@@ -33,17 +34,19 @@ const AppLayout = ({ children, onLogout }) => {
 
   return (
     <div className="app-container" style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-app)', transition: 'all 0.3s' }}>
-      {/* Sidebar */}
-      <div style={{
-        width: isCollapsed ? '80px' : '260px',
-        backgroundColor: 'var(--bg-card)',
-        borderRight: '1px solid var(--border-color)',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '1.5rem 0',
-        transition: 'width 0.3s ease',
-        position: 'relative'
-      }}>
+      {/* Desktop Sidebar */}
+      <div 
+        className="desktop-sidebar"
+        style={{
+          width: isCollapsed ? '80px' : '260px',
+          backgroundColor: 'var(--bg-card)',
+          borderRight: '1px solid var(--border-color)',
+          flexDirection: 'column',
+          padding: '1.5rem 0',
+          transition: 'width 0.3s ease',
+          position: 'relative'
+        }}
+      >
         {/* Toggle Collapse Button */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -189,8 +192,89 @@ const AppLayout = ({ children, onLogout }) => {
       </div>
 
       {/* Main Content */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div className="app-main-content">
         {children}
+      </div>
+
+      {/* Mobile Bottom Bar */}
+      <div className="mobile-bottom-bar">
+        <Link to="/" className={`bottom-bar-item ${location.pathname === '/' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+          <div className="icon-wrapper">
+            <Home size={22} />
+            {myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
+              <span className="bottom-bar-badge">{myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}</span>
+            )}
+          </div>
+          <span>Hem</span>
+        </Link>
+        <button 
+          className="bottom-bar-item" 
+          onClick={() => setIsMobileSheetOpen(true)}
+          style={{ background: 'transparent', border: 'none', fontFamily: 'inherit' }}
+        >
+          <div className="icon-wrapper">
+            <Filter size={22} />
+          </div>
+          <span>Flöden</span>
+        </button>
+        <Link to="/manage" className={`bottom-bar-item ${location.pathname === '/manage' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+          <div className="icon-wrapper">
+            <List size={22} />
+          </div>
+          <span>Hantera</span>
+        </Link>
+        <button 
+          className="bottom-bar-item" 
+          onClick={onLogout}
+          style={{ background: 'transparent', border: 'none', fontFamily: 'inherit', color: '#ef4444' }}
+        >
+          <div className="icon-wrapper">
+            <LogOut size={22} />
+          </div>
+          <span>Logga ut</span>
+        </button>
+      </div>
+
+      {/* Mobile Feeds Bottom Sheet */}
+      <div className={`mobile-feeds-sheet-overlay ${isMobileSheetOpen ? 'open' : ''}`} onClick={() => setIsMobileSheetOpen(false)}></div>
+      <div className={`mobile-feeds-sheet ${isMobileSheetOpen ? 'open' : ''}`}>
+        <div className="sheet-handle"></div>
+        <div className="sheet-title">Mina Flöden</div>
+        <div className="sheet-content">
+          <Link 
+            to="/" 
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem',
+              color: location.pathname === '/' && !location.search.includes('feedId') ? 'var(--primary)' : 'var(--text-main)', 
+              backgroundColor: location.pathname === '/' && !location.search.includes('feedId') ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+              borderRadius: '12px', textDecoration: 'none', fontWeight: 600
+            }}
+            onClick={() => setIsMobileSheetOpen(false)}
+          >
+            <Home size={20} /> Alla flöden
+          </Link>
+          {myFeeds.map(feed => (
+            <Link 
+              to={`/?feedId=${feed.id}`} 
+              key={feed.id} 
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem',
+                color: location.search.includes(`feedId=${feed.id}`) ? 'var(--primary)' : 'var(--text-main)', 
+                backgroundColor: location.search.includes(`feedId=${feed.id}`) ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+                borderRadius: '12px', textDecoration: 'none', fontWeight: location.search.includes(`feedId=${feed.id}`) ? 600 : 400
+              }}
+              onClick={() => setIsMobileSheetOpen(false)}
+            >
+              <Hash size={18} style={{ color: 'var(--primary)' }} /> 
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{feed.title}</span>
+              {feed.unread_count > 0 && (
+                <span style={{ backgroundColor: '#ef4444', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold' }}>
+                  {feed.unread_count}
+                </span>
+              )}
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
