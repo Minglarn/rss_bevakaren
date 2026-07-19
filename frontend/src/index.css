@@ -1026,6 +1026,19 @@ select:focus, input:focus {
   background-color: var(--primary-hover);
 }
 
+.events-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .events-list.cols-1 { grid-template-columns: repeat(1, 1fr); }
+  .events-list.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .events-list.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .events-list.cols-4 { grid-template-columns: repeat(4, 1fr); }
+}
+
 @media (max-width: 768px) {
   .desktop-sidebar {
     display: none !important;
