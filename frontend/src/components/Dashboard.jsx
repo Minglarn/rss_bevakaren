@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft, List, ArrowUp, CheckCheck } from 'lucide-react';
+import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft, List, ArrowUp, CheckCheck, Eye, EyeOff } from 'lucide-react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 
@@ -16,6 +16,14 @@ const Dashboard = () => {
   
   const [readItems, setReadItems] = useState(new Set());
   const readTimers = useRef({});
+  const longPressTimers = useRef({});
+  const [showRead, setShowRead] = useState(() => {
+    return localStorage.getItem('rss_show_read') === 'true';
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('rss_show_read', showRead);
+  }, [showRead]);
   
   const [desktopColumns, setDesktopColumns] = useState(() => {
     const saved = localStorage.getItem('rss_desktop_columns');
@@ -57,7 +65,10 @@ const Dashboard = () => {
       setPage(1);
     }
     try {
-      const url = feedId ? `/dashboard-feeds?feed_id=${feedId}` : '/dashboard-feeds';
+      let url = feedId ? `/dashboard-feeds?feed_id=${feedId}` : '/dashboard-feeds';
+      if (showRead) {
+        url += url.includes('?') ? '&show_read=true' : '?show_read=true';
+      }
       const res = await api.get(url);
       setAllFeeds(res.data);
       if (!isBackground) {
@@ -127,7 +138,7 @@ const Dashboard = () => {
     connectWebSocket();
     
     const handleFeedsUpdated = () => {
-      fetchFeeds();
+      fetchFeeds(true);
     };
     
     window.addEventListener('feedsUpdated', handleFeedsUpdated);
@@ -138,7 +149,7 @@ const Dashboard = () => {
       if (ws) ws.close();
       window.removeEventListener('feedsUpdated', handleFeedsUpdated);
     };
-  }, [feedId]);
+  }, [feedId, showRead]);
 
   // Infinite Scroll logic
   const lastElementRef = useCallback(node => {
@@ -183,6 +194,9 @@ const Dashboard = () => {
     try {
       await api.post(`/articles/${id}/read`);
       setReadItems(prev => new Set(prev).add(id));
+      if (navigator.vibrate) {
+        navigator.vibrate(50); // Haptic feedback on mobile
+      }
     } catch (error) {
       console.error("Kunde inte markera som läst:", error);
     }
@@ -271,7 +285,28 @@ const Dashboard = () => {
             </h1>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setShowRead(!showRead)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '6px 12px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: showRead ? 'var(--primary)' : 'var(--bg-card)',
+                color: showRead ? 'white' : 'var(--text-muted)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                transition: 'all 0.2s'
+              }}
+              title={showRead ? "Dölj lästa kort" : "Visa lästa kort"}
+            >
+              {showRead ? <EyeOff size={16} /> : <Eye size={16} />}
+              <span className="desktop-only">{showRead ? "Dölj lästa" : "Visa lästa"}</span>
+            </button>
             <button
               onClick={markAllAsRead}
               style={{
@@ -386,9 +421,31 @@ const Dashboard = () => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: readItems.has(item.id) || item.is_read ? 0.5 : 1, x: 0 }}
                   transition={{ duration: 0.2 }}
+                  onPointerDown={() => {
+                    longPressTimers.current[item.id] = setTimeout(() => {
+                      if (!readItems.has(item.id) && !item.is_read) {
+                        markAsRead(item.id);
+                      }
+                    }, 600); // 600ms for long press
+                  }}
+                  onPointerUp={() => {
+                    if (longPressTimers.current[item.id]) {
+                      clearTimeout(longPressTimers.current[item.id]);
+                    }
+                  }}
+                  onPointerLeave={() => {
+                    if (longPressTimers.current[item.id]) {
+                      clearTimeout(longPressTimers.current[item.id]);
+                    }
+                  }}
+                  onPointerCancel={() => {
+                    if (longPressTimers.current[item.id]) {
+                      clearTimeout(longPressTimers.current[item.id]);
+                    }
+                  }}
                   onClick={() => handleExpand(index, item.link, item.id)}
                   className={`feed-card ${readItems.has(item.id) || item.is_read ? 'read' : ''}`}
-                  style={{ filter: readItems.has(item.id) || item.is_read ? 'grayscale(100%)' : 'none' }}
+                  style={{ filter: readItems.has(item.id) || item.is_read ? 'grayscale(100%)' : 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
                 >
                 {/* Left colored bar */}
                 <div 
