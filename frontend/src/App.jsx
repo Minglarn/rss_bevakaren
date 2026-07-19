@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash, Filter, Home, Menu, RefreshCw } from 'lucide-react';
+import { Toaster, toast } from 'react-hot-toast';
 import Login from './Login';
 import Dashboard from './components/Dashboard';
 import RssManager from './components/RssManager';
@@ -15,6 +16,7 @@ const AppLayout = ({ children, onLogout }) => {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [myFeeds, setMyFeeds] = useState([]);
+  const myFeedsRef = useRef([]);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   const [pollingFeeds, setPollingFeeds] = useState(new Set());
 
@@ -24,20 +26,52 @@ const AppLayout = ({ children, onLogout }) => {
         const res = await api.get('/feeds');
         const sortedFeeds = res.data.sort((a, b) => a.title.localeCompare(b.title, 'sv'));
         setMyFeeds(sortedFeeds);
+        myFeedsRef.current = sortedFeeds;
       } catch (err) {
         console.error("Kunde inte hämta flöden till sidomenyn", err);
       }
     };
     fetchMyFeeds();
     
-    // Listen for custom event to refresh feeds without reloading window
-    window.addEventListener('feedsUpdated', fetchMyFeeds);
+    const handleFeedsUpdated = (e) => {
+      fetchMyFeeds();
+      if (e && e.detail && e.detail.feedId) {
+        const { feedId, count } = e.detail;
+        const feed = myFeedsRef.current.find(f => f.id === feedId);
+        if (feed) {
+          toast.success(`${count} nya händelser från ${feed.title}!`, {
+            style: {
+              borderRadius: '10px',
+              background: 'var(--bg-card)',
+              color: 'var(--text-main)',
+              border: '1px solid var(--accent)',
+            }
+          });
+        }
+      }
+    };
+    window.addEventListener('feedsUpdated', handleFeedsUpdated);
     
     const handleStart = (e) => {
+      const feedId = e.detail;
       setPollingFeeds(prev => {
         const newSet = new Set(prev);
-        newSet.add(e.detail);
+        newSet.add(feedId);
         return newSet;
+      });
+      
+      const feed = myFeedsRef.current.find(f => f.id === feedId);
+      const title = feed ? feed.title : `flöde ${feedId}`;
+      toast(`Letar nya händelser på ${title}...`, {
+        icon: '🔄',
+        id: `poll-${feedId}`, // Ensures we don't spam if it starts again quickly
+        duration: 3000,
+        style: {
+          borderRadius: '10px',
+          background: 'var(--bg-card)',
+          color: 'var(--text-main)',
+          border: '1px solid var(--primary)',
+        }
       });
     };
     const handleEnd = (e) => {
@@ -51,7 +85,7 @@ const AppLayout = ({ children, onLogout }) => {
     window.addEventListener('pollingEnd', handleEnd);
     
     return () => {
-      window.removeEventListener('feedsUpdated', fetchMyFeeds);
+      window.removeEventListener('feedsUpdated', handleFeedsUpdated);
       window.removeEventListener('pollingStart', handleStart);
       window.removeEventListener('pollingEnd', handleEnd);
     };
@@ -359,6 +393,7 @@ const App = () => {
         </AppLayout>
       </Router>
       <PWABadge />
+      <Toaster position="bottom-right" />
     </>
   );
 };

@@ -287,7 +287,7 @@ async def polling_loop():
                         print(f"Found {len(new_articles)} new articles for feed {feed.id}", flush=True)
                         db.commit()
                         # Send WS update
-                        await manager.send_personal_message("NEW_ARTICLES", feed.user_id)
+                        await manager.send_personal_message(f"NEW_ARTICLES:{feed.id}:{len(new_articles)}", feed.user_id)
                         
                         # Check keywords and feed notify settings
                         user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == feed.user_id).all()

@@ -134,9 +134,16 @@ const Dashboard = () => {
       };
       
       ws.onmessage = (event) => {
-        if (event.data === "NEW_ARTICLES") {
+        if (event.data.startsWith("NEW_ARTICLES")) {
+          const parts = event.data.split(":");
+          if (parts.length > 2) {
+            const feedId = parseInt(parts[1]);
+            const count = parseInt(parts[2]);
+            window.dispatchEvent(new CustomEvent('feedsUpdated', { detail: { feedId, count } }));
+          } else {
+            window.dispatchEvent(new Event('feedsUpdated')); // Fallback for old clients
+          }
           console.log("Nya artiklar mottagna via WebSocket! Uppdaterar UI...");
-          window.dispatchEvent(new Event('feedsUpdated')); // Ensure sidebar unread count updates
           fetchFeeds(true);
         } else if (event.data.startsWith("POLLING_START:")) {
           const feedId = parseInt(event.data.split(":")[1]);
