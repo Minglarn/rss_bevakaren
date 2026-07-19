@@ -3,6 +3,7 @@ import asyncio
 import time
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from typing import List, Optional
 from datetime import timedelta
 import os
@@ -456,7 +457,7 @@ def get_opml_feeds(current_user: models.User = Depends(auth.get_current_user)):
     return feeds
 
 @app.get("/dashboard-feeds", response_model=List[schemas.ArticleResponse])
-def get_dashboard_feeds(feed_id: Optional[int] = None, show_read: Optional[bool] = False, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+def get_dashboard_feeds(feed_id: Optional[int] = None, show_read: Optional[bool] = False, search: Optional[str] = None, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == current_user.id)
     if feed_id:
         query = query.filter(models.Feed.id == feed_id)
@@ -465,6 +466,9 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, show_read: Optional[bool]
         
     if not show_read:
         query = query.filter((models.Article.is_read == 0) | (models.Article.is_read == None))
+        
+    if search:
+        query = query.filter(or_(models.Article.title.ilike(f"%{search}%"), models.Article.summary.ilike(f"%{search}%")))
         
     articles = query.order_by(models.Article.received_ts.desc()).limit(150).all()
     

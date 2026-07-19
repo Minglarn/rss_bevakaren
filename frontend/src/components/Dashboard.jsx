@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft, List, ArrowUp, CheckCheck, Eye, EyeOff } from 'lucide-react';
+import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft, List, ArrowUp, CheckCheck, Eye, EyeOff, Search } from 'lucide-react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 
@@ -13,6 +13,16 @@ const Dashboard = () => {
   const observer = useRef();
   const [searchParams] = useSearchParams();
   const feedId = searchParams.get('feedId');
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 400); // 400ms debounce
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
   
   const [readItems, setReadItems] = useState(new Set());
   const [unreadItems, setUnreadItems] = useState(new Set());
@@ -69,6 +79,9 @@ const Dashboard = () => {
       let url = feedId ? `/dashboard-feeds?feed_id=${feedId}` : '/dashboard-feeds';
       if (showRead) {
         url += url.includes('?') ? '&show_read=true' : '?show_read=true';
+      }
+      if (debouncedSearch) {
+        url += url.includes('?') ? `&search=${encodeURIComponent(debouncedSearch)}` : `?search=${encodeURIComponent(debouncedSearch)}`;
       }
       const res = await api.get(url);
       setAllFeeds(res.data);
@@ -150,7 +163,7 @@ const Dashboard = () => {
       if (ws) ws.close();
       window.removeEventListener('feedsUpdated', handleFeedsUpdated);
     };
-  }, [feedId, showRead]);
+  }, [feedId, showRead, debouncedSearch]);
 
   // Infinite Scroll logic
   const lastElementRef = useCallback(node => {
@@ -314,83 +327,110 @@ const Dashboard = () => {
               {feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'IDAG'}
             </h1>
           </div>
+        </div>
+      </div>
+
+      {/* Toolbar / Verktygsfält */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        padding: '0.75rem 1.5rem',
+        backgroundColor: 'var(--bg-card)',
+        borderBottom: '1px solid var(--border-color)',
+        marginBottom: '1.5rem',
+        position: 'sticky',
+        top: '60px',
+        zIndex: 10
+      }}>
+        <div style={{ flex: '1 1 300px', display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-app)', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <Search size={18} style={{ color: 'var(--text-muted)', marginRight: '0.5rem' }} />
+          <input 
+            type="text" 
+            placeholder="Sök bland nyheter..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-main)', width: '100%', fontSize: '0.95rem' }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setShowRead(!showRead)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '6px 12px',
+              border: '1px solid var(--border-color)',
+              backgroundColor: showRead ? 'var(--primary)' : 'var(--bg-card)',
+              color: showRead ? 'white' : 'var(--text-muted)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              transition: 'all 0.2s'
+            }}
+            title={showRead ? "Dölj lästa kort" : "Visa lästa kort"}
+          >
+            {showRead ? <EyeOff size={16} /> : <Eye size={16} />}
+            <span className="desktop-only">{showRead ? "Dölj lästa" : "Visa lästa"}</span>
+          </button>
+          <button
+            onClick={markAllAsRead}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '6px 12px',
+              border: '1px solid var(--border-color)',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--text-muted)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--primary)';
+              e.currentTarget.style.borderColor = 'var(--primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--text-muted)';
+              e.currentTarget.style.borderColor = 'var(--border-color)';
+            }}
+            title="Markera alla nuvarande nyheter som lästa"
+          >
+            <CheckCheck size={16} />
+            <span className="desktop-only">Markera alla som lästa</span>
+          </button>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <button
-              onClick={() => setShowRead(!showRead)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '6px 12px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: showRead ? 'var(--primary)' : 'var(--bg-card)',
-                color: showRead ? 'white' : 'var(--text-muted)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                transition: 'all 0.2s'
-              }}
-              title={showRead ? "Dölj lästa kort" : "Visa lästa kort"}
-            >
-              {showRead ? <EyeOff size={16} /> : <Eye size={16} />}
-              <span className="desktop-only">{showRead ? "Dölj lästa" : "Visa lästa"}</span>
-            </button>
-            <button
-              onClick={markAllAsRead}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '6px 12px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-card)',
-                color: 'var(--text-muted)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--primary)';
-                e.currentTarget.style.borderColor = 'var(--primary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--text-muted)';
-                e.currentTarget.style.borderColor = 'var(--border-color)';
-              }}
-              title="Markera alla nuvarande nyheter som lästa"
-            >
-              <CheckCheck size={16} />
-              <span className="desktop-only">Markera alla som lästa</span>
-            </button>
-            
-            {/* Layout controls (desktop only) */}
-            <div className="layout-controls desktop-only" style={{ gap: '4px', backgroundColor: 'var(--bg-app)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-             {[1, 2, 3, 4].map(num => (
-               <button 
-                 key={num}
-                 onClick={() => setDesktopColumns(num)}
-                 style={{ 
-                   padding: '4px 12px', 
-                   border: 'none', 
-                   background: desktopColumns === num ? 'var(--primary)' : 'transparent', 
-                   color: desktopColumns === num ? 'white' : 'var(--text-muted)',
-                   borderRadius: '6px',
-                   cursor: 'pointer',
-                   fontWeight: 600,
-                   fontSize: '0.85rem',
-                   transition: 'all 0.2s'
-                 }}
-                 title={`${num} kort per rad`}
-               >
-                 {num}
-               </button>
-             ))}
-           </div>
-         </div>
+          {/* Layout controls (desktop only) */}
+          <div className="layout-controls desktop-only" style={{ gap: '4px', backgroundColor: 'var(--bg-app)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)', marginLeft: 'auto' }}>
+            {[1, 2, 3, 4].map(num => (
+              <button 
+                key={num}
+                onClick={() => setDesktopColumns(num)}
+                style={{ 
+                  padding: '4px 12px', 
+                  border: 'none', 
+                  background: desktopColumns === num ? 'var(--primary)' : 'transparent', 
+                  color: desktopColumns === num ? 'white' : 'var(--text-muted)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  transition: 'all 0.2s'
+                }}
+                title={`${num} kort per rad`}
+              >
+                {num}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
