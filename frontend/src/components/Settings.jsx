@@ -60,10 +60,10 @@ const Settings = () => {
     
     if (granted) {
       setPushEnabled(true);
-      const subSuccess = await subscribeToWebPush();
-      if (subSuccess) {
+      const subEndpoint = await subscribeToWebPush();
+      if (subEndpoint) {
         try {
-          await api.post('/push/test');
+          await api.post('/push/test', { endpoint: subEndpoint });
         } catch (e) {
           console.error("Test push misslyckades", e);
         }

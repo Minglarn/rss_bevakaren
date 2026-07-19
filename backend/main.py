@@ -3,11 +3,12 @@ import asyncio
 import time
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from datetime import timedelta
 import os
 
 import models, schemas, database, auth
+from pydantic import BaseModel
 
 models.Base.metadata.create_all(bind=database.engine)
 
@@ -571,9 +572,15 @@ def subscribe_push(sub: schemas.PushSubscriptionCreate, db: Session = Depends(da
     
     return {"status": "ok"}
 
-@app.post("/push/test")
-def test_push(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == current_user.id).all()
+class TestPushRequest(BaseModel):
+    endpoint: Optional[str] = None
+
+@app.post("/push/test", response_model=dict)
+def test_push(req: Optional[TestPushRequest] = None, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    query = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == current_user.id)
+    if req and req.endpoint:
+        query = query.filter(models.PushSubscription.endpoint == req.endpoint)
+    subs = query.all()
     if not subs:
         raise HTTPException(status_code=400, detail="Ingen push-prenumeration hittades för denna användare.")
         

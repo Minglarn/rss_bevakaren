@@ -218,7 +218,7 @@ const Dashboard = () => {
           <p style={{ color: 'var(--text-muted)' }}>Inga nyheter hittades. Kanske behöver du lägga till flöden i RSS-hanteraren?</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="events-list" style={{ gap: '1rem' }}>
           {displayedFeeds.map((item, index) => {
             const color = getBorderColor(item.feed_id || 1);
             const isLast = index === displayedFeeds.length - 1;
@@ -251,11 +251,12 @@ const Dashboard = () => {
             return (
               <React.Fragment key={index}>
                 {showDivider && (
-                  <div style={{ 
+                  <div className="divider-header" style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: '1rem', 
-                    margin: '1.5rem 0 1rem 0'
+                    margin: '1.5rem 0 1rem 0',
+                    gridColumn: '1 / -1'
                   }}>
                     <div style={{ fontWeight: 'bold', color: '#2563eb', fontSize: '1.2rem' }}>
                       {dividerText}

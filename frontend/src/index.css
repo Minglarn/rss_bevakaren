@@ -688,6 +688,12 @@ select:focus, input:focus {
   align-items: start;
 }
 
+@media (min-width: 1024px) {
+  .events-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .divider {
   grid-column: 1 / -1;
   font-size: 1.125rem;

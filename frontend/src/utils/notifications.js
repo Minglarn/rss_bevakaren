@@ -52,10 +52,10 @@ export const subscribeToWebPush = async () => {
       auth: subJSON.keys.auth
     });
     
-    return true;
+    return subJSON.endpoint;
   } catch (error) {
     console.error('Kunde inte prenumerera på push:', error);
-    return false;
+    return null;
   }
 };
 
