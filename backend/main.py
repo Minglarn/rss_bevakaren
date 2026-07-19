@@ -246,7 +246,13 @@ async def polling_loop():
                     # Time to poll!
                     short_url = (feed.url[:40] + '...') if len(feed.url) > 40 else feed.url
                     print(f"Polling feed {feed.id} ({short_url})...", flush=True)
-                    items = rss_parser.fetch_feed_items(feed.url)
+                    
+                    await manager.send_personal_message(f"POLLING_START:{feed.id}", feed.user_id)
+                    try:
+                        items = rss_parser.fetch_feed_items(feed.url)
+                    except Exception as e:
+                        print(f"Failed to fetch feed {feed.id}: {e}", flush=True)
+                        items = []
                     
                     new_articles = []
                     for item in items:
@@ -328,6 +334,8 @@ async def polling_loop():
                     # Update last polled time
                     feed.last_polled = current_time
                     db.commit()
+                    
+                    await manager.send_personal_message(f"POLLING_END:{feed.id}", feed.user_id)
         except Exception as e:
             print(f"Polling error: {e}", flush=True)
         finally:

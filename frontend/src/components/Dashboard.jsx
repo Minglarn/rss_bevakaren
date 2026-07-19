@@ -138,6 +138,12 @@ const Dashboard = () => {
           console.log("Nya artiklar mottagna via WebSocket! Uppdaterar UI...");
           window.dispatchEvent(new Event('feedsUpdated')); // Ensure sidebar unread count updates
           fetchFeeds(true);
+        } else if (event.data.startsWith("POLLING_START:")) {
+          const feedId = parseInt(event.data.split(":")[1]);
+          window.dispatchEvent(new CustomEvent('pollingStart', { detail: feedId }));
+        } else if (event.data.startsWith("POLLING_END:")) {
+          const feedId = parseInt(event.data.split(":")[1]);
+          window.dispatchEvent(new CustomEvent('pollingEnd', { detail: feedId }));
         }
       };
       

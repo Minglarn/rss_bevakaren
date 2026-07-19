@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
-import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash, Filter, Home, Menu } from 'lucide-react';
+import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash, Filter, Home, Menu, RefreshCw } from 'lucide-react';
 import Login from './Login';
 import Dashboard from './components/Dashboard';
 import RssManager from './components/RssManager';
@@ -16,6 +16,7 @@ const AppLayout = ({ children, onLogout }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [myFeeds, setMyFeeds] = useState([]);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+  const [pollingFeeds, setPollingFeeds] = useState(new Set());
 
   useEffect(() => {
     const fetchMyFeeds = async () => {
@@ -30,7 +31,29 @@ const AppLayout = ({ children, onLogout }) => {
     
     // Listen for custom event to refresh feeds without reloading window
     window.addEventListener('feedsUpdated', fetchMyFeeds);
-    return () => window.removeEventListener('feedsUpdated', fetchMyFeeds);
+    
+    const handleStart = (e) => {
+      setPollingFeeds(prev => {
+        const newSet = new Set(prev);
+        newSet.add(e.detail);
+        return newSet;
+      });
+    };
+    const handleEnd = (e) => {
+      setPollingFeeds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(e.detail);
+        return newSet;
+      });
+    };
+    window.addEventListener('pollingStart', handleStart);
+    window.addEventListener('pollingEnd', handleEnd);
+    
+    return () => {
+      window.removeEventListener('feedsUpdated', fetchMyFeeds);
+      window.removeEventListener('pollingStart', handleStart);
+      window.removeEventListener('pollingEnd', handleEnd);
+    };
   }, [location]);
 
   return (
@@ -159,7 +182,10 @@ const AppLayout = ({ children, onLogout }) => {
                     }}
                   >
                     <Hash size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} /> 
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{feed.title}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {feed.title}
+                      {pollingFeeds.has(feed.id) && <RefreshCw size={12} className="spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />}
+                    </span>
                     {!isCollapsed && feed.unread_count > 0 && (
                       <span style={{ 
                         backgroundColor: '#ef4444', 
@@ -279,7 +305,10 @@ const AppLayout = ({ children, onLogout }) => {
               onClick={() => setIsMobileSheetOpen(false)}
             >
               <Hash size={18} style={{ color: 'var(--primary)' }} /> 
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{feed.title}</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {feed.title}
+                {pollingFeeds.has(feed.id) && <RefreshCw size={14} className="spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />}
+              </span>
               {feed.unread_count > 0 && (
                 <span style={{ backgroundColor: '#ef4444', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold' }}>
                   {feed.unread_count}
