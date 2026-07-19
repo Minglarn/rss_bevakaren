@@ -22,7 +22,8 @@ const AppLayout = ({ children, onLogout }) => {
     const fetchMyFeeds = async () => {
       try {
         const res = await api.get('/feeds');
-        setMyFeeds(res.data);
+        const sortedFeeds = res.data.sort((a, b) => a.title.localeCompare(b.title, 'sv'));
+        setMyFeeds(sortedFeeds);
       } catch (err) {
         console.error("Kunde inte hämta flöden till sidomenyn", err);
       }
