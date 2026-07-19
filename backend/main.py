@@ -271,8 +271,8 @@ async def polling_loop():
                                                         "body": f"Larmord '{matched_kws[0]}' hittades i: {art.title}",
                                                         "url": art.link
                                                     }),
-                                                    vapid_private_key=vapid_keys.VAPID_PRIVATE_KEY,
-                                                    vapid_claims=vapid_keys.VAPID_CLAIMS
+                                                    vapid_private_key=VAPID_KEYS["private_key"],
+                                                    vapid_claims={"sub": VAPID_KEYS["sub"]}
                                                 )
                                             except WebPushException as ex:
                                                 if ex.response and ex.response.status_code in [404, 410]:
@@ -493,11 +493,49 @@ def scrape_article(url: str, current_user: models.User = Depends(auth.get_curren
 
 from pywebpush import webpush, WebPushException
 import json
-import vapid_keys
+import base64
+from cryptography.hazmat.primitives.asymmetric import ec
+
+def base64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode('utf-8').rstrip('=')
+
+def get_or_create_vapid_keys():
+    import os
+    keys_path = "/data/vapid_keys.json"
+    
+    if not os.path.exists("/data"):
+        keys_path = "vapid_keys.json"
+        
+    if os.path.exists(keys_path):
+        with open(keys_path, "r") as f:
+            return json.load(f)
+            
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    private_numbers = private_key.private_numbers()
+    private_bytes = private_numbers.private_value.to_bytes(32, byteorder='big')
+    
+    public_key = private_key.public_key()
+    public_numbers = public_key.public_numbers()
+    x = public_numbers.x.to_bytes(32, byteorder='big')
+    y = public_numbers.y.to_bytes(32, byteorder='big')
+    public_bytes = b'\x04' + x + y
+    
+    keys = {
+        "private_key": base64url_encode(private_bytes),
+        "public_key": base64url_encode(public_bytes),
+        "sub": "mailto:admin@example.com"
+    }
+    
+    with open(keys_path, "w") as f:
+        json.dump(keys, f)
+        
+    return keys
+
+VAPID_KEYS = get_or_create_vapid_keys()
 
 @app.get("/push/vapid-public-key")
 def get_vapid_public_key():
-    return {"public_key": vapid_keys.VAPID_PUBLIC_KEY}
+    return {"public_key": VAPID_KEYS["public_key"]}
 
 @app.post("/push/subscribe", response_model=dict)
 def subscribe_push(sub: schemas.PushSubscriptionCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
@@ -537,8 +575,8 @@ def test_push(db: Session = Depends(database.get_db), current_user: models.User 
                     }
                 },
                 data=json.dumps({"title": "Test från Servern!", "body": "Web Push fungerar nu perfekt!"}),
-                vapid_private_key=vapid_keys.VAPID_PRIVATE_KEY,
-                vapid_claims=vapid_keys.VAPID_CLAIMS
+                vapid_private_key=VAPID_KEYS["private_key"],
+                vapid_claims={"sub": VAPID_KEYS["sub"]}
             )
             success_count += 1
         except WebPushException as ex:
