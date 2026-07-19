@@ -14,6 +14,15 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const feedId = searchParams.get('feedId');
   
+  const [desktopColumns, setDesktopColumns] = useState(() => {
+    const saved = localStorage.getItem('rss_desktop_columns');
+    return saved ? parseInt(saved) : 3;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('rss_desktop_columns', desktopColumns);
+  }, [desktopColumns]);
+  
   const [expandedItems, setExpandedItems] = useState({});
   const [scrapedContents, setScrapedContents] = useState({});
   const [scrapingUrls, setScrapingUrls] = useState({});
@@ -200,15 +209,41 @@ const Dashboard = () => {
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {feedId && (
-            <Link to="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', textDecoration: 'none', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border-color)' }} title="Visa alla flöden">
-              <ArrowLeft size={20} />
-            </Link>
-          )}
-          <h1 style={{ color: 'var(--primary)', margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
-            {feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'IDAG'}
-          </h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {feedId && (
+              <Link to="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', textDecoration: 'none', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border-color)' }} title="Visa alla flöden">
+                <ArrowLeft size={20} />
+              </Link>
+            )}
+            <h1 style={{ color: 'var(--primary)', margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
+              {feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'IDAG'}
+            </h1>
+          </div>
+          
+          {/* Layout controls (desktop only) */}
+          <div className="layout-controls desktop-only" style={{ gap: '4px', backgroundColor: 'var(--bg-app)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+             {[1, 2, 3, 4].map(num => (
+               <button 
+                 key={num}
+                 onClick={() => setDesktopColumns(num)}
+                 style={{ 
+                   padding: '4px 12px', 
+                   border: 'none', 
+                   background: desktopColumns === num ? 'var(--primary)' : 'transparent', 
+                   color: desktopColumns === num ? 'white' : 'var(--text-muted)',
+                   borderRadius: '6px',
+                   cursor: 'pointer',
+                   fontWeight: 600,
+                   fontSize: '0.85rem',
+                   transition: 'all 0.2s'
+                 }}
+                 title={`${num} kort per rad`}
+               >
+                 {num}
+               </button>
+             ))}
+          </div>
         </div>
       </div>
 
@@ -219,7 +254,7 @@ const Dashboard = () => {
           <p style={{ color: 'var(--text-muted)' }}>Inga nyheter hittades. Kanske behöver du lägga till flöden i RSS-hanteraren?</p>
         </div>
       ) : (
-        <div className="events-list" style={{ gap: '1rem' }}>
+        <div className={`events-list cols-${desktopColumns}`} style={{ gap: '1rem' }}>
           {displayedFeeds.map((item, index) => {
             const color = getBorderColor(item.feed_id || 1);
             const isLast = index === displayedFeeds.length - 1;
