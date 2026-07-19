@@ -143,15 +143,20 @@ const Dashboard = () => {
     if (observer.current) observer.current.disconnect();
     
     observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && displayedFeeds.length < allFeeds.length) {
-        const nextPage = page + 1;
-        setPage(nextPage);
-        setDisplayedFeeds(allFeeds.slice(0, nextPage * itemsPerPage));
+      if (entries[0].isIntersecting) {
+        setPage(prevPage => {
+          const nextPage = prevPage + 1;
+          setDisplayedFeeds(prevFeeds => {
+            if (prevFeeds.length >= allFeeds.length) return prevFeeds;
+            return allFeeds.slice(0, nextPage * itemsPerPage);
+          });
+          return nextPage;
+        });
       }
     });
     
     if (node) observer.current.observe(node);
-  }, [loading, displayedFeeds.length, allFeeds.length, page, allFeeds]);
+  }, [loading, allFeeds]);
 
   // Helper to format date
   const formatTime = (dateString) => {
