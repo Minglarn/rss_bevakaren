@@ -96,6 +96,11 @@ async def startup_event():
         except sqlite3.OperationalError:
             pass # Column exists
             
+        try:
+            cur.execute("ALTER TABLE feeds ADD COLUMN include_in_dashboard INTEGER DEFAULT 1;")
+        except sqlite3.OperationalError:
+            pass # Column exists
+            
         conn.commit()
         conn.close()
         
