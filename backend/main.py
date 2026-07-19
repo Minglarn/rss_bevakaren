@@ -91,6 +91,11 @@ async def startup_event():
         except Exception as e:
             pass
             
+        try:
+            cur.execute("ALTER TABLE feeds ADD COLUMN last_viewed_ts INTEGER DEFAULT 0;")
+        except sqlite3.OperationalError:
+            pass # Column exists
+            
         conn.commit()
         conn.close()
         
@@ -268,7 +273,33 @@ def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
 
 @app.get("/feeds", response_model=List[schemas.FeedResponse])
 def get_feeds(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    return db.query(models.Feed).filter(models.Feed.user_id == current_user.id).all()
+    feeds = db.query(models.Feed).filter(models.Feed.user_id == current_user.id).all()
+    feed_responses = []
+    for feed in feeds:
+        unread_count = db.query(models.Article).filter(
+            models.Article.feed_id == feed.id,
+            models.Article.received_ts > feed.last_viewed_ts
+        ).count()
+        
+        feed_dict = {
+            "id": feed.id,
+            "user_id": feed.user_id,
+            "url": feed.url,
+            "title": feed.title,
+            "polling_interval": feed.polling_interval,
+            "scrape_enabled": bool(feed.scrape_enabled),
+            "unread_count": unread_count
+        }
+        feed_responses.append(feed_dict)
+    return feed_responses
+
+@app.post("/feeds/{feed_id}/view", response_model=dict)
+def view_feed(feed_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    feed = db.query(models.Feed).filter(models.Feed.id == feed_id, models.Feed.user_id == current_user.id).first()
+    if feed:
+        feed.last_viewed_ts = int(time.time())
+        db.commit()
+    return {"status": "ok"}
 
 @app.post("/feeds", response_model=schemas.FeedResponse)
 def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):

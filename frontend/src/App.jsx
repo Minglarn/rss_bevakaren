@@ -95,6 +95,19 @@ const AppLayout = ({ children, onLogout }) => {
             fontWeight: location.pathname === '/' ? 600 : 400
           }}>
             <Rss size={20} /> {!isCollapsed && "Dashboard"}
+            {!isCollapsed && myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
+              <span style={{ 
+                marginLeft: 'auto', 
+                backgroundColor: '#ef4444', 
+                color: 'white', 
+                fontSize: '0.7rem', 
+                padding: '0.1rem 0.4rem', 
+                borderRadius: '10px', 
+                fontWeight: 'bold' 
+              }}>
+                {myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}
+              </span>
+            )}
           </Link>
           <Link to="/manage" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
@@ -138,7 +151,20 @@ const AppLayout = ({ children, onLogout }) => {
                     }}
                   >
                     <Hash size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} /> 
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{feed.title}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{feed.title}</span>
+                    {!isCollapsed && feed.unread_count > 0 && (
+                      <span style={{ 
+                        backgroundColor: '#ef4444', 
+                        color: 'white', 
+                        fontSize: '0.65rem', 
+                        padding: '0.1rem 0.4rem', 
+                        borderRadius: '10px', 
+                        fontWeight: 'bold',
+                        marginLeft: 'auto'
+                      }}>
+                        {feed.unread_count}
+                      </span>
+                    )}
                   </Link>
                 ))}
               </div>

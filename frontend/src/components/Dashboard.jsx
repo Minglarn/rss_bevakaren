@@ -54,6 +54,14 @@ const Dashboard = () => {
         // Update displayed feeds while keeping the current page visible
         setDisplayedFeeds(res.data.slice(0, page * itemsPerPage));
       }
+      if (feedId) {
+        try {
+          await api.post(`/feeds/${feedId}/view`);
+          window.dispatchEvent(new Event('feedsUpdated'));
+        } catch (e) {
+          console.error('Failed to mark feed as viewed', e);
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -198,27 +206,6 @@ const Dashboard = () => {
             {feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'IDAG'}
           </h1>
         </div>
-        <button 
-          onClick={fetchFeeds} 
-          disabled={loading}
-          className="refresh-btn"
-          style={{
-            padding: '0.5rem 1rem',
-            borderRadius: '20px',
-            border: '1px solid var(--border-color)',
-            backgroundColor: 'var(--bg-card)',
-            color: 'var(--text-main)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontWeight: 600,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-          }}
-        >
-          <RefreshCw size={16} className={loading ? "spin" : ""} />
-          Uppdatera
-        </button>
       </div>
 
       {loading && allFeeds.length === 0 ? (

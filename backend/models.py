@@ -22,6 +22,7 @@ class Feed(Base):
     polling_interval = Column(Integer, default=60)
     scrape_enabled = Column(Integer, default=1) # SQLite doesn't have native Boolean, use Integer
     last_polled = Column(Integer, default=0) # timestamp
+    last_viewed_ts = Column(Integer, default=0) # timestamp
     user_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="feeds")
