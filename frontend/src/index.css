@@ -1101,43 +1101,105 @@ select:focus, input:focus {
 
   /* --- NEW MOBILE FIXES --- */
   
-  /* 1. Minska marginaler runt huvudcontainern och korten drastiskt */
   .main-content {
     padding: 0.25rem !important;
   }
   
-  .card {
+  .feed-card-left {
+    width: 40px !important;
+    padding: 1rem 0 !important;
+  }
+  
+  .feed-card-time {
+    font-size: 0.85rem !important;
+  }
+  
+  .feed-card-date {
+    font-size: 0.55rem !important;
+  }
+  
+  .feed-card-topbar {
     padding: 0.5rem !important;
   }
   
-  .card.split-theme .card-right {
-    padding: 0.5rem !important;
-    min-width: 0; /* Förhindrar textbeskärning i flex */
-  }
-
-  /* 2. Tillåt radbrytningar så texten inte klipps av */
-  .card-summary {
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    font-size: 0.7rem; /* Minskat med >35% från 1rem */
-    line-height: 1.3;
-  }
-
-  .card-title {
-    font-size: 0.85rem; /* Minskat med ~35% från 1.25rem */
-  }
-
-  /* 3. Minska split-bredden med 30% och dess font med ca 15% */
-  .card-split-left {
-    width: 35px;
-    padding: 1rem 0.25rem;
+  .feed-card-content {
+    padding: 0.75rem !important;
   }
   
-  .card-split-time {
-    font-size: 0.93rem;
+  .feed-card-title {
+    font-size: 0.85rem !important;
+    margin-bottom: 0.5rem !important;
   }
   
-  .card-split-date {
-    font-size: 0.63rem;
+  .feed-card-desc {
+    font-size: 0.75rem !important; /* >35% minskning */
   }
+}
+
+/* --- FEED CARD DESKTOP CLASSES --- */
+.feed-card {
+  background-color: var(--bg-card);
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color);
+  display: flex;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.feed-card-left {
+  width: 65px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 0;
+  color: white;
+  flex-shrink: 0;
+}
+
+.feed-card-time {
+  font-size: 1.15rem;
+  font-weight: bold;
+}
+
+.feed-card-date {
+  font-size: 0.7rem;
+  margin-top: 0.25rem;
+  letter-spacing: 0.5px;
+}
+
+.feed-card-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1.5rem;
+  background-color: rgba(0,0,0,0.02);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.85rem;
+}
+
+.feed-card-content {
+  padding: 1.25rem 1.5rem 1.5rem 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.feed-card-title {
+  margin: 0 0 1rem 0;
+  color: var(--text-main);
+  font-size: 1.15rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.feed-card-desc {
+  margin: 0;
+  color: var(--text-main);
+  line-height: 1.5;
+  font-size: 0.95rem;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }

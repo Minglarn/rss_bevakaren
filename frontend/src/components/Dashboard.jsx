@@ -266,50 +266,26 @@ const Dashboard = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.2 }}
                   onClick={() => handleExpand(index, item.link)}
-                style={{
-                  backgroundColor: 'var(--bg-card)',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.05)',
-                  border: '1px solid var(--border-color)',
-                  display: 'flex',
-                  overflow: 'hidden',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  cursor: 'pointer'
-                }}
-              >
+                  className="feed-card"
+                >
                 {/* Left colored bar */}
-                <div style={{
-                  backgroundColor: color,
-                  width: '65px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  padding: '1.5rem 0',
-                  color: 'white',
-                  flexShrink: 0
-                }}>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 'bold' }}>
+                <div 
+                  className="feed-card-left"
+                  style={{ backgroundColor: color }}
+                >
+                  <div className="feed-card-time">
                     {formatTime(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
                   </div>
-                  <div style={{ fontSize: '0.7rem', marginTop: '0.25rem', letterSpacing: '0.5px' }}>
+                  <div className="feed-card-date">
                     {formatDateLabel(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
                   </div>
                   <List size={22} style={{ marginTop: 'auto', opacity: 0.8 }} />
                 </div>
 
                 {/* Right content area */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   {/* Toppbar */}
-                  <div style={{
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.75rem', 
-                    padding: '0.5rem 1.5rem',
-                    backgroundColor: 'rgba(0,0,0,0.02)',
-                    borderBottom: '1px solid var(--border-color)',
-                    fontSize: '0.85rem'
-                  }}>
+                  <div className="feed-card-topbar">
                     {/* Source */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
                       <Rss size={14} /> {item.source_title}
@@ -331,11 +307,9 @@ const Dashboard = () => {
                   </div>
 
                   {/* Main content padding wrapper */}
-                  <div style={{ padding: '1.25rem 1.5rem 1.5rem 1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div className="feed-card-content">
                   {/* Title / Content */}
-                  <h3 
-                    style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', fontSize: '1.15rem', fontWeight: 400, lineHeight: '1.5' }}
-                  >
+                  <h3 className="feed-card-title">
                     {item.title}
                   </h3>
                   
