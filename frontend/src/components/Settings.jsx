@@ -26,7 +26,7 @@ const Settings = () => {
 
   useEffect(() => {
     fetchData();
-    if (Notification.permission === 'granted') {
+    if ('Notification' in window && Notification.permission === 'granted') {
       setPushEnabled(true);
     }
   }, []);

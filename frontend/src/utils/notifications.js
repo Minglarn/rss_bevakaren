@@ -20,10 +20,19 @@ export const sendNotification = (title, options = {}) => {
 
   if (Notification.permission === 'granted') {
     const defaultOptions = {
-      icon: '/pwa-192x192.svg',
-      badge: '/pwa-192x192.svg',
+      icon: '/pwa-192x192.png',
+      badge: '/pwa-192x192.png',
     };
     
-    new Notification(title, { ...defaultOptions, ...options });
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification(title, { ...defaultOptions, ...options }).catch(e => {
+          console.error("Kunde inte visa SW-notis", e);
+          new Notification(title, { ...defaultOptions, ...options });
+        });
+      });
+    } else {
+      new Notification(title, { ...defaultOptions, ...options });
+    }
   }
 };
