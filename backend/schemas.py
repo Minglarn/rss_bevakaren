@@ -24,6 +24,7 @@ class FeedBase(BaseModel):
     title: Optional[str] = ""
     polling_interval: int = 60
     scrape_enabled: bool = True
+    include_in_dashboard: bool = True
 
 class FeedCreate(FeedBase):
     pass

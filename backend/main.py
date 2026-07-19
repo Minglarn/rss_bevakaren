@@ -288,6 +288,7 @@ def get_feeds(db: Session = Depends(database.get_db), current_user: models.User 
             "title": feed.title,
             "polling_interval": feed.polling_interval,
             "scrape_enabled": bool(feed.scrape_enabled),
+            "include_in_dashboard": bool(feed.include_in_dashboard),
             "unread_count": unread_count
         }
         feed_responses.append(feed_dict)
@@ -303,12 +304,13 @@ def view_feed(feed_id: int, db: Session = Depends(database.get_db), current_user
 
 @app.post("/feeds", response_model=schemas.FeedResponse)
 def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    db_feed = models.Feed(url=feed.url, title=feed.title, polling_interval=feed.polling_interval, scrape_enabled=int(feed.scrape_enabled), user_id=current_user.id)
+    db_feed = models.Feed(url=feed.url, title=feed.title, polling_interval=feed.polling_interval, scrape_enabled=int(feed.scrape_enabled), include_in_dashboard=int(feed.include_in_dashboard), user_id=current_user.id)
     db.add(db_feed)
     db.commit()
     db.refresh(db_feed)
     # Convert integer to boolean for response
     db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
+    db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
     return db_feed
 
 @app.put("/feeds/{feed_id}", response_model=schemas.FeedResponse)
@@ -320,9 +322,11 @@ def update_feed(feed_id: int, feed: schemas.FeedCreate, db: Session = Depends(da
     db_feed.title = feed.title
     db_feed.polling_interval = feed.polling_interval
     db_feed.scrape_enabled = int(feed.scrape_enabled)
+    db_feed.include_in_dashboard = int(feed.include_in_dashboard)
     db.commit()
     db.refresh(db_feed)
     db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
+    db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
     return db_feed
 
 @app.delete("/feeds/{feed_id}", response_model=dict)
@@ -363,6 +367,8 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(dat
     query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == current_user.id)
     if feed_id:
         query = query.filter(models.Feed.id == feed_id)
+    else:
+        query = query.filter(models.Feed.include_in_dashboard == 1)
         
     articles = query.order_by(models.Article.received_ts.desc()).limit(150).all()
     

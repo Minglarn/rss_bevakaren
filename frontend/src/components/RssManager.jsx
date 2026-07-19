@@ -9,6 +9,7 @@ const RssManager = () => {
   const [title, setTitle] = useState('');
   const [pollingInterval, setPollingInterval] = useState(60);
   const [scrapeEnabled, setScrapeEnabled] = useState(true);
+  const [includeInDashboard, setIncludeInDashboard] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const fetchFeeds = async () => {
@@ -30,11 +31,12 @@ const RssManager = () => {
     if (!url) return;
     setLoading(true);
     try {
-      await api.post('/feeds', { url, title, polling_interval: parseInt(pollingInterval, 10), scrape_enabled: scrapeEnabled });
+      await api.post('/feeds', { url, title, polling_interval: parseInt(pollingInterval, 10), scrape_enabled: scrapeEnabled, include_in_dashboard: includeInDashboard });
       setUrl('');
       setTitle('');
       setPollingInterval(60);
       setScrapeEnabled(true);
+      setIncludeInDashboard(true);
       fetchFeeds();
     } catch (err) {
       console.error(err);
@@ -121,16 +123,24 @@ const RssManager = () => {
             />
             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>min</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', marginTop: '0.5rem' }}>
-            <input 
-              type="checkbox" 
-              id="scrapeCheck" 
-              checked={scrapeEnabled} 
-              onChange={(e) => setScrapeEnabled(e.target.checked)} 
-              style={{ cursor: 'pointer', width: '18px', height: '18px' }}
-            />
-            <label htmlFor="scrapeCheck" style={{ color: 'var(--text-main)', cursor: 'pointer', fontSize: '0.9rem' }}>
-              Auto-skrapning (hämta hela artikeln när du klickar på den)
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', marginTop: '0.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)', cursor: 'pointer', fontSize: '0.9rem' }}>
+              <input 
+                type="checkbox" 
+                checked={scrapeEnabled} 
+                onChange={(e) => setScrapeEnabled(e.target.checked)} 
+                style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+              />
+              Auto-skrapning
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)', cursor: 'pointer', fontSize: '0.9rem' }}>
+              <input 
+                type="checkbox" 
+                checked={includeInDashboard} 
+                onChange={(e) => setIncludeInDashboard(e.target.checked)} 
+                style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+              />
+              Visa i Dashboard
             </label>
           </div>
           <button 
@@ -174,31 +184,52 @@ const RssManager = () => {
                 alignItems: 'center'
               }}
             >
-              <div style={{ flex: 1, marginRight: '1rem' }}>
-                <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <input
-                    type="text"
-                    defaultValue={feed.title}
-                    placeholder="[Ingen titel angiven, klicka för att lägga till]"
-                    onBlur={(e) => {
-                      if (e.target.value !== feed.title) {
-                        api.put(`/feeds/${feed.id}`, { title: e.target.value, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled }).then(fetchFeeds);
-                      }
-                    }}
-                    style={{
-                      background: 'transparent',
-                      border: '1px solid transparent',
-                      color: 'inherit',
-                      fontSize: 'inherit',
-                      fontWeight: 'inherit',
-                      width: '100%',
-                      padding: '2px 4px',
-                      borderRadius: '4px',
-                    }}
-                    onFocus={(e) => e.target.style.border = '1px solid var(--primary)'}
-                    onMouseLeave={(e) => { if(document.activeElement !== e.target) e.target.style.border = '1px solid transparent'; }}
-                  />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '0.1rem 0.5rem', borderRadius: '10px' }} title="Pollningstid i minuter">
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <input
+                  type="text"
+                  defaultValue={feed.title}
+                  placeholder="[Ingen titel angiven, klicka för att lägga till]"
+                  onBlur={(e) => {
+                    if (e.target.value !== feed.title) {
+                      api.put(`/feeds/${feed.id}`, { title: e.target.value, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
+                    }
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid transparent',
+                    color: 'var(--text-main)',
+                    fontSize: '1.2rem',
+                    fontWeight: '700',
+                    width: '100%',
+                    padding: '2px 4px',
+                    borderRadius: '4px',
+                  }}
+                  onFocus={(e) => e.target.style.border = '1px solid var(--primary)'}
+                  onMouseLeave={(e) => { if(document.activeElement !== e.target) e.target.style.border = '1px solid transparent'; }}
+                />
+                <input
+                  type="text"
+                  defaultValue={feed.url}
+                  onBlur={(e) => {
+                    if (e.target.value !== feed.url) {
+                      api.put(`/feeds/${feed.id}`, { title: feed.title, url: e.target.value, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
+                    }
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid transparent',
+                    color: 'var(--text-muted)',
+                    fontSize: '0.85rem',
+                    width: '100%',
+                    padding: '2px 4px',
+                    borderRadius: '4px',
+                  }}
+                  onFocus={(e) => e.target.style.border = '1px solid var(--primary)'}
+                  onMouseLeave={(e) => { if(document.activeElement !== e.target) e.target.style.border = '1px solid transparent'; }}
+                />
+                
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '0.2rem 0.6rem', borderRadius: '12px' }} title="Pollningstid i minuter">
                     ⏱ 
                     <input
                       type="number"
@@ -207,7 +238,7 @@ const RssManager = () => {
                       onBlur={(e) => {
                         const newVal = parseInt(e.target.value, 10);
                         if (newVal !== feed.polling_interval && !isNaN(newVal)) {
-                          api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: newVal, scrape_enabled: feed.scrape_enabled }).then(fetchFeeds);
+                          api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: newVal, scrape_enabled: feed.scrape_enabled, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
                         }
                       }}
                       style={{
@@ -215,7 +246,7 @@ const RssManager = () => {
                         border: '1px solid transparent',
                         color: 'inherit',
                         fontSize: 'inherit',
-                        width: '40px',
+                        width: '35px',
                         padding: '0',
                         textAlign: 'right'
                       }}
@@ -223,41 +254,32 @@ const RssManager = () => {
                       onMouseLeave={(e) => { if(document.activeElement !== e.target) e.target.style.borderBottom = '1px solid transparent'; }}
                     /> min
                   </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '0.1rem 0.5rem', borderRadius: '10px', cursor: 'pointer' }} title="Stäng av om flödet inte går att skrapa korrekt">
+                  
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '0.2rem 0.6rem', borderRadius: '12px', cursor: 'pointer' }} title="Stäng av om flödet inte går att skrapa korrekt">
                     <input
                       type="checkbox"
                       defaultChecked={feed.scrape_enabled}
                       onChange={(e) => {
-                        api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: e.target.checked }).then(fetchFeeds);
+                        api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: e.target.checked, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
                       }}
-                      style={{ cursor: 'pointer' }}
+                      style={{ cursor: 'pointer', margin: 0 }}
                     /> Auto-skrap
                   </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '0.1rem 0.5rem', borderRadius: '10px' }} title="Flödets ID i databasen">
+                  
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: feed.include_in_dashboard ? 'var(--primary)' : 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '0.2rem 0.6rem', borderRadius: '12px', cursor: 'pointer', fontWeight: feed.include_in_dashboard ? '600' : '400' }} title="Visa flödets inlägg i huvudflödet (Dashboard)">
+                    <input
+                      type="checkbox"
+                      defaultChecked={feed.include_in_dashboard}
+                      onChange={(e) => {
+                        api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled, include_in_dashboard: e.target.checked }).then(fetchFeeds);
+                      }}
+                      style={{ cursor: 'pointer', margin: 0 }}
+                    /> Visa i Dashboard
+                  </label>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '0.2rem 0.6rem', borderRadius: '12px', marginLeft: 'auto' }}>
                     ID: {feed.id}
                   </div>
-                </div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  <input
-                    type="text"
-                    defaultValue={feed.url}
-                    onBlur={(e) => {
-                      if (e.target.value !== feed.url) {
-                        api.put(`/feeds/${feed.id}`, { title: feed.title, url: e.target.value, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled }).then(fetchFeeds);
-                      }
-                    }}
-                    style={{
-                      background: 'transparent',
-                      border: '1px solid transparent',
-                      color: 'inherit',
-                      fontSize: 'inherit',
-                      width: '100%',
-                      padding: '2px 4px',
-                      borderRadius: '4px',
-                    }}
-                    onFocus={(e) => e.target.style.border = '1px solid var(--primary)'}
-                    onMouseLeave={(e) => { if(document.activeElement !== e.target) e.target.style.border = '1px solid transparent'; }}
-                  />
                 </div>
               </div>
               <button 

@@ -23,6 +23,7 @@ class Feed(Base):
     scrape_enabled = Column(Integer, default=1) # SQLite doesn't have native Boolean, use Integer
     last_polled = Column(Integer, default=0) # timestamp
     last_viewed_ts = Column(Integer, default=0) # timestamp
+    include_in_dashboard = Column(Integer, default=1) # 1 = true, 0 = false
     user_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="feeds")
