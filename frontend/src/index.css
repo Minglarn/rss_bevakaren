@@ -983,7 +983,7 @@ select:focus, input:focus {
   }
   
   .mobile-bottom-bar {
-    display: flex;
+    display: flex !important;
     position: fixed;
     bottom: 0;
     left: 0;
