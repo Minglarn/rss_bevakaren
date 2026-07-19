@@ -177,14 +177,22 @@ const Settings = () => {
                 Om appen känns utdaterad eller om du har problem med sparad data kan du tvinga fram en uppdatering. Detta rensar webbläsarens lokala minne för appen.
               </p>
               <button 
-                onClick={() => {
+                onClick={async () => {
                   if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                      for(let registration of registrations) {
-                        registration.unregister();
+                    try {
+                      const registrations = await navigator.serviceWorker.getRegistrations();
+                      for (let registration of registrations) {
+                        await registration.unregister();
+                      }
+                      const cacheNames = await caches.keys();
+                      for (const cacheName of cacheNames) {
+                        await caches.delete(cacheName);
                       }
                       window.location.reload(true);
-                    });
+                    } catch (e) {
+                      console.error(e);
+                      window.location.reload(true);
+                    }
                   } else {
                     window.location.reload(true);
                   }
