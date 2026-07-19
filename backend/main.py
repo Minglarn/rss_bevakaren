@@ -153,8 +153,8 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections: dict[int, List[WebSocket]] = {}
 
-    async def connect(self, websocket: WebSocket, user_id: int, subprotocol: str = None):
-        await websocket.accept(subprotocol=subprotocol)
+    async def connect(self, websocket: WebSocket, user_id: int):
+        await websocket.accept()
         if user_id not in self.active_connections:
             self.active_connections[user_id] = []
         self.active_connections[user_id].append(websocket)
@@ -177,42 +177,36 @@ manager = ConnectionManager()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    token = None
-    if "sec-websocket-protocol" in websocket.headers:
-        token = websocket.headers.get("sec-websocket-protocol")
-        if "," in token:
-            token = token.split(",")[0].strip()
-    elif "token" in websocket.query_params:
-        token = websocket.query_params.get("token")
-        
-    if not token:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
-        
+    await websocket.accept()
     try:
+        token = await websocket.receive_text()
+        
         payload = auth.jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
-    except auth.JWTError:
+            
+        db = database.SessionLocal()
+        user = db.query(models.User).filter(models.User.username == username).first()
+        db.close()
+        
+        if not user:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+            
+        if user.id not in manager.active_connections:
+            manager.active_connections[user.id] = []
+        manager.active_connections[user.id].append(websocket)
+        
+        try:
+            while True:
+                data = await websocket.receive_text()
+        except WebSocketDisconnect:
+            manager.disconnect(websocket, user.id)
+            
+    except Exception as e:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
-
-    db = database.SessionLocal()
-    user = db.query(models.User).filter(models.User.username == username).first()
-    db.close()
-    if not user:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
-
-    subprotocol = token if "sec-websocket-protocol" in websocket.headers else None
-    await manager.connect(websocket, user.id, subprotocol=subprotocol)
-    try:
-        while True:
-            data = await websocket.receive_text()
-    except WebSocketDisconnect:
-        manager.disconnect(websocket, user.id)
 
 async def polling_loop():
     print("Background polling loop started", flush=True)

@@ -684,8 +684,8 @@ select:focus, input:focus {
 .events-list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.4rem;
-  align-items: start;
+  gap: 1rem;
+  align-items: stretch;
 }
 
 @media (min-width: 1024px) {
@@ -1181,6 +1181,7 @@ select:focus, input:focus {
   text-decoration: none;
   color: inherit;
   cursor: pointer;
+  height: 100%;
 }
 
 .feed-card-left {
