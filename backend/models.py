@@ -57,6 +57,7 @@ class Article(Base):
     link = Column(String)
     published = Column(String)
     published_ts = Column(Integer, index=True)
+    received_ts = Column(Integer, index=True)
     summary = Column(String)
     image_url = Column(String)
     categories = Column(String)

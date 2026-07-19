@@ -236,12 +236,15 @@ const Dashboard = () => {
             let showDivider = false;
             let dividerText = '';
             
-            const currentD = new Date(item.published);
+            const currentTs = item.received_ts ? item.received_ts * 1000 : (item.published_ts ? item.published_ts * 1000 : new Date(item.published).getTime());
+            const currentD = new Date(currentTs);
             if (!isNaN(currentD.getTime())) {
                 if (index === 0) {
                     showDivider = true;
                 } else {
-                    const prevD = new Date(displayedFeeds[index - 1].published);
+                    const prevItem = displayedFeeds[index - 1];
+                    const prevTs = prevItem.received_ts ? prevItem.received_ts * 1000 : (prevItem.published_ts ? prevItem.published_ts * 1000 : new Date(prevItem.published).getTime());
+                    const prevD = new Date(prevTs);
                     // Check if day changed
                     if (!isNaN(prevD.getTime()) && 
                        (currentD.getDate() !== prevD.getDate() || currentD.getMonth() !== prevD.getMonth() || currentD.getFullYear() !== prevD.getFullYear())) {
@@ -300,10 +303,10 @@ const Dashboard = () => {
                   flexShrink: 0
                 }}>
                   <div style={{ fontSize: '1.15rem', fontWeight: 'bold' }}>
-                    {formatTime(item.published)}
+                    {formatTime(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
                   </div>
                   <div style={{ fontSize: '0.7rem', marginTop: '0.25rem', letterSpacing: '0.5px' }}>
-                    {formatDateLabel(item.published)}
+                    {formatDateLabel(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
                   </div>
                   <List size={22} style={{ marginTop: 'auto', opacity: 0.8 }} />
                 </div>

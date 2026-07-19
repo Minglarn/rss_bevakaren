@@ -71,12 +71,25 @@ async def startup_event():
                     summary VARCHAR,
                     image_url VARCHAR,
                     categories VARCHAR,
+                    received_ts INTEGER,
                     FOREIGN KEY(feed_id) REFERENCES feeds(id)
                 );
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS ix_articles_guid ON articles (guid);")
         except Exception as e:
             print(f"Migration error: {e}")
+            
+        # Migration 4: Add received_ts to existing articles
+        try:
+            cur.execute("ALTER TABLE articles ADD COLUMN received_ts INTEGER;")
+        except sqlite3.OperationalError:
+            pass # Column exists
+            
+        try:
+            cur.execute("UPDATE articles SET received_ts = published_ts WHERE received_ts IS NULL;")
+            cur.execute("CREATE INDEX IF NOT EXISTS ix_articles_received_ts ON articles (received_ts);")
+        except Exception as e:
+            pass
             
         conn.commit()
         conn.close()
@@ -211,7 +224,8 @@ async def polling_loop():
                                 published_ts=item.get("published_ts"),
                                 summary=item.get("summary"),
                                 image_url=item.get("image_url"),
-                                categories=cat_str
+                                categories=cat_str,
+                                received_ts=current_time
                             )
                             db.add(new_article)
                             new_articles.append(new_article)
@@ -319,7 +333,7 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(dat
     if feed_id:
         query = query.filter(models.Feed.id == feed_id)
         
-    articles = query.order_by(models.Article.published_ts.desc()).limit(150).all()
+    articles = query.order_by(models.Article.received_ts.desc()).limit(150).all()
     
     # Enhance articles with feed info for the UI
     response_items = []
@@ -337,7 +351,8 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(dat
             "image_url": art.image_url,
             "categories": cats,
             "source_title": art.feed.title or art.feed.url,
-            "scrape_enabled": bool(art.feed.scrape_enabled)
+            "scrape_enabled": bool(art.feed.scrape_enabled),
+            "received_ts": art.received_ts
         }
         response_items.append(art_dict)
         
