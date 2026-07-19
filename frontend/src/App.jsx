@@ -40,6 +40,7 @@ const AppLayout = ({ children, onLogout }) => {
         const feed = myFeedsRef.current.find(f => f.id === feedId);
         if (feed) {
           toast.success(`${count} nya händelser från ${feed.title}!`, {
+            duration: 6000,
             style: {
               borderRadius: '10px',
               background: 'var(--bg-card)',
@@ -65,7 +66,7 @@ const AppLayout = ({ children, onLogout }) => {
       toast(`Letar nya händelser på ${title}...`, {
         icon: '🔄',
         id: `poll-${feedId}`, // Ensures we don't spam if it starts again quickly
-        duration: 3000,
+        duration: 6000,
         style: {
           borderRadius: '10px',
           background: 'var(--bg-card)',
