@@ -565,9 +565,14 @@ const Dashboard = () => {
                   {/* Toppbar */}
                   <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, flexWrap: 'wrap' }}>
-                      {/* Source */}
+                      {/* Source and original published date */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
                         <Rss size={14} /> {item.source_title}
+                        {item.published && (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.5rem' }} title="Original publiceringstid">
+                            • {formatDateLabel(item.published)} {formatTime(item.published)}
+                          </span>
+                        )}
                       </div>
                       
                       {/* Categories */}

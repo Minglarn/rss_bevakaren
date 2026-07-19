@@ -981,6 +981,9 @@ select:focus, input:focus {
 .app-main-content {
   flex: 1;
   position: relative;
+  padding: 2rem;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .toppbar {
@@ -994,7 +997,7 @@ select:focus, input:focus {
   background-color: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
-  top: 2rem; /* Compensate for margin-top: -2rem */
+  top: 0;
   z-index: 50;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
@@ -1029,12 +1032,12 @@ select:focus, input:focus {
   }
   
   .app-main-content {
-    padding-bottom: 70px; /* Space for bottom bar */
+    padding: 1rem 1rem 70px 1rem; /* Space for bottom bar and smaller side padding */
   }
   
   .toppbar {
     padding: 0.75rem 1rem;
-    margin: 0 0 1.5rem 0;
+    margin: -1rem -1rem 1.5rem -1rem; /* Pull to edges */
     top: 0;
   }
   
