@@ -24,9 +24,9 @@ export default function PWABadge() {
   return (
     <div style={{
       position: 'fixed',
-      bottom: '5rem',
+      bottom: '6rem',
       right: '1.5rem',
-      zIndex: 50,
+      zIndex: 9999,
       backgroundColor: 'var(--bg-card)',
       border: '1px solid var(--border-color)',
       boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2)',
@@ -85,7 +85,11 @@ export default function PWABadge() {
         }}
         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-hover)'}
         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--primary)'}
-        onClick={() => updateServiceWorker(true)}
+        onClick={() => {
+          updateServiceWorker(true);
+          // Fallback if the plugin doesn't reload automatically
+          setTimeout(() => window.location.reload(true), 1500);
+        }}
       >
         <RefreshCw size={16} />
         <span>Ladda om appen</span>
