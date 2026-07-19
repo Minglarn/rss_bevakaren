@@ -115,6 +115,12 @@ async def startup_event():
             cur.execute("ALTER TABLE feeds ADD COLUMN notify_enabled INTEGER DEFAULT 1;")
         except sqlite3.OperationalError:
             pass # Column exists
+
+        # Migration 7: Add is_read to articles
+        try:
+            cur.execute("ALTER TABLE articles ADD COLUMN is_read INTEGER DEFAULT 0;")
+        except sqlite3.OperationalError:
+            pass # Column exists
             
         conn.commit()
         conn.close()
@@ -457,7 +463,8 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(dat
     else:
         query = query.filter(models.Feed.include_in_dashboard == 1)
         
-    articles = query.order_by(models.Article.published_ts.desc()).limit(150).all()
+    query = query.filter((models.Article.is_read == 0) | (models.Article.is_read == None))
+    articles = query.order_by(models.Article.received_ts.desc()).limit(150).all()
     
     # Enhance articles with feed info for the UI
     response_items = []
@@ -476,7 +483,8 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(dat
             "categories": cats,
             "source_title": art.feed.title or art.feed.url,
             "scrape_enabled": bool(art.feed.scrape_enabled),
-            "received_ts": art.received_ts
+            "received_ts": art.received_ts,
+            "is_read": art.is_read or 0
         }
         response_items.append(art_dict)
         
@@ -636,3 +644,25 @@ def get_system_info(db: Session = Depends(database.get_db), current_user: models
         "total_feeds": total_feeds,
         "total_articles": total_articles
     }
+
+@app.post("/articles/{article_id}/read")
+def mark_article_read(article_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    article = db.query(models.Article).join(models.Feed).filter(models.Article.id == article_id, models.Feed.user_id == current_user.id).first()
+    if article:
+        article.is_read = 1
+        db.commit()
+    return {"status": "ok"}
+
+@app.post("/articles/read-all")
+def mark_all_articles_read(feed_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == current_user.id)
+    if feed_id:
+        query = query.filter(models.Feed.id == feed_id)
+    else:
+        query = query.filter(models.Feed.include_in_dashboard == 1)
+        
+    articles = query.filter((models.Article.is_read == 0) | (models.Article.is_read == None)).all()
+    for article in articles:
+        article.is_read = 1
+    db.commit()
+    return {"status": "ok", "count": len(articles)}

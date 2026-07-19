@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft, List, ArrowUp } from 'lucide-react';
+import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft, List, ArrowUp, CheckCheck } from 'lucide-react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 
@@ -13,6 +13,9 @@ const Dashboard = () => {
   const observer = useRef();
   const [searchParams] = useSearchParams();
   const feedId = searchParams.get('feedId');
+  
+  const [readItems, setReadItems] = useState(new Set());
+  const readTimers = useRef({});
   
   const [desktopColumns, setDesktopColumns] = useState(() => {
     const saved = localStorage.getItem('rss_desktop_columns');
@@ -176,29 +179,71 @@ const Dashboard = () => {
     return `${d.getDate()} ${months[d.getMonth()]}`;
   };
 
-  const handleExpand = async (index, url) => {
-    // Toggle expand
-    setExpandedItems(prev => ({ ...prev, [index]: !prev[index] }));
+  const markAsRead = async (id) => {
+    try {
+      await api.post(`/articles/${id}/read`);
+      setReadItems(prev => new Set(prev).add(id));
+    } catch (error) {
+      console.error("Kunde inte markera som läst:", error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const url = feedId ? `/articles/read-all?feed_id=${feedId}` : '/articles/read-all';
+      await api.post(url);
+      // Mark all currently loaded items as read visually
+      const allIds = new Set(readItems);
+      allFeeds.forEach(item => allIds.add(item.id));
+      setReadItems(allIds);
+    } catch (error) {
+      console.error("Kunde inte markera alla som lästa:", error);
+    }
+  };
+
+  const handleExpand = async (index, link, id) => {
+    setExpandedItems(prev => {
+      const isExpanding = !prev[index];
+      
+      // Handle read timer
+      if (isExpanding) {
+        if (!readItems.has(id)) {
+          readTimers.current[id] = setTimeout(() => {
+            markAsRead(id);
+          }, 5000); // 5 seconds
+        }
+      } else {
+        if (readTimers.current[id]) {
+          clearTimeout(readTimers.current[id]);
+          delete readTimers.current[id];
+        }
+      }
+
+      return {
+        ...prev,
+        [index]: isExpanding
+      };
+    });
     
     // If expanding and content not scraped yet
-    if (!expandedItems[index] && !scrapedContents[url]) {
-      const feedItems = allFeeds.filter(f => f.link === url);
+    if (!expandedItems[index] && !scrapedContents[link]) {
+      const feedItems = allFeeds.filter(f => f.link === link);
       const isScrapeEnabled = feedItems.length > 0 && feedItems[0].scrape_enabled !== false;
       
       if (isScrapeEnabled) {
-        setScrapingUrls(prev => ({ ...prev, [url]: true }));
+        setScrapingUrls(prev => ({ ...prev, [link]: true }));
         try {
-          const res = await api.get(`/scrape?url=${encodeURIComponent(url)}`);
-          setScrapedContents(prev => ({ ...prev, [url]: res.data.content }));
+          const res = await api.get(`/scrape?url=${encodeURIComponent(link)}`);
+          setScrapedContents(prev => ({ ...prev, [link]: res.data.content }));
         } catch (err) {
           console.error("Scrape error", err);
-          setScrapedContents(prev => ({ ...prev, [url]: 'Det gick inte att ladda artikeln automatiskt. Läs mer på original-sidan.' }));
+          setScrapedContents(prev => ({ ...prev, [link]: 'Det gick inte att ladda artikeln automatiskt. Läs mer på original-sidan.' }));
         } finally {
-          setScrapingUrls(prev => ({ ...prev, [url]: false }));
+          setScrapingUrls(prev => ({ ...prev, [link]: false }));
         }
       } else {
         // Just use the local summary
-        setScrapedContents(prev => ({ ...prev, [url]: feedItems[0]?.summary || 'Läs mer på original-sidan.' }));
+        setScrapedContents(prev => ({ ...prev, [link]: feedItems[0]?.summary || 'Läs mer på original-sidan.' }));
       }
     }
   };
@@ -226,8 +271,39 @@ const Dashboard = () => {
             </h1>
           </div>
           
-          {/* Layout controls (desktop only) */}
-          <div className="layout-controls desktop-only" style={{ gap: '4px', backgroundColor: 'var(--bg-app)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <button
+              onClick={markAllAsRead}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '6px 12px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-muted)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--primary)';
+                e.currentTarget.style.borderColor = 'var(--primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-muted)';
+                e.currentTarget.style.borderColor = 'var(--border-color)';
+              }}
+              title="Markera alla nuvarande nyheter som lästa"
+            >
+              <CheckCheck size={16} />
+              <span className="desktop-only">Markera alla som lästa</span>
+            </button>
+            
+            {/* Layout controls (desktop only) */}
+            <div className="layout-controls desktop-only" style={{ gap: '4px', backgroundColor: 'var(--bg-app)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
              {[1, 2, 3, 4].map(num => (
                <button 
                  key={num}
@@ -248,7 +324,8 @@ const Dashboard = () => {
                  {num}
                </button>
              ))}
-          </div>
+           </div>
+         </div>
         </div>
       </div>
 
@@ -307,10 +384,11 @@ const Dashboard = () => {
                 )}
                 <motion.div 
                   initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  animate={{ opacity: readItems.has(item.id) || item.is_read ? 0.5 : 1, x: 0 }}
                   transition={{ duration: 0.2 }}
-                  onClick={() => handleExpand(index, item.link)}
-                  className="feed-card"
+                  onClick={() => handleExpand(index, item.link, item.id)}
+                  className={`feed-card ${readItems.has(item.id) || item.is_read ? 'read' : ''}`}
+                  style={{ filter: readItems.has(item.id) || item.is_read ? 'grayscale(100%)' : 'none' }}
                 >
                 {/* Left colored bar */}
                 <div 
@@ -389,7 +467,7 @@ const Dashboard = () => {
                       )}
                       
                       <div style={{ marginTop: '1rem' }}>
-                        <a href={item.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
+                        <a href={item.link} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
                           <ExternalLink size={16} /> Läs på original-sidan
                         </a>
                       </div>

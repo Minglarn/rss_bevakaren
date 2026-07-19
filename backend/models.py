@@ -64,5 +64,6 @@ class Article(Base):
     summary = Column(String)
     image_url = Column(String)
     categories = Column(String)
+    is_read = Column(Integer, default=0)
 
     feed = relationship("Feed", back_populates="articles")

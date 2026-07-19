@@ -79,6 +79,8 @@ class ArticleResponse(BaseModel):
     categories: Optional[List[str]] = []
     source_title: Optional[str] = None
     scrape_enabled: Optional[bool] = True
+    received_ts: Optional[int] = 0
+    is_read: Optional[int] = 0
 
     class Config:
         from_attributes = True
