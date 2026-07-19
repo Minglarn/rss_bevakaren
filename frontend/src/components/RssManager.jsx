@@ -446,7 +446,7 @@ const RssManager = () => {
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="Stäng av om flödet inte går att skrapa korrekt">
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Auto-skrap</span>
-                  <div className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
+                  <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
                     <input
                       type="checkbox"
                       checked={editingFeedId === feed.id ? editScrapeEnabled : feed.scrape_enabled}
@@ -459,12 +459,12 @@ const RssManager = () => {
                       }}
                     />
                     <span className="toggle-slider"></span>
-                  </div>
+                  </label>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="Visa i Dashboard">
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dashboard</span>
-                  <div className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
+                  <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
                     <input
                       type="checkbox"
                       checked={editingFeedId === feed.id ? editIncludeInDashboard : feed.include_in_dashboard}
@@ -477,7 +477,7 @@ const RssManager = () => {
                       }}
                     />
                     <span className="toggle-slider"></span>
-                  </div>
+                  </label>
                 </div>
               </div>
 
