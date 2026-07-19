@@ -962,8 +962,10 @@ select:focus, input:focus {
 .desktop-sidebar {
   display: flex;
 }
-.mobile-bottom-bar {
-  display: none;
+.mobile-bottom-bar,
+.mobile-feeds-sheet-overlay,
+.mobile-feeds-sheet {
+  display: none !important;
 }
 .app-main-content {
   flex: 1;
@@ -1047,6 +1049,7 @@ select:focus, input:focus {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
+    display: block !important;
   }
   
   .mobile-feeds-sheet-overlay.open {
@@ -1067,7 +1070,7 @@ select:focus, input:focus {
     box-shadow: 0 -10px 25px rgba(0,0,0,0.1);
     transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.1);
     max-height: 80vh;
-    display: flex;
+    display: flex !important;
     flex-direction: column;
   }
   
