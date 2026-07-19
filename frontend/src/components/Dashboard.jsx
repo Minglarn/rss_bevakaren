@@ -557,25 +557,52 @@ const Dashboard = () => {
                 {/* Right content area */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   {/* Toppbar */}
-                  <div className="feed-card-topbar">
-                    {/* Source */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
-                      <Rss size={14} /> {item.source_title}
-                    </div>
-                    
-                    {/* Categories */}
-                    {item.categories && item.categories.map((cat, cIdx) => (
-                      <div key={cIdx} style={{ 
-                        color: 'var(--text-muted)', 
-                        padding: '0.1rem 0.5rem', 
-                        backgroundColor: 'var(--bg-app)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem'
-                      }}>
-                        {cat}
+                  <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, flexWrap: 'wrap' }}>
+                      {/* Source */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
+                        <Rss size={14} /> {item.source_title}
                       </div>
-                    ))}
+                      
+                      {/* Categories */}
+                      {item.categories && item.categories.map((cat, cIdx) => (
+                        <div key={cIdx} style={{ 
+                          color: 'var(--text-muted)', 
+                          padding: '0.1rem 0.5rem', 
+                          backgroundColor: 'var(--bg-app)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem'
+                        }}>
+                          {cat}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Läst-knapp */}
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      {isArticleRead(item.id, item.is_read) ? (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px', transition: 'background-color 0.2s' }}
+                          title="Markera som oläst"
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <EyeOff size={16} />
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px', transition: 'background-color 0.2s' }}
+                          title="Markera som läst"
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <CheckCheck size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Main content padding wrapper */}
@@ -620,21 +647,6 @@ const Dashboard = () => {
                         <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
                           <ExternalLink size={16} /> Läs på original-sidan
                         </a>
-                        {isArticleRead(item.id, item.is_read) ? (
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}
-                          >
-                            <EyeOff size={16} /> Markera som oläst
-                          </button>
-                        ) : (
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}
-                          >
-                            <CheckCheck size={16} /> Markera som läst
-                          </button>
-                        )}
                       </div>
                     </motion.div>
                   )}
