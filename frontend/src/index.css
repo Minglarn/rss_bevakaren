@@ -1215,10 +1215,6 @@ select:focus, input:focus {
     font-size: 0.75rem !important; /* >35% minskning */
   }
   
-  .dashboard-container {
-    padding: 0.4rem !important;
-  }
-  
   .dashboard-header {
     margin-bottom: 1rem !important;
   }
@@ -1226,7 +1222,6 @@ select:focus, input:focus {
 
 /* --- FEED CARD DESKTOP CLASSES --- */
 .dashboard-container {
-  padding: 2rem;
   max-width: 100%;
   margin: 0 auto;
 }
