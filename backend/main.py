@@ -187,8 +187,8 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
 async def polling_loop():
     print("Background polling loop started", flush=True)
     while True:
+        db = database.SessionLocal()
         try:
-            db = database.SessionLocal()
             feeds = db.query(models.Feed).all()
             current_time = int(time.time())
             
@@ -239,10 +239,10 @@ async def polling_loop():
                     # Update last polled time
                     feed.last_polled = current_time
                     db.commit()
-            
-            db.close()
         except Exception as e:
             print(f"Polling error: {e}", flush=True)
+        finally:
+            db.close()
         
         await asyncio.sleep(30) # Check every 30 seconds
 
