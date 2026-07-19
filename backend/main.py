@@ -463,9 +463,7 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, show_read: Optional[bool]
     else:
         query = query.filter(models.Feed.include_in_dashboard == 1)
         
-    if show_read:
-        query = query.filter(models.Article.is_read == 1)
-    else:
+    if not show_read:
         query = query.filter((models.Article.is_read == 0) | (models.Article.is_read == None))
         
     articles = query.order_by(models.Article.received_ts.desc()).limit(150).all()
