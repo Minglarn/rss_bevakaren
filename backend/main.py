@@ -9,6 +9,14 @@ import os
 
 import models, schemas, database, auth
 from pydantic import BaseModel
+import logging
+
+class WsLogFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.getMessage().find("WebSocket /ws") == -1
+
+logging.getLogger("uvicorn.access").addFilter(WsLogFilter())
+logging.getLogger("uvicorn.error").addFilter(WsLogFilter())
 
 models.Base.metadata.create_all(bind=database.engine)
 
