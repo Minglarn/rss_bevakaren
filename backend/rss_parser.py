@@ -33,6 +33,13 @@ def fetch_feed_items(url: str):
                             image_url = media.get("url", "")
                             break
                             
+                # Check standard RSS enclosures for images
+                if not image_url and "enclosures" in entry:
+                    for enc in entry.enclosures:
+                        if enc.get("type", "").startswith("image/"):
+                            image_url = enc.get("href", "")
+                            break
+                            
                 clean_summary = soup.get_text(separator=" ", strip=True)
                 
             items.append({
