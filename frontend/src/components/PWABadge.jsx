@@ -24,7 +24,7 @@ export default function PWABadge() {
   return (
     <div style={{
       position: 'fixed',
-      bottom: '1.5rem',
+      bottom: '5rem',
       right: '1.5rem',
       zIndex: 50,
       backgroundColor: 'var(--bg-card)',
