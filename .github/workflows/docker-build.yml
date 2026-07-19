@@ -38,7 +38,9 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ghcr.io/minglarn/rss_bevakaren_backend:latest
+            ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Build and push Frontend image
@@ -46,5 +48,7 @@ jobs:
         with:
           context: ./frontend
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ghcr.io/minglarn/rss_bevakaren_frontend:latest
+            ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
