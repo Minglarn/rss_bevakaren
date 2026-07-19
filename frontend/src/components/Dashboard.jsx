@@ -15,6 +15,7 @@ const Dashboard = () => {
   const feedId = searchParams.get('feedId');
   
   const [readItems, setReadItems] = useState(new Set());
+  const [unreadItems, setUnreadItems] = useState(new Set());
   const readTimers = useRef({});
   const longPressTimers = useRef({});
   const [showRead, setShowRead] = useState(() => {
@@ -194,11 +195,33 @@ const Dashboard = () => {
     try {
       await api.post(`/articles/${id}/read`);
       setReadItems(prev => new Set(prev).add(id));
+      setUnreadItems(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       if (navigator.vibrate) {
         navigator.vibrate(50); // Haptic feedback on mobile
       }
     } catch (error) {
       console.error("Kunde inte markera som läst:", error);
+    }
+  };
+
+  const markAsUnread = async (id) => {
+    try {
+      await api.post(`/articles/${id}/unread`);
+      setUnreadItems(prev => new Set(prev).add(id));
+      setReadItems(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      if (navigator.vibrate) {
+        navigator.vibrate(50); // Haptic feedback on mobile
+      }
+    } catch (error) {
+      console.error("Kunde inte markera som oläst:", error);
     }
   };
 
@@ -210,9 +233,16 @@ const Dashboard = () => {
       const allIds = new Set(readItems);
       allFeeds.forEach(item => allIds.add(item.id));
       setReadItems(allIds);
+      setUnreadItems(new Set());
     } catch (error) {
       console.error("Kunde inte markera alla som lästa:", error);
     }
+  };
+
+  const isArticleRead = (id, is_read) => {
+    if (unreadItems.has(id)) return false;
+    if (readItems.has(id)) return true;
+    return is_read;
   };
 
   const handleExpand = async (index, link, id) => {
@@ -221,7 +251,7 @@ const Dashboard = () => {
       
       // Handle read timer
       if (isExpanding) {
-        if (!readItems.has(id)) {
+        if (!isArticleRead(id, allFeeds[index]?.is_read)) {
           readTimers.current[id] = setTimeout(() => {
             markAsRead(id);
           }, 5000); // 5 seconds
@@ -419,11 +449,13 @@ const Dashboard = () => {
                 )}
                 <motion.div 
                   initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: (!showRead && (readItems.has(item.id) || item.is_read)) ? 0.5 : 1, x: 0 }}
+                  animate={{ opacity: (!showRead && isArticleRead(item.id, item.is_read)) ? 0.5 : 1, x: 0 }}
                   transition={{ duration: 0.2 }}
                   onPointerDown={() => {
                     longPressTimers.current[item.id] = setTimeout(() => {
-                      if (!readItems.has(item.id) && !item.is_read) {
+                      if (isArticleRead(item.id, item.is_read)) {
+                        markAsUnread(item.id);
+                      } else {
                         markAsRead(item.id);
                       }
                     }, 600); // 600ms for long press
@@ -444,8 +476,8 @@ const Dashboard = () => {
                     }
                   }}
                   onClick={() => handleExpand(index, item.link, item.id)}
-                  className={`feed-card ${(!showRead && (readItems.has(item.id) || item.is_read)) ? 'read' : ''}`}
-                  style={{ filter: (!showRead && (readItems.has(item.id) || item.is_read)) ? 'grayscale(100%)' : 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
+                  className={`feed-card ${(!showRead && isArticleRead(item.id, item.is_read)) ? 'read' : ''}`}
+                  style={{ filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
                 >
                 {/* Left colored bar */}
                 <div 
@@ -523,10 +555,18 @@ const Dashboard = () => {
                         </div>
                       )}
                       
-                      <div style={{ marginTop: '1rem' }}>
+                      <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                         <a href={item.link} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
                           <ExternalLink size={16} /> Läs på original-sidan
                         </a>
+                        {isArticleRead(item.id, item.is_read) && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                          >
+                            <EyeOff size={16} /> Markera som oläst
+                          </button>
+                        )}
                       </div>
                     </motion.div>
                   )}

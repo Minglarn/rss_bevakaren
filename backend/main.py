@@ -668,3 +668,11 @@ def mark_all_articles_read(feed_id: Optional[int] = None, db: Session = Depends(
         article.is_read = 1
     db.commit()
     return {"status": "ok", "count": len(articles)}
+
+@app.post("/articles/{article_id}/unread")
+def mark_article_unread(article_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    article = db.query(models.Article).join(models.Feed).filter(models.Article.id == article_id, models.Feed.user_id == current_user.id).first()
+    if article:
+        article.is_read = 0
+        db.commit()
+    return {"status": "ok"}
