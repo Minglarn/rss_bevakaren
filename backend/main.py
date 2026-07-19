@@ -37,8 +37,8 @@ BANNER = """
 ██   ██ ██       ██  ██  ██   ██ ██  ██  ██   ██ ██   ██ ██      ██  ██ ██ 
 ██████  ███████   ████   ██   ██ ██   ██ ██   ██ ██   ██ ███████ ██   ████ 
 """
-VERSION = "2026.07.19.6"
-LAST_UPDATE = "2026-07-19"
+VERSION = "2026.07.19.10"
+LAST_UPDATE = "2026-07-20"
 
 # Setup default users on startup from environment variables
 @app.on_event("startup")
@@ -299,18 +299,20 @@ async def polling_loop():
                             notify_body = ""
                             
                             if getattr(feed, "notify_enabled", 1) == 1:
-                                should_notify = True
-                                notify_title = f"Ny händelse: {feed.title or 'RSS'}"
-                                notify_body = art.title
-                            
-                            # Check keywords to override title/body if matched
-                            if kw_texts:
-                                search_text = f"{art.title or ''} {art.summary or ''}".lower()
-                                matched_kws = [k for k in kw_texts if k in search_text]
-                                if matched_kws:
+                                # User has enabled notifications for this feed
+                                if kw_texts:
+                                    # User has keywords, ONLY notify if a keyword matches
+                                    search_text = f"{art.title or ''} {art.summary or ''}".lower()
+                                    matched_kws = [k for k in kw_texts if k in search_text]
+                                    if matched_kws:
+                                        should_notify = True
+                                        notify_title = "Nytt larmord hittat!"
+                                        notify_body = f"Larmord '{matched_kws[0]}' hittades i: {art.title}"
+                                else:
+                                    # User has NO keywords, notify for all articles
                                     should_notify = True
-                                    notify_title = "Nytt larmord hittat!"
-                                    notify_body = f"Larmord '{matched_kws[0]}' hittades i: {art.title}"
+                                    notify_title = f"Ny händelse: {feed.title or 'RSS'}"
+                                    notify_body = art.title
                                     
                             if should_notify:
                                 subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
@@ -328,9 +330,12 @@ async def polling_loop():
                                         )
                                         print(f"Skickade push-notis till användare {feed.user_id}", flush=True)
                                     except WebPushException as ex:
+                                        print(f"WebPushException för feed {feed.id}: {repr(ex)}", flush=True)
                                         if ex.response and ex.response.status_code in [404, 410]:
                                             db.delete(sub)
                                             db.commit()
+                                    except Exception as ex:
+                                        print(f"Oväntat fel vid webpush: {ex}", flush=True)
                     else:
                         print(f"Polling done for feed {feed.id} ({feed.title}): 0 new articles.", flush=True)
                     
