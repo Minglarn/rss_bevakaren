@@ -147,7 +147,7 @@ input, textarea, .card-content-text, .card-summary {
 
 .main-content {
   flex: 1;
-  max-width: 900px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 2rem;
   box-sizing: border-box;
@@ -683,15 +683,9 @@ select:focus, input:focus {
 
 .events-list {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
   gap: 1rem;
   align-items: stretch;
-}
-
-@media (min-width: 1024px) {
-  .events-list {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 .divider {
