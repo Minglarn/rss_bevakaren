@@ -347,16 +347,19 @@ const App = () => {
   }
 
   return (
-    <Router>
-      <AppLayout onLogout={handleLogout}>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/manage" element={<RssManager />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AppLayout>
-    </Router>
+    <>
+      <Router>
+        <AppLayout onLogout={handleLogout}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/manage" element={<RssManager />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AppLayout>
+      </Router>
+      <PWABadge />
+    </>
   );
 };
 
