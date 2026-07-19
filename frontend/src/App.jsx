@@ -5,6 +5,7 @@ import Login from './Login';
 import Dashboard from './components/Dashboard';
 import RssManager from './components/RssManager';
 import Settings from './components/Settings';
+import PWABadge from './components/PWABadge';
 import api from './api';
 import './App.css';
 import './index.css';
@@ -276,6 +277,7 @@ const AppLayout = ({ children, onLogout }) => {
           ))}
         </div>
       </div>
+      <PWABadge />
     </div>
   );
 };

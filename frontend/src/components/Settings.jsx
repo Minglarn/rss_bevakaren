@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert } from 'lucide-react';
 import api from '../api';
+import { requestNotificationPermission, sendNotification } from '../utils/notifications';
 
 const Settings = () => {
   const [keywords, setKeywords] = useState([]);
@@ -48,13 +49,13 @@ const Settings = () => {
 
   const togglePush = async () => {
     if (Notification.permission !== 'granted') {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
+      const granted = await requestNotificationPermission();
+      if (granted) {
         setPushEnabled(true);
-        alert('Notiser är nu aktiverade! (Observera att backend-prenumeration måste implementeras fullt ut via Service Worker)');
+        sendNotification('Notiser aktiverade!', { body: 'Du kommer nu få larm när dina nyckelord nämns.' });
       }
     } else {
-      alert('Notiser är redan aktiverade i webbläsaren. Du kan stänga av dem i webbläsarens inställningar.');
+      sendNotification('Test Notis', { body: 'Detta är ett test från RSS Bevakare.' });
     }
   };
 
