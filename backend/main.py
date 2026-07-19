@@ -100,6 +100,12 @@ async def startup_event():
             cur.execute("ALTER TABLE feeds ADD COLUMN include_in_dashboard INTEGER DEFAULT 1;")
         except sqlite3.OperationalError:
             pass # Column exists
+
+        # Migration 6: Add notify_enabled
+        try:
+            cur.execute("ALTER TABLE feeds ADD COLUMN notify_enabled INTEGER DEFAULT 1;")
+        except sqlite3.OperationalError:
+            pass # Column exists
             
         conn.commit()
         conn.close()
@@ -294,6 +300,7 @@ def get_feeds(db: Session = Depends(database.get_db), current_user: models.User 
             "polling_interval": feed.polling_interval,
             "scrape_enabled": bool(feed.scrape_enabled),
             "include_in_dashboard": bool(feed.include_in_dashboard),
+            "notify_enabled": bool(feed.notify_enabled),
             "unread_count": unread_count
         }
         feed_responses.append(feed_dict)
@@ -309,13 +316,14 @@ def view_feed(feed_id: int, db: Session = Depends(database.get_db), current_user
 
 @app.post("/feeds", response_model=schemas.FeedResponse)
 def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    db_feed = models.Feed(url=feed.url, title=feed.title, polling_interval=feed.polling_interval, scrape_enabled=int(feed.scrape_enabled), include_in_dashboard=int(feed.include_in_dashboard), user_id=current_user.id)
+    db_feed = models.Feed(url=feed.url, title=feed.title, polling_interval=feed.polling_interval, scrape_enabled=int(feed.scrape_enabled), include_in_dashboard=int(feed.include_in_dashboard), notify_enabled=int(feed.notify_enabled), user_id=current_user.id)
     db.add(db_feed)
     db.commit()
     db.refresh(db_feed)
     # Convert integer to boolean for response
     db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
     db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
+    db_feed.notify_enabled = bool(db_feed.notify_enabled)
     return db_feed
 
 @app.put("/feeds/{feed_id}", response_model=schemas.FeedResponse)
@@ -328,10 +336,12 @@ def update_feed(feed_id: int, feed: schemas.FeedCreate, db: Session = Depends(da
     db_feed.polling_interval = feed.polling_interval
     db_feed.scrape_enabled = int(feed.scrape_enabled)
     db_feed.include_in_dashboard = int(feed.include_in_dashboard)
+    db_feed.notify_enabled = int(feed.notify_enabled)
     db.commit()
     db.refresh(db_feed)
     db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
     db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
+    db_feed.notify_enabled = bool(db_feed.notify_enabled)
     return db_feed
 
 @app.delete("/feeds/{feed_id}", response_model=dict)
