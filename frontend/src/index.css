@@ -980,7 +980,6 @@ select:focus, input:focus {
 }
 .app-main-content {
   flex: 1;
-  overflow-y: auto;
   position: relative;
 }
 

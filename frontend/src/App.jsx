@@ -45,7 +45,10 @@ const AppLayout = ({ children, onLogout }) => {
           flexDirection: 'column',
           padding: '1.5rem 0',
           transition: 'width 0.3s ease',
-          position: 'relative'
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+          zIndex: 100
         }}
       >
         {/* Toggle Collapse Button */}
