@@ -242,6 +242,7 @@ const Dashboard = () => {
         next.delete(id);
         return next;
       });
+      window.dispatchEvent(new Event('feedsUpdated'));
       if (navigator.vibrate) {
         navigator.vibrate(50); // Haptic feedback on mobile
       }
@@ -259,6 +260,7 @@ const Dashboard = () => {
         next.delete(id);
         return next;
       });
+      window.dispatchEvent(new Event('feedsUpdated'));
       if (navigator.vibrate) {
         navigator.vibrate(50); // Haptic feedback on mobile
       }
@@ -276,6 +278,7 @@ const Dashboard = () => {
       allFeeds.forEach(item => allIds.add(item.id));
       setReadItems(allIds);
       setUnreadItems(new Set());
+      window.dispatchEvent(new Event('feedsUpdated'));
     } catch (error) {
       console.error("Kunde inte markera alla som lästa:", error);
     }
