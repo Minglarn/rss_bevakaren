@@ -1,5 +1,6 @@
 import feedparser
 import time
+import calendar
 
 def fetch_feed_items(url: str):
     """Fetches and parses an RSS feed, returning a list of items."""
@@ -12,7 +13,7 @@ def fetch_feed_items(url: str):
             
             published_ts = 0
             if hasattr(entry, 'published_parsed') and entry.published_parsed:
-                published_ts = time.mktime(entry.published_parsed)
+                published_ts = calendar.timegm(entry.published_parsed)
                 
             summary_html = entry.get("summary", "")
             image_url = ""
