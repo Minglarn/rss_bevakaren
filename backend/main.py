@@ -213,8 +213,14 @@ async def websocket_endpoint(websocket: WebSocket):
         except WebSocketDisconnect:
             manager.disconnect(websocket, user.id)
             
+    except WebSocketDisconnect:
+        # Client disconnected before or during auth
+        pass
     except Exception as e:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        try:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        except RuntimeError:
+            pass
 
 async def polling_loop():
     print("Background polling loop started", flush=True)

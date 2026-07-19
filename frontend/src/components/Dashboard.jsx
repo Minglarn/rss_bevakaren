@@ -266,7 +266,6 @@ const Dashboard = () => {
                   </div>
                 )}
                 <motion.div 
-                  ref={isLast ? lastElementRef : null}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.2 }}
@@ -374,7 +373,7 @@ const Dashboard = () => {
           })}
           
           {displayedFeeds.length < allFeeds.length && (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+            <div ref={lastElementRef} style={{ display: 'flex', justifyContent: 'center', padding: '2rem', color: 'var(--text-muted)', gridColumn: '1 / -1' }}>
               <Loader2 className="spin" size={24} />
             </div>
           )}
