@@ -335,10 +335,14 @@ async def polling_loop():
                         print(f"Polling done for feed {feed.id} ({feed.title}): 0 new articles.", flush=True)
                     
                     # Update last polled time
-                    feed.last_polled = current_time
+                    feed.last_polled = int(time.time())
                     db.commit()
                     
                     await manager.send_personal_message(f"POLLING_END:{feed.id}", feed.user_id)
+                    
+                    # Spread out the polling to avoid bursts of notifications
+                    import random
+                    await asyncio.sleep(random.uniform(5.0, 15.0))
         except Exception as e:
             print(f"Polling error: {e}", flush=True)
         finally:
