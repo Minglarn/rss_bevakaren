@@ -683,21 +683,9 @@ select:focus, input:focus {
 
 .events-list {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
   gap: 1rem;
   align-items: stretch;
-}
-
-@media (min-width: 768px) {
-  .events-list {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 1200px) {
-  .events-list {
-    grid-template-columns: repeat(3, 1fr);
-  }
 }
 
 .divider {

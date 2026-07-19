@@ -268,7 +268,7 @@ const Settings = () => {
                       checked={feed.notify_enabled}
                       onChange={() => toggleFeedNotification(feed)}
                     />
-                    <span className="slider"></span>
+                    <span className="toggle-slider"></span>
                   </label>
                 </div>
               ))}
