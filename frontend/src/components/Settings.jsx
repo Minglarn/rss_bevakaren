@@ -246,14 +246,14 @@ const Settings = () => {
               Här lägger du in ord som du anser är viktiga. När systemet hittar dessa i dina RSS-flöden, kommer det att kunna larma dig.
             </p>
 
-            <form onSubmit={handleAddKeyword} style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+            <form onSubmit={handleAddKeyword} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.5rem' }}>
               <input 
                 type="text" 
                 placeholder="T.ex. Säkerhet, Brand..." 
                 value={newKeyword}
                 onChange={(e) => setNewKeyword(e.target.value)}
                 style={{
-                  flex: '1',
+                  flex: '1 1 200px',
                   padding: '0.75rem 1rem',
                   borderRadius: '8px',
                   border: '1px solid var(--border-color)',
@@ -273,7 +273,9 @@ const Settings = () => {
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem'
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  flex: '0 1 auto'
                 }}
               >
                 <Plus size={18} /> Lägg till

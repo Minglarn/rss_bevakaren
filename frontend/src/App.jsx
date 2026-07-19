@@ -34,7 +34,8 @@ const AppLayout = ({ children, onLogout }) => {
   }, [location]);
 
   return (
-    <div className="app-container" style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-app)', transition: 'all 0.3s' }}>
+    <>
+      <div className="app-container" style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-app)', transition: 'all 0.3s' }}>
       {/* Desktop Sidebar */}
       <div 
         className="desktop-sidebar"
@@ -88,7 +89,7 @@ const AppLayout = ({ children, onLogout }) => {
           {!isCollapsed && (
             <div>
               <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS-Bevakaren</h2>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v2026.07.19.2</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v2026.07.19.4</span>
             </div>
           )}
         </div>
@@ -200,6 +201,8 @@ const AppLayout = ({ children, onLogout }) => {
         {children}
       </div>
 
+      </div>
+
       {/* Mobile Bottom Bar */}
       <div className="mobile-bottom-bar">
         <Link to="/" className={`bottom-bar-item ${location.pathname === '/' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
@@ -287,7 +290,7 @@ const AppLayout = ({ children, onLogout }) => {
         </div>
       </div>
       <PWABadge />
-    </div>
+    </>
   );
 };
 
