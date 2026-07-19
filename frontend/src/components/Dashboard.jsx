@@ -306,21 +306,7 @@ const Dashboard = () => {
   return (
     <div className="dashboard-container">
       {/* Toolbar / Verktygsfält (TOPPBAR) */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        padding: '1rem 2rem',
-        margin: '-2rem -2rem 1.5rem -2rem',
-        backgroundColor: 'var(--bg-card)',
-        borderBottom: '1px solid var(--border-color)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
-      }}>
+      <div className="toppbar">
         <div style={{ display: 'flex', alignItems: 'center', transition: 'width 0.3s', width: isSearchExpanded ? '250px' : '36px' }}>
           {isSearchExpanded ? (
             <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-app)', padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid var(--primary)', width: '100%' }}>

@@ -983,6 +983,22 @@ select:focus, input:focus {
   position: relative;
 }
 
+.toppbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  margin: -2rem -2rem 1.5rem -2rem;
+  background-color: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
 @media (max-width: 768px) {
   .desktop-sidebar {
     display: none !important;
@@ -990,6 +1006,11 @@ select:focus, input:focus {
   
   .app-main-content {
     padding-bottom: 70px; /* Space for bottom bar */
+  }
+  
+  .toppbar {
+    padding: 0.75rem 1rem;
+    margin: 0 0 1.5rem 0;
   }
   
   .mobile-bottom-bar {
