@@ -14,6 +14,7 @@ const RssManager = () => {
   const [editingFeedId, setEditingFeedId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editUrl, setEditUrl] = useState('');
+  const [deletingFeedId, setDeletingFeedId] = useState(null);
   
   const [showAddForm, setShowAddForm] = useState(false);
   const [showExplore, setShowExplore] = useState(false);
@@ -464,46 +465,58 @@ const RssManager = () => {
 
               {/* Höger: Åtgärder (Edit/Delete) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem', marginLeft: '0.5rem' }}>
-                <button 
-                  onClick={() => { setEditingFeedId(feed.id); setEditTitle(feed.title); setEditUrl(feed.url); }}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    padding: '0.4rem',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseOver={(e) => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)'; }}
-                  onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
-                  title="Redigera flöde"
-                >
-                  <Edit2 size={16} />
-                </button>
-                <button 
-                  onClick={() => handleDelete(feed.id)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    padding: '0.4rem',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseOver={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; }}
-                  onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
-                  title="Ta bort flöde"
-                >
-                  <Trash2 size={16} />
-                </button>
+                {deletingFeedId === feed.id ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'bold' }}>Är du säker?!</span>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button onClick={() => { handleDelete(feed.id); setDeletingFeedId(null); }} style={{ padding: '0.2rem 0.5rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>JA</button>
+                      <button onClick={() => setDeletingFeedId(null)} style={{ padding: '0.2rem 0.5rem', background: 'var(--bg-app)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>NEJ</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => { setEditingFeedId(feed.id); setEditTitle(feed.title); setEditUrl(feed.url); }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: '0.4rem',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)'; }}
+                      onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      title="Redigera flöde"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button 
+                      onClick={() => setDeletingFeedId(feed.id)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: '0.4rem',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; }}
+                      onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      title="Ta bort flöde"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </>
+                )}
               </div>
 
             </div>
