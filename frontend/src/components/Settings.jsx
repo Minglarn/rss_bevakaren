@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon } from 'lucide-react';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush } from '../utils/notifications';
 
@@ -11,6 +11,13 @@ const Settings = () => {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [feeds, setFeeds] = useState([]);
   const [sysInfo, setSysInfo] = useState(null);
+  const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
+
+  const toggleImages = () => {
+    const val = !showImages;
+    setShowImages(val);
+    localStorage.setItem('rss_show_images', val);
+  };
 
   const fetchData = async () => {
     try {
@@ -143,6 +150,26 @@ const Settings = () => {
             )}
 
             <div style={{ marginTop: '2rem', padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ImageIcon size={18} /> Visning
+              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Inkludera bilder i händelsekortet</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Välj om nyhetsartiklar ska visa tillhörande bilder eller bara text.</div>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={showImages}
+                    onChange={toggleImages}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '1.5rem', padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
               <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 Felsökning
               </h4>

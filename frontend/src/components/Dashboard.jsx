@@ -31,6 +31,9 @@ const Dashboard = () => {
   const [showRead, setShowRead] = useState(() => {
     return localStorage.getItem('rss_show_read') === 'true';
   });
+  const [showImages, setShowImages] = useState(() => {
+    return localStorage.getItem('rss_show_images') !== 'false';
+  });
   
   useEffect(() => {
     localStorage.setItem('rss_show_read', showRead);
@@ -564,7 +567,7 @@ const Dashboard = () => {
                     {item.title}
                   </h3>
                   
-                  {item.image_url && (
+                  {showImages && item.image_url && (
                     <div 
                       style={{ 
                         width: '100%', 
