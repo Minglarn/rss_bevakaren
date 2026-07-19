@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, List, Edit2, Check, X, Link as LinkIcon, Activity, Globe } from 'lucide-react';
+import { Plus, Trash2, List, Edit2, Check, X, Link as LinkIcon, Activity, Globe, Search, Library } from 'lucide-react';
 import api from '../api';
 
 const RssManager = () => {
@@ -16,6 +16,10 @@ const RssManager = () => {
   const [editUrl, setEditUrl] = useState('');
   
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showExplore, setShowExplore] = useState(false);
+  const [opmlFeeds, setOpmlFeeds] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [addingFeedUrl, setAddingFeedUrl] = useState(null);
 
   const fetchFeeds = async () => {
     try {
@@ -27,9 +31,37 @@ const RssManager = () => {
     }
   };
 
+  const fetchOpmlFeeds = async () => {
+    try {
+      const res = await api.get('/opml-feeds');
+      setOpmlFeeds(res.data);
+    } catch (err) {
+      console.error("Kunde inte hämta OPML-flöden", err);
+    }
+  };
+
   useEffect(() => {
     fetchFeeds();
+    fetchOpmlFeeds();
   }, []);
+
+  const handleQuickAdd = async (feedUrl, feedTitle) => {
+    setAddingFeedUrl(feedUrl);
+    try {
+      await api.post('/feeds', { 
+        url: feedUrl, 
+        title: feedTitle, 
+        polling_interval: 60, 
+        scrape_enabled: true, 
+        include_in_dashboard: true 
+      });
+      fetchFeeds();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAddingFeedUrl(null);
+    }
+  };
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -62,31 +94,157 @@ const RssManager = () => {
 
   return (
     <div className="dashboard-container" style={{ maxWidth: '1000px' }}>
-      <div className="dashboard-header" style={{ marginBottom: '1.5rem' }}>
+      <div className="dashboard-header" style={{ marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <h1 style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.75rem', margin: 0, fontSize: '1.8rem' }}>
           <List size={28} style={{ color: 'var(--primary)' }} /> Hantera RSS-flöden
         </h1>
-        <button 
-          onClick={() => setShowAddForm(!showAddForm)}
-          style={{
-            padding: '0.6rem 1.25rem',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: showAddForm ? 'var(--bg-card)' : 'var(--primary)',
-            color: showAddForm ? 'var(--text-main)' : 'white',
-            border: showAddForm ? '1px solid var(--border-color)' : '1px solid transparent',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            transition: 'all 0.2s'
-          }}
-        >
-          {showAddForm ? <X size={18} /> : <Plus size={18} />} 
-          {showAddForm ? 'Avbryt' : 'Nytt flöde'}
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <button 
+            onClick={() => { setShowExplore(!showExplore); setShowAddForm(false); }}
+            style={{
+              padding: '0.6rem 1.25rem',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: showExplore ? 'var(--bg-card)' : 'rgba(37, 99, 235, 0.1)',
+              color: showExplore ? 'var(--text-main)' : 'var(--primary)',
+              border: showExplore ? '1px solid var(--border-color)' : '1px solid transparent',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s'
+            }}
+          >
+            {showExplore ? <X size={18} /> : <Library size={18} />} 
+            {showExplore ? 'Stäng katalog' : 'Utforska katalog'}
+          </button>
+          <button 
+            onClick={() => { setShowAddForm(!showAddForm); setShowExplore(false); }}
+            style={{
+              padding: '0.6rem 1.25rem',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: showAddForm ? 'var(--bg-card)' : 'var(--primary)',
+              color: showAddForm ? 'var(--text-main)' : 'white',
+              border: showAddForm ? '1px solid var(--border-color)' : '1px solid transparent',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s'
+            }}
+          >
+            {showAddForm ? <X size={18} /> : <Plus size={18} />} 
+            {showAddForm ? 'Avbryt' : 'Nytt flöde'}
+          </button>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {showExplore && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
+            animate={{ opacity: 1, height: 'auto', overflow: 'visible' }}
+            exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+            transition={{ duration: 0.3 }}
+          >
+            <div style={{
+              backgroundColor: 'var(--bg-card)',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.05)',
+              marginBottom: '2rem',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: '500px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <h3 style={{ marginTop: 0, marginBottom: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Library size={18} style={{ color: 'var(--primary)' }}/> Utforska svenska källor
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.4rem 0.8rem', minWidth: '250px' }}>
+                  <Search size={16} style={{ color: 'var(--text-muted)', marginRight: '0.5rem' }} />
+                  <input 
+                    type="text" 
+                    placeholder="Sök bland hundratals flöden..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', color: 'var(--text-main)' }}
+                  />
+                  {searchTerm && (
+                    <button onClick={() => setSearchTerm('')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0, display: 'flex' }}>
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              <div style={{ overflowY: 'auto', flex: 1, borderTop: '1px solid var(--border-color)', margin: '0 -1.5rem', padding: '0 1.5rem' }}>
+                {opmlFeeds.length === 0 ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Laddar katalog...</div>
+                ) : (
+                  opmlFeeds.filter(f => f.title.toLowerCase().includes(searchTerm.toLowerCase()) || f.description.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Inga träffar på "{searchTerm}".</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      {opmlFeeds
+                        .filter(f => f.title.toLowerCase().includes(searchTerm.toLowerCase()) || f.description.toLowerCase().includes(searchTerm.toLowerCase()))
+                        .map((feed, index) => {
+                          const isAlreadyAdded = feeds.some(existing => existing.url === feed.url);
+                          const isAdding = addingFeedUrl === feed.url;
+                          
+                          return (
+                            <div key={index} style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'space-between', 
+                              padding: '1rem 0', 
+                              borderBottom: '1px solid var(--border-color)',
+                              gap: '1rem'
+                            }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.2rem' }}>{feed.title}</div>
+                                {feed.description && feed.description !== feed.title && (
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{feed.description}</div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => handleQuickAdd(feed.url, feed.title)}
+                                disabled={isAlreadyAdded || isAdding}
+                                style={{
+                                  padding: '0.4rem 0.8rem',
+                                  borderRadius: '6px',
+                                  border: isAlreadyAdded ? '1px solid var(--border-color)' : 'none',
+                                  backgroundColor: isAlreadyAdded ? 'transparent' : 'var(--primary)',
+                                  color: isAlreadyAdded ? 'var(--text-muted)' : 'white',
+                                  fontWeight: 600,
+                                  fontSize: '0.85rem',
+                                  cursor: isAlreadyAdded ? 'default' : 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  whiteSpace: 'nowrap',
+                                  opacity: isAdding ? 0.7 : 1
+                                }}
+                              >
+                                {isAdding ? <Activity size={14} className="spin-animation" /> : 
+                                 isAlreadyAdded ? <Check size={14} /> : <Plus size={14} />}
+                                {isAlreadyAdded ? 'Tillagd' : 'Lägg till'}
+                              </button>
+                            </div>
+                          );
+                      })}
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showAddForm && (

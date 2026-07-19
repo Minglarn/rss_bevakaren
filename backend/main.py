@@ -366,6 +366,27 @@ def delete_keyword(keyword_id: int, db: Session = Depends(database.get_db), curr
 
 import rss_parser
 from typing import Optional
+import xml.etree.ElementTree as ET
+import os
+
+@app.get("/opml-feeds")
+def get_opml_feeds(current_user: models.User = Depends(auth.get_current_user)):
+    opml_path = os.path.join(os.path.dirname(__file__), "svenska_rss.opml")
+    feeds = []
+    try:
+        if os.path.exists(opml_path):
+            tree = ET.parse(opml_path)
+            root = tree.getroot()
+            for outline in root.iter("outline"):
+                if outline.get("type") == "rss":
+                    feeds.append({
+                        "title": outline.get("text") or outline.get("title", ""),
+                        "url": outline.get("xmlUrl", ""),
+                        "description": outline.get("description", "")
+                    })
+    except Exception as e:
+        print(f"Error parsing OPML: {e}")
+    return feeds
 
 @app.get("/dashboard-feeds", response_model=List[schemas.ArticleResponse])
 def get_dashboard_feeds(feed_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
