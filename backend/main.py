@@ -237,7 +237,8 @@ async def polling_loop():
                 # Check if it's time to poll
                 if current_time - feed.last_polled >= interval_sec:
                     # Time to poll!
-                    print(f"Polling feed {feed.id} ({feed.url})...", flush=True)
+                    short_url = (feed.url[:40] + '...') if len(feed.url) > 40 else feed.url
+                    print(f"Polling feed {feed.id} ({short_url})...", flush=True)
                     items = rss_parser.fetch_feed_items(feed.url)
                     
                     new_articles = []
