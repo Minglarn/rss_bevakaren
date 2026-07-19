@@ -224,6 +224,12 @@ const AppLayout = ({ children, onLogout }) => {
           </div>
           <span>Hantera</span>
         </Link>
+        <Link to="/settings" className={`bottom-bar-item ${location.pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+          <div className="icon-wrapper">
+            <SettingsIcon size={22} />
+          </div>
+          <span>Inställningar</span>
+        </Link>
         <button 
           className="bottom-bar-item" 
           onClick={onLogout}
