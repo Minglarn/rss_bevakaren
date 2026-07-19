@@ -266,20 +266,6 @@ const Dashboard = () => {
     setExpandedItems(prev => {
       const isExpanding = !prev[index];
       
-      // Handle read timer
-      if (isExpanding) {
-        if (!isArticleRead(id, allFeeds[index]?.is_read)) {
-          readTimers.current[id] = setTimeout(() => {
-            markAsRead(id);
-          }, 5000); // 5 seconds
-        }
-      } else {
-        if (readTimers.current[id]) {
-          clearTimeout(readTimers.current[id]);
-          delete readTimers.current[id];
-        }
-      }
-
       return {
         ...prev,
         [index]: isExpanding
@@ -636,15 +622,22 @@ const Dashboard = () => {
                       )}
                       
                       <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                        <a href={item.link} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
+                        <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
                           <ExternalLink size={16} /> Läs på original-sidan
                         </a>
-                        {isArticleRead(item.id, item.is_read) && (
+                        {isArticleRead(item.id, item.is_read) ? (
                           <button 
                             onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
                             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}
                           >
                             <EyeOff size={16} /> Markera som oläst
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                          >
+                            <CheckCheck size={16} /> Markera som läst
                           </button>
                         )}
                       </div>
