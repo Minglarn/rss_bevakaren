@@ -194,8 +194,8 @@ const Dashboard = () => {
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {feedId && (
             <Link to="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', textDecoration: 'none', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border-color)' }} title="Visa alla flöden">
