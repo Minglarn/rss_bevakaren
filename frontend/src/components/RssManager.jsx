@@ -233,6 +233,9 @@ const RssManager = () => {
                       style={{ cursor: 'pointer' }}
                     /> Auto-skrap
                   </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '0.1rem 0.5rem', borderRadius: '10px' }} title="Flödets ID i databasen">
+                    ID: {feed.id}
+                  </div>
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   <input
