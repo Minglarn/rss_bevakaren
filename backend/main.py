@@ -274,6 +274,7 @@ async def polling_loop():
                                                     vapid_private_key=VAPID_KEYS["private_key"],
                                                     vapid_claims={"sub": VAPID_KEYS["sub"]}
                                                 )
+                                                print(f"Skickade push-notis för larmord '{matched_kws[0]}' till användare {feed.user_id}", flush=True)
                                             except WebPushException as ex:
                                                 if ex.response and ex.response.status_code in [404, 410]:
                                                     db.delete(sub)
@@ -579,6 +580,7 @@ def test_push(db: Session = Depends(database.get_db), current_user: models.User 
                 vapid_claims={"sub": VAPID_KEYS["sub"]}
             )
             success_count += 1
+            print(f"Skickade framgångsrikt test-push till {sub.endpoint}", flush=True)
         except WebPushException as ex:
             print(f"Web Push Error: {repr(ex)}")
             if ex.response and ex.response.status_code in [404, 410]:

@@ -212,19 +212,27 @@ const Settings = () => {
               Välj vilka flöden du vill ha notiser från. Stäng av flöden som du inte vill att larmorden ska reagera på.
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {feeds.map(feed => (
-                <div key={feed.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-main)' }}>
-                    <Hash size={16} style={{ color: 'var(--primary)' }} />
-                    <span style={{ fontWeight: 500 }}>{feed.title || feed.url}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+              {feeds.map((feed, idx) => (
+                <div key={feed.id} style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between', 
+                  padding: '0.75rem 0', 
+                  borderBottom: idx !== feeds.length - 1 ? '1px solid var(--border-color)' : 'none'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)', overflow: 'hidden' }}>
+                    <Hash size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                    <span style={{ fontWeight: 500, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{feed.title || feed.url}</span>
                   </div>
-                  <button 
-                    onClick={() => toggleFeedNotification(feed)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: feed.notify_enabled ? 'var(--primary)' : 'var(--text-muted)' }}
-                  >
-                    {feed.notify_enabled ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-                  </button>
+                  <label className="toggle-switch" style={{ transform: 'scale(0.85)', flexShrink: 0, margin: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={feed.notify_enabled}
+                      onChange={() => toggleFeedNotification(feed)}
+                    />
+                    <span className="slider"></span>
+                  </label>
                 </div>
               ))}
             </div>

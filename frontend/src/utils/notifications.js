@@ -67,7 +67,7 @@ export const sendNotification = (title, options = {}) => {
   if (Notification.permission === 'granted') {
     const defaultOptions = {
       icon: '/pwa-192x192.png',
-      badge: '/pwa-192x192.png',
+      badge: '/badge.png',
     };
     
     if ('serviceWorker' in navigator) {
