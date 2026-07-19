@@ -34,6 +34,7 @@ const Dashboard = () => {
   const [showImages, setShowImages] = useState(() => {
     return localStorage.getItem('rss_show_images') !== 'false';
   });
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   
   useEffect(() => {
     localStorage.setItem('rss_show_read', showRead);
@@ -318,45 +319,60 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {feedId && (
-              <Link to="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', textDecoration: 'none', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border-color)' }} title="Visa alla flöden">
-                <ArrowLeft size={20} />
-              </Link>
-            )}
-            <h1 style={{ color: 'var(--primary)', margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
-              {feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'IDAG'}
-            </h1>
-          </div>
-        </div>
-      </div>
-
-      {/* Toolbar / Verktygsfält */}
+      {/* Toolbar / Verktygsfält (TOPPBAR) */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '1rem',
-        padding: '0.75rem 1.5rem',
+        padding: '1rem 2rem',
+        margin: '-2rem -2rem 1.5rem -2rem',
         backgroundColor: 'var(--bg-card)',
         borderBottom: '1px solid var(--border-color)',
-        marginBottom: '1.5rem',
         position: 'sticky',
-        top: '60px',
-        zIndex: 10
+        top: 0,
+        zIndex: 50,
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
       }}>
-        <div style={{ flex: '1 1 300px', display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-app)', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-          <Search size={18} style={{ color: 'var(--text-muted)', marginRight: '0.5rem' }} />
-          <input 
-            type="text" 
-            placeholder="Sök bland nyheter..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-main)', width: '100%', fontSize: '0.95rem' }}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', transition: 'width 0.3s', width: isSearchExpanded ? '250px' : '36px' }}>
+          {isSearchExpanded ? (
+            <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-app)', padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid var(--primary)', width: '100%' }}>
+              <Search size={16} style={{ color: 'var(--primary)', marginRight: '0.5rem' }} />
+              <input 
+                type="text" 
+                autoFocus
+                placeholder="Sök..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onBlur={(e) => {
+                  if (!e.target.value) setIsSearchExpanded(false);
+                }}
+                style={{ border: 'none', background: 'transparent', outline: 'none', color: 'var(--text-main)', width: '100%', fontSize: '0.9rem' }}
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsSearchExpanded(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-muted)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                width: '36px',
+                height: '36px',
+                transition: 'all 0.2s'
+              }}
+              title="Sök nyheter"
+            >
+              <Search size={16} />
+            </button>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -374,7 +390,8 @@ const Dashboard = () => {
               cursor: 'pointer',
               fontSize: '0.85rem',
               fontWeight: 600,
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              height: '36px'
             }}
             title={showRead ? "Dölj lästa kort" : "Visa lästa kort"}
           >
@@ -395,7 +412,8 @@ const Dashboard = () => {
               cursor: 'pointer',
               fontSize: '0.85rem',
               fontWeight: 600,
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              height: '36px'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = 'var(--primary)';
@@ -412,7 +430,7 @@ const Dashboard = () => {
           </button>
           
           {/* Layout controls (desktop only) */}
-          <div className="layout-controls desktop-only" style={{ gap: '4px', backgroundColor: 'var(--bg-app)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)', marginLeft: 'auto' }}>
+          <div className="layout-controls desktop-only" style={{ gap: '4px', backgroundColor: 'var(--bg-app)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-color)', marginLeft: 'auto', height: '36px', display: 'flex', alignItems: 'center' }}>
             {[1, 2, 3, 4].map(num => (
               <button 
                 key={num}
@@ -426,13 +444,32 @@ const Dashboard = () => {
                   cursor: 'pointer',
                   fontWeight: 600,
                   fontSize: '0.85rem',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  height: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
                 title={`${num} kort per rad`}
               >
                 {num}
               </button>
             ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="dashboard-header">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {feedId && (
+              <Link to="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', textDecoration: 'none', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border-color)' }} title="Visa alla flöden">
+                <ArrowLeft size={20} />
+              </Link>
+            )}
+            <h1 style={{ color: 'var(--primary)', margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
+              {feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'IDAG'}
+            </h1>
           </div>
         </div>
       </div>
