@@ -299,7 +299,7 @@ async def polling_loop():
                             
                             if getattr(feed, "notify_enabled", 1) == 1:
                                 should_notify = True
-                                notify_title = f"Ny händelse: {feed.name or 'RSS'}"
+                                notify_title = f"Ny händelse: {feed.title or 'RSS'}"
                                 notify_body = art.title
                             
                             # Check keywords to override title/body if matched
