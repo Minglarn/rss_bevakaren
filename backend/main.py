@@ -32,7 +32,7 @@ LAST_UPDATE = "2026-07-18"
 
 # Setup default users on startup from environment variables
 @app.on_event("startup")
-def startup_event():
+async def startup_event():
     print(BANNER, flush=True)
     print(f"Version: {VERSION}", flush=True)
     print(f"Senaste uppdatering: {LAST_UPDATE}", flush=True)
