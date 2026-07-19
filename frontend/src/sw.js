@@ -11,7 +11,6 @@ self.addEventListener('push', function(event) {
       const options = {
         body: data.body || 'Du har en ny notis',
         icon: '/pwa-192x192.png',
-        badge: '/badge.png',
         data: {
           url: data.url || '/'
         }
