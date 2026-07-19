@@ -143,7 +143,10 @@ const Dashboard = () => {
           window.dispatchEvent(new CustomEvent('pollingStart', { detail: feedId }));
         } else if (event.data.startsWith("POLLING_END:")) {
           const feedId = parseInt(event.data.split(":")[1]);
-          window.dispatchEvent(new CustomEvent('pollingEnd', { detail: feedId }));
+          // Fördröj avslutandet av pollningen med 2 sekunder så animationen hinns med att ses
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('pollingEnd', { detail: feedId }));
+          }, 2000);
         }
       };
       
