@@ -40,7 +40,8 @@ jobs:
           push: true
           tags: |
             ghcr.io/minglarn/rss_bevakaren_backend:latest
-            ${{ steps.meta.outputs.tags }}
+            ghcr.io/minglarn/rss_bevakaren_backend:${{ github.sha }}
+            ghcr.io/minglarn/rss_bevakaren_backend:${{ github.ref_name }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Build and push Frontend image
@@ -50,5 +51,6 @@ jobs:
           push: true
           tags: |
             ghcr.io/minglarn/rss_bevakaren_frontend:latest
-            ${{ steps.meta.outputs.tags }}
+            ghcr.io/minglarn/rss_bevakaren_frontend:${{ github.sha }}
+            ghcr.io/minglarn/rss_bevakaren_frontend:${{ github.ref_name }}
           labels: ${{ steps.meta.outputs.labels }}
