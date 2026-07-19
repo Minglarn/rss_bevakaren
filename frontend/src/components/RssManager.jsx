@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, List } from 'lucide-react';
+import { Plus, Trash2, List, Edit2, Check, X } from 'lucide-react';
 import api from '../api';
 
 const RssManager = () => {
@@ -11,6 +11,9 @@ const RssManager = () => {
   const [scrapeEnabled, setScrapeEnabled] = useState(true);
   const [includeInDashboard, setIncludeInDashboard] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [editingFeedId, setEditingFeedId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editUrl, setEditUrl] = useState('');
 
   const fetchFeeds = async () => {
     try {
@@ -185,48 +188,55 @@ const RssManager = () => {
               }}
             >
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <input
-                  type="text"
-                  defaultValue={feed.title}
-                  placeholder="[Ingen titel angiven, klicka för att lägga till]"
-                  onBlur={(e) => {
-                    if (e.target.value !== feed.title) {
-                      api.put(`/feeds/${feed.id}`, { title: e.target.value, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
-                    }
-                  }}
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid transparent',
-                    color: 'var(--text-main)',
-                    fontSize: '1.2rem',
-                    fontWeight: '700',
-                    width: '100%',
-                    padding: '2px 4px',
-                    borderRadius: '4px',
-                  }}
-                  onFocus={(e) => e.target.style.border = '1px solid var(--primary)'}
-                  onMouseLeave={(e) => { if(document.activeElement !== e.target) e.target.style.border = '1px solid transparent'; }}
-                />
-                <input
-                  type="text"
-                  defaultValue={feed.url}
-                  onBlur={(e) => {
-                    if (e.target.value !== feed.url) {
-                      api.put(`/feeds/${feed.id}`, { title: feed.title, url: e.target.value, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
-                    }
-                  }}
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid transparent',
-                    color: 'var(--text-muted)',
-                    fontSize: '0.85rem',
-                    width: '100%',
-                    padding: '2px 4px',
-                    borderRadius: '4px',
-                  }}
-                  onFocus={(e) => e.target.style.border = '1px solid var(--primary)'}
-                  onMouseLeave={(e) => { if(document.activeElement !== e.target) e.target.style.border = '1px solid transparent'; }}
-                />
+                {editingFeedId === feed.id ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+                    <input 
+                      type="text"
+                      value={editTitle} 
+                      onChange={e => setEditTitle(e.target.value)}
+                      placeholder="Titel"
+                      style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--primary)', background: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '1.1rem' }}
+                    />
+                    <input 
+                      type="url"
+                      value={editUrl} 
+                      onChange={e => setEditUrl(e.target.value)}
+                      placeholder="URL"
+                      style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--primary)', background: 'var(--bg-app)', color: 'var(--text-muted)', fontSize: '0.9rem' }}
+                    />
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      <button 
+                        onClick={() => {
+                          api.put(`/feeds/${feed.id}`, { title: editTitle, url: editUrl, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
+                          setEditingFeedId(null);
+                        }} 
+                        style={{ padding: '0.4rem 0.8rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}
+                      >
+                        <Check size={14} /> Spara
+                      </button>
+                      <button 
+                        onClick={() => setEditingFeedId(null)} 
+                        style={{ padding: '0.4rem 0.8rem', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}
+                      >
+                        <X size={14} /> Avbryt
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-main)' }}>{feed.title || '[Ingen titel angiven]'}</h3>
+                      <button 
+                        onClick={() => { setEditingFeedId(feed.id); setEditTitle(feed.title); setEditUrl(feed.url); }} 
+                        style={{ background: 'var(--bg-app)', border: '1px solid var(--border-color)', padding: '0.25rem', borderRadius: '4px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }} 
+                        title="Redigera namn och URL"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', wordBreak: 'break-all' }}>{feed.url}</div>
+                  </div>
+                )}
                 
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-app)', padding: '0.2rem 0.6rem', borderRadius: '12px' }} title="Pollningstid i minuter">
