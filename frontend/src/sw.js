@@ -1,9 +1,4 @@
 import { precacheAndRoute } from 'workbox-precaching';
-import { clientsClaim } from 'workbox-core';
-
-// Force new service worker to take over immediately
-self.skipWaiting();
-clientsClaim();
 
 // Precaching automatically injected by vite-plugin-pwa
 precacheAndRoute(self.__WB_MANIFEST);
