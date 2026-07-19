@@ -245,7 +245,7 @@ async def polling_loop():
                 if current_time - feed.last_polled >= interval_sec:
                     # Time to poll!
                     short_url = (feed.url[:40] + '...') if len(feed.url) > 40 else feed.url
-                    print(f"Polling feed {feed.id} ({short_url})...", flush=True)
+                    print(f"Polling feed {feed.id} ({feed.title}) [{short_url}]...", flush=True)
                     
                     await manager.send_personal_message(f"POLLING_START:{feed.id}", feed.user_id)
                     try:
@@ -284,7 +284,7 @@ async def polling_loop():
                             new_articles.append(new_article)
                     
                     if new_articles:
-                        print(f"Found {len(new_articles)} new articles for feed {feed.id}", flush=True)
+                        print(f"Found {len(new_articles)} new articles for feed {feed.id} ({feed.title})", flush=True)
                         db.commit()
                         # Send WS update
                         await manager.send_personal_message(f"NEW_ARTICLES:{feed.id}:{len(new_articles)}", feed.user_id)
@@ -332,7 +332,7 @@ async def polling_loop():
                                             db.delete(sub)
                                             db.commit()
                     else:
-                        print(f"Polling done for feed {feed.id}: 0 new articles.", flush=True)
+                        print(f"Polling done for feed {feed.id} ({feed.title}): 0 new articles.", flush=True)
                     
                     # Update last polled time
                     feed.last_polled = current_time
