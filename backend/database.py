@@ -6,7 +6,11 @@ import os
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./rss.db")
 
 engine = create_engine(
-    DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+    DATABASE_URL, 
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
+    pool_size=20,
+    max_overflow=40,
+    pool_timeout=60
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
