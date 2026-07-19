@@ -282,33 +282,48 @@ async def polling_loop():
                         # Send WS update
                         await manager.send_personal_message("NEW_ARTICLES", feed.user_id)
                         
-                        # Check keywords and send push
-                        if feed.notify_enabled:
-                            user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == feed.user_id).all()
-                            if user_keywords:
-                                kw_texts = [kw.keyword.lower() for kw in user_keywords]
-                                for art in new_articles:
-                                    search_text = f"{art.title or ''} {art.summary or ''}".lower()
-                                    matched_kws = [k for k in kw_texts if k in search_text]
-                                    if matched_kws:
-                                        subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
-                                        for sub in subs:
-                                            try:
-                                                webpush(
-                                                    subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
-                                                    data=json.dumps({
-                                                        "title": "Nytt larmord hittat!",
-                                                        "body": f"Larmord '{matched_kws[0]}' hittades i: {art.title}",
-                                                        "url": art.link
-                                                    }),
-                                                    vapid_private_key=VAPID_KEYS["private_key"],
-                                                    vapid_claims={"sub": VAPID_KEYS["sub"]}
-                                                )
-                                                print(f"Skickade push-notis för larmord '{matched_kws[0]}' till användare {feed.user_id}", flush=True)
-                                            except WebPushException as ex:
-                                                if ex.response and ex.response.status_code in [404, 410]:
-                                                    db.delete(sub)
-                                                    db.commit()
+                        # Check keywords and feed notify settings
+                        user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == feed.user_id).all()
+                        kw_texts = [kw.keyword.lower() for kw in user_keywords] if user_keywords else []
+                        
+                        for art in new_articles:
+                            should_notify = False
+                            notify_title = ""
+                            notify_body = ""
+                            
+                            if getattr(feed, "notify_enabled", 1) == 1:
+                                should_notify = True
+                                notify_title = f"Ny händelse: {feed.name or 'RSS'}"
+                                notify_body = art.title
+                            
+                            # Check keywords to override title/body if matched
+                            if kw_texts:
+                                search_text = f"{art.title or ''} {art.summary or ''}".lower()
+                                matched_kws = [k for k in kw_texts if k in search_text]
+                                if matched_kws:
+                                    should_notify = True
+                                    notify_title = "Nytt larmord hittat!"
+                                    notify_body = f"Larmord '{matched_kws[0]}' hittades i: {art.title}"
+                                    
+                            if should_notify:
+                                subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
+                                for sub in subs:
+                                    try:
+                                        webpush(
+                                            subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
+                                            data=json.dumps({
+                                                "title": notify_title,
+                                                "body": notify_body,
+                                                "url": art.link
+                                            }),
+                                            vapid_private_key=VAPID_KEYS["private_key"],
+                                            vapid_claims={"sub": VAPID_KEYS["sub"]}
+                                        )
+                                        print(f"Skickade push-notis till användare {feed.user_id}", flush=True)
+                                    except WebPushException as ex:
+                                        if ex.response and ex.response.status_code in [404, 410]:
+                                            db.delete(sub)
+                                            db.commit()
                     
                     # Update last polled time
                     feed.last_polled = current_time

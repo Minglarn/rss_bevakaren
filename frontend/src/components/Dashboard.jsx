@@ -130,6 +130,7 @@ const Dashboard = () => {
       ws.onopen = () => {
         console.log("WebSocket ansluten!");
         ws.send(token);
+        fetchFeeds(true); // Always fetch on reconnect to catch missed items
       };
       
       ws.onmessage = (event) => {
@@ -158,14 +159,22 @@ const Dashboard = () => {
     const handleFeedsUpdated = () => {
       fetchFeeds(true);
     };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchFeeds(true);
+      }
+    };
     
     window.addEventListener('feedsUpdated', handleFeedsUpdated);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
       isCleaningUp = true;
       clearTimeout(reconnectTimeout);
       if (ws) ws.close();
       window.removeEventListener('feedsUpdated', handleFeedsUpdated);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [feedId, showRead, debouncedSearch]);
 
