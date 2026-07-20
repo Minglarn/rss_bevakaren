@@ -23,6 +23,7 @@ const RssManager = () => {
   const [showExplore, setShowExplore] = useState(false);
   const [opmlFeeds, setOpmlFeeds] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [feedSearch, setFeedSearch] = useState('');
   const [addingFeedUrl, setAddingFeedUrl] = useState(null);
 
   const fetchFeeds = async () => {
@@ -95,6 +96,10 @@ const RssManager = () => {
       console.error(err);
     }
   };
+
+  const sortedAndFilteredFeeds = feeds
+    .filter(f => !feedSearch || (f.title || '').toLowerCase().includes(feedSearch.toLowerCase()) || (f.url || '').toLowerCase().includes(feedSearch.toLowerCase()))
+    .sort((a, b) => (a.title || a.url || '').localeCompare(b.title || b.url || ''));
 
   return (
     <div className="dashboard-container" style={{ maxWidth: '1000px' }}>
@@ -345,14 +350,36 @@ const RssManager = () => {
         )}
       </AnimatePresence>
 
+      {feeds.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.5rem 1rem', marginBottom: '1rem' }}>
+          <Search size={18} style={{ color: 'var(--text-muted)', marginRight: '0.75rem' }} />
+          <input 
+            type="text" 
+            placeholder="Sök bland dina flöden..." 
+            value={feedSearch}
+            onChange={(e) => setFeedSearch(e.target.value)}
+            style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', color: 'var(--text-main)', fontSize: '1rem' }}
+          />
+          {feedSearch && (
+            <button onClick={() => setFeedSearch('')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0, display: 'flex' }}>
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="rss-list-container">
         {feeds.length === 0 ? (
           <div style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
             <Globe size={48} style={{ opacity: 0.2, margin: '0 auto 1rem auto', display: 'block' }} />
             Du bevakar inga flöden ännu.
           </div>
+        ) : sortedAndFilteredFeeds.length === 0 ? (
+          <div style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            Inga träffar på "{feedSearch}".
+          </div>
         ) : (
-          feeds.map((feed) => (
+          sortedAndFilteredFeeds.map((feed) => (
             <div className="rss-list-item" key={feed.id}>
               
               {/* Vänster: Titel & URL */}
