@@ -690,6 +690,7 @@ const Dashboard = () => {
                         </button>
                       )}
                     </div>
+                    </div>
                   </div>
 
                   {/* Main content padding wrapper */}
