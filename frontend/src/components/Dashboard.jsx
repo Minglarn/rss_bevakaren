@@ -110,10 +110,8 @@ const Dashboard = () => {
     }
   };
 
+  // 1. WebSocket useEffect (Runs ONCE)
   useEffect(() => {
-    fetchFeeds();
-    
-    // Setup WebSocket connection
     let ws;
     let isCleaningUp = false;
     let reconnectTimeout;
@@ -130,7 +128,7 @@ const Dashboard = () => {
       ws.onopen = () => {
         console.log("WebSocket ansluten!");
         ws.send(token);
-        fetchFeeds(true); // Always fetch on reconnect to catch missed items
+        window.dispatchEvent(new Event('feedsUpdated')); // Always fetch on reconnect to catch missed items
       };
       
       ws.onmessage = (event) => {
@@ -144,13 +142,11 @@ const Dashboard = () => {
             window.dispatchEvent(new Event('feedsUpdated')); // Fallback for old clients
           }
           console.log("Nya artiklar mottagna via WebSocket! Uppdaterar UI...");
-          fetchFeeds(true);
         } else if (event.data.startsWith("POLLING_START:")) {
           const feedId = parseInt(event.data.split(":")[1]);
           window.dispatchEvent(new CustomEvent('pollingStart', { detail: feedId }));
         } else if (event.data.startsWith("POLLING_END:")) {
           const feedId = parseInt(event.data.split(":")[1]);
-          // Fördröj avslutandet av pollningen med 2 sekunder så animationen hinns med att ses
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('pollingEnd', { detail: feedId }));
           }, 2000);
@@ -172,6 +168,17 @@ const Dashboard = () => {
     
     connectWebSocket();
     
+    return () => {
+      isCleaningUp = true;
+      clearTimeout(reconnectTimeout);
+      if (ws) ws.close();
+    };
+  }, []);
+
+  // 2. Fetch Feeds & Event Listeners
+  useEffect(() => {
+    fetchFeeds();
+    
     const handleFeedsUpdated = () => {
       fetchFeeds(true);
     };
@@ -186,9 +193,6 @@ const Dashboard = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      isCleaningUp = true;
-      clearTimeout(reconnectTimeout);
-      if (ws) ws.close();
       window.removeEventListener('feedsUpdated', handleFeedsUpdated);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
