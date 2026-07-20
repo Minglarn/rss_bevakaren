@@ -65,5 +65,6 @@ class Article(Base):
     image_url = Column(String)
     categories = Column(String)
     is_read = Column(Integer, default=0)
+    is_locked = Column(Integer, default=0)
 
     feed = relationship("Feed", back_populates="articles")

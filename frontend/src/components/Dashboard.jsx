@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft, List, ArrowUp, CheckCheck, Eye, EyeOff, Search } from 'lucide-react';
+import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft, List, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock } from 'lucide-react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 
@@ -26,6 +26,8 @@ const Dashboard = () => {
   
   const [readItems, setReadItems] = useState(new Set());
   const [unreadItems, setUnreadItems] = useState(new Set());
+  const [lockedItems, setLockedItems] = useState(new Set());
+  const [unlockedItems, setUnlockedItems] = useState(new Set());
   const readTimers = useRef({});
   const longPressTimers = useRef({});
   const [showRead, setShowRead] = useState(() => {
@@ -274,6 +276,33 @@ const Dashboard = () => {
     }
   };
 
+  const toggleLockState = async (id, isCurrentlyLocked) => {
+    try {
+      if (isCurrentlyLocked) {
+        await api.post(`/articles/${id}/unlock`);
+        setUnlockedItems(prev => new Set(prev).add(id));
+        setLockedItems(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      } else {
+        await api.post(`/articles/${id}/lock`);
+        setLockedItems(prev => new Set(prev).add(id));
+        setUnlockedItems(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    } catch (error) {
+      console.error("Kunde inte ändra låsstatus:", error);
+    }
+  };
+
   const markAllAsRead = async () => {
     try {
       const url = feedId ? `/articles/read-all?feed_id=${feedId}` : '/articles/read-all';
@@ -289,10 +318,16 @@ const Dashboard = () => {
     }
   };
 
-  const isArticleRead = (id, is_read) => {
-    if (unreadItems.has(id)) return false;
+  const isArticleRead = (id, serverIsRead) => {
     if (readItems.has(id)) return true;
-    return is_read;
+    if (unreadItems.has(id)) return false;
+    return serverIsRead === 1;
+  };
+
+  const isArticleLocked = (id, serverIsLocked) => {
+    if (lockedItems.has(id)) return true;
+    if (unlockedItems.has(id)) return false;
+    return serverIsLocked === 1;
   };
 
   const handleExpand = async (index, link, id) => {
@@ -608,7 +643,30 @@ const Dashboard = () => {
                       ))}
                     </div>
 
-                    {/* Läst-knapp */}
+                    {/* Actions: Låst/Läst-knappar */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      {/* Lås-knapp */}
+                      {isArticleLocked(item.id, item.is_locked) ? (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', background: 'rgba(37, 99, 235, 0.1)', border: '1px solid rgba(37, 99, 235, 0.2)', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                          title="Lås upp händelse (kan nu rensas)"
+                        >
+                          <Lock size={15} />
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'none', border: '1px solid transparent', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                          title="Lås händelse (skydda från rensning)"
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <Unlock size={15} />
+                        </button>
+                      )}
+
+                      {/* Läst-knapp */}
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       {isArticleRead(item.id, item.is_read) ? (
                         <button 

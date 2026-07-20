@@ -44,7 +44,7 @@ BANNER = """
 ██   ██ ██       ██  ██  ██   ██ ██  ██  ██   ██ ██   ██ ██      ██  ██ ██ 
 ██████  ███████   ████   ██   ██ ██   ██ ██   ██ ██   ██ ███████ ██   ████ 
 """
-VERSION = "2026.07.20.21"
+VERSION = "2026.07.20.22"
 LAST_UPDATE = "2026-07-20"
 
 # Setup default users on startup from environment variables
@@ -127,6 +127,12 @@ async def startup_event():
         # Migration 7: Add is_read to articles
         try:
             cur.execute("ALTER TABLE articles ADD COLUMN is_read INTEGER DEFAULT 0;")
+        except sqlite3.OperationalError:
+            pass # Column exists
+
+        # Migration 8: Add is_locked to articles
+        try:
+            cur.execute("ALTER TABLE articles ADD COLUMN is_locked INTEGER DEFAULT 0;")
         except sqlite3.OperationalError:
             pass # Column exists
             
@@ -536,7 +542,8 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, show_read: Optional[bool]
             "source_title": art.feed.title or art.feed.url,
             "scrape_enabled": bool(art.feed.scrape_enabled),
             "received_ts": art.received_ts,
-            "is_read": art.is_read or 0
+            "is_read": art.is_read or 0,
+            "is_locked": art.is_locked or 0
         }
         response_items.append(art_dict)
         
@@ -726,3 +733,35 @@ def mark_article_unread(article_id: int, db: Session = Depends(database.get_db),
         article.is_read = 0
         db.commit()
     return {"status": "ok"}
+
+@app.post("/articles/{article_id}/lock")
+def lock_article(article_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    article = db.query(models.Article).join(models.Feed).filter(models.Article.id == article_id, models.Feed.user_id == current_user.id).first()
+    if article:
+        article.is_locked = 1
+        db.commit()
+    return {"status": "ok"}
+
+@app.post("/articles/{article_id}/unlock")
+def unlock_article(article_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    article = db.query(models.Article).join(models.Feed).filter(models.Article.id == article_id, models.Feed.user_id == current_user.id).first()
+    if article:
+        article.is_locked = 0
+        db.commit()
+    return {"status": "ok"}
+
+@app.post("/system/purge")
+def purge_system(days: int = 30, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    cutoff_ts = int(time.time()) - (days * 24 * 60 * 60)
+    query = db.query(models.Article).join(models.Feed).filter(
+        models.Feed.user_id == current_user.id,
+        models.Article.received_ts < cutoff_ts,
+        or_(models.Article.is_locked == 0, models.Article.is_locked == None)
+    )
+    count = query.count()
+    if count > 0:
+        article_ids = [a.id for a in query.all()]
+        db.query(models.Article).filter(models.Article.id.in_(article_ids)).delete(synchronize_session=False)
+        db.commit()
+    return {"status": "ok", "deleted": count}
+

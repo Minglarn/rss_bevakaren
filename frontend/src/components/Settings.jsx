@@ -12,6 +12,9 @@ const Settings = () => {
   const [feeds, setFeeds] = useState([]);
   const [sysInfo, setSysInfo] = useState(null);
   const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
+  const [purgeDays, setPurgeDays] = useState(30);
+  const [isPurging, setIsPurging] = useState(false);
+  const [purgeMessage, setPurgeMessage] = useState(null);
 
   const toggleImages = () => {
     const val = !showImages;
@@ -82,6 +85,24 @@ const Settings = () => {
       }
     }
   };
+
+  const handlePurge = async () => {
+    if (!window.confirm(`Är du säker på att du vill radera alla olåsta händelser som är äldre än ${purgeDays} dagar?`)) return;
+    setIsPurging(true);
+    setPurgeMessage(null);
+    try {
+      const res = await api.post(`/system/purge?days=${purgeDays}`);
+      setPurgeMessage(`Rensning slutförd! ${res.data.deleted} gamla händelser raderades.`);
+      fetchData(); // Uppdaterar databas-statistik
+    } catch (err) {
+      console.error(err);
+      setPurgeMessage("Ett fel inträffade vid rensning.");
+    } finally {
+      setIsPurging(false);
+      setTimeout(() => setPurgeMessage(null), 5000);
+    }
+  };
+
   const toggleFeedNotification = async (feed) => {
     try {
       const updatedFeed = { ...feed, notify_enabled: !feed.notify_enabled };
@@ -210,6 +231,55 @@ const Settings = () => {
               >
                 Tvinga App-uppdatering
               </button>
+            </div>
+
+            <div style={{ marginTop: '1.5rem', padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Database size={18} /> Rensa Databas (Purge)
+              </h4>
+              <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                Rensa bort gamla nyhetshändelser för att spara lagringsutrymme. Händelser som du har markerat som "Låsta" på dashboarden påverkas inte av rensningen.
+              </p>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>Spara inlägg i</span>
+                  <input 
+                    type="number" 
+                    value={purgeDays} 
+                    onChange={e => setPurgeDays(Math.max(1, parseInt(e.target.value) || 30))} 
+                    style={{ width: '60px', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-card)', color: 'var(--text-main)' }} 
+                  />
+                  <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>dagar</span>
+                </div>
+                
+                <button 
+                  onClick={handlePurge}
+                  disabled={isPurging}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    color: '#ef4444',
+                    border: '1px solid #ef4444',
+                    borderRadius: '6px',
+                    cursor: isPurging ? 'not-allowed' : 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  {isPurging ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />}
+                  {isPurging ? 'Rensar...' : 'Kör Rensning'}
+                </button>
+              </div>
+              
+              {purgeMessage && (
+                <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', borderRadius: '6px', fontSize: '0.9rem' }}>
+                  {purgeMessage}
+                </div>
+              )}
             </div>
           </div>
 

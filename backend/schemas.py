@@ -81,6 +81,7 @@ class ArticleResponse(BaseModel):
     scrape_enabled: Optional[bool] = True
     received_ts: Optional[int] = 0
     is_read: Optional[int] = 0
+    is_locked: Optional[int] = 0
 
     class Config:
         from_attributes = True
