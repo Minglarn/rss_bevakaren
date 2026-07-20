@@ -148,7 +148,7 @@ const AppLayout = ({ children, onLogout }) => {
           {!isCollapsed && (
             <div>
               <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS-Bevakaren</h2>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v2026.07.20.15</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v2026.07.20.16</span>
             </div>
           )}
         </div>
@@ -202,19 +202,21 @@ const AppLayout = ({ children, onLogout }) => {
                 Mina Flöden
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {myFeeds.map(feed => (
+                {myFeeds.map(feed => {
+                  const isActive = new URLSearchParams(location.search).get('feedId') === String(feed.id);
+                  return (
                   <Link 
                     to={`/?feedId=${feed.id}`} 
                     key={feed.id} 
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem',
-                      color: location.search.includes(`feedId=${feed.id}`) ? 'var(--primary)' : 'var(--text-main)', 
+                      color: isActive ? 'var(--primary)' : 'var(--text-main)', 
                       fontSize: '0.9rem',
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       textDecoration: 'none',
-                      backgroundColor: location.search.includes(`feedId=${feed.id}`) ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+                      backgroundColor: isActive ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
                       borderRadius: '8px',
-                      fontWeight: location.search.includes(`feedId=${feed.id}`) ? 600 : 400
+                      fontWeight: isActive ? 600 : 400
                     }}
                   >
                     <Hash size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} /> 
@@ -236,7 +238,8 @@ const AppLayout = ({ children, onLogout }) => {
                       </span>
                     )}
                   </Link>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
