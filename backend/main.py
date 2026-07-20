@@ -11,6 +11,13 @@ import os
 import models, schemas, database, auth
 from pydantic import BaseModel
 import logging
+import builtins
+from datetime import datetime
+
+_original_print = builtins.print
+def _timestamped_print(*args, **kwargs):
+    _original_print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]", *args, **kwargs)
+builtins.print = _timestamped_print
 
 class WsLogFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
@@ -37,7 +44,7 @@ BANNER = """
 ██   ██ ██       ██  ██  ██   ██ ██  ██  ██   ██ ██   ██ ██      ██  ██ ██ 
 ██████  ███████   ████   ██   ██ ██   ██ ██   ██ ██   ██ ███████ ██   ████ 
 """
-VERSION = "2026.07.20.19"
+VERSION = "2026.07.20.20"
 LAST_UPDATE = "2026-07-20"
 
 # Setup default users on startup from environment variables
