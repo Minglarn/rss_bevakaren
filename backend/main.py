@@ -37,7 +37,7 @@ BANNER = """
 ██   ██ ██       ██  ██  ██   ██ ██  ██  ██   ██ ██   ██ ██      ██  ██ ██ 
 ██████  ███████   ████   ██   ██ ██   ██ ██   ██ ██   ██ ███████ ██   ████ 
 """
-VERSION = "2026.07.20.14"
+VERSION = "2026.07.20.15"
 LAST_UPDATE = "2026-07-20"
 
 # Setup default users on startup from environment variables
@@ -379,7 +379,8 @@ def get_feeds(db: Session = Depends(database.get_db), current_user: models.User 
     for feed in feeds:
         unread_count = db.query(models.Article).filter(
             models.Article.feed_id == feed.id,
-            models.Article.received_ts > feed.last_viewed_ts
+            models.Article.received_ts > feed.last_viewed_ts,
+            (models.Article.is_read == 0) | (models.Article.is_read == None)
         ).count()
         
         feed_dict = {
