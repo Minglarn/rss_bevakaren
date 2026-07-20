@@ -299,20 +299,16 @@ async def polling_loop():
                             notify_body = ""
                             
                             if getattr(feed, "notify_enabled", 1) == 1:
-                                # User has enabled notifications for this feed
+                                should_notify = True
+                                notify_title = f"Ny händelse: {feed.title or 'RSS'}"
+                                notify_body = art.title
+                                
                                 if kw_texts:
-                                    # User has keywords, ONLY notify if a keyword matches
                                     search_text = f"{art.title or ''} {art.summary or ''}".lower()
                                     matched_kws = [k for k in kw_texts if k in search_text]
                                     if matched_kws:
-                                        should_notify = True
                                         notify_title = "Nytt larmord hittat!"
                                         notify_body = f"Larmord '{matched_kws[0]}' hittades i: {art.title}"
-                                else:
-                                    # User has NO keywords, notify for all articles
-                                    should_notify = True
-                                    notify_title = f"Ny händelse: {feed.title or 'RSS'}"
-                                    notify_body = art.title
                                     
                             if should_notify:
                                 subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
