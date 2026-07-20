@@ -9,6 +9,17 @@ export default function PWABadge() {
   } = useRegisterSW({
     onRegistered(r) {
       console.log('SW Registered: ' + r);
+      if (r) {
+        setInterval(() => {
+          r.update();
+        }, 60 * 60 * 1000);
+        
+        window.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            r.update();
+          }
+        });
+      }
     },
     onRegisterError(error) {
       console.log('SW registration error', error);
