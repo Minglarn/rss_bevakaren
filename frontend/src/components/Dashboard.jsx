@@ -98,7 +98,7 @@ const Dashboard = () => {
       if (feedId) {
         try {
           await api.post(`/feeds/${feedId}/view`);
-          window.dispatchEvent(new Event('feedsUpdated'));
+          window.dispatchEvent(new CustomEvent('feedsUpdated', { detail: { fromDashboardFetch: true } }));
         } catch (e) {
           console.error('Failed to mark feed as viewed', e);
         }
@@ -179,7 +179,8 @@ const Dashboard = () => {
   useEffect(() => {
     fetchFeeds();
     
-    const handleFeedsUpdated = () => {
+    const handleFeedsUpdated = (e) => {
+      if (e && e.detail && e.detail.fromDashboardFetch) return;
       fetchFeeds(true);
     };
 
