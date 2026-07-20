@@ -6,8 +6,9 @@ Ett modernt system för att övervaka och presentera RSS-flöden i realtid. Bygg
 - **Multi-användare:** Säker inloggning via JWT-autentisering. Varje användare har sina egna flöden och inställningar.
 - **RSS-Hantering:** Lägg till och ta bort RSS-flöden som ska övervakas.
 - **Dashboard:** Presenterar de senaste nyheterna från dina valda flöden i ett samlat gränssnitt.
-- **Nyckelordsbevakning:** (Pågående) Möjlighet att lägga in sökord. Vid träff i flöden skickas notiser.
-- **PWA & WebPush:** (Pågående) Byggd för att fungera som en Progressiv Webbapp med stöd för notiser.
+- **Nyckelordsbevakning:** Möjlighet att lägga in larmord. Vid träff i flöden skickas tydliga notiser för att snabbt uppmärksamma dig.
+- **PWA & WebPush:** Fullt fungerande Progressiv Webbapp (PWA) med stöd för blixtsnabba push-notiser i både dator och mobil, oavsett om appen är öppen eller inte.
+- **Mångsidig kompatibilitet:** Accepterar i princip alla RSS-format, inklusive WordPress-flöden, Atom och standard RSS 2.0.
 
 ## Arkitektur
 Systemet bygger på en Docker-baserad mikrotjänstarkitektur:
