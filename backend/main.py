@@ -37,7 +37,7 @@ BANNER = """
 ██   ██ ██       ██  ██  ██   ██ ██  ██  ██   ██ ██   ██ ██      ██  ██ ██ 
 ██████  ███████   ████   ██   ██ ██   ██ ██   ██ ██   ██ ███████ ██   ████ 
 """
-VERSION = "2026.07.20.16"
+VERSION = "2026.07.20.19"
 LAST_UPDATE = "2026-07-20"
 
 # Setup default users on startup from environment variables
@@ -293,46 +293,52 @@ async def polling_loop():
                         user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == feed.user_id).all()
                         kw_texts = [kw.keyword.lower() for kw in user_keywords] if user_keywords else []
                         
-                        for art in new_articles:
-                            should_notify = False
-                            notify_title = ""
-                            notify_body = ""
-                            
-                            if getattr(feed, "notify_enabled", 1) == 1:
-                                should_notify = True
-                                notify_title = f"Ny händelse: {feed.title or 'RSS'}"
-                                notify_body = art.title
+                        is_initial_poll = (feed.last_polled == 0)
+                        
+                        if is_initial_poll:
+                            print(f"Första inläsning av flöde {feed.id}, hoppar över notiser för gamla inlägg.", flush=True)
+                        else:
+                            for art in new_articles:
+                                should_notify = False
+                                notify_title = ""
+                                notify_body = ""
                                 
+                                if getattr(feed, "notify_enabled", 1) == 1:
+                                    should_notify = True
+                                    notify_title = f"Ny händelse: {feed.title or 'RSS'}"
+                                    notify_body = art.title
+                                    
                                 if kw_texts:
                                     search_text = f"{art.title or ''} {art.summary or ''}".lower()
                                     matched_kws = [k for k in kw_texts if k in search_text]
                                     if matched_kws:
+                                        should_notify = True
                                         notify_title = "Nytt larmord hittat!"
                                         notify_body = f"Larmord '{matched_kws[0]}' hittades i: {art.title}"
-                                    
-                            if should_notify:
-                                subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
-                                for sub in subs:
-                                    try:
-                                        webpush(
-                                            subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
-                                            data=json.dumps({
-                                                "title": notify_title,
-                                                "body": notify_body,
-                                                "url": art.link
-                                            }),
-                                            vapid_private_key=VAPID_KEYS["private_key"],
-                                            vapid_claims={"sub": VAPID_KEYS["sub"]}
-                                        )
-                                        print(f"Skickade push-notis till användare {feed.user_id}", flush=True)
-                                    except WebPushException as ex:
-                                        print(f"WebPushException för feed {feed.id}: {repr(ex)}", flush=True)
-                                        if getattr(ex, "response", None) is not None and ex.response.status_code in [404, 410]:
-                                            db.delete(sub)
-                                            db.commit()
-                                            print(f"Tog bort ogiltig Push-prenumeration för användare {feed.user_id}", flush=True)
-                                    except Exception as ex:
-                                        print(f"Oväntat fel vid webpush: {ex}", flush=True)
+                                        
+                                if should_notify:
+                                    subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
+                                    for sub in subs:
+                                        try:
+                                            webpush(
+                                                subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
+                                                data=json.dumps({
+                                                    "title": notify_title,
+                                                    "body": notify_body,
+                                                    "url": art.link
+                                                }),
+                                                vapid_private_key=VAPID_KEYS["private_key"],
+                                                vapid_claims={"sub": VAPID_KEYS["sub"]}
+                                            )
+                                            print(f"Skickade push-notis till användare {feed.user_id}", flush=True)
+                                        except WebPushException as ex:
+                                            print(f"WebPushException för feed {feed.id}: {repr(ex)}", flush=True)
+                                            if getattr(ex, "response", None) is not None and ex.response.status_code in [404, 410]:
+                                                db.delete(sub)
+                                                db.commit()
+                                                print(f"Tog bort ogiltig Push-prenumeration för användare {feed.user_id}", flush=True)
+                                        except Exception as ex:
+                                            print(f"Oväntat fel vid webpush: {ex}", flush=True)
                     else:
                         print(f"Polling done for feed {feed.id} ({feed.title}): 0 new articles.", flush=True)
                     

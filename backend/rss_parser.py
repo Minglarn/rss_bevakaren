@@ -7,7 +7,10 @@ def fetch_feed_items(url: str):
     """Fetches and parses an RSS feed, returning a list of items."""
     print(f"Laddar och tolkar RSS-flöde: {url}")
     try:
-        res = requests.get(url, timeout=15)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        res = requests.get(url, headers=headers, timeout=15)
         parsed = feedparser.parse(res.content)
         items = []
         for entry in parsed.entries:
