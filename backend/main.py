@@ -44,7 +44,7 @@ BANNER = """
 ██   ██ ██       ██  ██  ██   ██ ██  ██  ██   ██ ██   ██ ██      ██  ██ ██ 
 ██████  ███████   ████   ██   ██ ██   ██ ██   ██ ██   ██ ███████ ██   ████ 
 """
-VERSION = "2026.07.20.20"
+VERSION = "2026.07.20.21"
 LAST_UPDATE = "2026-07-20"
 
 # Setup default users on startup from environment variables
@@ -312,7 +312,7 @@ async def polling_loop():
                                 
                                 if getattr(feed, "notify_enabled", 1) == 1:
                                     should_notify = True
-                                    notify_title = f"Ny händelse: {feed.title or 'RSS'}"
+                                    notify_title = f"{feed.title or 'RSS'}"
                                     notify_body = art.title
                                     
                                 if kw_texts:
