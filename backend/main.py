@@ -37,7 +37,7 @@ BANNER = """
 ██   ██ ██       ██  ██  ██   ██ ██  ██  ██   ██ ██   ██ ██      ██  ██ ██ 
 ██████  ███████   ████   ██   ██ ██   ██ ██   ██ ██   ██ ███████ ██   ████ 
 """
-VERSION = "2026.07.20.13"
+VERSION = "2026.07.20.14"
 LAST_UPDATE = "2026-07-20"
 
 # Setup default users on startup from environment variables
@@ -327,9 +327,10 @@ async def polling_loop():
                                         print(f"Skickade push-notis till användare {feed.user_id}", flush=True)
                                     except WebPushException as ex:
                                         print(f"WebPushException för feed {feed.id}: {repr(ex)}", flush=True)
-                                        if ex.response and ex.response.status_code in [404, 410]:
+                                        if getattr(ex, "response", None) is not None and ex.response.status_code in [404, 410]:
                                             db.delete(sub)
                                             db.commit()
+                                            print(f"Tog bort ogiltig Push-prenumeration för användare {feed.user_id}", flush=True)
                                     except Exception as ex:
                                         print(f"Oväntat fel vid webpush: {ex}", flush=True)
                     else:

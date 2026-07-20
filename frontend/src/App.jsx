@@ -148,7 +148,7 @@ const AppLayout = ({ children, onLogout }) => {
           {!isCollapsed && (
             <div>
               <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS-Bevakaren</h2>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v2026.07.20.13</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v2026.07.20.14</span>
             </div>
           )}
         </div>
