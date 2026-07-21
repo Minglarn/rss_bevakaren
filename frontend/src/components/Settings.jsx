@@ -260,7 +260,7 @@ const Settings = () => {
                 <select 
                   value={theme}
                   onChange={toggleTheme}
-                  style={{ width: 'auto', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                  style={{ flex: 'none', width: 'auto', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
                 >
                   <option value="light">Ljust Tema</option>
                   <option value="dark">Mörkt Tema</option>
