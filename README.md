@@ -1,13 +1,17 @@
 # RSS-Bevakaren
 
+![Dashboard Screenshot](screenshot_1.jpg)
+
 Ett modernt system för att övervaka och presentera RSS-flöden i realtid. Byggt med en stilren design (inspirerad av PolisInfo), robust Python-backend och en responsiv React-frontend.
 
 ## Funktioner
 - **Multi-användare:** Säker inloggning via JWT-autentisering. Varje användare har sina egna flöden och inställningar.
-- **RSS-Hantering:** Lägg till och ta bort RSS-flöden som ska övervakas.
+- **RSS-Hantering:** Lägg till och ta bort RSS-flöden som ska övervakas med inbyggd sökfunktion och automatisk sortering.
 - **Dashboard:** Presenterar de senaste nyheterna från dina valda flöden i ett samlat gränssnitt.
-- **Nyckelordsbevakning:** Möjlighet att lägga in larmord. Vid träff i flöden skickas tydliga notiser för att snabbt uppmärksamma dig.
+- **Artikelhantering:** Lås fast viktiga nyheter (skydda dem från att raderas) eller markera dem som lästa/olästa.
+- **Nyckelordsbevakning:** Möjlighet att lägga in larmord. Larmordsnotiser är helt oberoende och skickas ut oavsett flödets inställningar för allmänna notiser.
 - **PWA & WebPush:** Fullt fungerande Progressiv Webbapp (PWA) med stöd för blixtsnabba push-notiser i både dator och mobil, oavsett om appen är öppen eller inte.
+- **Databashantering:** Möjlighet att rensa bort gammal data (purge) från inställningarna. Du bestämmer själv hur många dagar data ska sparas.
 - **Mångsidig kompatibilitet:** Accepterar i princip alla RSS-format, inklusive WordPress-flöden, Atom och standard RSS 2.0.
 
 ## Arkitektur
