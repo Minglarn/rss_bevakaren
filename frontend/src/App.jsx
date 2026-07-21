@@ -64,7 +64,6 @@ const AppLayout = ({ children, onLogout }) => {
       const feed = myFeedsRef.current.find(f => f.id === feedId);
       const title = feed ? feed.title : `flöde ${feedId}`;
       toast(`Letar nya händelser på ${title}...`, {
-        icon: '🔄',
         id: `poll-${feedId}`, // Ensures we don't spam if it starts again quickly
         duration: 6000,
         style: {
@@ -91,6 +90,20 @@ const AppLayout = ({ children, onLogout }) => {
       window.removeEventListener('pollingEnd', handleEnd);
     };
   }, [location]);
+
+  useEffect(() => {
+    const applyTheme = () => {
+      const theme = localStorage.getItem('rss_theme') || 'light';
+      if (theme === 'dark') {
+        document.body.classList.add('theme-dark');
+      } else {
+        document.body.classList.remove('theme-dark');
+      }
+    };
+    applyTheme();
+    window.addEventListener('themeChanged', applyTheme);
+    return () => window.removeEventListener('themeChanged', applyTheme);
+  }, []);
 
   return (
     <>
@@ -148,7 +161,7 @@ const AppLayout = ({ children, onLogout }) => {
           {!isCollapsed && (
             <div>
               <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS-Bevakaren</h2>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v2026.07.20.22</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v2026.07.21.01</span>
             </div>
           )}
         </div>

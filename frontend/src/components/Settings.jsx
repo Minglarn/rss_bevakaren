@@ -12,6 +12,7 @@ const Settings = () => {
   const [feeds, setFeeds] = useState([]);
   const [sysInfo, setSysInfo] = useState(null);
   const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
+  const [theme, setTheme] = useState(() => localStorage.getItem('rss_theme') || 'light');
   const [purgeDays, setPurgeDays] = useState(30);
   const [isPurging, setIsPurging] = useState(false);
   const [purgeMessage, setPurgeMessage] = useState(null);
@@ -20,6 +21,13 @@ const Settings = () => {
     const val = !showImages;
     setShowImages(val);
     localStorage.setItem('rss_show_images', val);
+  };
+
+  const toggleTheme = (e) => {
+    const val = e.target.value;
+    setTheme(val);
+    localStorage.setItem('rss_theme', val);
+    window.dispatchEvent(new Event('themeChanged'));
   };
 
   const fetchData = async () => {
@@ -239,6 +247,27 @@ const Settings = () => {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
               Anpassa hur appen ser ut och fungerar.
             </p>
+
+            <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
+              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ImageIcon size={18} /> Tema
+              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Utseende</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Välj mellan ljust och mörkt tema.</div>
+                </div>
+                <select 
+                  value={theme}
+                  onChange={toggleTheme}
+                  style={{ width: 'auto', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                >
+                  <option value="light">Ljust Tema</option>
+                  <option value="dark">Mörkt Tema</option>
+                </select>
+              </div>
+            </div>
+
             <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
               <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <ImageIcon size={18} /> Visning
