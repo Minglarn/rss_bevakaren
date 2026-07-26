@@ -7,6 +7,7 @@ from sqlalchemy import or_
 from typing import List, Optional
 from datetime import timedelta
 import os
+import json
 
 import models, schemas, database, auth
 from pydantic import BaseModel
@@ -44,7 +45,21 @@ BANNER = """
 ██   ██ ██       ██  ██  ██   ██ ██  ██  ██   ██ ██   ██ ██      ██  ██ ██ 
 ██████  ███████   ████   ██   ██ ██   ██ ██   ██ ██   ██ ███████ ██   ████ 
 """
-VERSION = "2026.07.26.02"
+def get_version():
+    env_version = os.getenv("APP_VERSION")
+    if env_version and env_version != "unknown":
+        return env_version
+    
+    # Try reading package.json locally (for local dev)
+    try:
+        pkg_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "package.json")
+        with open(pkg_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data.get("version", "unknown")
+    except Exception:
+        return "unknown"
+
+VERSION = get_version()
 LAST_UPDATE = "2026-07-26"
 
 # Setup default users on startup from environment variables

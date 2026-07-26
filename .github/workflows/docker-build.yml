@@ -33,11 +33,17 @@ jobs:
             ghcr.io/minglarn/rss_bevakaren_backend
             ghcr.io/minglarn/rss_bevakaren_frontend
 
+      - name: Get version from package.json
+        id: get_version
+        run: echo "VERSION=$(jq -r .version frontend/package.json)" >> $GITHUB_ENV
+
       - name: Build and push Backend image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           push: true
+          build-args: |
+            APP_VERSION=${{ env.VERSION }}
           tags: |
             ghcr.io/minglarn/rss_bevakaren_backend:latest
             ghcr.io/minglarn/rss_bevakaren_backend:${{ github.sha }}
