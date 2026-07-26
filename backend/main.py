@@ -44,8 +44,8 @@ BANNER = """
 ██   ██ ██       ██  ██  ██   ██ ██  ██  ██   ██ ██   ██ ██      ██  ██ ██ 
 ██████  ███████   ████   ██   ██ ██   ██ ██   ██ ██   ██ ███████ ██   ████ 
 """
-VERSION = "2026.07.21.01"
-LAST_UPDATE = "2026-07-21"
+VERSION = "2026.07.26.01"
+LAST_UPDATE = "2026-07-26"
 
 # Setup default users on startup from environment variables
 @app.on_event("startup")
@@ -338,7 +338,8 @@ async def polling_loop():
                                                 data=json.dumps({
                                                     "title": notify_title,
                                                     "body": notify_body,
-                                                    "url": art.link
+                                                    "url": art.link,
+                                                    "article_id": art.id
                                                 }),
                                                 vapid_private_key=VAPID_KEYS["private_key"],
                                                 vapid_claims={"sub": VAPID_KEYS["sub"]}

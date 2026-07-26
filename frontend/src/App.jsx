@@ -393,6 +393,19 @@ const App = () => {
     setUsername(null);
   };
 
+  useEffect(() => {
+    if (token && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        if (registration.active) {
+          registration.active.postMessage({
+            type: 'SET_TOKEN',
+            token: token
+          });
+        }
+      });
+    }
+  }, [token]);
+
   if (!token) {
     return <Login onLogin={handleLogin} />;
   }
