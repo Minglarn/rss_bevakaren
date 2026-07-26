@@ -442,6 +442,14 @@ def view_feed(feed_id: int, db: Session = Depends(database.get_db), current_user
 
 @app.post("/feeds", response_model=schemas.FeedResponse)
 def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    if not feed.title or not feed.title.strip():
+        import feedparser
+        parsed = feedparser.parse(feed.url)
+        if parsed.feed and "title" in parsed.feed:
+            feed.title = parsed.feed.title
+        else:
+            feed.title = feed.url
+
     db_feed = models.Feed(url=feed.url, title=feed.title, polling_interval=feed.polling_interval, scrape_enabled=int(feed.scrape_enabled), include_in_dashboard=int(feed.include_in_dashboard), notify_enabled=int(feed.notify_enabled), user_id=current_user.id)
     db.add(db_feed)
     db.commit()
