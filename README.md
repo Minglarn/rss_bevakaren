@@ -25,22 +25,6 @@ Systemet bygger på en Docker-baserad mikrotjänstarkitektur:
 - **Frontend:** React (byggt med Vite), React Router och Axios.
 - **Infrastruktur:** Byggd för publicering via GitHub Container Registry (GHCR) med en produktionsklar `docker-compose.yml`.
 
-## Utveckling (Lokal körning)
-1. Klona repositoryt.
-2. För backend:
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   uvicorn main:app --reload
-   ```
-   *Standard inloggning skapas automatiskt: `admin` / `admin`*
-3. För frontend:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
 ## Produktionskörning
 Applikationen driftsätts enklast via Docker. Nedan finns en färdig `docker-compose.yml` som du kan kopiera rakt av. Den laddar ner de färdigbyggda image-filerna (inga bygg-steg krävs lokalt) och sätter upp databasen.
 
