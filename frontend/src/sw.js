@@ -6,6 +6,14 @@ precacheAndRoute(self.__WB_MANIFEST);
 const DB_NAME = 'rss_bevakare_db';
 const STORE_NAME = 'auth_store';
 
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
+});
+
 function initDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
@@ -85,9 +93,9 @@ self.addEventListener('push', function(event) {
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   
-  // Windows/Chrome ibland skickar inte action-strängen rätt.
-  // Vi kollar även ifall event.action matchar titeln som en extrem fallback.
-  if (event.action === 'mark_read' || event.action === 'Mark as Read' || event.action === 'Markera Läst') {
+  const action = (event.action || '').toLowerCase();
+  
+  if (action === 'mark_read' || action.includes('mark') || action.includes('lst') || action.includes('read')) {
     if (event.notification.data && event.notification.data.article_id) {
       event.waitUntil((async () => {
         const token = await getToken();
@@ -113,7 +121,7 @@ self.addEventListener('notificationclick', function(event) {
     return;
   }
   
-  if (event.action === 'open_event' || event.action === 'Open Event' || event.action === 'Öppna Händelse') {
+  if (action === 'open_event' || action.includes('open') || action.includes('ppna')) {
     if (event.notification.data && event.notification.data.url) {
       event.waitUntil(clients.openWindow(event.notification.data.url));
     } else {
