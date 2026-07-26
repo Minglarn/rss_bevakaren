@@ -664,6 +664,19 @@ def subscribe_push(sub: schemas.PushSubscriptionCreate, db: Session = Depends(da
     
     return {"status": "ok"}
 
+@app.post("/push/unsubscribe", response_model=dict)
+def unsubscribe_push(sub: schemas.PushSubscriptionCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    existing = db.query(models.PushSubscription).filter(
+        models.PushSubscription.endpoint == sub.endpoint,
+        models.PushSubscription.user_id == current_user.id
+    ).first()
+    
+    if existing:
+        db.delete(existing)
+        db.commit()
+        
+    return {"status": "ok"}
+
 class TestPushRequest(BaseModel):
     endpoint: Optional[str] = None
 

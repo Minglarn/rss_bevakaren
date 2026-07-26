@@ -94,6 +94,26 @@ const Settings = () => {
     }
   };
 
+  const handleUnsubscribe = async () => {
+    if (!window.confirm("Are you sure you want to completely unregister this device from push notifications?")) return;
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        // We only need the endpoint, but we pass dummy keys to satisfy the schema
+        await api.post('/push/unsubscribe', { 
+          endpoint: subscription.endpoint, 
+          p256dh: "dummy", 
+          auth: "dummy" 
+        });
+        await subscription.unsubscribe();
+      }
+      setPushEnabled(false);
+    } catch (e) {
+      console.error("Unsubscribe failed", e);
+    }
+  };
+
   const handlePurge = async () => {
     if (!window.confirm(`Are you sure you want to delete all unlocked events older than ${purgeDays} days?`)) return;
     setIsPurging(true);
@@ -363,23 +383,45 @@ const Settings = () => {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
               Enable notifications in your browser to receive a push notification directly on your screen/mobile when a monitored keyword appears in a feed.
             </p>
-            <button 
-              onClick={togglePush}
-              style={{
-                padding: '0.75rem 1.5rem',
-                borderRadius: '8px',
-                border: pushEnabled ? '1px solid var(--border-color)' : 'none',
-                backgroundColor: pushEnabled ? 'var(--bg-app)' : 'var(--primary)',
-                color: pushEnabled ? 'var(--text-main)' : 'white',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <Bell size={18} /> {pushEnabled ? 'Notifications are on' : 'Turn on notifications'}
-            </button>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <button 
+                onClick={togglePush}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  border: pushEnabled ? '1px solid var(--border-color)' : 'none',
+                  backgroundColor: pushEnabled ? 'var(--bg-app)' : 'var(--primary)',
+                  color: pushEnabled ? 'var(--text-main)' : 'white',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <Bell size={18} /> {pushEnabled ? 'Notifications are on' : 'Turn on notifications'}
+              </button>
+              
+              {pushEnabled && (
+                <button 
+                  onClick={handleUnsubscribe}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '8px',
+                    border: '1px solid #ef4444',
+                    backgroundColor: 'transparent',
+                    color: '#ef4444',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  Unsubscribe
+                </button>
+              )}
+            </div>
           </div>
 
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', marginBottom: '2rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
