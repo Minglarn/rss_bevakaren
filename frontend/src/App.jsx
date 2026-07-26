@@ -8,6 +8,7 @@ import RssManager from './components/RssManager';
 import Settings from './components/Settings';
 import PWABadge from './components/PWABadge';
 import api from './api';
+import packageJson from '../package.json';
 import './App.css';
 import './index.css';
 
@@ -161,7 +162,7 @@ const AppLayout = ({ children, onLogout }) => {
           {!isCollapsed && (
             <div>
               <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS-Bevakaren</h2>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v2026.07.26.01</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v{packageJson.version}</span>
             </div>
           )}
         </div>
