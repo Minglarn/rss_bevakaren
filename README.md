@@ -81,4 +81,4 @@ docker-compose up -d
 ```
 
 ## Versionshantering
-Projektet använder CalVer (ex. 2026.07.21.01).
+Projektet använder CalVer (ex. 2026.07.26.01).
