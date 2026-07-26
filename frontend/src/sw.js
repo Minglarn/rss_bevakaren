@@ -97,25 +97,34 @@ self.addEventListener('notificationclick', function(event) {
                 'Authorization': `Bearer ${token}`
               }
             });
+            // Try to notify all clients to refresh feeds
+            const allClients = await clients.matchAll();
+            for (const client of allClients) {
+              client.postMessage({ type: 'REFRESH_FEEDS' });
+            }
           } catch(e) {
             console.error("Failed to mark as read", e);
           }
         }
       })());
     }
-  } else if (event.action === 'open_event') {
+    return;
+  }
+  
+  if (event.action === 'open_event') {
     if (event.notification.data && event.notification.data.url) {
       event.waitUntil(clients.openWindow(event.notification.data.url));
     } else {
       event.waitUntil(clients.openWindow('/'));
     }
+    return;
+  }
+
+  // Default action
+  if (event.notification.data && event.notification.data.url) {
+    event.waitUntil(clients.openWindow(event.notification.data.url));
   } else {
-    // Default action
-    if (event.notification.data && event.notification.data.url) {
-      event.waitUntil(clients.openWindow(event.notification.data.url));
-    } else {
-      event.waitUntil(clients.openWindow('/'));
-    }
+    event.waitUntil(clients.openWindow('/'));
   }
 });
 

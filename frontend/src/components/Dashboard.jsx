@@ -192,12 +192,25 @@ const Dashboard = () => {
       }
     };
     
+    const handleServiceWorkerMessage = (event) => {
+      if (event.data && event.data.type === 'REFRESH_FEEDS') {
+        window.dispatchEvent(new Event('feedsUpdated'));
+      }
+    };
+    
     window.addEventListener('feedsUpdated', handleFeedsUpdated);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+    }
     
     return () => {
       window.removeEventListener('feedsUpdated', handleFeedsUpdated);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      }
     };
   }, [feedId, showRead, debouncedSearch]);
 
