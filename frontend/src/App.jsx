@@ -423,7 +423,6 @@ const App = () => {
           </Routes>
         </AppLayout>
       </Router>
-      <PWABadge />
       <Toaster position="top-center" containerClassName="my-toast-container" />
     </>
   );
