@@ -804,8 +804,15 @@ select:focus, input:focus {
   --primary-hover: #60a5fa;
 }
 
-.theme-dark .sidebar, .theme-dark .mobile-top-bar {
+.theme-dark .sidebar, .theme-dark .mobile-top-bar, .theme-dark .mobile-bottom-bar {
   background: rgba(30, 41, 59, 0.85);
+}
+
+.theme-dark .mobile-feeds-sheet {
+  background: var(--bg-main);
+}
+.theme-dark .mobile-bottom-bar .bottom-bar-item:not(.active) {
+  color: var(--text-muted);
 }
 
 .theme-dark .card-summary, .theme-dark .card-content-text {
@@ -1042,7 +1049,7 @@ select:focus, input:focus {
     left: 0;
     right: 0;
     height: 65px;
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-top: 1px solid var(--border-color);
