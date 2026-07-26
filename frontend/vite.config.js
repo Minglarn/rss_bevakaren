@@ -15,7 +15,7 @@ export default defineConfig({
       manifest: {
         name: 'RSS Bevakare',
         short_name: 'RSS Bevakare',
-        description: 'Din moderna och snabba RSS-läsare',
+        description: 'Your modern and fast RSS reader',
         theme_color: '#121212',
         background_color: '#121212',
         display: 'standalone',

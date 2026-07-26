@@ -7,28 +7,28 @@
 
 ![Dashboard Screenshot](screenshot_1.jpg)
 
-Ett modernt system för att övervaka och presentera RSS-flöden i realtid. Byggt med en stilren design (inspirerad av PolisInfo), robust Python-backend och en responsiv React-frontend.
+A modern system for monitoring and presenting RSS feeds in real-time. Built with a clean design, a robust Python backend, and a responsive React frontend.
 
-## Funktioner
-- **Multi-användare:** Säker inloggning via JWT-autentisering. Varje användare har sina egna flöden och inställningar.
-- **RSS-Hantering:** Lägg till och ta bort RSS-flöden som ska övervakas med inbyggd sökfunktion och automatisk sortering.
-- **Dashboard:** Presenterar de senaste nyheterna från dina valda flöden i ett samlat gränssnitt.
-- **Artikelhantering:** Lås fast viktiga nyheter (skydda dem från att raderas) eller markera dem som lästa/olästa.
-- **Nyckelordsbevakning:** Möjlighet att lägga in larmord. Larmordsnotiser är helt oberoende och skickas ut oavsett flödets inställningar för allmänna notiser.
-- **PWA & WebPush:** Fullt fungerande Progressiv Webbapp (PWA) med stöd för blixtsnabba push-notiser i både dator och mobil, oavsett om appen är öppen eller inte.
-- **Databashantering:** Möjlighet att rensa bort gammal data (purge) från inställningarna. Du bestämmer själv hur många dagar data ska sparas.
-- **Mångsidig kompatibilitet:** Accepterar i princip alla RSS-format, inklusive WordPress-flöden, Atom och standard RSS 2.0.
+## Features
+- **Multi-user:** Secure login via JWT authentication. Each user has their own feeds and settings.
+- **RSS Management:** Add and remove monitored RSS feeds with built-in search and automatic sorting.
+- **Dashboard:** Presents the latest news from your selected feeds in a unified interface.
+- **Article Management:** Lock important news (protecting them from deletion) or mark them as read/unread.
+- **Keyword Monitoring:** Add alert keywords. Keyword notifications are independent and sent regardless of the feed's general notification settings.
+- **PWA & WebPush:** Fully functional Progressive Web App (PWA) with support for lightning-fast push notifications on both desktop and mobile, even when the app is closed.
+- **Database Management:** Purge old data from the settings. You decide how many days of data to keep.
+- **Versatile Compatibility:** Accepts virtually all RSS formats, including WordPress feeds, Atom, and standard RSS 2.0.
 
-## Arkitektur
-Systemet bygger på en Docker-baserad mikrotjänstarkitektur:
-- **Backend:** Python med FastAPI, SQLAlchemy och SQLite.
-- **Frontend:** React (byggt med Vite), React Router och Axios.
-- **Infrastruktur:** Byggd för publicering via GitHub Container Registry (GHCR) med en produktionsklar `docker-compose.yml`.
+## Architecture
+The system is built on a Docker-based microservices architecture:
+- **Backend:** Python with FastAPI, SQLAlchemy, and SQLite.
+- **Frontend:** React (built with Vite), React Router, and Axios.
+- **Infrastructure:** Built for publishing via GitHub Container Registry (GHCR) with a production-ready `docker-compose.yml`.
 
-## Produktionskörning
-Applikationen driftsätts enklast via Docker. Nedan finns en färdig `docker-compose.yml` som du kan kopiera rakt av. Den laddar ner de färdigbyggda image-filerna (inga bygg-steg krävs lokalt) och sätter upp databasen.
+## Production Deployment
+The easiest way to deploy the application is via Docker. Below is a ready-to-use `docker-compose.yml`. It pulls the pre-built images (no local building required) and sets up the database.
 
-Skapa en fil med namnet `docker-compose.yml` på din server:
+Create a file named `docker-compose.yml` on your server:
 
 ```yaml
 services:
@@ -37,11 +37,11 @@ services:
     ports:
       - "8094:8000"
     volumes:
-      # Lagra databasen i en dedikerad data-mapp på hosten så den överlever omstarter
+      # Store the database in a dedicated data folder on the host so it survives restarts
       - ./data:/data
     environment:
       - DATABASE_URL=sqlite:////data/rss.db
-      # Multi-user setup: Separera med kommatecken. Ordningen matchar.
+      # Multi-user setup: Separate with commas. Order matches.
       - APP_USERNAME=admin
       - APP_PASSWORD=admin_password
     restart: unless-stopped
@@ -52,17 +52,17 @@ services:
       - "8093:80"
     environment:
       - TZ=Europe/Stockholm
-      # Ändra detta till din IP eller domän om du kör från en annan dator:
+      # Change this to your IP or domain if accessing from another machine:
       - VITE_API_URL=http://localhost:8094
     restart: unless-stopped
     depends_on:
       - backend
 ```
 
-Starta sedan upp allting med:
+Then start everything up with:
 ```bash
 docker-compose up -d
 ```
 
-## Versionshantering
-Projektet använder CalVer (ex. 2026.07.26.01).
+## Versioning
+The project uses CalVer (e.g. 2026.07.26.01).
