@@ -44,7 +44,7 @@ BANNER = """
 ██   ██ ██       ██  ██  ██   ██ ██  ██  ██   ██ ██   ██ ██      ██  ██ ██ 
 ██████  ███████   ████   ██   ██ ██   ██ ██   ██ ██   ██ ███████ ██   ████ 
 """
-VERSION = "2026.07.26.01"
+VERSION = "2026.07.26.02"
 LAST_UPDATE = "2026-07-26"
 
 # Setup default users on startup from environment variables
