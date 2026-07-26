@@ -85,7 +85,9 @@ self.addEventListener('push', function(event) {
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   
-  if (event.action === 'mark_read') {
+  // Windows/Chrome ibland skickar inte action-strängen rätt.
+  // Vi kollar även ifall event.action matchar titeln som en extrem fallback.
+  if (event.action === 'mark_read' || event.action === 'Mark as Read' || event.action === 'Markera Läst') {
     if (event.notification.data && event.notification.data.article_id) {
       event.waitUntil((async () => {
         const token = await getToken();
@@ -111,7 +113,7 @@ self.addEventListener('notificationclick', function(event) {
     return;
   }
   
-  if (event.action === 'open_event') {
+  if (event.action === 'open_event' || event.action === 'Open Event' || event.action === 'Öppna Händelse') {
     if (event.notification.data && event.notification.data.url) {
       event.waitUntil(clients.openWindow(event.notification.data.url));
     } else {
