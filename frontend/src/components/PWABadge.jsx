@@ -52,10 +52,10 @@ export default function PWABadge() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
         <div>
           <h3 style={{ color: 'var(--text-main)', fontWeight: 600, margin: '0 0 0.25rem 0', fontSize: '1rem' }}>
-            Ny uppdatering tillgänglig!
+            New update available!
           </h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>
-            Klicka på ladda om för att uppdatera appen till den senaste versionen.
+            Click reload to update the app to the latest version.
           </p>
         </div>
         <button 
@@ -71,7 +71,7 @@ export default function PWABadge() {
             justifyContent: 'center',
             borderRadius: '50%'
           }} 
-          aria-label="Stäng"
+          aria-label="Close"
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
@@ -103,7 +103,7 @@ export default function PWABadge() {
         }}
       >
         <RefreshCw size={16} />
-        <span>Ladda om appen</span>
+        <span>Reload app</span>
       </button>
     </div>
   );

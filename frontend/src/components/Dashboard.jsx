@@ -128,7 +128,7 @@ const Dashboard = () => {
       ws = new WebSocket(wsUrl);
       
       ws.onopen = () => {
-        console.log("WebSocket ansluten!");
+        console.log("WebSocket connected!");
         ws.send(token);
         window.dispatchEvent(new Event('feedsUpdated')); // Always fetch on reconnect to catch missed items
       };
@@ -143,7 +143,7 @@ const Dashboard = () => {
           } else {
             window.dispatchEvent(new Event('feedsUpdated')); // Fallback for old clients
           }
-          console.log("Nya artiklar mottagna via WebSocket! Uppdaterar UI...");
+          console.log("New articles received via WebSocket! Updating UI...");
         } else if (event.data.startsWith("POLLING_START:")) {
           const feedId = parseInt(event.data.split(":")[1]);
           window.dispatchEvent(new CustomEvent('pollingStart', { detail: feedId }));
@@ -157,13 +157,13 @@ const Dashboard = () => {
       
       ws.onclose = () => {
         if (!isCleaningUp) {
-          console.log("WebSocket frånkopplad. Försöker igen om 5 sekunder...");
+          console.log("WebSocket disconnected. Retrying in 5 seconds...");
           reconnectTimeout = setTimeout(connectWebSocket, 5000);
         }
       };
       
       ws.onerror = (err) => {
-        console.error("WebSocket fel:", err);
+        console.error("WebSocket error:", err);
         ws.close();
       };
     };
@@ -231,12 +231,12 @@ const Dashboard = () => {
 
   const formatDateLabel = (dateString) => {
     const d = new Date(dateString);
-    if (isNaN(d.getTime())) return 'IDAG';
+    if (isNaN(d.getTime())) return 'TODAY';
     const today = new Date();
     if (d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()) {
-      return 'IDAG';
+      return 'TODAY';
     }
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'];
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
     return `${d.getDate()} ${months[d.getMonth()]}`;
   };
 
@@ -254,7 +254,7 @@ const Dashboard = () => {
         navigator.vibrate(50); // Haptic feedback on mobile
       }
     } catch (error) {
-      console.error("Kunde inte markera som läst:", error);
+      console.error("Could not mark as read:", error);
     }
   };
 
@@ -272,7 +272,7 @@ const Dashboard = () => {
         navigator.vibrate(50); // Haptic feedback on mobile
       }
     } catch (error) {
-      console.error("Kunde inte markera som oläst:", error);
+      console.error("Could not mark as unread:", error);
     }
   };
 
@@ -299,7 +299,7 @@ const Dashboard = () => {
         navigator.vibrate(50);
       }
     } catch (error) {
-      console.error("Kunde inte ändra låsstatus:", error);
+      console.error("Could not change lock state:", error);
     }
   };
 
@@ -314,7 +314,7 @@ const Dashboard = () => {
       setUnreadItems(new Set());
       window.dispatchEvent(new Event('feedsUpdated'));
     } catch (error) {
-      console.error("Kunde inte markera alla som lästa:", error);
+      console.error("Could not mark all as read:", error);
     }
   };
 
@@ -352,13 +352,13 @@ const Dashboard = () => {
           setScrapedContents(prev => ({ ...prev, [link]: res.data.content }));
         } catch (err) {
           console.error("Scrape error", err);
-          setScrapedContents(prev => ({ ...prev, [link]: 'Det gick inte att ladda artikeln automatiskt. Läs mer på original-sidan.' }));
+          setScrapedContents(prev => ({ ...prev, [link]: 'Could not load article automatically. Read more on the original site.' }));
         } finally {
           setScrapingUrls(prev => ({ ...prev, [link]: false }));
         }
       } else {
         // Just use the local summary
-        setScrapedContents(prev => ({ ...prev, [link]: feedItems[0]?.summary || 'Läs mer på original-sidan.' }));
+        setScrapedContents(prev => ({ ...prev, [link]: feedItems[0]?.summary || 'Read more on the original site.' }));
       }
     }
   };
@@ -382,7 +382,7 @@ const Dashboard = () => {
               <input 
                 type="text" 
                 autoFocus
-                placeholder="Sök..." 
+                placeholder="Search..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onBlur={(e) => {
@@ -408,7 +408,7 @@ const Dashboard = () => {
                 height: '36px',
                 transition: 'all 0.2s'
               }}
-              title="Sök nyheter"
+              title="Search news"
             >
               <Search size={16} />
             </button>
@@ -433,10 +433,10 @@ const Dashboard = () => {
               transition: 'all 0.2s',
               height: '36px'
             }}
-            title={showRead ? "Dölj lästa kort" : "Visa lästa kort"}
+            title={showRead ? "Hide read items" : "Show read items"}
           >
             {showRead ? <EyeOff size={16} /> : <Eye size={16} />}
-            <span className="desktop-only">{showRead ? "Dölj lästa" : "Visa lästa"}</span>
+            <span className="desktop-only">{showRead ? "Hide read" : "Show read"}</span>
           </button>
           <button
             onClick={markAllAsRead}
@@ -463,10 +463,10 @@ const Dashboard = () => {
               e.currentTarget.style.color = 'var(--text-muted)';
               e.currentTarget.style.borderColor = 'var(--border-color)';
             }}
-            title="Markera alla nuvarande nyheter som lästa"
+            title="Mark all current news as read"
           >
             <CheckCheck size={16} />
-            <span className="desktop-only">Markera alla som lästa</span>
+            <span className="desktop-only">Mark all as read</span>
           </button>
           
           {/* Layout controls (desktop only) */}
@@ -490,7 +490,7 @@ const Dashboard = () => {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}
-                title={`${num} kort per rad`}
+                title={`${num} items per row`}
               >
                 {num}
               </button>
@@ -503,22 +503,22 @@ const Dashboard = () => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {feedId && (
-              <Link to="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', textDecoration: 'none', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border-color)' }} title="Visa alla flöden">
+              <Link to="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', textDecoration: 'none', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border-color)' }} title="Show all feeds">
                 <ArrowLeft size={20} />
               </Link>
             )}
             <h1 style={{ color: 'var(--primary)', margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
-              {feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'IDAG'}
+              {feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'TODAY'}
             </h1>
           </div>
         </div>
       </div>
 
       {loading && allFeeds.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)' }}>Laddar nyheter...</p>
+        <p style={{ color: 'var(--text-muted)' }}>Loading news...</p>
       ) : allFeeds.length === 0 ? (
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)' }}>Inga nyheter hittades. Kanske behöver du lägga till flöden i RSS-hanteraren?</p>
+          <p style={{ color: 'var(--text-muted)' }}>No news found. Maybe you need to add feeds in the RSS manager?</p>
         </div>
       ) : (
         <div className={`events-list cols-${desktopColumns}`} style={{ gap: '1rem' }}>
@@ -622,7 +622,7 @@ const Dashboard = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
                         <Rss size={14} /> {item.source_title}
                         {item.published && (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.5rem' }} title="Original publiceringstid">
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.5rem' }} title="Original publication time">
                             • {formatDateLabel(item.published)} {formatTime(item.published)}
                           </span>
                         )}
@@ -650,7 +650,7 @@ const Dashboard = () => {
                         <button 
                           onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', background: 'rgba(37, 99, 235, 0.1)', border: '1px solid rgba(37, 99, 235, 0.2)', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                          title="Lås upp händelse (kan nu rensas)"
+                          title="Unlock event (can now be purged)"
                         >
                           <Lock size={15} />
                         </button>
@@ -658,7 +658,7 @@ const Dashboard = () => {
                         <button 
                           onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'none', border: '1px solid transparent', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                          title="Lås händelse (skydda från rensning)"
+                          title="Lock event (protect from purging)"
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
@@ -672,7 +672,7 @@ const Dashboard = () => {
                         <button 
                           onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px', transition: 'background-color 0.2s' }}
-                          title="Markera som oläst"
+                          title="Mark as unread"
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
@@ -682,7 +682,7 @@ const Dashboard = () => {
                         <button 
                           onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px', transition: 'background-color 0.2s' }}
-                          title="Markera som läst"
+                          title="Mark as read"
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
@@ -723,17 +723,17 @@ const Dashboard = () => {
                     >
                       {scrapingUrls[item.link] ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
-                          <Loader2 className="spin" size={16} /> Hämtar artikeltext...
+                          <Loader2 className="spin" size={16} /> Fetching article text...
                         </div>
                       ) : (
                         <div style={{ whiteSpace: 'pre-line' }}>
-                          {scrapedContents[item.link] || item.summary || 'Ingen ytterligare text kunde hittas.'}
+                          {scrapedContents[item.link] || item.summary || 'No additional text could be found.'}
                         </div>
                       )}
                       
                       <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                         <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
-                          <ExternalLink size={16} /> Läs på original-sidan
+                          <ExternalLink size={16} /> Read on original site
                         </a>
                       </div>
                     </motion.div>
@@ -746,7 +746,7 @@ const Dashboard = () => {
                     <span style={{ backgroundColor: color, color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
                       {formatTime(item.published)}
                     </span>
-                    {expandedItems[index] ? 'Fäll ihop' : 'Läs hela notisen'} <ChevronRight size={16} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+                    {expandedItems[index] ? 'Collapse' : 'Read full event'} <ChevronRight size={16} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
                   </div>
                   </div>
                 </div>
@@ -768,7 +768,7 @@ const Dashboard = () => {
         <button
           className="scroll-to-top"
           onClick={scrollToTop}
-          title="Till toppen"
+          title="To top"
         >
           <ArrowUp size={24} />
         </button>

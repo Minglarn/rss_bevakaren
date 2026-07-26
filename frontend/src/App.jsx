@@ -29,7 +29,7 @@ const AppLayout = ({ children, onLogout }) => {
         setMyFeeds(sortedFeeds);
         myFeedsRef.current = sortedFeeds;
       } catch (err) {
-        console.error("Kunde inte hämta flöden till sidomenyn", err);
+        console.error("Could not fetch feeds for the sidebar", err);
       }
     };
     fetchMyFeeds();
@@ -40,7 +40,7 @@ const AppLayout = ({ children, onLogout }) => {
         const { feedId, count } = e.detail;
         const feed = myFeedsRef.current.find(f => f.id === feedId);
         if (feed) {
-          toast.success(`${count} nya händelser från ${feed.title}!`, {
+          toast.success(`${count} new events from ${feed.title}!`, {
             duration: 6000,
             style: {
               borderRadius: '10px',
@@ -64,7 +64,7 @@ const AppLayout = ({ children, onLogout }) => {
       
       const feed = myFeedsRef.current.find(f => f.id === feedId);
       const title = feed ? feed.title : `flöde ${feedId}`;
-      toast(`Letar nya händelser på ${title}...`, {
+      toast(`Looking for new events in ${title}...`, {
         id: `poll-${feedId}`, // Ensures we don't spam if it starts again quickly
         duration: 6000,
         style: {
@@ -161,7 +161,7 @@ const AppLayout = ({ children, onLogout }) => {
           <Rss size={28} />
           {!isCollapsed && (
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS-Bevakaren</h2>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS Monitor</h2>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v{packageJson.version}</span>
             </div>
           )}
@@ -197,7 +197,7 @@ const AppLayout = ({ children, onLogout }) => {
             backgroundColor: location.pathname === '/manage' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             fontWeight: location.pathname === '/manage' ? 600 : 400
           }}>
-            <List size={20} /> {!isCollapsed && "Hantera RSS"}
+            <List size={20} /> {!isCollapsed && "Manage RSS"}
           </Link>
           <Link to="/settings" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
@@ -206,14 +206,14 @@ const AppLayout = ({ children, onLogout }) => {
             backgroundColor: location.pathname === '/settings' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             fontWeight: location.pathname === '/settings' ? 600 : 400
           }}>
-            <SettingsIcon size={20} /> {!isCollapsed && "Inställningar"}
+            <SettingsIcon size={20} /> {!isCollapsed && "Settings"}
           </Link>
 
           {/* Feeds List */}
           {!isCollapsed && myFeeds.length > 0 && (
             <div style={{ marginTop: '2rem' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', paddingLeft: '1rem' }}>
-                Mina Flöden
+                My Feeds
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 {myFeeds.map(feed => {
@@ -270,7 +270,7 @@ const AppLayout = ({ children, onLogout }) => {
               fontSize: '1rem'
             }}
           >
-            <LogOut size={20} /> {!isCollapsed && "Logga ut"}
+            <LogOut size={20} /> {!isCollapsed && "Logout"}
           </button>
         </div>
       </div>
@@ -291,7 +291,7 @@ const AppLayout = ({ children, onLogout }) => {
               <span className="bottom-bar-badge">{myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}</span>
             )}
           </div>
-          <span>Hem</span>
+          <span>Home</span>
         </Link>
         <button 
           className="bottom-bar-item" 
@@ -301,19 +301,19 @@ const AppLayout = ({ children, onLogout }) => {
           <div className="icon-wrapper">
             <Filter size={22} />
           </div>
-          <span>Flöden</span>
+          <span>Feeds</span>
         </button>
         <Link to="/manage" className={`bottom-bar-item ${location.pathname === '/manage' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <List size={22} />
           </div>
-          <span>Hantera</span>
+          <span>Manage</span>
         </Link>
         <Link to="/settings" className={`bottom-bar-item ${location.pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <SettingsIcon size={22} />
           </div>
-          <span>Inställningar</span>
+          <span>Settings</span>
         </Link>
         <button 
           className="bottom-bar-item" 
@@ -323,7 +323,7 @@ const AppLayout = ({ children, onLogout }) => {
           <div className="icon-wrapper">
             <LogOut size={22} />
           </div>
-          <span>Logga ut</span>
+          <span>Logout</span>
         </button>
       </div>
 
@@ -331,7 +331,7 @@ const AppLayout = ({ children, onLogout }) => {
       <div className={`mobile-feeds-sheet-overlay ${isMobileSheetOpen ? 'open' : ''}`} onClick={() => setIsMobileSheetOpen(false)}></div>
       <div className={`mobile-feeds-sheet ${isMobileSheetOpen ? 'open' : ''}`}>
         <div className="sheet-handle"></div>
-        <div className="sheet-title">Mina Flöden</div>
+        <div className="sheet-title">My Feeds</div>
         <div className="sheet-content">
           <Link 
             to="/" 
@@ -343,7 +343,7 @@ const AppLayout = ({ children, onLogout }) => {
             }}
             onClick={() => setIsMobileSheetOpen(false)}
           >
-            <Home size={20} /> Alla flöden
+            <Home size={20} /> All feeds
           </Link>
           {myFeeds.map(feed => (
             <Link 

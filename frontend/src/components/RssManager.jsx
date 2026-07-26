@@ -32,7 +32,7 @@ const RssManager = () => {
       setFeeds(res.data);
       window.dispatchEvent(new Event('feedsUpdated'));
     } catch (err) {
-      console.error("Kunde inte hämta flöden", err);
+      console.error("Could not fetch feeds", err);
     }
   };
 
@@ -41,7 +41,7 @@ const RssManager = () => {
       const res = await api.get('/opml-feeds');
       setOpmlFeeds(res.data);
     } catch (err) {
-      console.error("Kunde inte hämta OPML-flöden", err);
+      console.error("Could not fetch OPML feeds", err);
     }
   };
 
@@ -105,7 +105,7 @@ const RssManager = () => {
     <div className="dashboard-container" style={{ maxWidth: '1000px' }}>
       <div className="dashboard-header" style={{ marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <h1 style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.75rem', margin: 0, fontSize: '1.8rem' }}>
-          <List size={28} style={{ color: 'var(--primary)' }} /> Hantera RSS-flöden
+          <List size={28} style={{ color: 'var(--primary)' }} /> Manage RSS Feeds
         </h1>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <button 
@@ -126,7 +126,7 @@ const RssManager = () => {
             }}
           >
             {showExplore ? <X size={18} /> : <Library size={18} />} 
-            {showExplore ? 'Stäng katalog' : 'Utforska katalog'}
+            {showExplore ? 'Close catalog' : 'Explore catalog'}
           </button>
           <button 
             onClick={() => { setShowAddForm(!showAddForm); setShowExplore(false); }}
@@ -146,7 +146,7 @@ const RssManager = () => {
             }}
           >
             {showAddForm ? <X size={18} /> : <Plus size={18} />} 
-            {showAddForm ? 'Avbryt' : 'Nytt flöde'}
+            {showAddForm ? 'Cancel' : 'New feed'}
           </button>
         </div>
       </div>
@@ -172,13 +172,13 @@ const RssManager = () => {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <h3 style={{ marginTop: 0, marginBottom: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Library size={18} style={{ color: 'var(--primary)' }}/> Utforska svenska källor
+                  <Library size={18} style={{ color: 'var(--primary)' }}/> Explore sources
                 </h3>
                 <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.4rem 0.8rem', minWidth: '250px' }}>
                   <Search size={16} style={{ color: 'var(--text-muted)', marginRight: '0.5rem' }} />
                   <input 
                     type="text" 
-                    placeholder="Sök bland hundratals flöden..." 
+                    placeholder="Search among hundreds of feeds..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', color: 'var(--text-main)' }}
@@ -193,10 +193,10 @@ const RssManager = () => {
               
               <div style={{ overflowY: 'auto', flex: 1, borderTop: '1px solid var(--border-color)', margin: '0 -1.5rem', padding: '0 1.5rem' }}>
                 {opmlFeeds.length === 0 ? (
-                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Laddar katalog...</div>
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading catalog...</div>
                 ) : (
                   opmlFeeds.filter(f => f.title.toLowerCase().includes(searchTerm.toLowerCase()) || f.description.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
-                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Inga träffar på "{searchTerm}".</div>
+                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No matches for "{searchTerm}".</div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       {opmlFeeds
@@ -241,7 +241,7 @@ const RssManager = () => {
                               >
                                 {isAdding ? <Activity size={14} className="spin-animation" /> : 
                                  isAlreadyAdded ? <Check size={14} /> : <Plus size={14} />}
-                                {isAlreadyAdded ? 'Tillagd' : 'Lägg till'}
+                                {isAlreadyAdded ? 'Added' : 'Add'}
                               </button>
                             </div>
                           );
@@ -272,14 +272,14 @@ const RssManager = () => {
               border: '1px solid var(--border-color)'
             }}>
               <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Globe size={18} style={{ color: 'var(--primary)' }}/> Lägg till nytt flöde
+                <Globe size={18} style={{ color: 'var(--primary)' }}/> Add new feed
               </h3>
               <form onSubmit={handleAdd} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 <div style={{ flex: '1', minWidth: '150px' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Titel (frivillig)</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Title (optional)</label>
                   <input 
                     type="text" 
-                    placeholder="T.ex. Aftonbladet Nyheter" 
+                    placeholder="E.g. BBC News" 
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     style={{ width: '100%', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
@@ -297,7 +297,7 @@ const RssManager = () => {
                   />
                 </div>
                 <div style={{ flex: '0 1 120px' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Pollning (min)</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Polling (min)</label>
                   <input 
                     type="number" 
                     min="1"
@@ -313,14 +313,14 @@ const RssManager = () => {
                       <input type="checkbox" checked={scrapeEnabled} onChange={(e) => setScrapeEnabled(e.target.checked)} />
                       <span className="toggle-slider"></span>
                     </div>
-                    Auto-skrap
+                    Auto-scrape
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)', cursor: 'pointer', fontSize: '0.9rem' }}>
                     <div className="toggle-switch">
                       <input type="checkbox" checked={includeInDashboard} onChange={(e) => setIncludeInDashboard(e.target.checked)} />
                       <span className="toggle-slider"></span>
                     </div>
-                    Visa i Dashboard
+                    Show in Dashboard
                   </label>
                 </div>
 
@@ -342,7 +342,7 @@ const RssManager = () => {
                     justifyContent: 'center'
                   }}
                 >
-                  <Plus size={18} /> Lägg till
+                  <Plus size={18} /> Add
                 </button>
               </form>
             </div>
@@ -355,7 +355,7 @@ const RssManager = () => {
           <Search size={18} style={{ color: 'var(--text-muted)', marginRight: '0.75rem' }} />
           <input 
             type="text" 
-            placeholder="Sök bland dina flöden..." 
+            placeholder="Search among your feeds..." 
             value={feedSearch}
             onChange={(e) => setFeedSearch(e.target.value)}
             style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', color: 'var(--text-main)', fontSize: '1rem' }}
@@ -372,11 +372,11 @@ const RssManager = () => {
         {feeds.length === 0 ? (
           <div style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
             <Globe size={48} style={{ opacity: 0.2, margin: '0 auto 1rem auto', display: 'block' }} />
-            Du bevakar inga flöden ännu.
+            You are not monitoring any feeds yet.
           </div>
         ) : sortedAndFilteredFeeds.length === 0 ? (
           <div style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-            Inga träffar på "{feedSearch}".
+            No matches for "{feedSearch}".
           </div>
         ) : (
           sortedAndFilteredFeeds.map((feed) => (
@@ -390,7 +390,7 @@ const RssManager = () => {
                       type="text"
                       value={editTitle} 
                       onChange={e => setEditTitle(e.target.value)}
-                      placeholder="Titel"
+                      placeholder="Title"
                       style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '1rem', width: '100%' }}
                     />
                     <input 
@@ -408,13 +408,13 @@ const RssManager = () => {
                         }} 
                         style={{ padding: '0.3rem 0.6rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem' }}
                       >
-                        <Check size={14} /> Spara
+                        <Check size={14} /> Save
                       </button>
                       <button 
                         onClick={() => setEditingFeedId(null)} 
                         style={{ padding: '0.3rem 0.6rem', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem' }}
                       >
-                        <X size={14} /> Avbryt
+                        <X size={14} /> Cancel
                       </button>
                     </div>
                   </div>
@@ -422,7 +422,7 @@ const RssManager = () => {
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {feed.title || '[Ingen titel angiven]'}
+                        {feed.title || '[No title specified]'}
                       </h3>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -435,8 +435,8 @@ const RssManager = () => {
 
               {/* Mitten: Inställningar (Pollning, Auto-skrap, Dashboard) */}
               <div className="rss-actions-container" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }} title="Pollningstid i minuter">
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pollning</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }} title="Polling interval in minutes">
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Polling</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', backgroundColor: 'var(--bg-app)', padding: '0.15rem 0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
                     <Activity size={12} style={{ color: 'var(--primary)' }} />
                     <input
@@ -471,8 +471,8 @@ const RssManager = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="Stäng av om flödet inte går att skrapa korrekt">
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Auto-skrap</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="Disable if the feed cannot be scraped correctly">
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Auto-scrape</span>
                   <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
                     <input
                       type="checkbox"
@@ -489,7 +489,7 @@ const RssManager = () => {
                   </label>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="Visa i Dashboard">
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="Show in Dashboard">
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dashboard</span>
                   <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
                     <input
@@ -512,10 +512,10 @@ const RssManager = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem', marginLeft: '0.5rem' }}>
                 {deletingFeedId === feed.id ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
-                    <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'bold' }}>Är du säker?!</span>
+                    <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'bold' }}>Are you sure?!</span>
                     <div style={{ display: 'flex', gap: '0.25rem' }}>
-                      <button onClick={() => { handleDelete(feed.id); setDeletingFeedId(null); }} style={{ padding: '0.2rem 0.5rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>JA</button>
-                      <button onClick={() => setDeletingFeedId(null)} style={{ padding: '0.2rem 0.5rem', background: 'var(--bg-app)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>NEJ</button>
+                      <button onClick={() => { handleDelete(feed.id); setDeletingFeedId(null); }} style={{ padding: '0.2rem 0.5rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>YES</button>
+                      <button onClick={() => setDeletingFeedId(null)} style={{ padding: '0.2rem 0.5rem', background: 'var(--bg-app)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>NO</button>
                     </div>
                   </div>
                 ) : (
@@ -543,7 +543,7 @@ const RssManager = () => {
                       }}
                       onMouseOver={(e) => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)'; }}
                       onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
-                      title="Redigera flöde"
+                      title="Edit feed"
                     >
                       <Edit2 size={16} />
                     </button>
@@ -563,7 +563,7 @@ const RssManager = () => {
                       }}
                       onMouseOver={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; }}
                       onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
-                      title="Ta bort flöde"
+                      title="Delete feed"
                     >
                       <Trash2 size={16} />
                     </button>

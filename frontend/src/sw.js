@@ -55,24 +55,24 @@ self.addEventListener('push', function(event) {
     try {
       const data = event.data.json();
       const options = {
-        body: data.body || 'Du har en ny notis',
+        body: data.body || 'You have a new notification',
         icon: '/pwa-192x192.png',
         data: {
           url: data.url || '/',
           article_id: data.article_id
         },
         actions: [
-          { action: 'mark_read', title: 'Markera Läst' },
-          { action: 'open_event', title: 'Öppna Händelse' }
+          { action: 'mark_read', title: 'Mark as Read' },
+          { action: 'open_event', title: 'Open Event' }
         ]
       };
       event.waitUntil(
-        self.registration.showNotification(data.title || 'RSS Bevakare', options)
+        self.registration.showNotification(data.title || 'RSS Monitor', options)
       );
     } catch(e) {
       // Fallback if not json
       event.waitUntil(
-        self.registration.showNotification('RSS Bevakare', {
+        self.registration.showNotification('RSS Monitor', {
           body: event.data.text(),
           icon: '/pwa-192x192.png'
         })

@@ -52,7 +52,7 @@ LAST_UPDATE = "2026-07-26"
 async def startup_event():
     print(BANNER, flush=True)
     print(f"Version: {VERSION}", flush=True)
-    print(f"Senaste uppdatering: {LAST_UPDATE}", flush=True)
+    print(f"Last update: {LAST_UPDATE}", flush=True)
     
     db_path = "/data/rss.db"
     
@@ -140,9 +140,9 @@ async def startup_event():
         conn.close()
         
         size_kb = os.path.getsize(db_path) / 1024
-        print(f"Databasstorlek: {size_kb:.2f} KB", flush=True)
+        print(f"Database size: {size_kb:.2f} KB", flush=True)
     else:
-        print("Databasstorlek: 0 KB (Skapas nu)", flush=True)
+        print("Database size: 0 KB (Creating now)", flush=True)
     print("-" * 50, flush=True)
 
     db = database.SessionLocal()
@@ -309,7 +309,7 @@ async def polling_loop():
                         is_initial_poll = (feed.last_polled == 0)
                         
                         if is_initial_poll:
-                            print(f"Första inläsning av flöde {feed.id}, hoppar över notiser för gamla inlägg.", flush=True)
+                            print(f"Initial load of feed {feed.id}, skipping notifications for old posts.", flush=True)
                         else:
                             for art in new_articles:
                                 should_notify = False
@@ -326,8 +326,8 @@ async def polling_loop():
                                     matched_kws = [k for k in kw_texts if k in search_text]
                                     if matched_kws:
                                         should_notify = True
-                                        notify_title = "Nytt larmord hittat!"
-                                        notify_body = f"Larmord '{matched_kws[0]}' hittades i: {art.title}"
+                                        notify_title = "New monitored keyword found!"
+                                        notify_body = f"Monitored keyword '{matched_kws[0]}' found in: {art.title}"
                                         
                                 if should_notify:
                                     subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
@@ -344,15 +344,15 @@ async def polling_loop():
                                                 vapid_private_key=VAPID_KEYS["private_key"],
                                                 vapid_claims={"sub": VAPID_KEYS["sub"]}
                                             )
-                                            print(f"Skickade push-notis till användare {feed.user_id}", flush=True)
+                                            print(f"Sent push notification to user {feed.user_id}", flush=True)
                                         except WebPushException as ex:
-                                            print(f"WebPushException för feed {feed.id}: {repr(ex)}", flush=True)
+                                            print(f"WebPushException for feed {feed.id}: {repr(ex)}", flush=True)
                                             if getattr(ex, "response", None) is not None and ex.response.status_code in [404, 410]:
                                                 db.delete(sub)
                                                 db.commit()
-                                                print(f"Tog bort ogiltig Push-prenumeration för användare {feed.user_id}", flush=True)
+                                                print(f"Removed invalid Push subscription for user {feed.user_id}", flush=True)
                                         except Exception as ex:
-                                            print(f"Oväntat fel vid webpush: {ex}", flush=True)
+                                            print(f"Unexpected error during webpush: {ex}", flush=True)
                     else:
                         print(f"Polling done for feed {feed.id} ({feed.title}): 0 new articles.", flush=True)
                     
@@ -555,7 +555,7 @@ from bs4 import BeautifulSoup
 
 @app.get("/scrape")
 def scrape_article(url: str, current_username: str = Depends(auth.get_current_username)):
-    print(f"Skrapning påbörjad för URL: {url}")
+    print(f"Scraping started for URL: {url}")
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -576,12 +576,12 @@ def scrape_article(url: str, current_username: str = Depends(auth.get_current_us
         text_content = "\n\n".join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
         
         if not text_content:
-            text_content = "Kunde inte extrahera artikeltexten från denna sida."
+            text_content = "Could not extract article text from this page."
             
         return {"content": text_content}
     except Exception as e:
         print(f"Scrape error for {url}: {e}")
-        return {"content": "Det gick inte att ladda artikeln automatiskt."}
+        return {"content": "Could not load article automatically."}
 
 from pywebpush import webpush, WebPushException
 import json
@@ -659,7 +659,7 @@ def test_push(req: Optional[TestPushRequest] = None, db: Session = Depends(datab
         query = query.filter(models.PushSubscription.endpoint == req.endpoint)
     subs = query.all()
     if not subs:
-        raise HTTPException(status_code=400, detail="Ingen push-prenumeration hittades för denna användare.")
+        raise HTTPException(status_code=400, detail="No push subscription found for this user.")
         
     success_count = 0
     for sub in subs:
@@ -672,12 +672,12 @@ def test_push(req: Optional[TestPushRequest] = None, db: Session = Depends(datab
                         "auth": sub.auth
                     }
                 },
-                data=json.dumps({"title": "Test från Servern!", "body": "Web Push fungerar nu perfekt!"}),
+                data=json.dumps({"title": "Test from Server!", "body": "Web Push is now working perfectly!"}),
                 vapid_private_key=VAPID_KEYS["private_key"],
                 vapid_claims={"sub": VAPID_KEYS["sub"]}
             )
             success_count += 1
-            print(f"Skickade framgångsrikt test-push till {sub.endpoint}", flush=True)
+            print(f"Successfully sent test push to {sub.endpoint}", flush=True)
         except WebPushException as ex:
             print(f"Web Push Error: {repr(ex)}")
             if ex.response and ex.response.status_code in [404, 410]:

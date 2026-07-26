@@ -28,7 +28,7 @@ const Login = ({ onLogin }) => {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.detail || 'Inloggningen misslyckades');
+        throw new Error(data.detail || 'Login failed');
       }
 
       onLogin(data.access_token, username);
@@ -80,8 +80,8 @@ const Login = ({ onLogin }) => {
           <Shield size={32} />
         </div>
         
-        <h1 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.5rem' }}>RSS-Bevakaren</h1>
-        <p style={{ margin: '0 0 2rem 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>Logga in för att fortsätta</p>
+        <h1 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.5rem' }}>RSS Monitor</h1>
+        <p style={{ margin: '0 0 2rem 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>Sign in to continue</p>
 
         {error && (
           <div style={{
@@ -105,7 +105,7 @@ const Login = ({ onLogin }) => {
             </div>
             <input 
               type="text" 
-              placeholder="Användarnamn" 
+              placeholder="Username" 
               value={username}
               onChange={e => setUsername(e.target.value)}
               required
@@ -130,7 +130,7 @@ const Login = ({ onLogin }) => {
             </div>
             <input 
               type="password" 
-              placeholder="Lösenord" 
+              placeholder="Password" 
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
@@ -170,9 +170,9 @@ const Login = ({ onLogin }) => {
               opacity: isLoading ? 0.8 : 1
             }}
           >
-            {isLoading ? 'Loggar in...' : (
+            {isLoading ? 'Signing in...' : (
               <>
-                <LogIn size={18} /> Logga in
+                <LogIn size={18} /> Sign in
               </>
             )}
           </button>

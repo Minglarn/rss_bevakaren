@@ -86,25 +86,25 @@ const Settings = () => {
         try {
           await api.post('/push/test', { endpoint: subEndpoint });
         } catch (e) {
-          console.error("Test push misslyckades", e);
+          console.error("Test push failed", e);
         }
       } else {
-        alert("Kunde inte registrera prenumerationen på servern.");
+        alert("Could not register subscription on the server.");
       }
     }
   };
 
   const handlePurge = async () => {
-    if (!window.confirm(`Är du säker på att du vill radera alla olåsta händelser som är äldre än ${purgeDays} dagar?`)) return;
+    if (!window.confirm(`Are you sure you want to delete all unlocked events older than ${purgeDays} days?`)) return;
     setIsPurging(true);
     setPurgeMessage(null);
     try {
       const res = await api.post(`/system/purge?days=${purgeDays}`);
-      setPurgeMessage(`Rensning slutförd! ${res.data.deleted} gamla händelser raderades.`);
-      fetchData(); // Uppdaterar databas-statistik
+      setPurgeMessage(`Purge complete! ${res.data.deleted} old events were deleted.`);
+      fetchData(); // Updates database statistics
     } catch (err) {
       console.error(err);
-      setPurgeMessage("Ett fel inträffade vid rensning.");
+      setPurgeMessage("An error occurred during purging.");
     } finally {
       setIsPurging(false);
       setTimeout(() => setPurgeMessage(null), 5000);
@@ -124,7 +124,7 @@ const Settings = () => {
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
       <h1 style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        <SettingsIcon /> Inställningar
+        <SettingsIcon /> Settings
       </h1>
 
       {/* Tabs */}
@@ -133,7 +133,7 @@ const Settings = () => {
           onClick={() => setActiveTab('general')}
           style={{ background: 'none', border: 'none', color: activeTab === 'general' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'general' ? 600 : 400, cursor: 'pointer', fontSize: '1rem', padding: '0.5rem 1rem' }}
         >
-          Allmänt
+          General
         </button>
         <button 
           onClick={() => setActiveTab('ui')}
@@ -145,13 +145,13 @@ const Settings = () => {
           onClick={() => setActiveTab('database')}
           style={{ background: 'none', border: 'none', color: activeTab === 'database' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'database' ? 600 : 400, cursor: 'pointer', fontSize: '1rem', padding: '0.5rem 1rem' }}
         >
-          Databas
+          Database
         </button>
         <button 
           onClick={() => setActiveTab('notifications')}
           style={{ background: 'none', border: 'none', color: activeTab === 'notifications' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'notifications' ? 600 : 400, cursor: 'pointer', fontSize: '1rem', padding: '0.5rem 1rem' }}
         >
-          Notiser
+          Notifications
         </button>
       </div>
 
@@ -160,10 +160,10 @@ const Settings = () => {
           
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Info size={20} /> Systeminformation
+              <Info size={20} /> System Information
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Teknisk information om din installation av RSS Bevakaren.
+              Technical information about your installation of RSS Bevakaren.
             </p>
             
             {sysInfo ? (
@@ -171,31 +171,31 @@ const Settings = () => {
                 <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Server size={14} /> Server Version</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--primary)' }}>{sysInfo.version}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Uppdaterad: {sysInfo.last_update}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Updated: {sysInfo.last_update}</div>
                 </div>
                 
                 <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Database size={14} /> Databas</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Database size={14} /> Database</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{(sysInfo.database_size_bytes / 1024 / 1024).toFixed(2)} MB</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>SQLite Lagring</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>SQLite Storage</div>
                 </div>
 
                 <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><FileText size={14} /> Innehåll</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{sysInfo.total_articles} artiklar</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Från {sysInfo.total_feeds} flöden</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><FileText size={14} /> Content</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{sysInfo.total_articles} articles</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>From {sysInfo.total_feeds} feeds</div>
                 </div>
               </div>
             ) : (
-              <p style={{ color: 'var(--text-muted)' }}>Laddar systeminformation...</p>
+              <p style={{ color: 'var(--text-muted)' }}>Loading system information...</p>
             )}
 
             <div style={{ marginTop: '1.5rem', padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
               <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                Felsökning
+                Troubleshooting
               </h4>
               <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                Om appen känns utdaterad eller om du har problem med sparad data kan du tvinga fram en uppdatering. Detta rensar webbläsarens lokala minne för appen.
+                If the app feels outdated or you have issues with saved data, you can force an update. This clears the browser's local storage for the app.
               </p>
               <button 
                 onClick={async () => {
@@ -229,12 +229,12 @@ const Settings = () => {
                   fontSize: '0.85rem'
                 }}
               >
-                Tvinga App-uppdatering
+                Force App Update
               </button>
             </div>
           </div>
 
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Fler allmänna inställningar kommer i framtida uppdateringar.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>More general settings will arrive in future updates.</p>
         </motion.div>
       )}
 
@@ -242,40 +242,40 @@ const Settings = () => {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ImageIcon size={20} /> UI-Inställningar
+              <ImageIcon size={20} /> UI Settings
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Anpassa hur appen ser ut och fungerar.
+              Customize how the app looks and works.
             </p>
 
             <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
               <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ImageIcon size={18} /> Tema
+                <ImageIcon size={18} /> Theme
               </h4>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Utseende</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Välj mellan ljust och mörkt tema.</div>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Appearance</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Choose between light and dark theme.</div>
                 </div>
                 <select 
                   value={theme}
                   onChange={toggleTheme}
                   style={{ flex: 'none', width: 'auto', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
                 >
-                  <option value="light">Ljust Tema</option>
-                  <option value="dark">Mörkt Tema</option>
+                  <option value="light">Light Theme</option>
+                  <option value="dark">Dark Theme</option>
                 </select>
               </div>
             </div>
 
             <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
               <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ImageIcon size={18} /> Visning
+                <ImageIcon size={18} /> Display
               </h4>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Inkludera bilder i händelsekortet</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Välj om nyhetsartiklar ska visa tillhörande bilder eller bara text.</div>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Include images in event cards</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Choose whether news articles should display accompanying images or just text.</div>
                 </div>
                 <label className="toggle-switch">
                   <input
@@ -295,29 +295,29 @@ const Settings = () => {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Database size={20} /> Databashantering
+              <Database size={20} /> Database Management
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Hantera din databas och rensa bort gammal data.
+              Manage your database and purge old data.
             </p>
             <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
               <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Database size={18} /> Rensa Databas (Purge)
+                <Database size={18} /> Purge Database
               </h4>
               <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                Rensa bort gamla nyhetshändelser för att spara lagringsutrymme. Händelser som du har markerat som "Låsta" på dashboarden påverkas inte av rensningen.
+                Purge old news events to save storage space. Events you have marked as "Locked" on the dashboard are not affected by the purge.
               </p>
               
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>Spara inlägg i</span>
+                  <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>Save posts for</span>
                   <input 
                     type="number" 
                     value={purgeDays} 
                     onChange={e => setPurgeDays(Math.max(1, parseInt(e.target.value) || 30))} 
                     style={{ width: '60px', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-card)', color: 'var(--text-main)' }} 
                   />
-                  <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>dagar</span>
+                  <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>days</span>
                 </div>
                 
                 <button 
@@ -338,7 +338,7 @@ const Settings = () => {
                   }}
                 >
                   {isPurging ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />}
-                  {isPurging ? 'Rensar...' : 'Kör Rensning'}
+                  {isPurging ? 'Purging...' : 'Run Purge'}
                 </button>
               </div>
               
@@ -358,10 +358,10 @@ const Settings = () => {
           
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', marginBottom: '2rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Bell size={20} /> Web Push-notiser (PWA)
+              <Bell size={20} /> Web Push Notifications (PWA)
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Aktivera notiser i din webbläsare för att få en push-notis direkt på skärmen/mobilen när ett bevakat nyckelord dyker upp i ett flöde.
+              Enable notifications in your browser to receive a push notification directly on your screen/mobile when a monitored keyword appears in a feed.
             </p>
             <button 
               onClick={togglePush}
@@ -378,22 +378,22 @@ const Settings = () => {
                 gap: '0.5rem'
               }}
             >
-              <Bell size={18} /> {pushEnabled ? 'Notiser är på' : 'Slå på notiser'}
+              <Bell size={18} /> {pushEnabled ? 'Notifications are on' : 'Turn on notifications'}
             </button>
           </div>
 
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', marginBottom: '2rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ShieldAlert size={20} /> Bevakade Nyckelord
+              <ShieldAlert size={20} /> Monitored Keywords
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Här lägger du in ord som du anser är viktiga. När systemet hittar dessa i dina RSS-flöden, kommer det att kunna larma dig.
+              Enter words you consider important here. When the system finds these in your RSS feeds, it can alert you.
             </p>
 
             <form onSubmit={handleAddKeyword} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.5rem' }}>
               <input 
                 type="text" 
-                placeholder="T.ex. Säkerhet, Brand..." 
+                placeholder="E.g. Security, Fire..." 
                 value={newKeyword}
                 onChange={(e) => setNewKeyword(e.target.value)}
                 style={{
@@ -422,7 +422,7 @@ const Settings = () => {
                   flex: '0 1 auto'
                 }}
               >
-                <Plus size={18} /> Lägg till
+                <Plus size={18} /> Add
               </button>
             </form>
 
@@ -451,10 +451,10 @@ const Settings = () => {
 
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Hash size={20} /> Flödesnotiser
+              <Hash size={20} /> Feed Notifications
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Välj vilka flöden du vill ha notiser från. Stäng av flöden som du inte vill att larmorden ska reagera på.
+              Choose which feeds you want notifications from. Turn off feeds that you don't want the alert words to react to.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>

@@ -17,7 +17,7 @@ function urlBase64ToUint8Array(base64String) {
 
 export const requestNotificationPermission = async () => {
   if (!('Notification' in window)) {
-    console.log('Denna webbläsare stöder inte skrivbordsnotiser');
+    console.log('This browser does not support desktop notifications');
     return false;
   }
 
@@ -54,7 +54,7 @@ export const subscribeToWebPush = async () => {
     
     return subJSON.endpoint;
   } catch (error) {
-    console.error('Kunde inte prenumerera på push:', error);
+    console.error('Could not subscribe to push:', error);
     return null;
   }
 };
@@ -72,7 +72,7 @@ export const sendNotification = (title, options = {}) => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then(registration => {
         registration.showNotification(title, { ...defaultOptions, ...options }).catch(e => {
-          console.error("Kunde inte visa SW-notis", e);
+          console.error("Could not show SW notification", e);
           new Notification(title, { ...defaultOptions, ...options });
         });
       });
