@@ -1,5 +1,12 @@
 # RSS-Bevakaren
 
+![Version](https://img.shields.io/badge/version-2026.07.26.01-blue.svg)
+![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
+![Backend Pulls](https://img.shields.io/ghcr/pulls/minglarn/rss_bevakaren_backend?label=Backend%20Pulls)
+![Frontend Pulls](https://img.shields.io/ghcr/pulls/minglarn/rss_bevakaren_frontend?label=Frontend%20Pulls)
+![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
+![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
+
 ![Dashboard Screenshot](screenshot_1.jpg)
 
 Ett modernt system för att övervaka och presentera RSS-flöden i realtid. Byggt med en stilren design (inspirerad av PolisInfo), robust Python-backend och en responsiv React-frontend.
