@@ -535,6 +535,24 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Back to all events banner if viewing a specific article */}
+      {articleId && (
+        <div style={{ padding: '0 1rem 1rem 1rem' }}>
+          <Link 
+            to="/"
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '0.5rem', 
+              backgroundColor: 'var(--primary)', color: 'white', 
+              padding: '0.75rem 1rem', borderRadius: '8px', 
+              textDecoration: 'none', fontWeight: 600, justifyContent: 'center' 
+            }}
+          >
+            <ArrowLeft size={18} />
+            Visa alla händelser
+          </Link>
+        </div>
+      )}
+
       {loading && allFeeds.length === 0 ? (
         <p style={{ color: 'var(--text-muted)' }}>Loading news...</p>
       ) : allFeeds.length === 0 ? (
