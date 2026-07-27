@@ -13,6 +13,7 @@ const Dashboard = () => {
   const observer = useRef();
   const [searchParams] = useSearchParams();
   const feedId = searchParams.get('feedId');
+  const articleId = searchParams.get('articleId');
   
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -83,16 +84,23 @@ const Dashboard = () => {
     }
     try {
       let url = feedId ? `/dashboard-feeds?feed_id=${feedId}` : '/dashboard-feeds';
-      if (showRead) {
-        url += url.includes('?') ? '&show_read=true' : '?show_read=true';
-      }
-      if (debouncedSearch) {
-        url += url.includes('?') ? `&search=${encodeURIComponent(debouncedSearch)}` : `?search=${encodeURIComponent(debouncedSearch)}`;
+      if (articleId) {
+        url = `/dashboard-feeds?article_id=${articleId}`;
+      } else {
+        if (showRead) {
+          url += url.includes('?') ? '&show_read=true' : '?show_read=true';
+        }
+        if (debouncedSearch) {
+          url += url.includes('?') ? `&search=${encodeURIComponent(debouncedSearch)}` : `?search=${encodeURIComponent(debouncedSearch)}`;
+        }
       }
       const res = await api.get(url);
       setAllFeeds(res.data);
       if (!isBackground) {
         setDisplayedFeeds(res.data.slice(0, itemsPerPage));
+        if (articleId && res.data.length > 0) {
+          setExpandedItems({ 0: true }); // Expand the first (and only) item
+        }
       } else {
         // Update displayed feeds based on current length to avoid stale closure
         setDisplayedFeeds(prev => res.data.slice(0, Math.max(prev.length, itemsPerPage)));

@@ -122,8 +122,8 @@ self.addEventListener('notificationclick', function(event) {
   }
   
   if (action === 'open_event' || action.includes('open') || action.includes('ppna')) {
-    if (event.notification.data && event.notification.data.url) {
-      event.waitUntil(clients.openWindow(event.notification.data.url));
+    if (event.notification.data && event.notification.data.article_id) {
+      event.waitUntil(clients.openWindow(`/?articleId=${event.notification.data.article_id}`));
     } else {
       event.waitUntil(clients.openWindow('/'));
     }
@@ -131,8 +131,8 @@ self.addEventListener('notificationclick', function(event) {
   }
 
   // Default action
-  if (event.notification.data && event.notification.data.url) {
-    event.waitUntil(clients.openWindow(event.notification.data.url));
+  if (event.notification.data && event.notification.data.article_id) {
+    event.waitUntil(clients.openWindow(`/?articleId=${event.notification.data.article_id}`));
   } else {
     event.waitUntil(clients.openWindow('/'));
   }
