@@ -220,7 +220,7 @@ const Dashboard = () => {
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
       }
     };
-  }, [feedId, showRead, debouncedSearch]);
+  }, [feedId, articleId, showRead, debouncedSearch]);
 
   // Infinite Scroll logic
   const lastElementRef = useCallback(node => {
