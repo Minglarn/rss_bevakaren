@@ -649,7 +649,53 @@ const Dashboard = () => {
                   <div className="feed-card-date">
                     {formatDateLabel(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
                   </div>
-                  <List size={22} style={{ marginTop: 'auto', opacity: 0.8 }} />
+                  
+                  {/* Actions: Låst/Läst-knappar */}
+                  <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                    {/* Läst-knapp */}
+                    {isArticleRead(item.id, item.is_read) ? (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                        title="Markera som oläst"
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <EyeOff size={18} />
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                        title="Markera som läst"
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <CheckCheck size={18} />
+                      </button>
+                    )}
+
+                    {/* Lås-knapp */}
+                    {isArticleLocked(item.id, item.is_locked) ? (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                        title="Lås upp händelse"
+                      >
+                        <Lock size={16} />
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: '1px solid transparent', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                        title="Lås händelse"
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Unlock size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Right content area */}
@@ -680,55 +726,6 @@ const Dashboard = () => {
                           {cat}
                         </div>
                       ))}
-                    </div>
-
-                    {/* Actions: Låst/Läst-knappar */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      {/* Lås-knapp */}
-                      {isArticleLocked(item.id, item.is_locked) ? (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', background: 'rgba(37, 99, 235, 0.1)', border: '1px solid rgba(37, 99, 235, 0.2)', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                          title="Unlock event (can now be purged)"
-                        >
-                          <Lock size={15} />
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'none', border: '1px solid transparent', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                          title="Lock event (protect from purging)"
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <Unlock size={15} />
-                        </button>
-                      )}
-
-                      {/* Läst-knapp */}
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      {isArticleRead(item.id, item.is_read) ? (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px', transition: 'background-color 0.2s' }}
-                          title="Mark as unread"
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <EyeOff size={16} />
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.3rem', borderRadius: '4px', transition: 'background-color 0.2s' }}
-                          title="Mark as read"
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <CheckCheck size={16} />
-                        </button>
-                      )}
-                    </div>
                     </div>
                   </div>
 
