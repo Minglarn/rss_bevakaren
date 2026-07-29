@@ -753,7 +753,23 @@ const Dashboard = () => {
                     </div>
                   )}
                   
-                  {/* Expanded Content */}
+                  {/* Summary - Always visible */}
+                  {item.summary && (
+                    <div style={{ 
+                      color: 'var(--text-main)', 
+                      fontSize: '0.95rem', 
+                      marginBottom: '1rem', 
+                      lineHeight: '1.5',
+                      display: expandedItems[index] ? 'block' : '-webkit-box',
+                      WebkitLineClamp: expandedItems[index] ? 'unset' : 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}>
+                      {item.summary}
+                    </div>
+                  )}
+                  
+                  {/* Expanded Content (Full scraped text) */}
                   {expandedItems[index] && (
                     <motion.div 
                       initial={{ opacity: 0, height: 0 }}
@@ -762,17 +778,21 @@ const Dashboard = () => {
                     >
                       {scrapingUrls[item.link] ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
-                          <Loader2 className="spin" size={16} /> Fetching article text...
+                          <Loader2 className="spin" size={16} /> Hämtar hela artikeln...
+                        </div>
+                      ) : scrapedContents[item.link] && scrapedContents[item.link] !== item.summary ? (
+                        <div style={{ whiteSpace: 'pre-line' }}>
+                          {scrapedContents[item.link]}
                         </div>
                       ) : (
-                        <div style={{ whiteSpace: 'pre-line' }}>
-                          {scrapedContents[item.link] || item.summary || 'No additional text could be found.'}
+                        <div style={{ color: 'var(--text-muted)' }}>
+                          Ingen ytterligare text kunde hämtas automatiskt. Läs hela på originalkällan.
                         </div>
                       )}
                       
                       <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                         <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
-                          <ExternalLink size={16} /> Read on original site
+                          <ExternalLink size={16} /> Läs på originalkällan
                         </a>
                       </div>
                     </motion.div>
