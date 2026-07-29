@@ -651,7 +651,7 @@ const Dashboard = () => {
                   </div>
                   
                   {/* Actions: Låst/Läst-knappar */}
-                  <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
                     {/* Läst-knapp */}
                     {isArticleRead(item.id, item.is_read) ? (
                       <button 
