@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft, List, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock } from 'lucide-react';
+import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft, List, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2 } from 'lucide-react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
+import ShareModal from './ShareModal';
 
 const Dashboard = () => {
   const [allFeeds, setAllFeeds] = useState([]);
@@ -56,6 +57,7 @@ const Dashboard = () => {
   const [scrapedContents, setScrapedContents] = useState({});
   const [scrapingUrls, setScrapingUrls] = useState({});
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [shareItem, setShareItem] = useState(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -701,7 +703,7 @@ const Dashboard = () => {
                 {/* Right content area */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   {/* Toppbar */}
-                  <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                  <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', gap: '0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, flexWrap: 'wrap' }}>
                       {/* Source and original published date */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
@@ -727,6 +729,18 @@ const Dashboard = () => {
                         </div>
                       ))}
                     </div>
+
+                    {/* Dela-knapp */}
+                    <button
+                      className="feed-card-share-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShareItem(item);
+                      }}
+                      title="Dela händelse"
+                    >
+                      <Share2 size={16} />
+                    </button>
                   </div>
 
                   {/* Main content padding wrapper */}
@@ -787,10 +801,31 @@ const Dashboard = () => {
                         </div>
                       )}
                       
-                      <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                      <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
                           <ExternalLink size={16} /> Läs på originalkällan
                         </a>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShareItem(item);
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            background: 'transparent',
+                            border: '1px solid var(--border-color)',
+                            color: 'var(--text-main)',
+                            padding: '0.3rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.85rem',
+                            fontWeight: 500,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Share2 size={14} style={{ color: 'var(--primary)' }} /> Dela händelse
+                        </button>
                       </div>
                     </motion.div>
                   )}
@@ -828,6 +863,14 @@ const Dashboard = () => {
         >
           <ArrowUp size={24} />
         </button>
+      )}
+
+      {/* Dela dialog */}
+      {shareItem && (
+        <ShareModal 
+          item={shareItem} 
+          onClose={() => setShareItem(null)} 
+        />
       )}
     </div>
   );

@@ -1408,3 +1408,38 @@ input:checked + .toggle-slider:before {
     justify-content: flex-start !important;
   }
 }
+
+/* Share feature styles */
+.feed-card-share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.feed-card-share-btn:hover {
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--primary);
+  border-color: var(--border-color);
+}
+
+.share-action-btn {
+  transition: all 0.15s ease;
+}
+
+.share-action-btn:hover {
+  filter: brightness(0.96);
+  border-color: var(--primary) !important;
+}
+
+.share-action-system:hover {
+  opacity: 0.92;
+}
+
