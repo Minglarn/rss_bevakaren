@@ -636,74 +636,76 @@ const Dashboard = ({ isPrioModeProp = false }) => {
           </div>
         </div>
 
-        {/* Kategori- och Tagg-filterbar */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '0.5rem', 
-          marginTop: '1rem', 
-          overflowX: 'auto', 
-          paddingBottom: '0.5rem',
-          scrollbarWidth: 'none'
-        }}>
-          {CATEGORIES.map(cat => {
-            const isActive = selectedCategory === cat;
-            return (
-              <button
-                key={cat}
-                onClick={() => handleSelectCategory(cat)}
-                style={{
-                  padding: '0.35rem 0.85rem',
-                  borderRadius: '20px',
-                  border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                  backgroundColor: isActive ? 'var(--primary)' : 'var(--bg-card)',
-                  color: isActive ? '#ffffff' : 'var(--text-muted)',
-                  fontSize: '0.8rem',
-                  fontWeight: isActive ? 600 : 400,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.15s'
-                }}
-              >
-                {cat}
-              </button>
-            );
-          })}
+        {/* Kategori- och Tagg-filterbar - Visas endast i PRIO-flödet */}
+        {isPrioMode && (
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem', 
+            marginTop: '1rem', 
+            overflowX: 'auto', 
+            paddingBottom: '0.5rem',
+            scrollbarWidth: 'none'
+          }}>
+            {CATEGORIES.map(cat => {
+              const isActive = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => handleSelectCategory(cat)}
+                  style={{
+                    padding: '0.35rem 0.85rem',
+                    borderRadius: '20px',
+                    border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                    backgroundColor: isActive ? 'var(--primary)' : 'var(--bg-card)',
+                    color: isActive ? '#ffffff' : 'var(--text-muted)',
+                    fontSize: '0.8rem',
+                    fontWeight: isActive ? 600 : 400,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  {cat}
+                </button>
+              );
+            })}
 
-          {selectedTag && (
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              backgroundColor: 'rgba(249, 115, 22, 0.15)',
-              border: '1px solid rgba(249, 115, 22, 0.4)',
-              color: '#f97316',
-              padding: '0.3rem 0.75rem',
-              borderRadius: '20px',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              whiteSpace: 'nowrap'
-            }}>
-              <Tag size={13} /> #{selectedTag}
-              <button
-                onClick={clearTagFilter}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#f97316',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: 0,
-                  marginLeft: '0.25rem'
-                }}
-                title="Ta bort tagg-filter"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-        </div>
+            {selectedTag && (
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                backgroundColor: 'rgba(249, 115, 22, 0.15)',
+                border: '1px solid rgba(249, 115, 22, 0.4)',
+                color: '#f97316',
+                padding: '0.3rem 0.75rem',
+                borderRadius: '20px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                whiteSpace: 'nowrap'
+              }}>
+                <Tag size={13} /> #{selectedTag}
+                <button
+                  onClick={clearTagFilter}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#f97316',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: 0,
+                    marginLeft: '0.25rem'
+                  }}
+                  title="Ta bort tagg-filter"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Back to all events banner if viewing a specific article */}
@@ -811,10 +813,10 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                     filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
                     userSelect: 'none', 
                     WebkitUserSelect: 'none',
-                    border: (item.priority === 'high' || (item.prio_score || 0) >= 75) 
+                    border: (isPrioMode && (item.priority === 'high' || (item.prio_score || 0) >= 75)) 
                       ? '1px solid rgba(249, 115, 22, 0.45)' 
                       : undefined,
-                    boxShadow: (item.priority === 'high' || (item.prio_score || 0) >= 75) 
+                    boxShadow: (isPrioMode && (item.priority === 'high' || (item.prio_score || 0) >= 75)) 
                       ? '0 2px 10px rgba(249, 115, 22, 0.1)' 
                       : undefined
                   }}
@@ -823,7 +825,7 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                 <div 
                   className="feed-card-left"
                   style={{ 
-                    backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : color 
+                    backgroundColor: (isPrioMode && (item.priority === 'high' || (item.prio_score || 0) >= 75)) ? '#f97316' : color 
                   }}
                 >
                   <div className="feed-card-time">
@@ -896,8 +898,8 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                         )}
                       </div>
 
-                      {/* PRIO Badge vid hög prioritet */}
-                      {(item.priority === 'high' || (item.prio_score || 0) >= 75) && (
+                      {/* PRIO Badge vid hög prioritet - Endast i Prio-flödet */}
+                      {isPrioMode && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (
                         <span style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -915,8 +917,8 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                         </span>
                       )}
 
-                      {/* AI Kategori */}
-                      {item.category && (
+                      {/* AI Kategori - Endast i Prio-flödet */}
+                      {isPrioMode && item.category && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
                           style={{
@@ -952,16 +954,18 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                       ))}
                     </div>
 
-                    {/* Verktygsknappar: Analysera och Dela */}
+                    {/* Verktygsknappar: Analysera (endast i Prio) och Dela */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <button
-                        className="feed-card-share-btn"
-                        onClick={(e) => triggerAnalysis(e, item.id)}
-                        title={item.ai_processed ? "Gör om AI-analys" : "Kör AI-analys nu"}
-                        style={{ color: analyzingIds.has(item.id) ? '#f97316' : undefined }}
-                      >
-                        {analyzingIds.has(item.id) ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
-                      </button>
+                      {isPrioMode && (
+                        <button
+                          className="feed-card-share-btn"
+                          onClick={(e) => triggerAnalysis(e, item.id)}
+                          title={item.ai_processed ? "Gör om AI-analys" : "Kör AI-analys nu"}
+                          style={{ color: analyzingIds.has(item.id) ? '#f97316' : undefined }}
+                        >
+                          {analyzingIds.has(item.id) ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
+                        </button>
+                      )}
 
                       <button
                         className="feed-card-share-btn"
@@ -997,8 +1001,8 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                     </div>
                   )}
                   
-                  {/* AI-sammanfattning (om tillgänglig) */}
-                  {item.ai_summary && (
+                  {/* AI-sammanfattning (visas ENBART i PRIO flödet) */}
+                  {isPrioMode && item.ai_summary && (
                     <div style={{
                       backgroundColor: 'var(--bg-app)',
                       borderLeft: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '3px solid #f97316' : '3px solid var(--primary)',
@@ -1023,8 +1027,8 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                     </div>
                   )}
 
-                  {/* Summary - Visas om ingen AI-sammanfattning finns */}
-                  {!item.ai_summary && item.summary && (
+                  {/* Summary - Visas alltid i Dashboard, eller i Prio om ingen AI-sammanfattning finns */}
+                  {(!isPrioMode || !item.ai_summary) && item.summary && (
                     <div style={{ 
                       color: 'var(--text-main)', 
                       fontSize: '0.95rem', 
@@ -1039,8 +1043,8 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                     </div>
                   )}
 
-                  {/* Taggar från AI-analys */}
-                  {item.tags && item.tags.length > 0 && (
+                  {/* Taggar från AI-analys - Visas endast i Prio-flödet */}
+                  {isPrioMode && item.tags && item.tags.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem' }}>
                       {item.tags.map((tag, tIdx) => {
                         const isTagActive = selectedTag.toLowerCase() === tag.toLowerCase();
