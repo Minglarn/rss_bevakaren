@@ -171,9 +171,9 @@ const AppLayout = ({ children, onLogout }) => {
           <Link to="/" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
             borderRadius: '8px', textDecoration: 'none',
-            color: (location.pathname === '/' && !location.search.includes('prio=true')) ? 'var(--primary)' : 'var(--text-muted)',
-            backgroundColor: (location.pathname === '/' && !location.search.includes('prio=true')) ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-            fontWeight: (location.pathname === '/' && !location.search.includes('prio=true')) ? 600 : 400
+            color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-muted)',
+            backgroundColor: location.pathname === '/' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+            fontWeight: location.pathname === '/' ? 600 : 400
           }}>
             <Rss size={20} /> {!isCollapsed && "Dashboard"}
             {!isCollapsed && myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
@@ -190,12 +190,12 @@ const AppLayout = ({ children, onLogout }) => {
               </span>
             )}
           </Link>
-          <Link to="/?prio=true" style={{
+          <Link to="/prio" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
             borderRadius: '8px', textDecoration: 'none',
-            color: (location.pathname === '/' && location.search.includes('prio=true')) ? '#f97316' : 'var(--text-muted)',
-            backgroundColor: (location.pathname === '/' && location.search.includes('prio=true')) ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
-            fontWeight: (location.pathname === '/' && location.search.includes('prio=true')) ? 600 : 400
+            color: location.pathname === '/prio' ? '#f97316' : 'var(--text-muted)',
+            backgroundColor: location.pathname === '/prio' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+            fontWeight: location.pathname === '/prio' ? 600 : 400
           }}>
             <Flame size={20} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Flöde"}
           </Link>
@@ -293,7 +293,7 @@ const AppLayout = ({ children, onLogout }) => {
 
       {/* Mobile Bottom Bar */}
       <div className="mobile-bottom-bar">
-        <Link to="/" className={`bottom-bar-item ${location.pathname === '/' && !location.search.includes('prio=true') ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+        <Link to="/" className={`bottom-bar-item ${location.pathname === '/' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <Home size={22} />
             {myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
@@ -302,11 +302,11 @@ const AppLayout = ({ children, onLogout }) => {
           </div>
           <span>Hem</span>
         </Link>
-        <Link to="/?prio=true" className={`bottom-bar-item ${location.pathname === '/' && location.search.includes('prio=true') ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+        <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
-            <Flame size={22} style={{ color: location.search.includes('prio=true') ? '#f97316' : 'inherit' }} />
+            <Flame size={22} style={{ color: location.pathname === '/prio' ? '#f97316' : 'inherit' }} />
           </div>
-          <span style={{ color: location.search.includes('prio=true') ? '#f97316' : undefined }}>Prio</span>
+          <span style={{ color: location.pathname === '/prio' ? '#f97316' : undefined }}>Prio</span>
         </Link>
         <button 
           className="bottom-bar-item" 
@@ -352,8 +352,8 @@ const AppLayout = ({ children, onLogout }) => {
             to="/" 
             style={{
               display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem',
-              color: location.pathname === '/' && !location.search.includes('feedId') && !location.search.includes('prio=true') ? 'var(--primary)' : 'var(--text-main)', 
-              backgroundColor: location.pathname === '/' && !location.search.includes('feedId') && !location.search.includes('prio=true') ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+              color: location.pathname === '/' && !location.search.includes('feedId') ? 'var(--primary)' : 'var(--text-main)', 
+              backgroundColor: location.pathname === '/' && !location.search.includes('feedId') ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
               borderRadius: '12px', textDecoration: 'none', fontWeight: 600
             }}
             onClick={() => setIsMobileSheetOpen(false)}
@@ -361,11 +361,11 @@ const AppLayout = ({ children, onLogout }) => {
             <Home size={20} /> Alla flöden
           </Link>
           <Link 
-            to="/?prio=true" 
+            to="/prio" 
             style={{
               display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem',
-              color: location.search.includes('prio=true') ? '#f97316' : 'var(--text-main)', 
-              backgroundColor: location.search.includes('prio=true') ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+              color: location.pathname === '/prio' ? '#f97316' : 'var(--text-main)', 
+              backgroundColor: location.pathname === '/prio' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
               borderRadius: '12px', textDecoration: 'none', fontWeight: 600
             }}
             onClick={() => setIsMobileSheetOpen(false)}
@@ -443,7 +443,8 @@ const App = () => {
       <Router>
         <AppLayout onLogout={handleLogout}>
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Dashboard isPrioModeProp={false} />} />
+            <Route path="/prio" element={<Dashboard isPrioModeProp={true} />} />
             <Route path="/manage" element={<RssManager />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />

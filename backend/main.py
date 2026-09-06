@@ -651,7 +651,7 @@ def get_dashboard_feeds(
             query = query.filter((models.Article.is_read == 0) | (models.Article.is_read == None))
             
         if prio_only:
-            query = query.filter(or_(models.Article.priority == 'high', models.Article.prio_score >= 75))
+            query = query.filter(models.Article.ai_processed == 1)
 
         if category and category.lower() != "alla":
             query = query.filter(models.Article.category == category)

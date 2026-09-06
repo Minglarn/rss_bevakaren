@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X } from 'lucide-react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import ShareModal from './ShareModal';
 
 const CATEGORIES = ['Alla', 'Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
 
-const Dashboard = () => {
+const Dashboard = ({ isPrioModeProp = false }) => {
+  const location = useLocation();
   const [allFeeds, setAllFeeds] = useState([]);
   const [displayedFeeds, setDisplayedFeeds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +18,9 @@ const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const feedId = searchParams.get('feedId');
   const articleId = searchParams.get('articleId');
-  const isPrioMode = searchParams.get('prio') === 'true';
+  
+  // Avgör om vi är i Prio-flödet baserat på prop, URL-path (/prio) eller searchParam
+  const isPrioMode = isPrioModeProp || location.pathname === '/prio' || searchParams.get('prio') === 'true';
   const selectedCategory = searchParams.get('category') || 'Alla';
   const selectedTag = searchParams.get('tag') || '';
   const [analyzingIds, setAnalyzingIds] = useState(new Set());
@@ -36,7 +39,6 @@ const Dashboard = () => {
   const [unreadItems, setUnreadItems] = useState(new Set());
   const [lockedItems, setLockedItems] = useState(new Set());
   const [unlockedItems, setUnlockedItems] = useState(new Set());
-  const readTimers = useRef({});
   const longPressTimers = useRef({});
   const [showRead, setShowRead] = useState(() => {
     return localStorage.getItem('rss_show_read') === 'true';
@@ -85,41 +87,58 @@ const Dashboard = () => {
     });
   };
 
-  const fetchFeeds = async (isBackground = false) => {
+  // Håller alltid uppdaterade referenser så bakgrunds-anrop (WebSocket etc) aldrig fångar gamla filter
+  const paramsRef = useRef({});
+  paramsRef.current = {
+    isPrioMode,
+    feedId,
+    articleId,
+    showRead,
+    debouncedSearch,
+    selectedCategory,
+    selectedTag
+  };
+
+  const fetchFeeds = useCallback(async (isBackground = false) => {
+    const {
+      isPrioMode: pMode,
+      feedId: fId,
+      articleId: aId,
+      showRead: sRead,
+      debouncedSearch: dSearch,
+      selectedCategory: sCat,
+      selectedTag: sTag
+    } = paramsRef.current;
+
     if (!isBackground) {
       setLoading(true);
       setPage(1);
     }
     try {
-      let url = feedId ? `/dashboard-feeds?feed_id=${feedId}` : '/dashboard-feeds';
-      if (articleId) {
-        url = `/dashboard-feeds?article_id=${articleId}`;
-      } else {
-        const queryParts = [];
-        if (showRead) queryParts.push('show_read=true');
-        if (debouncedSearch) queryParts.push(`search=${encodeURIComponent(debouncedSearch)}`);
-        if (isPrioMode) queryParts.push('prio_only=true');
-        if (selectedCategory && selectedCategory !== 'Alla') queryParts.push(`category=${encodeURIComponent(selectedCategory)}`);
-        if (selectedTag && selectedTag.trim()) queryParts.push(`tag=${encodeURIComponent(selectedTag.trim())}`);
-        
-        if (queryParts.length > 0) {
-          url += (url.includes('?') ? '&' : '?') + queryParts.join('&');
-        }
-      }
+      const queryParts = [];
+      if (fId) queryParts.push(`feed_id=${encodeURIComponent(fId)}`);
+      if (aId) queryParts.push(`article_id=${encodeURIComponent(aId)}`);
+      if (sRead) queryParts.push('show_read=true');
+      if (dSearch) queryParts.push(`search=${encodeURIComponent(dSearch)}`);
+      if (pMode) queryParts.push('prio_only=true');
+      if (sCat && sCat !== 'Alla') queryParts.push(`category=${encodeURIComponent(sCat)}`);
+      if (sTag && sTag.trim()) queryParts.push(`tag=${encodeURIComponent(sTag.trim())}`);
+
+      const url = '/dashboard-feeds' + (queryParts.length > 0 ? '?' + queryParts.join('&') : '');
       const res = await api.get(url);
       setAllFeeds(res.data);
       if (!isBackground) {
         setDisplayedFeeds(res.data.slice(0, itemsPerPage));
-        if (articleId && res.data.length > 0) {
-          setExpandedItems({ 0: true }); // Expand the first (and only) item
+        if (aId && res.data.length > 0) {
+          setExpandedItems({ 0: true });
         }
       } else {
-        // Update displayed feeds based on current length to avoid stale closure
+        // Uppdatera utan att ändra scroll eller skriva över med fel flöde
         setDisplayedFeeds(prev => res.data.slice(0, Math.max(prev.length, itemsPerPage)));
       }
-      if (feedId) {
+      if (fId) {
         try {
-          await api.post(`/feeds/${feedId}/view`);
+          await api.post(`/feeds/${fId}/view`);
           window.dispatchEvent(new CustomEvent('feedsUpdated', { detail: { fromDashboardFetch: true } }));
         } catch (e) {
           console.error('Failed to mark feed as viewed', e);
@@ -130,7 +149,7 @@ const Dashboard = () => {
     } finally {
       if (!isBackground) setLoading(false);
     }
-  };
+  }, [itemsPerPage]);
 
   // 1. WebSocket useEffect (Runs ONCE)
   useEffect(() => {
@@ -611,7 +630,7 @@ const Dashboard = () => {
                 fontWeight: 600,
                 border: '1px solid rgba(249, 115, 22, 0.3)'
               }}>
-                AI-prioriterat (score ≥ 75)
+                AI-genomgångna händelser
               </span>
             )}
           </div>
