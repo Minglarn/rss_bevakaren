@@ -661,12 +661,18 @@ def get_dashboard_feeds(
             query = query.filter(models.Article.tags.ilike(f"%{clean_tag}%"))
             
         if search:
-            query = query.filter(or_(
-                models.Article.title.ilike(f"%{search}%"), 
-                models.Article.summary.ilike(f"%{search}%"),
-                models.Article.ai_summary.ilike(f"%{search}%"),
-                models.Article.tags.ilike(f"%{search}%")
-            ))
+            if prio_only:
+                query = query.filter(or_(
+                    models.Article.title.ilike(f"%{search}%"), 
+                    models.Article.summary.ilike(f"%{search}%"),
+                    models.Article.ai_summary.ilike(f"%{search}%"),
+                    models.Article.tags.ilike(f"%{search}%")
+                ))
+            else:
+                query = query.filter(or_(
+                    models.Article.title.ilike(f"%{search}%"), 
+                    models.Article.summary.ilike(f"%{search}%")
+                ))
         
     articles = query.order_by(models.Article.received_ts.desc()).limit(150).all()
     
@@ -676,7 +682,7 @@ def get_dashboard_feeds(
         cats = art.categories.split(",") if art.categories else []
         
         parsed_tags = []
-        if art.tags:
+        if prio_only and art.tags:
             try:
                 parsed_tags = json.loads(art.tags)
             except Exception:
@@ -698,13 +704,14 @@ def get_dashboard_feeds(
             "received_ts": art.received_ts,
             "is_read": art.is_read or 0,
             "is_locked": art.is_locked or 0,
-            "ai_processed": art.ai_processed or 0,
-            "category": art.category or "Övrigt",
-            "priority": art.priority or "low",
-            "prio_score": art.prio_score or 0,
-            "prio_reason": art.prio_reason or "",
-            "ai_summary": art.ai_summary,
-            "tags": parsed_tags
+            # AI-fält levereras ENBART i PRIO-flödet - Dashboard förblir 100% omodifierad precis som förut
+            "ai_processed": art.ai_processed or 0 if prio_only else 0,
+            "category": art.category if prio_only else None,
+            "priority": art.priority if prio_only else None,
+            "prio_score": art.prio_score or 0 if prio_only else 0,
+            "prio_reason": art.prio_reason or "" if prio_only else "",
+            "ai_summary": art.ai_summary if prio_only else None,
+            "tags": parsed_tags if prio_only else []
         }
         response_items.append(art_dict)
         
