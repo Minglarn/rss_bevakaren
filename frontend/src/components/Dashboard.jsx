@@ -1030,7 +1030,7 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                     <div style={{ 
                       color: 'var(--text-main)', 
                       fontSize: '0.95rem', 
-                      marginBottom: '1rem', 
+                      marginBottom: '0.65rem', 
                       lineHeight: '1.5',
                       display: expandedItems[index] ? 'block' : '-webkit-box',
                       WebkitLineClamp: expandedItems[index] ? 'unset' : 3,
