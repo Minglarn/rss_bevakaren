@@ -882,7 +882,7 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                 {/* Right content area */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   {/* Toppbar */}
-                  <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', gap: '0.5rem' }}>
+                  <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0, gap: '0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }}>
                       {/* Source and original published date */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
@@ -1015,9 +1015,12 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                         {item.ai_summary}
                       </div>
                       {item.prio_reason && (
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.35rem', fontStyle: 'italic' }}>
-                          Motivering: {item.prio_reason}
-                        </div>
+                        <>
+                          <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.5rem 0 0.4rem 0', opacity: 0.6 }}></div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: '1.4' }}>
+                            Motivering: {item.prio_reason}
+                          </div>
+                        </>
                       )}
                     </div>
                   )}
