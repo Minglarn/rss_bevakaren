@@ -630,7 +630,7 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                 fontWeight: 600,
                 border: '1px solid rgba(249, 115, 22, 0.3)'
               }}>
-                AI-genomgångna händelser
+                Endast högprioriterade händelser
               </span>
             )}
           </div>
