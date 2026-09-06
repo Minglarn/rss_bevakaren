@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
-import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash, Filter, Home, Menu, RefreshCw } from 'lucide-react';
+import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash, Filter, Home, Menu, RefreshCw, Flame } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import Login from './Login';
 import Dashboard from './components/Dashboard';
@@ -171,9 +171,9 @@ const AppLayout = ({ children, onLogout }) => {
           <Link to="/" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
             borderRadius: '8px', textDecoration: 'none',
-            color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-muted)',
-            backgroundColor: location.pathname === '/' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-            fontWeight: location.pathname === '/' ? 600 : 400
+            color: (location.pathname === '/' && !location.search.includes('prio=true')) ? 'var(--primary)' : 'var(--text-muted)',
+            backgroundColor: (location.pathname === '/' && !location.search.includes('prio=true')) ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+            fontWeight: (location.pathname === '/' && !location.search.includes('prio=true')) ? 600 : 400
           }}>
             <Rss size={20} /> {!isCollapsed && "Dashboard"}
             {!isCollapsed && myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
@@ -189,6 +189,15 @@ const AppLayout = ({ children, onLogout }) => {
                 {myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}
               </span>
             )}
+          </Link>
+          <Link to="/?prio=true" style={{
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
+            borderRadius: '8px', textDecoration: 'none',
+            color: (location.pathname === '/' && location.search.includes('prio=true')) ? '#f97316' : 'var(--text-muted)',
+            backgroundColor: (location.pathname === '/' && location.search.includes('prio=true')) ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+            fontWeight: (location.pathname === '/' && location.search.includes('prio=true')) ? 600 : 400
+          }}>
+            <Flame size={20} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Flöde"}
           </Link>
           <Link to="/manage" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
@@ -284,14 +293,20 @@ const AppLayout = ({ children, onLogout }) => {
 
       {/* Mobile Bottom Bar */}
       <div className="mobile-bottom-bar">
-        <Link to="/" className={`bottom-bar-item ${location.pathname === '/' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+        <Link to="/" className={`bottom-bar-item ${location.pathname === '/' && !location.search.includes('prio=true') ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <Home size={22} />
             {myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
               <span className="bottom-bar-badge">{myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}</span>
             )}
           </div>
-          <span>Home</span>
+          <span>Hem</span>
+        </Link>
+        <Link to="/?prio=true" className={`bottom-bar-item ${location.pathname === '/' && location.search.includes('prio=true') ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+          <div className="icon-wrapper">
+            <Flame size={22} style={{ color: location.search.includes('prio=true') ? '#f97316' : 'inherit' }} />
+          </div>
+          <span style={{ color: location.search.includes('prio=true') ? '#f97316' : undefined }}>Prio</span>
         </Link>
         <button 
           className="bottom-bar-item" 
@@ -301,19 +316,19 @@ const AppLayout = ({ children, onLogout }) => {
           <div className="icon-wrapper">
             <Filter size={22} />
           </div>
-          <span>Feeds</span>
+          <span>Flöden</span>
         </button>
         <Link to="/manage" className={`bottom-bar-item ${location.pathname === '/manage' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <List size={22} />
           </div>
-          <span>Manage</span>
+          <span>Hantera</span>
         </Link>
         <Link to="/settings" className={`bottom-bar-item ${location.pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <SettingsIcon size={22} />
           </div>
-          <span>Settings</span>
+          <span>Inställningar</span>
         </Link>
         <button 
           className="bottom-bar-item" 
@@ -323,7 +338,7 @@ const AppLayout = ({ children, onLogout }) => {
           <div className="icon-wrapper">
             <LogOut size={22} />
           </div>
-          <span>Logout</span>
+          <span>Logga ut</span>
         </button>
       </div>
 
@@ -331,19 +346,31 @@ const AppLayout = ({ children, onLogout }) => {
       <div className={`mobile-feeds-sheet-overlay ${isMobileSheetOpen ? 'open' : ''}`} onClick={() => setIsMobileSheetOpen(false)}></div>
       <div className={`mobile-feeds-sheet ${isMobileSheetOpen ? 'open' : ''}`}>
         <div className="sheet-handle"></div>
-        <div className="sheet-title">My Feeds</div>
+        <div className="sheet-title">Mina flöden</div>
         <div className="sheet-content">
           <Link 
             to="/" 
             style={{
               display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem',
-              color: location.pathname === '/' && !location.search.includes('feedId') ? 'var(--primary)' : 'var(--text-main)', 
-              backgroundColor: location.pathname === '/' && !location.search.includes('feedId') ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+              color: location.pathname === '/' && !location.search.includes('feedId') && !location.search.includes('prio=true') ? 'var(--primary)' : 'var(--text-main)', 
+              backgroundColor: location.pathname === '/' && !location.search.includes('feedId') && !location.search.includes('prio=true') ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
               borderRadius: '12px', textDecoration: 'none', fontWeight: 600
             }}
             onClick={() => setIsMobileSheetOpen(false)}
           >
-            <Home size={20} /> All feeds
+            <Home size={20} /> Alla flöden
+          </Link>
+          <Link 
+            to="/?prio=true" 
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem',
+              color: location.search.includes('prio=true') ? '#f97316' : 'var(--text-main)', 
+              backgroundColor: location.search.includes('prio=true') ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+              borderRadius: '12px', textDecoration: 'none', fontWeight: 600
+            }}
+            onClick={() => setIsMobileSheetOpen(false)}
+          >
+            <Flame size={20} style={{ color: '#f97316' }} /> Prio Flöde
           </Link>
           {myFeeds.map(feed => (
             <Link 

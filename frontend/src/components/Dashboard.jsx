@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, RefreshCw, Rss, MapPin, ChevronRight, Loader2, ArrowLeft, List, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2 } from 'lucide-react';
+import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X } from 'lucide-react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 import ShareModal from './ShareModal';
+
+const CATEGORIES = ['Alla', 'Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
 
 const Dashboard = () => {
   const [allFeeds, setAllFeeds] = useState([]);
@@ -12,9 +14,13 @@ const Dashboard = () => {
   const [page, setPage] = useState(1);
   const itemsPerPage = 15;
   const observer = useRef();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const feedId = searchParams.get('feedId');
   const articleId = searchParams.get('articleId');
+  const isPrioMode = searchParams.get('prio') === 'true';
+  const selectedCategory = searchParams.get('category') || 'Alla';
+  const selectedTag = searchParams.get('tag') || '';
+  const [analyzingIds, setAnalyzingIds] = useState(new Set());
   
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -89,11 +95,15 @@ const Dashboard = () => {
       if (articleId) {
         url = `/dashboard-feeds?article_id=${articleId}`;
       } else {
-        if (showRead) {
-          url += url.includes('?') ? '&show_read=true' : '?show_read=true';
-        }
-        if (debouncedSearch) {
-          url += url.includes('?') ? `&search=${encodeURIComponent(debouncedSearch)}` : `?search=${encodeURIComponent(debouncedSearch)}`;
+        const queryParts = [];
+        if (showRead) queryParts.push('show_read=true');
+        if (debouncedSearch) queryParts.push(`search=${encodeURIComponent(debouncedSearch)}`);
+        if (isPrioMode) queryParts.push('prio_only=true');
+        if (selectedCategory && selectedCategory !== 'Alla') queryParts.push(`category=${encodeURIComponent(selectedCategory)}`);
+        if (selectedTag && selectedTag.trim()) queryParts.push(`tag=${encodeURIComponent(selectedTag.trim())}`);
+        
+        if (queryParts.length > 0) {
+          url += (url.includes('?') ? '&' : '?') + queryParts.join('&');
         }
       }
       const res = await api.get(url);
@@ -154,6 +164,9 @@ const Dashboard = () => {
             window.dispatchEvent(new Event('feedsUpdated')); // Fallback for old clients
           }
           console.log("New articles received via WebSocket! Updating UI...");
+        } else if (event.data.startsWith("AI_UPDATED:")) {
+          // Uppdatera dashboard tyst i bakgrunden när AI-berikning sker
+          fetchFeeds(true);
         } else if (event.data.startsWith("POLLING_START:")) {
           const feedId = parseInt(event.data.split(":")[1]);
           window.dispatchEvent(new CustomEvent('pollingStart', { detail: feedId }));
@@ -222,7 +235,51 @@ const Dashboard = () => {
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
       }
     };
-  }, [feedId, articleId, showRead, debouncedSearch]);
+  }, [feedId, articleId, showRead, debouncedSearch, isPrioMode, selectedCategory, selectedTag]);
+
+  const handleSelectCategory = (cat) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (cat === 'Alla' || selectedCategory === cat) {
+      newParams.delete('category');
+    } else {
+      newParams.set('category', cat);
+    }
+    setSearchParams(newParams);
+  };
+
+  const handleSelectTag = (tag) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (selectedTag.toLowerCase() === tag.toLowerCase()) {
+      newParams.delete('tag');
+    } else {
+      newParams.set('tag', tag);
+    }
+    setSearchParams(newParams);
+  };
+
+  const clearTagFilter = () => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('tag');
+    setSearchParams(newParams);
+  };
+
+  const triggerAnalysis = async (e, id) => {
+    e.stopPropagation();
+    if (analyzingIds.has(id)) return;
+    setAnalyzingIds(prev => new Set(prev).add(id));
+    try {
+      await api.post(`/articles/${id}/analyze`);
+      fetchFeeds(true);
+    } catch (err) {
+      console.error("Fel vid AI-analys:", err);
+    } finally {
+      setAnalyzingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
 
   // Infinite Scroll logic
   const lastElementRef = useCallback(node => {
@@ -523,17 +580,110 @@ const Dashboard = () => {
       </div>
 
       <div className="dashboard-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {feedId && (
-              <Link to="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', textDecoration: 'none', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border-color)' }} title="Show all feeds">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            {(feedId || isPrioMode) && (
+              <Link to="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', textDecoration: 'none', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border-color)' }} title="Visa alla flöden">
                 <ArrowLeft size={20} />
               </Link>
             )}
-            <h1 style={{ color: 'var(--primary)', margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
-              {feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'TODAY'}
+            <h1 style={{ 
+              color: isPrioMode ? '#f97316' : 'var(--primary)', 
+              margin: 0, 
+              fontSize: '1.5rem', 
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              {isPrioMode && <Flame size={24} style={{ color: '#f97316' }} />}
+              {isPrioMode 
+                ? 'PRIO FLÖDE' 
+                : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'DAGENS NYHETER')}
             </h1>
+            {isPrioMode && (
+              <span style={{ 
+                fontSize: '0.75rem', 
+                backgroundColor: 'rgba(249, 115, 22, 0.15)', 
+                color: '#f97316', 
+                padding: '0.2rem 0.6rem', 
+                borderRadius: '12px', 
+                fontWeight: 600,
+                border: '1px solid rgba(249, 115, 22, 0.3)'
+              }}>
+                AI-prioriterat (score ≥ 75)
+              </span>
+            )}
           </div>
+        </div>
+
+        {/* Kategori- och Tagg-filterbar */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.5rem', 
+          marginTop: '1rem', 
+          overflowX: 'auto', 
+          paddingBottom: '0.5rem',
+          scrollbarWidth: 'none'
+        }}>
+          {CATEGORIES.map(cat => {
+            const isActive = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => handleSelectCategory(cat)}
+                style={{
+                  padding: '0.35rem 0.85rem',
+                  borderRadius: '20px',
+                  border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                  backgroundColor: isActive ? 'var(--primary)' : 'var(--bg-card)',
+                  color: isActive ? '#ffffff' : 'var(--text-muted)',
+                  fontSize: '0.8rem',
+                  fontWeight: isActive ? 600 : 400,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {cat}
+              </button>
+            );
+          })}
+
+          {selectedTag && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              backgroundColor: 'rgba(249, 115, 22, 0.15)',
+              border: '1px solid rgba(249, 115, 22, 0.4)',
+              color: '#f97316',
+              padding: '0.3rem 0.75rem',
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              whiteSpace: 'nowrap'
+            }}>
+              <Tag size={13} /> #{selectedTag}
+              <button
+                onClick={clearTagFilter}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#f97316',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: 0,
+                  marginLeft: '0.25rem'
+                }}
+                title="Ta bort tagg-filter"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -638,12 +788,24 @@ const Dashboard = () => {
                   }}
                   onClick={() => handleExpand(index, item.link, item.id)}
                   className={`feed-card ${(!showRead && isArticleRead(item.id, item.is_read)) ? 'read' : ''}`}
-                  style={{ filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
+                  style={{ 
+                    filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
+                    userSelect: 'none', 
+                    WebkitUserSelect: 'none',
+                    border: (item.priority === 'high' || (item.prio_score || 0) >= 75) 
+                      ? '1px solid rgba(249, 115, 22, 0.45)' 
+                      : undefined,
+                    boxShadow: (item.priority === 'high' || (item.prio_score || 0) >= 75) 
+                      ? '0 2px 10px rgba(249, 115, 22, 0.1)' 
+                      : undefined
+                  }}
                 >
                 {/* Left colored bar */}
                 <div 
                   className="feed-card-left"
-                  style={{ backgroundColor: color }}
+                  style={{ 
+                    backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : color 
+                  }}
                 >
                   <div className="feed-card-time">
                     {formatTime(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
@@ -704,43 +866,95 @@ const Dashboard = () => {
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   {/* Toppbar */}
                   <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', gap: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }}>
                       {/* Source and original published date */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
                         <Rss size={14} /> {item.source_title}
                         {item.published && (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.5rem' }} title="Original publication time">
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.35rem' }} title="Ursprunglig publiceringstid">
                             • {formatDateLabel(item.published)} {formatTime(item.published)}
                           </span>
                         )}
                       </div>
+
+                      {/* PRIO Badge vid hög prioritet */}
+                      {(item.priority === 'high' || (item.prio_score || 0) >= 75) && (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          backgroundColor: 'rgba(249, 115, 22, 0.15)',
+                          color: '#f97316',
+                          border: '1px solid rgba(249, 115, 22, 0.35)',
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.5px'
+                        }} title={item.prio_reason || "Högprioriterad av AI"}>
+                          <Flame size={13} /> PRIO {item.prio_score ? item.prio_score : ''}
+                        </span>
+                      )}
+
+                      {/* AI Kategori */}
+                      {item.category && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
+                          style={{
+                            color: selectedCategory === item.category ? '#ffffff' : 'var(--text-muted)',
+                            padding: '0.15rem 0.55rem',
+                            backgroundColor: selectedCategory === item.category ? 'var(--primary)' : 'var(--bg-app)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                          }}
+                          title={`Filtrera på kategori: ${item.category}`}
+                        >
+                          {item.category}
+                        </button>
+                      )}
                       
-                      {/* Categories */}
+                      {/* RSS Original Categories */}
                       {item.categories && item.categories.map((cat, cIdx) => (
                         <div key={cIdx} style={{ 
                           color: 'var(--text-muted)', 
-                          padding: '0.1rem 0.5rem', 
+                          padding: '0.1rem 0.45rem', 
                           backgroundColor: 'var(--bg-app)',
                           border: '1px solid var(--border-color)',
                           borderRadius: '4px',
-                          fontSize: '0.75rem'
+                          fontSize: '0.72rem',
+                          opacity: 0.85
                         }}>
                           {cat}
                         </div>
                       ))}
                     </div>
 
-                    {/* Dela-knapp */}
-                    <button
-                      className="feed-card-share-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShareItem(item);
-                      }}
-                      title="Dela händelse"
-                    >
-                      <Share2 size={16} />
-                    </button>
+                    {/* Verktygsknappar: Analysera och Dela */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <button
+                        className="feed-card-share-btn"
+                        onClick={(e) => triggerAnalysis(e, item.id)}
+                        title={item.ai_processed ? "Gör om AI-analys" : "Kör AI-analys nu"}
+                        style={{ color: analyzingIds.has(item.id) ? '#f97316' : undefined }}
+                      >
+                        {analyzingIds.has(item.id) ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
+                      </button>
+
+                      <button
+                        className="feed-card-share-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShareItem(item);
+                        }}
+                        title="Dela händelse"
+                      >
+                        <Share2 size={16} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Main content padding wrapper */}
@@ -764,8 +978,34 @@ const Dashboard = () => {
                     </div>
                   )}
                   
-                  {/* Summary - Always visible */}
-                  {item.summary && (
+                  {/* AI-sammanfattning (om tillgänglig) */}
+                  {item.ai_summary && (
+                    <div style={{
+                      backgroundColor: 'var(--bg-app)',
+                      borderLeft: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '3px solid #f97316' : '3px solid var(--primary)',
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '0 6px 6px 0',
+                      marginBottom: '0.85rem',
+                      fontSize: '0.92rem',
+                      lineHeight: '1.5'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : 'var(--primary)', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem' }}>
+                        <Sparkles size={13} /> AI-SAMMANFATTNING
+                        {item.prio_score ? <span style={{ opacity: 0.85, fontWeight: 500 }}>• Prio {item.prio_score}/100</span> : null}
+                      </div>
+                      <div style={{ color: 'var(--text-main)' }}>
+                        {item.ai_summary}
+                      </div>
+                      {item.prio_reason && (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem', fontStyle: 'italic' }}>
+                          Motivering: {item.prio_reason}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Summary - Visas om ingen AI-sammanfattning finns */}
+                  {!item.ai_summary && item.summary && (
                     <div style={{ 
                       color: 'var(--text-main)', 
                       fontSize: '0.95rem', 
@@ -779,6 +1019,38 @@ const Dashboard = () => {
                       {item.summary}
                     </div>
                   )}
+
+                  {/* Taggar från AI-analys */}
+                  {item.tags && item.tags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem' }}>
+                      {item.tags.map((tag, tIdx) => {
+                        const isTagActive = selectedTag.toLowerCase() === tag.toLowerCase();
+                        return (
+                          <button
+                            key={tIdx}
+                            onClick={(e) => { e.stopPropagation(); handleSelectTag(tag); }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: isTagActive ? 600 : 500,
+                              backgroundColor: isTagActive ? 'var(--primary)' : 'var(--bg-app)',
+                              color: isTagActive ? '#ffffff' : 'var(--text-muted)',
+                              border: isTagActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s'
+                            }}
+                            title={`Filtrera på tagg: #${tag}`}
+                          >
+                            <Tag size={11} /> {tag}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   
                   {/* Expanded Content (Full scraped text) */}
                   {expandedItems[index] && (
@@ -787,6 +1059,13 @@ const Dashboard = () => {
                       animate={{ opacity: 1, height: 'auto' }}
                       style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', fontSize: '0.95rem', lineHeight: '1.6', color: 'var(--text-main)' }}
                     >
+                      {item.ai_summary && item.summary && (
+                        <div style={{ marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                          <strong style={{ display: 'block', color: 'var(--text-main)', marginBottom: '0.25rem' }}>RSS Ingress:</strong>
+                          {item.summary}
+                        </div>
+                      )}
+
                       {scrapingUrls[item.link] ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
                           <Loader2 className="spin" size={16} /> Hämtar hela artikeln...
@@ -834,7 +1113,7 @@ const Dashboard = () => {
                   <div 
                     style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600 }}
                   >
-                    <span style={{ backgroundColor: color, color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                    <span style={{ backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : color, color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
                       {formatTime(item.published)}
                     </span>
                     {expandedItems[index] ? 'Collapse' : 'Read full event'} <ChevronRight size={16} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />

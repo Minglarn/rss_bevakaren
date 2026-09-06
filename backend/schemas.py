@@ -82,6 +82,13 @@ class ArticleResponse(BaseModel):
     received_ts: Optional[int] = 0
     is_read: Optional[int] = 0
     is_locked: Optional[int] = 0
+    ai_processed: Optional[int] = 0
+    category: Optional[str] = "Övrigt"
+    priority: Optional[str] = "low"
+    prio_score: Optional[int] = 0
+    prio_reason: Optional[str] = ""
+    ai_summary: Optional[str] = None
+    tags: Optional[List[str]] = []
 
     class Config:
         from_attributes = True

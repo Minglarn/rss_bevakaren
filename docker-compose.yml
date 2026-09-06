@@ -14,6 +14,9 @@ services:
       # Multi-user setup: Separera med kommatecken. Ordningen matchar.
       - APP_USERNAME=admin,wife
       - APP_PASSWORD=admin_password,wife_password
+      # LM Studio AI-inställningar (IP på lokala nätverket)
+      - LM_STUDIO_URL=http://192.168.1.239:1234/v1/chat/completions
+      - LM_STUDIO_MODEL=   # Lämna tomt för att använda aktiv modell i LM Studio, eller ange t.ex. gemma4-e4b
     restart: unless-stopped
 
   frontend:

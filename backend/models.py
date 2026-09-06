@@ -66,5 +66,12 @@ class Article(Base):
     categories = Column(String)
     is_read = Column(Integer, default=0)
     is_locked = Column(Integer, default=0)
+    ai_processed = Column(Integer, default=0, index=True)
+    category = Column(String, default="Övrigt", index=True)
+    priority = Column(String, default="low", index=True)
+    prio_score = Column(Integer, default=0)
+    prio_reason = Column(String, default="")
+    ai_summary = Column(String, nullable=True)
+    tags = Column(String, default="[]")
 
     feed = relationship("Feed", back_populates="articles")

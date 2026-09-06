@@ -9,7 +9,7 @@ from datetime import timedelta
 import os
 import json
 
-import models, schemas, database, auth
+import models, schemas, database, auth, ai_service
 from pydantic import BaseModel
 import logging
 import builtins
@@ -60,20 +60,13 @@ def get_version():
         return "unknown"
 
 VERSION = get_version()
-LAST_UPDATE = "2026-07-26"
+LAST_UPDATE = "2026-09-06"
 
-# Setup default users on startup from environment variables
-@app.on_event("startup")
-async def startup_event():
-    print(BANNER, flush=True)
-    print(f"Version: {VERSION}", flush=True)
-    print(f"Last update: {LAST_UPDATE}", flush=True)
-    
-    db_path = "/data/rss.db"
-    
-    # Run automatic DB migrations
-    if os.path.exists(db_path):
-        import sqlite3
+def run_db_migrations(db_path: str):
+    if not os.path.exists(db_path):
+        return
+    import sqlite3
+    try:
         conn = sqlite3.connect(db_path)
         cur = conn.cursor()
         
@@ -115,7 +108,7 @@ async def startup_event():
         try:
             cur.execute("ALTER TABLE articles ADD COLUMN received_ts INTEGER;")
         except sqlite3.OperationalError:
-            pass # Column exists
+            pass
             
         try:
             cur.execute("UPDATE articles SET received_ts = published_ts WHERE received_ts IS NULL;")
@@ -126,38 +119,71 @@ async def startup_event():
         try:
             cur.execute("ALTER TABLE feeds ADD COLUMN last_viewed_ts INTEGER DEFAULT 0;")
         except sqlite3.OperationalError:
-            pass # Column exists
+            pass
             
         try:
             cur.execute("ALTER TABLE feeds ADD COLUMN include_in_dashboard INTEGER DEFAULT 1;")
         except sqlite3.OperationalError:
-            pass # Column exists
+            pass
 
         # Migration 6: Add notify_enabled
         try:
             cur.execute("ALTER TABLE feeds ADD COLUMN notify_enabled INTEGER DEFAULT 1;")
         except sqlite3.OperationalError:
-            pass # Column exists
+            pass
 
         # Migration 7: Add is_read to articles
         try:
             cur.execute("ALTER TABLE articles ADD COLUMN is_read INTEGER DEFAULT 0;")
         except sqlite3.OperationalError:
-            pass # Column exists
+            pass
 
         # Migration 8: Add is_locked to articles
         try:
             cur.execute("ALTER TABLE articles ADD COLUMN is_locked INTEGER DEFAULT 0;")
         except sqlite3.OperationalError:
-            pass # Column exists
+            pass
+
+        # Migration 9: AI Enrichment fields
+        for col_def in [
+            ("ai_processed", "INTEGER DEFAULT 0"),
+            ("category", "VARCHAR DEFAULT 'Övrigt'"),
+            ("priority", "VARCHAR DEFAULT 'low'"),
+            ("prio_score", "INTEGER DEFAULT 0"),
+            ("prio_reason", "VARCHAR DEFAULT ''"),
+            ("ai_summary", "TEXT"),
+            ("tags", "TEXT DEFAULT '[]'")
+        ]:
+            try:
+                cur.execute(f"ALTER TABLE articles ADD COLUMN {col_def[0]} {col_def[1]};")
+            except sqlite3.OperationalError:
+                pass
+                
+        try:
+            cur.execute("CREATE INDEX IF NOT EXISTS ix_articles_ai_processed ON articles (ai_processed);")
+            cur.execute("CREATE INDEX IF NOT EXISTS ix_articles_priority ON articles (priority);")
+        except Exception:
+            pass
             
         conn.commit()
         conn.close()
-        
         size_kb = os.path.getsize(db_path) / 1024
-        print(f"Database size: {size_kb:.2f} KB", flush=True)
-    else:
-        print("Database size: 0 KB (Creating now)", flush=True)
+        print(f"Database ({db_path}) size: {size_kb:.2f} KB (Migrations applied)", flush=True)
+    except Exception as err:
+        print(f"Migration error for {db_path}: {err}", flush=True)
+
+# Setup default users on startup from environment variables
+@app.on_event("startup")
+async def startup_event():
+    print(BANNER, flush=True)
+    print(f"Version: {VERSION}", flush=True)
+    print(f"Last update: {LAST_UPDATE}", flush=True)
+    
+    # Run migrations for all possible db locations
+    for possible_path in ["/data/rss.db", "rss.db", "./rss.db"]:
+        if os.path.exists(possible_path):
+            run_db_migrations(possible_path)
+            
     print("-" * 50, flush=True)
 
     db = database.SessionLocal()
@@ -189,8 +215,9 @@ async def startup_event():
     db.commit()
     db.close()
     
-    # Start the background polling task
+    # Start the background polling task and AI enrichment task
     asyncio.create_task(polling_loop())
+    asyncio.create_task(ai_processing_loop())
 
 class ConnectionManager:
     def __init__(self):
@@ -387,6 +414,73 @@ async def polling_loop():
         
         await asyncio.sleep(30) # Check every 30 seconds
 
+async def ai_processing_loop():
+    print("Background AI enrichment loop started", flush=True)
+    # Vänta lite i början så appen och LM Studio hinner initialiseras
+    await asyncio.sleep(5)
+    
+    while True:
+        try:
+            # Kontrollera om LM Studio är nåbart innan vi hämtar artiklar
+            is_healthy = await asyncio.to_thread(ai_service.check_lm_studio_health)
+            if not is_healthy:
+                # Sov 30 sekunder om LM Studio är offline för att inte spamma loggar
+                await asyncio.sleep(30)
+                continue
+                
+            db = database.SessionLocal()
+            try:
+                # Hämta artiklar som inte är AI-processade än (senaste artiklarna först så nyheter prioriteras)
+                unprocessed = db.query(models.Article).filter(
+                    or_(models.Article.ai_processed == 0, models.Article.ai_processed == None)
+                ).order_by(models.Article.received_ts.desc()).limit(3).all()
+                
+                if not unprocessed:
+                    db.close()
+                    await asyncio.sleep(10)
+                    continue
+
+                for art in unprocessed:
+                    cats = art.categories.split(",") if art.categories else []
+                    source = art.feed.title if art.feed else ""
+                    print(f"[AI] Bearbetar artikel {art.id}: '{art.title[:50]}...'...", flush=True)
+                    
+                    analysis = await asyncio.to_thread(
+                        ai_service.analyze_article,
+                        title=art.title,
+                        summary=art.summary,
+                        source_title=source,
+                        categories=cats
+                    )
+                    
+                    if analysis:
+                        art.ai_processed = 1
+                        art.category = analysis.get("category", "Övrigt")
+                        art.priority = analysis.get("priority", "low")
+                        art.prio_score = analysis.get("prio_score", 10)
+                        art.prio_reason = analysis.get("prio_reason", "")
+                        art.ai_summary = analysis.get("ai_summary", "")
+                        art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
+                        db.commit()
+                        print(f"[AI] Klar artikel {art.id} -> {art.category} | {art.priority.upper()} ({art.prio_score}p)", flush=True)
+                        
+                        # Skicka WS-signal om AI-uppdatering till användaren
+                        if art.feed and art.feed.user_id:
+                            await manager.send_personal_message(f"AI_UPDATED:{art.id}", art.feed.user_id)
+                    else:
+                        # Om analysen misslyckades för just denna, sov en kort stund
+                        print(f"[AI] Analys gav inget svar för artikel {art.id} (LM Studio pausar)", flush=True)
+                        await asyncio.sleep(10)
+                        break
+                        
+            finally:
+                db.close()
+                
+        except Exception as e:
+            print(f"[AI] Fel i ai_processing_loop: {e}", flush=True)
+            
+        await asyncio.sleep(10)
+
 
 @app.post("/token", response_model=schemas.Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
@@ -533,7 +627,17 @@ def get_opml_feeds(current_user: models.User = Depends(auth.get_current_user)):
     return feeds
 
 @app.get("/dashboard-feeds", response_model=List[schemas.ArticleResponse])
-def get_dashboard_feeds(feed_id: Optional[int] = None, show_read: Optional[bool] = False, search: Optional[str] = None, article_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+def get_dashboard_feeds(
+    feed_id: Optional[int] = None, 
+    show_read: Optional[bool] = False, 
+    search: Optional[str] = None, 
+    article_id: Optional[int] = None,
+    prio_only: Optional[bool] = False,
+    category: Optional[str] = None,
+    tag: Optional[str] = None,
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
     query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == current_user.id)
     if article_id:
         query = query.filter(models.Article.id == article_id)
@@ -546,8 +650,23 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, show_read: Optional[bool]
         if not show_read:
             query = query.filter((models.Article.is_read == 0) | (models.Article.is_read == None))
             
+        if prio_only:
+            query = query.filter(or_(models.Article.priority == 'high', models.Article.prio_score >= 75))
+
+        if category and category.lower() != "alla":
+            query = query.filter(models.Article.category == category)
+
+        if tag and tag.strip():
+            clean_tag = tag.strip()
+            query = query.filter(models.Article.tags.ilike(f"%{clean_tag}%"))
+            
         if search:
-            query = query.filter(or_(models.Article.title.ilike(f"%{search}%"), models.Article.summary.ilike(f"%{search}%")))
+            query = query.filter(or_(
+                models.Article.title.ilike(f"%{search}%"), 
+                models.Article.summary.ilike(f"%{search}%"),
+                models.Article.ai_summary.ilike(f"%{search}%"),
+                models.Article.tags.ilike(f"%{search}%")
+            ))
         
     articles = query.order_by(models.Article.received_ts.desc()).limit(150).all()
     
@@ -555,6 +674,14 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, show_read: Optional[bool]
     response_items = []
     for art in articles:
         cats = art.categories.split(",") if art.categories else []
+        
+        parsed_tags = []
+        if art.tags:
+            try:
+                parsed_tags = json.loads(art.tags)
+            except Exception:
+                parsed_tags = []
+
         art_dict = {
             "id": art.id,
             "feed_id": art.feed_id,
@@ -570,11 +697,46 @@ def get_dashboard_feeds(feed_id: Optional[int] = None, show_read: Optional[bool]
             "scrape_enabled": bool(art.feed.scrape_enabled),
             "received_ts": art.received_ts,
             "is_read": art.is_read or 0,
-            "is_locked": art.is_locked or 0
+            "is_locked": art.is_locked or 0,
+            "ai_processed": art.ai_processed or 0,
+            "category": art.category or "Övrigt",
+            "priority": art.priority or "low",
+            "prio_score": art.prio_score or 0,
+            "prio_reason": art.prio_reason or "",
+            "ai_summary": art.ai_summary,
+            "tags": parsed_tags
         }
         response_items.append(art_dict)
         
     return response_items
+
+@app.post("/articles/{article_id}/analyze")
+async def trigger_article_analysis(article_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    art = db.query(models.Article).join(models.Feed).filter(models.Article.id == article_id, models.Feed.user_id == current_user.id).first()
+    if not art:
+        raise HTTPException(status_code=404, detail="Article not found")
+        
+    cats = art.categories.split(",") if art.categories else []
+    source = art.feed.title if art.feed else ""
+    analysis = await asyncio.to_thread(
+        ai_service.analyze_article,
+        title=art.title,
+        summary=art.summary,
+        source_title=source,
+        categories=cats
+    )
+    if not analysis:
+        raise HTTPException(status_code=502, detail="LM Studio svarade inte eller kunde inte analysera artikeln.")
+        
+    art.ai_processed = 1
+    art.category = analysis.get("category", "Övrigt")
+    art.priority = analysis.get("priority", "low")
+    art.prio_score = analysis.get("prio_score", 10)
+    art.prio_reason = analysis.get("prio_reason", "")
+    art.ai_summary = analysis.get("ai_summary", "")
+    art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
+    db.commit()
+    return {"status": "ok", "article_id": art.id, "analysis": analysis}
 
 import requests
 from bs4 import BeautifulSoup
