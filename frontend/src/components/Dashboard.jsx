@@ -813,19 +813,15 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                     filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
                     userSelect: 'none', 
                     WebkitUserSelect: 'none',
-                    border: (isPrioMode && (item.priority === 'high' || (item.prio_score || 0) >= 75)) 
-                      ? '1px solid rgba(249, 115, 22, 0.45)' 
-                      : undefined,
-                    boxShadow: (isPrioMode && (item.priority === 'high' || (item.prio_score || 0) >= 75)) 
-                      ? '0 2px 10px rgba(249, 115, 22, 0.1)' 
-                      : undefined
+                    border: undefined,
+                    boxShadow: undefined
                   }}
                 >
                 {/* Left colored bar */}
                 <div 
                   className="feed-card-left"
                   style={{ 
-                    backgroundColor: (isPrioMode && (item.priority === 'high' || (item.prio_score || 0) >= 75)) ? '#f97316' : color 
+                    backgroundColor: color 
                   }}
                 >
                   <div className="feed-card-time">
@@ -1003,24 +999,23 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                   
                   {/* AI-sammanfattning (visas ENBART i PRIO flödet) */}
                   {isPrioMode && item.ai_summary && (
-                    <div style={{
-                      backgroundColor: 'var(--bg-app)',
-                      borderLeft: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '3px solid #f97316' : '3px solid var(--primary)',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: '0 6px 6px 0',
-                      marginBottom: '0.85rem',
-                      fontSize: '0.92rem',
-                      lineHeight: '1.5'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : 'var(--primary)', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem' }}>
-                        <Sparkles size={13} /> AI-SAMMANFATTNING
-                        {item.prio_score ? <span style={{ opacity: 0.85, fontWeight: 500 }}>• Prio {item.prio_score}/100</span> : null}
+                    <div style={{ marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                        <Sparkles size={13} style={{ color: 'var(--primary)' }} /> AI-genererad sammanfattning
                       </div>
-                      <div style={{ color: 'var(--text-main)' }}>
+                      <div style={{ 
+                        color: 'var(--text-main)', 
+                        fontSize: '0.95rem', 
+                        lineHeight: '1.5',
+                        display: expandedItems[index] ? 'block' : '-webkit-box',
+                        WebkitLineClamp: expandedItems[index] ? 'unset' : 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
                         {item.ai_summary}
                       </div>
                       {item.prio_reason && (
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem', fontStyle: 'italic' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.35rem', fontStyle: 'italic' }}>
                           Motivering: {item.prio_reason}
                         </div>
                       )}
