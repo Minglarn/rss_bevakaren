@@ -430,9 +430,27 @@ async def ai_processing_loop():
                 
             db = database.SessionLocal()
             try:
-                # Hämta artiklar som inte är AI-processade än (senaste artiklarna först så nyheter prioriteras)
-                unprocessed = db.query(models.Article).filter(
-                    or_(models.Article.ai_processed == 0, models.Article.ai_processed == None)
+                max_age_hours = int(os.environ.get("AI_MAX_ARTICLE_AGE_HOURS", "24"))
+                now = int(time.time())
+                cutoff_ts = now - (max_age_hours * 3600)
+
+                # 1. Arkivera/hoppa automatiskt över gamla artiklar (> max_age_hours) och artiklar som redan är lästa
+                # så att LM Studio inte slösar tid och resurser på historisk backlog
+                db.query(models.Article).filter(
+                    or_(models.Article.ai_processed == 0, models.Article.ai_processed == None),
+                    or_(
+                        models.Article.received_ts < cutoff_ts,
+                        models.Article.is_read == 1
+                    )
+                ).update({models.Article.ai_processed: 2}, synchronize_session=False)
+                db.commit()
+
+                # 2. Hämta endast färska, olästa artiklar från aktiva flöden som inkommit inom tidsfönstret
+                unprocessed = db.query(models.Article).join(models.Feed).filter(
+                    or_(models.Article.ai_processed == 0, models.Article.ai_processed == None),
+                    models.Article.received_ts >= cutoff_ts,
+                    or_(models.Article.is_read == 0, models.Article.is_read == None),
+                    models.Feed.include_in_dashboard == 1
                 ).order_by(models.Article.received_ts.desc()).limit(3).all()
                 
                 if not unprocessed:
