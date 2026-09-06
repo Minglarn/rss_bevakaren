@@ -18,6 +18,7 @@ const AppLayout = ({ children, onLogout }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [myFeeds, setMyFeeds] = useState([]);
   const myFeedsRef = useRef([]);
+  const [prioUnreadCount, setPrioUnreadCount] = useState(0);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   const [pollingFeeds, setPollingFeeds] = useState(new Set());
 
@@ -32,10 +33,22 @@ const AppLayout = ({ children, onLogout }) => {
         console.error("Could not fetch feeds for the sidebar", err);
       }
     };
+
+    const fetchPrioUnread = async () => {
+      try {
+        const res = await api.get('/prio/unread-count');
+        setPrioUnreadCount(res.data.unread_count || 0);
+      } catch (err) {
+        console.error("Could not fetch prio unread count", err);
+      }
+    };
+
     fetchMyFeeds();
+    fetchPrioUnread();
     
     const handleFeedsUpdated = (e) => {
       fetchMyFeeds();
+      fetchPrioUnread();
       if (e && e.detail && e.detail.feedId) {
         const { feedId, count } = e.detail;
         const feed = myFeedsRef.current.find(f => f.id === feedId);
@@ -198,6 +211,19 @@ const AppLayout = ({ children, onLogout }) => {
             fontWeight: location.pathname === '/prio' ? 600 : 400
           }}>
             <Flame size={20} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Flöde"}
+            {!isCollapsed && prioUnreadCount > 0 && (
+              <span style={{ 
+                marginLeft: 'auto', 
+                backgroundColor: '#f97316', 
+                color: 'white', 
+                fontSize: '0.7rem', 
+                padding: '0.1rem 0.4rem', 
+                borderRadius: '10px', 
+                fontWeight: 'bold' 
+              }}>
+                {prioUnreadCount}
+              </span>
+            )}
           </Link>
           <Link to="/manage" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
@@ -305,6 +331,9 @@ const AppLayout = ({ children, onLogout }) => {
         <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <Flame size={22} style={{ color: location.pathname === '/prio' ? '#f97316' : 'inherit' }} />
+            {prioUnreadCount > 0 && (
+              <span className="bottom-bar-badge" style={{ backgroundColor: '#f97316' }}>{prioUnreadCount}</span>
+            )}
           </div>
           <span style={{ color: location.pathname === '/prio' ? '#f97316' : undefined }}>Prio</span>
         </Link>
@@ -371,6 +400,11 @@ const AppLayout = ({ children, onLogout }) => {
             onClick={() => setIsMobileSheetOpen(false)}
           >
             <Flame size={20} style={{ color: '#f97316' }} /> Prio Flöde
+            {prioUnreadCount > 0 && (
+              <span style={{ backgroundColor: '#f97316', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold', marginLeft: 'auto' }}>
+                {prioUnreadCount}
+              </span>
+            )}
           </Link>
           {myFeeds.map(feed => (
             <Link 

@@ -5,9 +5,10 @@ import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import ShareModal from './ShareModal';
 
-const CATEGORIES = ['Alla', 'Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
+const DEFAULT_CATEGORIES = ['Alla', 'Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
 
 const Dashboard = ({ isPrioModeProp = false }) => {
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const location = useLocation();
   const [allFeeds, setAllFeeds] = useState([]);
   const [displayedFeeds, setDisplayedFeeds] = useState([]);
@@ -34,6 +35,26 @@ const Dashboard = ({ isPrioModeProp = false }) => {
     }, 400); // 400ms debounce
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get('/ai/config');
+        if (res.data && Array.isArray(res.data.categories) && res.data.categories.length > 0) {
+          setCategories(['Alla', ...res.data.categories]);
+        }
+      } catch (err) {
+        // Behåll standard om anropet misslyckas
+      }
+    };
+    fetchCategories();
+
+    const handleConfigUpdate = () => {
+      fetchCategories();
+    };
+    window.addEventListener('aiConfigUpdated', handleConfigUpdate);
+    return () => window.removeEventListener('aiConfigUpdated', handleConfigUpdate);
+  }, []);
   
   const [readItems, setReadItems] = useState(new Set());
   const [unreadItems, setUnreadItems] = useState(new Set());
@@ -647,7 +668,7 @@ const Dashboard = ({ isPrioModeProp = false }) => {
             paddingBottom: '0.5rem',
             scrollbarWidth: 'none'
           }}>
-            {CATEGORIES.map(cat => {
+            {categories.map(cat => {
               const isActive = selectedCategory === cat;
               return (
                 <button

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush } from '../utils/notifications';
 
@@ -17,6 +18,18 @@ const Settings = () => {
   const [isPurging, setIsPurging] = useState(false);
   const [purgeMessage, setPurgeMessage] = useState(null);
 
+  // AI Inställningar state
+  const [aiConfig, setAiConfig] = useState({
+    system_prompt: '',
+    categories: [],
+    lm_studio_url: '',
+    lm_studio_model: '',
+    is_healthy: false
+  });
+  const [newAiCategory, setNewAiCategory] = useState('');
+  const [isSavingAi, setIsSavingAi] = useState(false);
+  const [isLoadingAi, setIsLoadingAi] = useState(false);
+
   const toggleImages = () => {
     const val = !showImages;
     setShowImages(val);
@@ -30,6 +43,18 @@ const Settings = () => {
     window.dispatchEvent(new Event('themeChanged'));
   };
 
+  const fetchAiConfig = async () => {
+    try {
+      setIsLoadingAi(true);
+      const res = await api.get('/ai/config');
+      setAiConfig(res.data);
+    } catch (err) {
+      console.error("Could not fetch AI config", err);
+    } finally {
+      setIsLoadingAi(false);
+    }
+  };
+
   const fetchData = async () => {
     try {
       const [kwRes, feedsRes, sysRes] = await Promise.all([
@@ -40,6 +65,7 @@ const Settings = () => {
       setKeywords(kwRes.data);
       setFeeds(feedsRes.data);
       setSysInfo(sysRes.data);
+      fetchAiConfig();
     } catch (err) {
       console.error(err);
     }
@@ -141,6 +167,71 @@ const Settings = () => {
     }
   };
 
+  const handleSaveAiConfig = async (e) => {
+    if (e) e.preventDefault();
+    try {
+      setIsSavingAi(true);
+      await api.put('/ai/config', {
+        system_prompt: aiConfig.system_prompt,
+        categories: aiConfig.categories
+      });
+      toast.success('AI-inställningar och prompt har sparats!');
+      window.dispatchEvent(new Event('aiConfigUpdated'));
+    } catch (err) {
+      console.error("Could not save AI config", err);
+      toast.error('Kunde inte spara AI-inställningarna');
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
+
+  const handleAddAiCategory = (e) => {
+    e.preventDefault();
+    const cat = newAiCategory.trim();
+    if (!cat) return;
+    if (aiConfig.categories && aiConfig.categories.some(c => c.toLowerCase() === cat.toLowerCase())) {
+      toast.error('Kategorin finns redan');
+      return;
+    }
+    setAiConfig(prev => ({
+      ...prev,
+      categories: [...(prev.categories || []), cat]
+    }));
+    setNewAiCategory('');
+  };
+
+  const handleRemoveAiCategory = (catToRemove) => {
+    setAiConfig(prev => ({
+      ...prev,
+      categories: prev.categories.filter(c => c !== catToRemove)
+    }));
+  };
+
+  const handleResetAiPrompt = () => {
+    if (!window.confirm("Vill du återställa analysprompten till standardinställningen?")) return;
+    const catsStr = (aiConfig.categories && aiConfig.categories.length > 0) 
+      ? aiConfig.categories.join(' | ') 
+      : 'Teknik | Politik | Blåljus | Lokalt | Ekonomi | Nöje | Övrigt';
+    const defaultPrompt = `Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
+{
+  "category": "${catsStr}",
+  "priority": "high | medium | low",
+  "prio_score": 1-100,
+  "prio_reason": "Kort motivering till prioritetsnivån på svenska",
+  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen.",
+  "tags": ["tagg1", "tagg2"]
+}
+
+Prioriteringsregler:
+- 'high' (score >= 75): Handlar specifikt om Tesla/elbilar, lokalpolitik/viktiga lokala samhällshändelser, eller kritiska blåljus/samhällsvarningar.
+- 'medium' (score 40-74): Allmän teknik, ekonomi, bredare inrikespolitik.
+- 'low' (score < 40): Nöje, skvaller, kändisar, vardagliga sportnotiser eller mat/recept.`;
+    setAiConfig(prev => ({
+      ...prev,
+      system_prompt: defaultPrompt
+    }));
+  };
+
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
       <h1 style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
@@ -172,6 +263,23 @@ const Settings = () => {
           style={{ background: 'none', border: 'none', color: activeTab === 'notifications' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'notifications' ? 600 : 400, cursor: 'pointer', fontSize: '1rem', padding: '0.5rem 1rem' }}
         >
           Notifications
+        </button>
+        <button 
+          onClick={() => setActiveTab('ai')}
+          style={{ 
+            background: 'none', 
+            border: 'none', 
+            color: activeTab === 'ai' ? '#f97316' : 'var(--text-muted)', 
+            fontWeight: activeTab === 'ai' ? 600 : 400, 
+            cursor: 'pointer', 
+            fontSize: '1rem', 
+            padding: '0.5rem 1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}
+        >
+          <Sparkles size={16} style={{ color: activeTab === 'ai' ? '#f97316' : 'inherit' }} /> AI Analys & Prompt
         </button>
       </div>
 
@@ -524,6 +632,167 @@ const Settings = () => {
               ))}
             </div>
           </div>
+        </motion.div>
+      )}
+
+      {/* AI Analys & Prompt Tab */}
+      {activeTab === 'ai' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          {/* Statuskort */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sparkles size={20} style={{ color: '#f97316' }} /> LM Studio Status
+              </h3>
+              <button 
+                onClick={fetchAiConfig}
+                disabled={isLoadingAi}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem',
+                  backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)',
+                  borderRadius: '6px', cursor: 'pointer', color: 'var(--text-main)', fontSize: '0.8rem'
+                }}
+              >
+                <RefreshCw size={14} className={isLoadingAi ? 'spin' : ''} /> Kontrollera anslutning
+              </button>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Anslutningsstatus</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: aiConfig.is_healthy ? '#16a34a' : '#ef4444' }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: aiConfig.is_healthy ? '#16a34a' : '#ef4444', display: 'inline-block' }}></span>
+                  {aiConfig.is_healthy ? 'Ansluten till LM Studio' : 'Offline / Ingen kontakt'}
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Aktiv Modell</div>
+                <div style={{ fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {aiConfig.lm_studio_model || 'Standard i LM Studio'}
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Endpoint URL</div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {aiConfig.lm_studio_url}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Kategorier */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+            <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Tag size={20} style={{ color: 'var(--primary)' }} /> AI Kategorier
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+              Dessa kategorier används av AI för klassificering och visas som filterknappar i Prio-flödet.
+            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
+              {(aiConfig.categories || []).map((cat, idx) => (
+                <div 
+                  key={idx}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                    backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)',
+                    padding: '0.35rem 0.75rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)'
+                  }}
+                >
+                  <span>{cat}</span>
+                  <button 
+                    type="button"
+                    onClick={() => handleRemoveAiCategory(cat)}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
+                    title={`Ta bort ${cat}`}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={handleAddAiCategory} style={{ display: 'flex', gap: '0.5rem', maxWidth: '400px' }}>
+              <input 
+                type="text" 
+                placeholder="Ny kategori (t.ex. Sport, Kultur)..." 
+                value={newAiCategory} 
+                onChange={(e) => setNewAiCategory(e.target.value)}
+                style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.9rem' }}
+              />
+              <button 
+                type="submit"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 1rem', backgroundColor: 'var(--primary)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
+              >
+                <Plus size={16} /> Lägg till
+              </button>
+            </form>
+          </div>
+
+          {/* Prompt Redigerare */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FileText size={20} style={{ color: '#f97316' }} /> AI Analysprompt & Prioriteringsregler
+              </h3>
+              <button 
+                type="button"
+                onClick={handleResetAiPrompt}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+              >
+                Återställ till standard
+              </button>
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+              Instruktionerna nedan styr hur din lokala modell i LM Studio prioriterar, sammanfattar och klassificerar artiklarna.
+            </p>
+
+            <textarea 
+              value={aiConfig.system_prompt}
+              onChange={(e) => setAiConfig({ ...aiConfig, system_prompt: e.target.value })}
+              rows={18}
+              style={{
+                width: '100%',
+                padding: '1rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-app)',
+                color: 'var(--text-main)',
+                fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                fontSize: '0.85rem',
+                lineHeight: '1.5',
+                resize: 'vertical',
+                boxSizing: 'border-box'
+              }}
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+              <button 
+                type="button"
+                onClick={handleSaveAiConfig}
+                disabled={isSavingAi}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  padding: '0.65rem 1.5rem',
+                  backgroundColor: '#f97316',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '0.95rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(249, 115, 22, 0.3)'
+                }}
+              >
+                {isSavingAi ? <RefreshCw size={18} className="spin" /> : <Check size={18} />}
+                {isSavingAi ? 'Sparar...' : 'Spara AI-inställningar'}
+              </button>
+            </div>
+          </div>
+
         </motion.div>
       )}
     </div>

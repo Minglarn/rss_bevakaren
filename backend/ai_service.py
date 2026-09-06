@@ -24,6 +24,8 @@ Prioriteringsregler:
 - 'medium' (score 40-74): Allmän teknik, ekonomi, bredare inrikespolitik.
 - 'low' (score < 40): Nöje, skvaller, kändisar, vardagliga sportnotiser eller mat/recept."""
 
+DEFAULT_CATEGORIES = ["Teknik", "Politik", "Blåljus", "Lokalt", "Ekonomi", "Nöje", "Övrigt"]
+
 def get_prompt_config_path() -> str:
     """Hittar eller skapar sökvägen till prompt-konfigurationsfilen i delad datamapp."""
     if os.path.exists("/data"):
@@ -38,42 +40,78 @@ def get_prompt_config_path() -> str:
     return os.path.join(local_data_dir, "ai_prompt.json")
 
 _cached_prompt: Optional[str] = None
+_cached_categories: Optional[List[str]] = None
 _cached_mtime: float = 0.0
 
-def load_system_prompt() -> str:
-    """Läser systemprompt on-the-fly från fil så ändringar i nano slår igenom omedelbart."""
-    global _cached_prompt, _cached_mtime
+def load_ai_config() -> Dict[str, Any]:
+    """Läser komplett AI-konfiguration (prompt, kategorier och status) från fil."""
+    global _cached_prompt, _cached_categories, _cached_mtime
     config_path = get_prompt_config_path()
     
-    # Skapa default config-fil om den inte existerar
     if not os.path.exists(config_path):
-        try:
-            initial_data = {
-                "system_prompt": DEFAULT_SYSTEM_PROMPT,
-                "note": "Denna fil kan redigeras on-the-fly med t.ex. nano utan att starta om Docker/containern."
-            }
-            with open(config_path, "w", encoding="utf-8") as f:
-                json.dump(initial_data, f, ensure_ascii=False, indent=2)
-            print(f"[AI Service] Skapade standard prompt-fil på: {config_path}", flush=True)
-        except Exception as e:
-            print(f"[AI Service] Kunde inte skapa prompt-fil {config_path}: {e}", flush=True)
-            return DEFAULT_SYSTEM_PROMPT
-
+        save_ai_config(DEFAULT_SYSTEM_PROMPT, DEFAULT_CATEGORIES)
+        
     try:
         current_mtime = os.path.getmtime(config_path)
-        if _cached_prompt and current_mtime == _cached_mtime:
-            return _cached_prompt
-        
         with open(config_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             prompt = data.get("system_prompt", DEFAULT_SYSTEM_PROMPT)
+            cats = data.get("categories", DEFAULT_CATEGORIES)
             _cached_prompt = prompt
+            _cached_categories = cats
             _cached_mtime = current_mtime
-            print(f"[AI Service] Laddade uppdaterad systemprompt från {config_path}", flush=True)
-            return prompt
+            
+            return {
+                "system_prompt": prompt,
+                "categories": cats,
+                "lm_studio_url": LM_STUDIO_URL,
+                "lm_studio_model": get_active_model(),
+                "is_healthy": check_lm_studio_health()
+            }
     except Exception as e:
-        print(f"[AI Service] Fel vid inläsning av prompt-fil {config_path}: {e}", flush=True)
-        return _cached_prompt or DEFAULT_SYSTEM_PROMPT
+        print(f"[AI Service] Fel vid läsning av prompt-fil {config_path}: {e}", flush=True)
+        return {
+            "system_prompt": _cached_prompt or DEFAULT_SYSTEM_PROMPT,
+            "categories": _cached_categories or DEFAULT_CATEGORIES,
+            "lm_studio_url": LM_STUDIO_URL,
+            "lm_studio_model": get_active_model(),
+            "is_healthy": False
+        }
+
+def save_ai_config(system_prompt: str, categories: List[str]) -> bool:
+    """Sparar uppdaterad systemprompt och kategorier till konfigurationsfilen."""
+    global _cached_prompt, _cached_categories, _cached_mtime
+    config_path = get_prompt_config_path()
+    try:
+        clean_cats = [c.strip() for c in categories if c and c.strip()]
+        if not clean_cats:
+            clean_cats = DEFAULT_CATEGORIES
+            
+        data = {
+            "system_prompt": system_prompt.strip(),
+            "categories": clean_cats,
+            "note": "Denna fil kan redigeras on-the-fly via webbgränssnittet i Inställningar eller med nano."
+        }
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        _cached_prompt = data["system_prompt"]
+        _cached_categories = clean_cats
+        _cached_mtime = os.path.getmtime(config_path)
+        print(f"[AI Service] Sparade uppdaterad AI-konfiguration till {config_path}", flush=True)
+        return True
+    except Exception as e:
+        print(f"[AI Service] Kunde inte spara AI-konfiguration {config_path}: {e}", flush=True)
+        return False
+
+def load_system_prompt() -> str:
+    """Läser systemprompt on-the-fly från fil så ändringar slår igenom omedelbart."""
+    config = load_ai_config()
+    return config["system_prompt"]
+
+def load_categories() -> List[str]:
+    """Läser in konfigurerade kategorier."""
+    config = load_ai_config()
+    return config.get("categories", DEFAULT_CATEGORIES)
 
 def get_models_endpoint() -> str:
     """Extraherar /v1/models endpoint baserat på LM_STUDIO_URL."""

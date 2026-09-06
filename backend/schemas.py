@@ -92,3 +92,14 @@ class ArticleResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class AIConfigUpdate(BaseModel):
+    system_prompt: str
+    categories: List[str]
+
+class AIConfigResponse(BaseModel):
+    system_prompt: str
+    categories: List[str]
+    lm_studio_url: str
+    lm_studio_model: str
+    is_healthy: bool

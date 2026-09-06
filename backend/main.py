@@ -766,6 +766,30 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     db.commit()
     return {"status": "ok", "article_id": art.id, "analysis": analysis}
 
+@app.get("/prio/unread-count")
+def get_prio_unread_count(
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    count = db.query(models.Article).join(models.Feed).filter(
+        models.Feed.user_id == current_user.id,
+        models.Article.ai_processed == 1,
+        or_(models.Article.priority == 'high', models.Article.prio_score >= 75),
+        (models.Article.is_read == 0) | (models.Article.is_read == None)
+    ).count()
+    return {"unread_count": count}
+
+@app.get("/ai/config", response_model=schemas.AIConfigResponse)
+def get_ai_config(current_user: models.User = Depends(auth.get_current_user)):
+    return ai_service.load_ai_config()
+
+@app.put("/ai/config")
+def update_ai_config(config: schemas.AIConfigUpdate, current_user: models.User = Depends(auth.get_current_user)):
+    success = ai_service.save_ai_config(config.system_prompt, config.categories)
+    if not success:
+        raise HTTPException(status_code=500, detail="Kunde inte spara AI-konfigurationen")
+    return {"status": "ok", "message": "AI-konfiguration sparades framgångsrikt"}
+
 import requests
 from bs4 import BeautifulSoup
 
