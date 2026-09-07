@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown } from 'lucide-react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import ShareModal from './ShareModal';
@@ -27,6 +27,7 @@ const Dashboard = ({ isPrioModeProp = false }) => {
   const selectedCategory = searchParams.get('category') || 'Alla';
   const selectedTag = searchParams.get('tag') || '';
   const [analyzingIds, setAnalyzingIds] = useState(new Set());
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -629,113 +630,177 @@ const Dashboard = ({ isPrioModeProp = false }) => {
         </div>
       </div>
 
-      <div className="dashboard-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+      <div className="dashboard-header" style={{ marginBottom: isPrioMode ? '0.35rem' : undefined }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
             {(feedId || isPrioMode) && (
-              <Link to="/" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', textDecoration: 'none', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '50%', border: '1px solid var(--border-color)' }} title="Visa alla flöden">
-                <ArrowLeft size={20} />
+              <Link 
+                to="/" 
+                style={{ 
+                  color: 'var(--text-muted)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  textDecoration: 'none', 
+                  backgroundColor: 'var(--bg-card)', 
+                  padding: '0.4rem', 
+                  borderRadius: '50%', 
+                  border: '1px solid var(--border-color)',
+                  flexShrink: 0
+                }} 
+                title="Visa alla flöden"
+              >
+                <ArrowLeft size={18} />
               </Link>
             )}
             <h1 style={{ 
               color: isPrioMode ? '#f97316' : 'var(--primary)', 
               margin: 0, 
-              fontSize: '1.5rem', 
+              fontSize: isPrioMode ? '1.25rem' : '1.4rem', 
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem'
+              gap: '0.4rem',
+              whiteSpace: 'nowrap'
             }}>
-              {isPrioMode && <Flame size={24} style={{ color: '#f97316' }} />}
+              {isPrioMode && <Flame size={20} style={{ color: '#f97316', flexShrink: 0 }} />}
               {isPrioMode 
                 ? 'PRIO FLÖDE' 
                 : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'DAGENS NYHETER')}
             </h1>
             {isPrioMode && (
-              <span style={{ 
+              <span className="desktop-only" style={{ 
                 fontSize: '0.75rem', 
                 backgroundColor: 'rgba(249, 115, 22, 0.15)', 
                 color: '#f97316', 
                 padding: '0.2rem 0.6rem', 
                 borderRadius: '12px', 
                 fontWeight: 600,
-                border: '1px solid rgba(249, 115, 22, 0.3)'
+                border: '1px solid rgba(249, 115, 22, 0.3)',
+                whiteSpace: 'nowrap'
               }}>
                 Endast högprioriterade händelser
               </span>
             )}
           </div>
+
+          {/* Expanderande Kategori-väljare i PRIO-flödet */}
+          {isPrioMode && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+              <button
+                onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.35rem 0.65rem',
+                  borderRadius: '16px',
+                  border: selectedCategory !== 'Alla' ? '1px solid #f97316' : '1px solid var(--border-color)',
+                  backgroundColor: selectedCategory !== 'Alla' ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-card)',
+                  color: selectedCategory !== 'Alla' ? '#f97316' : 'var(--text-main)',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                  whiteSpace: 'nowrap'
+                }}
+                title="Välj kategori"
+              >
+                <Filter size={13} style={{ color: selectedCategory !== 'Alla' ? '#f97316' : 'var(--text-muted)' }} />
+                <span>{selectedCategory === 'Alla' ? 'Kategorier' : selectedCategory}</span>
+                <ChevronDown size={14} style={{ transform: isCategoryMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+              </button>
+
+              {selectedTag && (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  backgroundColor: 'rgba(249, 115, 22, 0.15)',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
+                  color: '#f97316',
+                  padding: '0.25rem 0.6rem',
+                  borderRadius: '16px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap'
+                }}>
+                  <Tag size={12} /> #{selectedTag}
+                  <button
+                    onClick={clearTagFilter}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#f97316',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: 0,
+                      marginLeft: '0.15rem'
+                    }}
+                    title="Ta bort tagg-filter"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Kategori- och Tagg-filterbar - Visas endast i PRIO-flödet */}
+        {/* Expanderande panel för kategorival */}
         {isPrioMode && (
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.5rem', 
-            marginTop: '1rem', 
-            overflowX: 'auto', 
-            paddingBottom: '0.5rem',
-            scrollbarWidth: 'none'
-          }}>
-            {categories.map(cat => {
-              const isActive = selectedCategory === cat;
-              return (
-                <button
-                  key={cat}
-                  onClick={() => handleSelectCategory(cat)}
-                  style={{
-                    padding: '0.35rem 0.85rem',
-                    borderRadius: '20px',
-                    border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                    backgroundColor: isActive ? 'var(--primary)' : 'var(--bg-card)',
-                    color: isActive ? '#ffffff' : 'var(--text-muted)',
-                    fontSize: '0.8rem',
-                    fontWeight: isActive ? 600 : 400,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  {cat}
-                </button>
-              );
-            })}
-
-            {selectedTag && (
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                backgroundColor: 'rgba(249, 115, 22, 0.15)',
-                border: '1px solid rgba(249, 115, 22, 0.4)',
-                color: '#f97316',
-                padding: '0.3rem 0.75rem',
-                borderRadius: '20px',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                whiteSpace: 'nowrap'
-              }}>
-                <Tag size={13} /> #{selectedTag}
-                <button
-                  onClick={clearTagFilter}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#f97316',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: 0,
-                    marginLeft: '0.25rem'
-                  }}
-                  title="Ta bort tagg-filter"
-                >
-                  <X size={14} />
-                </button>
-              </div>
+          <AnimatePresence>
+            {isCategoryMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  overflow: 'hidden',
+                  width: '100%',
+                  marginTop: '0.4rem'
+                }}
+              >
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.35rem',
+                  padding: '0.5rem',
+                  backgroundColor: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px'
+                }}>
+                  {categories.map(cat => {
+                    const isActive = selectedCategory === cat;
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          handleSelectCategory(cat);
+                          setIsCategoryMenuOpen(false);
+                        }}
+                        style={{
+                          padding: '0.3rem 0.75rem',
+                          borderRadius: '14px',
+                          border: isActive ? '1px solid #f97316' : '1px solid var(--border-color)',
+                          backgroundColor: isActive ? '#f97316' : 'var(--bg-app)',
+                          color: isActive ? '#ffffff' : 'var(--text-muted)',
+                          fontSize: '0.78rem',
+                          fontWeight: isActive ? 600 : 400,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
         )}
       </div>
 
@@ -797,14 +862,13 @@ const Dashboard = ({ isPrioModeProp = false }) => {
             return (
               <React.Fragment key={index}>
                 {showDivider && (
-                  <div className="divider-header" style={{ 
+                  <div className={`divider-header ${index === 0 ? 'first-divider' : ''}`} style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    gap: '1rem', 
-                    margin: '1.5rem 0 1rem 0',
+                    gap: '0.75rem', 
                     gridColumn: '1 / -1'
                   }}>
-                    <div style={{ fontWeight: 'bold', color: '#2563eb', fontSize: '1.2rem' }}>
+                    <div style={{ fontWeight: 'bold', color: isPrioMode ? '#f97316' : '#2563eb', fontSize: '1.1rem' }}>
                       {dividerText}
                     </div>
                     <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>

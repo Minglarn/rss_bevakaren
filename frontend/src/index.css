@@ -1032,8 +1032,8 @@ select:focus, input:focus {
   }
   
   .toppbar {
-    padding: 0.75rem 0.5rem;
-    margin: -0.5rem -0.5rem 1.5rem -0.5rem; /* Pull to edges */
+    padding: 0.5rem 0.5rem;
+    margin: -0.5rem -0.5rem 0.4rem -0.5rem; /* Dra ut till kanten med minimerat avstånd */
     top: 0;
   }
   
@@ -1199,7 +1199,19 @@ select:focus, input:focus {
   }
   
   .dashboard-header {
-    margin-bottom: 1rem !important;
+    margin-bottom: 0.35rem !important;
+  }
+
+  .divider-header {
+    margin: 0.65rem 0 0.35rem 0 !important;
+    gap: 0.5rem !important;
+  }
+  .divider-header.first-divider {
+    margin-top: 0.2rem !important;
+    margin-bottom: 0.35rem !important;
+  }
+  .divider-header > div:first-child {
+    font-size: 0.95rem !important;
   }
 }
 
@@ -1213,7 +1225,14 @@ select:focus, input:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.divider-header {
+  margin: 1.25rem 0 0.75rem 0;
+}
+.divider-header.first-divider {
+  margin-top: 0.5rem;
 }
 
 .feed-card {
