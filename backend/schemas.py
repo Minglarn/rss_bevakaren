@@ -101,6 +101,7 @@ class AIConfigUpdate(BaseModel):
     system_prompt: Optional[str] = ""
     onboarding_completed: Optional[bool] = None
     prio_enabled: Optional[bool] = None
+    lm_studio_model: Optional[str] = None
 
 class AIConfigResponse(BaseModel):
     prio_rules: str = ""
@@ -112,6 +113,7 @@ class AIConfigResponse(BaseModel):
     prio_enabled: bool = False
     lm_studio_url: str = ""
     lm_studio_model: str = ""
+    available_models: List[str] = []
     is_healthy: bool = False
 
 class ArticlePrioritizeRequest(BaseModel):

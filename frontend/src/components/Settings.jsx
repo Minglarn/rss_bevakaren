@@ -27,6 +27,7 @@ const Settings = () => {
     categories: [],
     lm_studio_url: '',
     lm_studio_model: '',
+    available_models: [],
     is_healthy: false,
     prio_enabled: false
   });
@@ -78,6 +79,24 @@ Prioriteringsregler:
       setAiConfig(res.data);
     } catch (err) {
       console.error("Could not fetch AI config", err);
+    } finally {
+      setIsLoadingAi(false);
+    }
+  };
+
+  const handleCheckConnection = async () => {
+    try {
+      setIsLoadingAi(true);
+      const res = await api.get('/ai/config');
+      setAiConfig(res.data);
+      if (res.data.is_healthy) {
+        toast.success(`Ansluten till LM Studio! ${res.data.available_models?.length || 0} modeller tillgängliga.`);
+      } else {
+        toast.error('Kunde inte nå LM Studio.');
+      }
+    } catch (err) {
+      console.error("Could not fetch AI config", err);
+      toast.error('Fel vid anslutningstest.');
     } finally {
       setIsLoadingAi(false);
     }
@@ -250,7 +269,8 @@ Prioriteringsregler:
         prio_threshold: aiConfig.prio_threshold || 75,
         system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
         onboarding_completed: true,
-        prio_enabled: nextState
+        prio_enabled: nextState,
+        lm_studio_model: aiConfig.lm_studio_model || ''
       });
       if (res.data) {
         setAiConfig(res.data);
@@ -278,7 +298,8 @@ Prioriteringsregler:
         prio_threshold: aiConfig.prio_threshold || 75,
         system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
         onboarding_completed: true,
-        prio_enabled: aiConfig.prio_enabled ?? false
+        prio_enabled: aiConfig.prio_enabled ?? false,
+        lm_studio_model: aiConfig.lm_studio_model || ''
       });
       if (res.data) {
         setAiConfig(res.data);
@@ -869,7 +890,7 @@ Prioriteringsregler:
                 <Sparkles size={20} style={{ color: '#f97316' }} /> LM Studio Status
               </h3>
               <button 
-                onClick={fetchAiConfig}
+                onClick={handleCheckConnection}
                 disabled={isLoadingAi}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem',
@@ -891,9 +912,39 @@ Prioriteringsregler:
               </div>
 
               <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Aktiv Modell</div>
-                <div style={{ fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {aiConfig.lm_studio_model || 'Standard i LM Studio'}
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                  AI-modell
+                </div>
+                {aiConfig.available_models && aiConfig.available_models.length > 0 ? (
+                  <select
+                    value={aiConfig.lm_studio_model || ''}
+                    onChange={(e) => setAiConfig(prev => ({ ...prev, lm_studio_model: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '0.4rem 0.5rem',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-main)',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="">Standard i LM Studio (Automatisk)</option>
+                    {aiConfig.available_models.map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {aiConfig.lm_studio_model || 'Standard i LM Studio'}
+                  </div>
+                )}
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                  {aiConfig.available_models?.length 
+                    ? `${aiConfig.available_models.length} modeller tillgängliga i LM Studio` 
+                    : 'Inga modeller hittades'}
                 </div>
               </div>
 

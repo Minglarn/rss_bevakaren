@@ -188,6 +188,8 @@ def run_db_migrations(db_path: str):
                     prio_threshold INTEGER DEFAULT 75,
                     custom_system_prompt TEXT DEFAULT '',
                     onboarding_completed INTEGER DEFAULT 0,
+                    prio_enabled INTEGER DEFAULT 0,
+                    selected_model TEXT DEFAULT '',
                     FOREIGN KEY(user_id) REFERENCES users(id)
                 );
             """)
@@ -195,6 +197,12 @@ def run_db_migrations(db_path: str):
         except Exception as e:
             print(f"Migration 10 error: {e}")
             
+        # Migration 11: Add selected_model to user_ai_settings
+        try:
+            cur.execute("ALTER TABLE user_ai_settings ADD COLUMN selected_model TEXT DEFAULT '';")
+        except sqlite3.OperationalError:
+            pass
+
         conn.commit()
         conn.close()
         size_kb = os.path.getsize(db_path) / 1024
@@ -525,7 +533,8 @@ async def ai_processing_loop():
                                 except Exception:
                                     pass
 
-                    print(f"[AI] Bearbetar artikel {art.id} för user {user_id}: '{art.title[:50]}...'...", flush=True)
+                    user_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
+                    print(f"[AI] Bearbetar artikel {art.id} för user {user_id} (modell: {user_model or 'auto'}): '{art.title[:50]}...'...", flush=True)
                     
                     analysis = await asyncio.to_thread(
                         ai_service.analyze_article,
@@ -534,7 +543,8 @@ async def ai_processing_loop():
                         source_title=source,
                         categories=cats,
                         custom_prompt=user_prompt,
-                        user_categories=user_cats
+                        user_categories=user_cats,
+                        model_override=user_model
                     )
                     
                     if analysis:
@@ -872,6 +882,7 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
             except Exception:
                 pass
 
+    user_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
     analysis = await asyncio.to_thread(
         ai_service.analyze_article,
         title=art.title,
@@ -879,7 +890,8 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
         source_title=source,
         categories=cats,
         custom_prompt=user_prompt,
-        user_categories=user_cats
+        user_categories=user_cats,
+        model_override=user_model
     )
     if not analysis:
         raise HTTPException(status_code=502, detail="LM Studio svarade inte eller kunde inte analysera artikeln.")
@@ -1003,6 +1015,7 @@ def get_ai_config(
 ):
     user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
     
+    available_models = ai_service.get_available_models()
     if not user_ai:
         global_cfg = ai_service.load_ai_config()
         return schemas.AIConfigResponse(
@@ -1014,7 +1027,8 @@ def get_ai_config(
             onboarding_completed=False,
             prio_enabled=False,
             lm_studio_url=ai_service.LM_STUDIO_URL,
-            lm_studio_model=ai_service.get_active_model(),
+            lm_studio_model="",
+            available_models=available_models,
             is_healthy=ai_service.check_lm_studio_health()
         )
         
@@ -1041,9 +1055,19 @@ def get_ai_config(
         onboarding_completed=bool(user_ai.onboarding_completed),
         prio_enabled=bool(user_ai.prio_enabled),
         lm_studio_url=ai_service.LM_STUDIO_URL,
-        lm_studio_model=ai_service.get_active_model(),
+        lm_studio_model=user_ai.selected_model or "",
+        available_models=available_models,
         is_healthy=ai_service.check_lm_studio_health()
     )
+
+@app.get("/ai/models")
+def get_ai_models(current_user: models.User = Depends(auth.get_current_user)):
+    models_list = ai_service.get_available_models()
+    return {
+        "models": models_list,
+        "active_model": ai_service.get_active_model(),
+        "is_healthy": ai_service.check_lm_studio_health()
+    }
 
 @app.put("/ai/config", response_model=schemas.AIConfigResponse)
 def update_ai_config(
@@ -1069,6 +1093,8 @@ def update_ai_config(
         user_ai.prio_threshold = max(50, min(95, config.prio_threshold))
     if config.onboarding_completed is not None:
         user_ai.onboarding_completed = 1 if config.onboarding_completed else 0
+    if config.lm_studio_model is not None:
+        user_ai.selected_model = config.lm_studio_model.strip()
 
     try:
         cats = json.loads(user_ai.categories) if user_ai.categories else ai_service.DEFAULT_CATEGORIES
@@ -1089,6 +1115,7 @@ def update_ai_config(
     db.commit()
     db.refresh(user_ai)
 
+    available_models = ai_service.get_available_models()
     return schemas.AIConfigResponse(
         prio_rules=user_ai.prio_rules or "",
         exclude_rules=user_ai.exclude_rules or "",
@@ -1098,7 +1125,8 @@ def update_ai_config(
         onboarding_completed=bool(user_ai.onboarding_completed),
         prio_enabled=bool(user_ai.prio_enabled),
         lm_studio_url=ai_service.LM_STUDIO_URL,
-        lm_studio_model=ai_service.get_active_model(),
+        lm_studio_model=user_ai.selected_model or "",
+        available_models=available_models,
         is_healthy=ai_service.check_lm_studio_health()
     )
 

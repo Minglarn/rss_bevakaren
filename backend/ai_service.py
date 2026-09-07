@@ -130,23 +130,33 @@ def check_lm_studio_health() -> bool:
     except Exception:
         return False
 
+def get_available_models() -> List[str]:
+    """Hämtar alla tillgängliga chatt-/textmodeller från LM Studio."""
+    try:
+        endpoint = get_models_endpoint()
+        res = requests.get(endpoint, timeout=4)
+        if res.status_code == 200:
+            data = res.json()
+            models_list = data.get("data", [])
+            # Filtrera bort embedding-modeller och returnera unika modell-id:n
+            result = []
+            for m in models_list:
+                m_id = m.get("id", "")
+                if m_id and "embedding" not in m_id.lower() and m_id not in result:
+                    result.append(m_id)
+            return result
+    except Exception as e:
+        print(f"[AI Service] Kunde inte hämta modeller från LM Studio: {e}", flush=True)
+    return []
+
 def get_active_model() -> str:
     """Hämtar konfigurerad modell eller läser in aktiv modell från LM Studio."""
     if LM_STUDIO_MODEL and LM_STUDIO_MODEL.strip():
         return LM_STUDIO_MODEL.strip()
     
-    try:
-        endpoint = get_models_endpoint()
-        res = requests.get(endpoint, timeout=3)
-        if res.status_code == 200:
-            data = res.json()
-            models_list = data.get("data", [])
-            if models_list and len(models_list) > 0:
-                model_id = models_list[0].get("id")
-                if model_id:
-                    return model_id
-    except Exception:
-        pass
+    available = get_available_models()
+    if available:
+        return available[0]
     
     return "local-model"
 
@@ -267,14 +277,15 @@ def analyze_article(
     source_title: Optional[str] = None, 
     categories: Optional[List[str]] = None,
     custom_prompt: Optional[str] = None,
-    user_categories: Optional[List[str]] = None
+    user_categories: Optional[List[str]] = None,
+    model_override: Optional[str] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Anropar LM Studio och returnerar ett berikat artikelobjekt.
     Kastar inga ohanterade undantag så anroparen skyddas mot krascher.
     """
     system_prompt = custom_prompt.strip() if (custom_prompt and custom_prompt.strip()) else load_system_prompt()
-    model = get_active_model()
+    model = model_override.strip() if (model_override and model_override.strip()) else get_active_model()
     
     # Bygg en kompakt, informativ användarprompt
     user_prompt_lines = [
