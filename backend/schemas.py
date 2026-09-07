@@ -100,6 +100,7 @@ class AIConfigUpdate(BaseModel):
     prio_threshold: Optional[int] = 75
     system_prompt: Optional[str] = ""
     onboarding_completed: Optional[bool] = None
+    prio_enabled: Optional[bool] = None
 
 class AIConfigResponse(BaseModel):
     prio_rules: str = ""
@@ -108,6 +109,7 @@ class AIConfigResponse(BaseModel):
     prio_threshold: int = 75
     system_prompt: str = ""
     onboarding_completed: bool = False
+    prio_enabled: bool = False
     lm_studio_url: str = ""
     lm_studio_model: str = ""
     is_healthy: bool = False

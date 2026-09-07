@@ -13,7 +13,7 @@ import './App.css';
 import './index.css';
 
 // Layout Component with Sidebar
-const AppLayout = ({ children, onLogout }) => {
+const AppLayout = ({ children, onLogout, prioEnabled }) => {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [myFeeds, setMyFeeds] = useState([]);
@@ -35,6 +35,10 @@ const AppLayout = ({ children, onLogout }) => {
     };
 
     const fetchPrioUnread = async () => {
+      if (!prioEnabled) {
+        setPrioUnreadCount(0);
+        return;
+      }
       try {
         const res = await api.get('/prio/unread-count');
         setPrioUnreadCount(res.data.unread_count || 0);
@@ -48,7 +52,9 @@ const AppLayout = ({ children, onLogout }) => {
     
     const handleFeedsUpdated = (e) => {
       fetchMyFeeds();
-      fetchPrioUnread();
+      if (prioEnabled) {
+        fetchPrioUnread();
+      }
       if (e && e.detail && e.detail.feedId) {
         const { feedId, count } = e.detail;
         const feed = myFeedsRef.current.find(f => f.id === feedId);
@@ -203,28 +209,30 @@ const AppLayout = ({ children, onLogout }) => {
               </span>
             )}
           </Link>
-          <Link to="/prio" style={{
-            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
-            borderRadius: '8px', textDecoration: 'none',
-            color: location.pathname === '/prio' ? '#f97316' : 'var(--text-muted)',
-            backgroundColor: location.pathname === '/prio' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
-            fontWeight: location.pathname === '/prio' ? 600 : 400
-          }}>
-            <Flame size={20} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Flöde"}
-            {!isCollapsed && prioUnreadCount > 0 && (
-              <span style={{ 
-                marginLeft: 'auto', 
-                backgroundColor: '#f97316', 
-                color: 'white', 
-                fontSize: '0.7rem', 
-                padding: '0.1rem 0.4rem', 
-                borderRadius: '10px', 
-                fontWeight: 'bold' 
-              }}>
-                {prioUnreadCount}
-              </span>
-            )}
-          </Link>
+          {prioEnabled && (
+            <Link to="/prio" style={{
+              display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
+              borderRadius: '8px', textDecoration: 'none',
+              color: location.pathname === '/prio' ? '#f97316' : 'var(--text-muted)',
+              backgroundColor: location.pathname === '/prio' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+              fontWeight: location.pathname === '/prio' ? 600 : 400
+            }}>
+              <Flame size={20} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Flöde"}
+              {!isCollapsed && prioUnreadCount > 0 && (
+                <span style={{ 
+                  marginLeft: 'auto', 
+                  backgroundColor: '#f97316', 
+                  color: 'white', 
+                  fontSize: '0.7rem', 
+                  padding: '0.1rem 0.4rem', 
+                  borderRadius: '10px', 
+                  fontWeight: 'bold' 
+                }}>
+                  {prioUnreadCount}
+                </span>
+              )}
+            </Link>
+          )}
           <Link to="/manage" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
             borderRadius: '8px', textDecoration: 'none',
@@ -328,15 +336,17 @@ const AppLayout = ({ children, onLogout }) => {
           </div>
           <span>Hem</span>
         </Link>
-        <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
-          <div className="icon-wrapper">
-            <Flame size={22} style={{ color: location.pathname === '/prio' ? '#f97316' : 'inherit' }} />
-            {prioUnreadCount > 0 && (
-              <span className="bottom-bar-badge" style={{ backgroundColor: '#f97316' }}>{prioUnreadCount}</span>
-            )}
-          </div>
-          <span style={{ color: location.pathname === '/prio' ? '#f97316' : undefined }}>Prio</span>
-        </Link>
+        {prioEnabled && (
+          <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+            <div className="icon-wrapper">
+              <Flame size={22} style={{ color: location.pathname === '/prio' ? '#f97316' : 'inherit' }} />
+              {prioUnreadCount > 0 && (
+                <span className="bottom-bar-badge" style={{ backgroundColor: '#f97316' }}>{prioUnreadCount}</span>
+              )}
+            </div>
+            <span style={{ color: location.pathname === '/prio' ? '#f97316' : undefined }}>Prio</span>
+          </Link>
+        )}
         <button 
           className="bottom-bar-item" 
           onClick={() => setIsMobileSheetOpen(true)}
@@ -389,23 +399,25 @@ const AppLayout = ({ children, onLogout }) => {
           >
             <Home size={20} /> Alla flöden
           </Link>
-          <Link 
-            to="/prio" 
-            style={{
-              display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem',
-              color: location.pathname === '/prio' ? '#f97316' : 'var(--text-main)', 
-              backgroundColor: location.pathname === '/prio' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
-              borderRadius: '12px', textDecoration: 'none', fontWeight: 600
-            }}
-            onClick={() => setIsMobileSheetOpen(false)}
-          >
-            <Flame size={20} style={{ color: '#f97316' }} /> Prio Flöde
-            {prioUnreadCount > 0 && (
-              <span style={{ backgroundColor: '#f97316', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold', marginLeft: 'auto' }}>
-                {prioUnreadCount}
-              </span>
-            )}
-          </Link>
+          {prioEnabled && (
+            <Link 
+              to="/prio" 
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem',
+                color: location.pathname === '/prio' ? '#f97316' : 'var(--text-main)', 
+                backgroundColor: location.pathname === '/prio' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+                borderRadius: '12px', textDecoration: 'none', fontWeight: 600
+              }}
+              onClick={() => setIsMobileSheetOpen(false)}
+            >
+              <Flame size={20} style={{ color: '#f97316' }} /> Prio Flöde
+              {prioUnreadCount > 0 && (
+                <span style={{ backgroundColor: '#f97316', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold', marginLeft: 'auto' }}>
+                  {prioUnreadCount}
+                </span>
+              )}
+            </Link>
+          )}
           {myFeeds.map(feed => (
             <Link 
               to={`/?feedId=${feed.id}`} 
@@ -441,6 +453,8 @@ const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [username, setUsername] = useState(localStorage.getItem('username'));
 
+  const [prioEnabled, setPrioEnabled] = useState(false);
+
   const handleLogin = (newToken, newUsername) => {
     localStorage.setItem('token', newToken);
     localStorage.setItem('username', newUsername);
@@ -453,6 +467,7 @@ const App = () => {
     localStorage.removeItem('username');
     setToken(null);
     setUsername(null);
+    setPrioEnabled(false);
   };
 
   useEffect(() => {
@@ -466,6 +481,29 @@ const App = () => {
         }
       });
     }
+
+    const fetchPrioStatus = async () => {
+      if (!token) return;
+      try {
+        const res = await api.get('/ai/config');
+        if (res.data) {
+          setPrioEnabled(!!res.data.prio_enabled);
+        }
+      } catch (err) {
+        console.error("Could not fetch prio status", err);
+      }
+    };
+
+    fetchPrioStatus();
+
+    const handleConfigUpdated = () => {
+      fetchPrioStatus();
+    };
+    window.addEventListener('aiConfigUpdated', handleConfigUpdated);
+
+    return () => {
+      window.removeEventListener('aiConfigUpdated', handleConfigUpdated);
+    };
   }, [token]);
 
   if (!token) {
@@ -475,10 +513,10 @@ const App = () => {
   return (
     <>
       <Router>
-        <AppLayout onLogout={handleLogout}>
+        <AppLayout onLogout={handleLogout} prioEnabled={prioEnabled}>
           <Routes>
-            <Route path="/" element={<Dashboard isPrioModeProp={false} />} />
-            <Route path="/prio" element={<Dashboard isPrioModeProp={true} />} />
+            <Route path="/" element={<Dashboard isPrioModeProp={false} prioEnabled={prioEnabled} />} />
+            <Route path="/prio" element={<Dashboard isPrioModeProp={true} prioEnabled={prioEnabled} />} />
             <Route path="/manage" element={<RssManager />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />

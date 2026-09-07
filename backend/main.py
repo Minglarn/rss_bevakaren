@@ -3,7 +3,7 @@ import asyncio
 import time
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from typing import List, Optional
 from datetime import timedelta
 import os
@@ -28,6 +28,20 @@ logging.getLogger("uvicorn.access").addFilter(WsLogFilter())
 logging.getLogger("uvicorn.error").addFilter(WsLogFilter())
 
 models.Base.metadata.create_all(bind=database.engine)
+
+def ensure_db_migrations():
+    with database.engine.connect() as conn:
+        try:
+            res = conn.execute(text("PRAGMA table_info(user_ai_settings)"))
+            cols = [row[1] for row in res.fetchall()]
+            if cols and "prio_enabled" not in cols:
+                conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN prio_enabled INTEGER DEFAULT 0"))
+                conn.commit()
+                print("[DB] Added prio_enabled column to user_ai_settings", flush=True)
+        except Exception as e:
+            print(f"[DB] Migration notice: {e}", flush=True)
+
+ensure_db_migrations()
 
 app = FastAPI(title="RSS Bevakaren API")
 
@@ -480,6 +494,12 @@ async def ai_processing_loop():
                     user_cats = None
                     if user_id:
                         user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == user_id).first()
+                        # Om användaren inte har aktiverat PRIO-flödet, skippa AI-analys och spara resurser
+                        if not user_ai or not user_ai.prio_enabled:
+                            art.ai_processed = 1
+                            db.commit()
+                            continue
+
                         if user_ai:
                             if user_ai.custom_system_prompt and user_ai.custom_system_prompt.strip():
                                 user_prompt = user_ai.custom_system_prompt.strip()
@@ -884,22 +904,25 @@ async def prioritize_article(
         art.prio_reason = "Manuellt prioriterad av användaren"
 
     # Om ett ämne angavs, uppdatera användarens AI-inställningar (prio_rules) och anpassat system prompt
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    if not user_ai:
+        user_ai = models.UserAISettings(
+            user_id=current_user.id,
+            prio_rules=f"- {topic_clean}" if topic_clean else "",
+            prio_threshold=75,
+            prio_enabled=1
+        )
+        db.add(user_ai)
+    else:
+        user_ai.prio_enabled = 1
+
     if topic_clean:
-        user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
-        if not user_ai:
-            user_ai = models.UserAISettings(
-                user_id=current_user.id,
-                prio_rules=f"- {topic_clean}",
-                prio_threshold=75
-            )
-            db.add(user_ai)
-        else:
-            existing_rules = user_ai.prio_rules.strip() if user_ai.prio_rules else ""
-            if topic_clean.lower() not in existing_rules.lower():
-                if existing_rules:
-                    user_ai.prio_rules = f"{existing_rules}\n- {topic_clean}"
-                else:
-                    user_ai.prio_rules = f"- {topic_clean}"
+        existing_rules = user_ai.prio_rules.strip() if user_ai.prio_rules else ""
+        if topic_clean.lower() not in existing_rules.lower():
+            if existing_rules:
+                user_ai.prio_rules = f"{existing_rules}\n- {topic_clean}"
+            else:
+                user_ai.prio_rules = f"- {topic_clean}"
 
         parsed_cats = ["Teknik", "Ekonomi", "Politik", "Säkerhet", "Vetenskap", "Kultur", "Sport", "Övrigt"]
         if user_ai.categories:
@@ -945,10 +968,11 @@ def get_prio_unread_count(
     db: Session = Depends(database.get_db), 
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    threshold = 75
     user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
-    if user_ai and user_ai.prio_threshold:
-        threshold = user_ai.prio_threshold
+    if not user_ai or not user_ai.prio_enabled:
+        return {"unread_count": 0}
+
+    threshold = user_ai.prio_threshold or 75
 
     count = db.query(models.Article).join(models.Feed).filter(
         models.Feed.user_id == current_user.id,
@@ -974,6 +998,7 @@ def get_ai_config(
             prio_threshold=75,
             system_prompt=global_cfg.get("system_prompt", ai_service.DEFAULT_SYSTEM_PROMPT),
             onboarding_completed=False,
+            prio_enabled=False,
             lm_studio_url=ai_service.LM_STUDIO_URL,
             lm_studio_model=ai_service.get_active_model(),
             is_healthy=ai_service.check_lm_studio_health()
@@ -1000,6 +1025,7 @@ def get_ai_config(
         prio_threshold=user_ai.prio_threshold or 75,
         system_prompt=prompt,
         onboarding_completed=bool(user_ai.onboarding_completed),
+        prio_enabled=bool(user_ai.prio_enabled),
         lm_studio_url=ai_service.LM_STUDIO_URL,
         lm_studio_model=ai_service.get_active_model(),
         is_healthy=ai_service.check_lm_studio_health()
@@ -1016,6 +1042,8 @@ def update_ai_config(
         user_ai = models.UserAISettings(user_id=current_user.id)
         db.add(user_ai)
 
+    if config.prio_enabled is not None:
+        user_ai.prio_enabled = 1 if config.prio_enabled else 0
     if config.prio_rules is not None:
         user_ai.prio_rules = config.prio_rules.strip()
     if config.exclude_rules is not None:
@@ -1054,6 +1082,7 @@ def update_ai_config(
         prio_threshold=user_ai.prio_threshold or 75,
         system_prompt=user_ai.custom_system_prompt or "",
         onboarding_completed=bool(user_ai.onboarding_completed),
+        prio_enabled=bool(user_ai.prio_enabled),
         lm_studio_url=ai_service.LM_STUDIO_URL,
         lm_studio_model=ai_service.get_active_model(),
         is_healthy=ai_service.check_lm_studio_health()

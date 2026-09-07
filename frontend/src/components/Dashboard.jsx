@@ -9,7 +9,7 @@ import PrioritizeModal from './PrioritizeModal';
 
 const DEFAULT_CATEGORIES = ['Alla', 'Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
 
-const Dashboard = ({ isPrioModeProp = false }) => {
+const Dashboard = ({ isPrioModeProp = false, prioEnabled = true }) => {
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const location = useLocation();
   const [allFeeds, setAllFeeds] = useState([]);
@@ -822,7 +822,55 @@ const Dashboard = ({ isPrioModeProp = false }) => {
         </div>
       )}
 
-      {loading && allFeeds.length === 0 ? (
+      {isPrioMode && !prioEnabled ? (
+        <div style={{ 
+          backgroundColor: 'var(--bg-card)', 
+          border: '1px solid var(--border-color)', 
+          borderRadius: '12px', 
+          padding: '3rem 1.5rem', 
+          textAlign: 'center',
+          maxWidth: '520px',
+          margin: '2rem auto',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(249, 115, 22, 0.12)',
+            color: '#f97316',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.25rem auto'
+          }}>
+            <Flame size={32} />
+          </div>
+          <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.35rem', fontWeight: 700 }}>
+            Skapa ditt personliga PRIO-flöde
+          </h2>
+          <p style={{ margin: '0 0 1.5rem 0', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+            PRIO-flödet är för närvarande inaktiverat. När du aktiverar funktionen i inställningarna analyseras och filtreras inkommande artiklar automatiskt mot dina personliga preferenser och intresseområden.
+          </p>
+          <Link
+            to="/settings"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              backgroundColor: '#f97316',
+              color: '#ffffff',
+              padding: '0.65rem 1.25rem',
+              borderRadius: '8px',
+              fontWeight: 600,
+              textDecoration: 'none',
+              fontSize: '0.9rem'
+            }}
+          >
+            Aktivera i Inställningar
+          </Link>
+        </div>
+      ) : loading && allFeeds.length === 0 ? (
         <p style={{ color: 'var(--text-muted)' }}>Loading news...</p>
       ) : allFeeds.length === 0 ? (
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', textAlign: 'center' }}>
@@ -1045,24 +1093,26 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                       ))}
                     </div>
 
-                    {/* Verktygsknappar: Prioritera, Analysera (endast i Prio) och Dela */}
+                    {/* Verktygsknappar: Prioritera, Analysera och Dela */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <button
-                        className="feed-card-share-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPrioritizeItem(item);
-                        }}
-                        title={item.priority === 'high' ? "Prioriterad (klicka för att ändra/bevaka ämne)" : "Prioritera händelse / bevaka ämne"}
-                        style={{
-                          color: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : undefined,
-                          backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? 'rgba(249, 115, 22, 0.12)' : undefined
-                        }}
-                      >
-                        <Flame size={16} />
-                      </button>
+                      {prioEnabled && (
+                        <button
+                          className="feed-card-share-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPrioritizeItem(item);
+                          }}
+                          title={item.priority === 'high' ? "Prioriterad (klicka för att ändra/bevaka ämne)" : "Prioritera händelse / bevaka ämne"}
+                          style={{
+                            color: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : undefined,
+                            backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? 'rgba(249, 115, 22, 0.12)' : undefined
+                          }}
+                        >
+                          <Flame size={16} />
+                        </button>
+                      )}
 
-                      {isPrioMode && (
+                      {prioEnabled && isPrioMode && (
                         <button
                           className="feed-card-share-btn"
                           onClick={(e) => triggerAnalysis(e, item.id)}

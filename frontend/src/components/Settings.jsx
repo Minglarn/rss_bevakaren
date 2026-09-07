@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush } from '../utils/notifications';
@@ -27,7 +27,8 @@ const Settings = () => {
     categories: [],
     lm_studio_url: '',
     lm_studio_model: '',
-    is_healthy: false
+    is_healthy: false,
+    prio_enabled: false
   });
   const [showAdvancedPrompt, setShowAdvancedPrompt] = useState(false);
   const [isCustomPromptEdited, setIsCustomPromptEdited] = useState(false);
@@ -238,6 +239,34 @@ Prioriteringsregler:
     });
   };
 
+  const handleTogglePrioEnabled = async () => {
+    const nextState = !aiConfig.prio_enabled;
+    try {
+      setIsSavingAi(true);
+      const res = await api.put('/ai/config', {
+        prio_rules: aiConfig.prio_rules || '',
+        exclude_rules: aiConfig.exclude_rules || '',
+        categories: aiConfig.categories || [],
+        prio_threshold: aiConfig.prio_threshold || 75,
+        system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
+        onboarding_completed: true,
+        prio_enabled: nextState
+      });
+      if (res.data) {
+        setAiConfig(res.data);
+      }
+      toast.success(nextState 
+        ? 'Ditt personliga PRIO-flöde är nu aktiverat!' 
+        : 'PRIO-flödet är nu inaktiverat. Klassiskt RSS-läge är aktivt.');
+      window.dispatchEvent(new Event('aiConfigUpdated'));
+    } catch (err) {
+      console.error("Kunde inte ändra status för PRIO-flöde:", err);
+      toast.error('Kunde inte uppdatera PRIO-status');
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
+
   const handleSaveAiConfig = async (e) => {
     if (e) e.preventDefault();
     try {
@@ -248,7 +277,8 @@ Prioriteringsregler:
         categories: aiConfig.categories || [],
         prio_threshold: aiConfig.prio_threshold || 75,
         system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
-        onboarding_completed: true
+        onboarding_completed: true,
+        prio_enabled: aiConfig.prio_enabled ?? false
       });
       if (res.data) {
         setAiConfig(res.data);
@@ -731,8 +761,109 @@ Prioriteringsregler:
       {activeTab === 'ai' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
+          {/* Huvudbrytare: Aktivera / Skapa personligt PRIO-flöde */}
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            border: aiConfig.prio_enabled ? '1px solid rgba(249, 115, 22, 0.4)' : '1px solid var(--border-color)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '240px' }}>
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '10px',
+                  backgroundColor: aiConfig.prio_enabled ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-app)',
+                  color: aiConfig.prio_enabled ? '#f97316' : 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Flame size={24} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem', fontWeight: 700 }}>
+                      Personligt PRIO-flöde
+                    </h3>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '12px',
+                      fontWeight: 700,
+                      backgroundColor: aiConfig.prio_enabled ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-app)',
+                      color: aiConfig.prio_enabled ? '#f97316' : 'var(--text-muted)',
+                      border: aiConfig.prio_enabled ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid var(--border-color)'
+                    }}>
+                      {aiConfig.prio_enabled ? 'AKTIVERAT' : 'INAKTIVERAT'}
+                    </span>
+                  </div>
+                  <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
+                    {aiConfig.prio_enabled 
+                      ? 'Ditt personliga PRIO-flöde är aktivt. Inkommande artiklar poängsätts och filtreras mot dina regler.'
+                      : 'När funktionen är avstängd fungerar appen som en ren, klassisk RSS-läsare utan AI-analyser och förbrukar inga bakgrundsresurser.'}
+                  </p>
+                </div>
+              </div>
+
+              <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={!!aiConfig.prio_enabled}
+                  onChange={handleTogglePrioEnabled}
+                  disabled={isSavingAi}
+                />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+
+            {!aiConfig.prio_enabled && (
+              <div style={{
+                padding: '1rem',
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem'
+              }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Vill du börja prioritera och skräddarsy ditt nyhetsflöde med AI?
+                </div>
+                <button
+                  type="button"
+                  onClick={handleTogglePrioEnabled}
+                  disabled={isSavingAi}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    backgroundColor: '#f97316',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Flame size={16} /> Aktivera & skapa flöde
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Statuskort */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)', opacity: aiConfig.prio_enabled ? 1 : 0.7 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Sparkles size={20} style={{ color: '#f97316' }} /> LM Studio Status
