@@ -4,6 +4,7 @@ import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckChec
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import ShareModal from './ShareModal';
+import PrioOnboardingModal from './PrioOnboardingModal';
 
 const DEFAULT_CATEGORIES = ['Alla', 'Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
 
@@ -36,12 +37,19 @@ const Dashboard = ({ isPrioModeProp = false }) => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const res = await api.get('/ai/config');
-        if (res.data && Array.isArray(res.data.categories) && res.data.categories.length > 0) {
-          setCategories(['Alla', ...res.data.categories]);
+        if (res.data) {
+          if (Array.isArray(res.data.categories) && res.data.categories.length > 0) {
+            setCategories(['Alla', ...res.data.categories]);
+          }
+          if (isPrioMode && res.data.onboarding_completed === false) {
+            setShowOnboarding(true);
+          }
         }
       } catch (err) {
         // Behåll standard om anropet misslyckas
@@ -54,7 +62,7 @@ const Dashboard = ({ isPrioModeProp = false }) => {
     };
     window.addEventListener('aiConfigUpdated', handleConfigUpdate);
     return () => window.removeEventListener('aiConfigUpdated', handleConfigUpdate);
-  }, []);
+  }, [isPrioMode]);
   
   const [readItems, setReadItems] = useState(new Set());
   const [unreadItems, setUnreadItems] = useState(new Set());
@@ -1193,6 +1201,15 @@ const Dashboard = ({ isPrioModeProp = false }) => {
           onClose={() => setShareItem(null)} 
         />
       )}
+
+      {/* Onboarding för Prio Flöde */}
+      <PrioOnboardingModal
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onSaved={() => {
+          fetchFeeds();
+        }}
+      />
     </div>
   );
 };

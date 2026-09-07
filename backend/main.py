@@ -60,7 +60,7 @@ def get_version():
         return "unknown"
 
 VERSION = get_version()
-LAST_UPDATE = "2026-09-06"
+LAST_UPDATE = "2026-09-07"
 
 def run_db_migrations(db_path: str):
     if not os.path.exists(db_path):
@@ -159,11 +159,24 @@ def run_db_migrations(db_path: str):
             except sqlite3.OperationalError:
                 pass
                 
+        # Migration 10: Create user_ai_settings table
         try:
-            cur.execute("CREATE INDEX IF NOT EXISTS ix_articles_ai_processed ON articles (ai_processed);")
-            cur.execute("CREATE INDEX IF NOT EXISTS ix_articles_priority ON articles (priority);")
-        except Exception:
-            pass
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS user_ai_settings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER UNIQUE,
+                    prio_rules TEXT DEFAULT '',
+                    exclude_rules TEXT DEFAULT '',
+                    categories TEXT DEFAULT '["Teknik", "Politik", "Blåljus", "Lokalt", "Ekonomi", "Nöje", "Övrigt"]',
+                    prio_threshold INTEGER DEFAULT 75,
+                    custom_system_prompt TEXT DEFAULT '',
+                    onboarding_completed INTEGER DEFAULT 0,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS ix_user_ai_settings_user_id ON user_ai_settings (user_id);")
+        except Exception as e:
+            print(f"Migration 10 error: {e}")
             
         conn.commit()
         conn.close()
@@ -461,14 +474,44 @@ async def ai_processing_loop():
                 for art in unprocessed:
                     cats = art.categories.split(",") if art.categories else []
                     source = art.feed.title if art.feed else ""
-                    print(f"[AI] Bearbetar artikel {art.id}: '{art.title[:50]}...'...", flush=True)
+                    user_id = art.feed.user_id if art.feed else None
+                    
+                    user_prompt = None
+                    user_cats = None
+                    if user_id:
+                        user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == user_id).first()
+                        if user_ai:
+                            if user_ai.custom_system_prompt and user_ai.custom_system_prompt.strip():
+                                user_prompt = user_ai.custom_system_prompt.strip()
+                            elif user_ai.prio_rules or user_ai.exclude_rules:
+                                parsed_c = None
+                                if user_ai.categories:
+                                    try:
+                                        parsed_c = json.loads(user_ai.categories)
+                                    except Exception:
+                                        pass
+                                user_prompt = ai_service.build_user_prompt(
+                                    categories=parsed_c,
+                                    prio_rules=user_ai.prio_rules,
+                                    exclude_rules=user_ai.exclude_rules,
+                                    prio_threshold=user_ai.prio_threshold or 75
+                                )
+                            if user_ai.categories:
+                                try:
+                                    user_cats = json.loads(user_ai.categories)
+                                except Exception:
+                                    pass
+
+                    print(f"[AI] Bearbetar artikel {art.id} för user {user_id}: '{art.title[:50]}...'...", flush=True)
                     
                     analysis = await asyncio.to_thread(
                         ai_service.analyze_article,
                         title=art.title,
                         summary=art.summary,
                         source_title=source,
-                        categories=cats
+                        categories=cats,
+                        custom_prompt=user_prompt,
+                        user_categories=user_cats
                     )
                     
                     if analysis:
@@ -669,9 +712,14 @@ def get_dashboard_feeds(
             query = query.filter((models.Article.is_read == 0) | (models.Article.is_read == None))
             
         if prio_only:
+            user_threshold = 75
+            user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+            if user_ai and user_ai.prio_threshold:
+                user_threshold = user_ai.prio_threshold
+
             query = query.filter(
                 models.Article.ai_processed == 1,
-                or_(models.Article.priority == 'high', models.Article.prio_score >= 75)
+                or_(models.Article.priority == 'high', models.Article.prio_score >= user_threshold)
             )
 
         if category and category.lower() != "alla":
@@ -746,12 +794,41 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
         
     cats = art.categories.split(",") if art.categories else []
     source = art.feed.title if art.feed else ""
+
+    # Hämta användarens personliga AI-inställningar
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    user_prompt = None
+    user_cats = None
+    if user_ai:
+        if user_ai.custom_system_prompt and user_ai.custom_system_prompt.strip():
+            user_prompt = user_ai.custom_system_prompt.strip()
+        elif user_ai.prio_rules or user_ai.exclude_rules:
+            parsed_c = None
+            if user_ai.categories:
+                try:
+                    parsed_c = json.loads(user_ai.categories)
+                except Exception:
+                    pass
+            user_prompt = ai_service.build_user_prompt(
+                categories=parsed_c,
+                prio_rules=user_ai.prio_rules,
+                exclude_rules=user_ai.exclude_rules,
+                prio_threshold=user_ai.prio_threshold or 75
+            )
+        if user_ai.categories:
+            try:
+                user_cats = json.loads(user_ai.categories)
+            except Exception:
+                pass
+
     analysis = await asyncio.to_thread(
         ai_service.analyze_article,
         title=art.title,
         summary=art.summary,
         source_title=source,
-        categories=cats
+        categories=cats,
+        custom_prompt=user_prompt,
+        user_categories=user_cats
     )
     if not analysis:
         raise HTTPException(status_code=502, detail="LM Studio svarade inte eller kunde inte analysera artikeln.")
@@ -771,24 +848,107 @@ def get_prio_unread_count(
     db: Session = Depends(database.get_db), 
     current_user: models.User = Depends(auth.get_current_user)
 ):
+    threshold = 75
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    if user_ai and user_ai.prio_threshold:
+        threshold = user_ai.prio_threshold
+
     count = db.query(models.Article).join(models.Feed).filter(
         models.Feed.user_id == current_user.id,
         models.Article.ai_processed == 1,
-        or_(models.Article.priority == 'high', models.Article.prio_score >= 75),
+        or_(models.Article.priority == 'high', models.Article.prio_score >= threshold),
         (models.Article.is_read == 0) | (models.Article.is_read == None)
     ).count()
     return {"unread_count": count}
 
 @app.get("/ai/config", response_model=schemas.AIConfigResponse)
-def get_ai_config(current_user: models.User = Depends(auth.get_current_user)):
-    return ai_service.load_ai_config()
+def get_ai_config(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    
+    if not user_ai:
+        global_cfg = ai_service.load_ai_config()
+        return schemas.AIConfigResponse(
+            prio_rules="",
+            exclude_rules="",
+            categories=global_cfg.get("categories", ai_service.DEFAULT_CATEGORIES),
+            prio_threshold=75,
+            system_prompt=global_cfg.get("system_prompt", ai_service.DEFAULT_SYSTEM_PROMPT),
+            onboarding_completed=False,
+            lm_studio_url=ai_service.LM_STUDIO_URL,
+            lm_studio_model=ai_service.get_active_model(),
+            is_healthy=ai_service.check_lm_studio_health()
+        )
+        
+    try:
+        cats = json.loads(user_ai.categories) if user_ai.categories else ai_service.DEFAULT_CATEGORIES
+    except Exception:
+        cats = ai_service.DEFAULT_CATEGORIES
+
+    prompt = user_ai.custom_system_prompt
+    if not prompt or not prompt.strip():
+        prompt = ai_service.build_user_prompt(
+            categories=cats,
+            prio_rules=user_ai.prio_rules,
+            exclude_rules=user_ai.exclude_rules,
+            prio_threshold=user_ai.prio_threshold or 75
+        )
+
+    return schemas.AIConfigResponse(
+        prio_rules=user_ai.prio_rules or "",
+        exclude_rules=user_ai.exclude_rules or "",
+        categories=cats,
+        prio_threshold=user_ai.prio_threshold or 75,
+        system_prompt=prompt,
+        onboarding_completed=bool(user_ai.onboarding_completed),
+        lm_studio_url=ai_service.LM_STUDIO_URL,
+        lm_studio_model=ai_service.get_active_model(),
+        is_healthy=ai_service.check_lm_studio_health()
+    )
 
 @app.put("/ai/config")
-def update_ai_config(config: schemas.AIConfigUpdate, current_user: models.User = Depends(auth.get_current_user)):
-    success = ai_service.save_ai_config(config.system_prompt, config.categories)
-    if not success:
-        raise HTTPException(status_code=500, detail="Kunde inte spara AI-konfigurationen")
-    return {"status": "ok", "message": "AI-konfiguration sparades framgångsrikt"}
+def update_ai_config(
+    config: schemas.AIConfigUpdate, 
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    if not user_ai:
+        user_ai = models.UserAISettings(user_id=current_user.id)
+        db.add(user_ai)
+
+    if config.prio_rules is not None:
+        user_ai.prio_rules = config.prio_rules.strip()
+    if config.exclude_rules is not None:
+        user_ai.exclude_rules = config.exclude_rules.strip()
+    if config.categories is not None and len(config.categories) > 0:
+        clean_cats = [c.strip() for c in config.categories if c and c.strip()]
+        user_ai.categories = json.dumps(clean_cats, ensure_ascii=False)
+    if config.prio_threshold is not None:
+        user_ai.prio_threshold = max(50, min(95, config.prio_threshold))
+    if config.onboarding_completed is not None:
+        user_ai.onboarding_completed = 1 if config.onboarding_completed else 0
+
+    if config.system_prompt and config.system_prompt.strip():
+        user_ai.custom_system_prompt = config.system_prompt.strip()
+    else:
+        # Generera prompt från de uppdaterade reglerna och kategorierna
+        try:
+            cats = json.loads(user_ai.categories) if user_ai.categories else ai_service.DEFAULT_CATEGORIES
+        except Exception:
+            cats = ai_service.DEFAULT_CATEGORIES
+            
+        user_ai.custom_system_prompt = ai_service.build_user_prompt(
+            categories=cats,
+            prio_rules=user_ai.prio_rules,
+            exclude_rules=user_ai.exclude_rules,
+            prio_threshold=user_ai.prio_threshold or 75
+        )
+
+    db.commit()
+    return {"status": "ok", "message": "Användarens AI-inställningar har sparats"}
 
 import requests
 from bs4 import BeautifulSoup

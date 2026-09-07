@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush } from '../utils/notifications';
@@ -18,14 +18,18 @@ const Settings = () => {
   const [isPurging, setIsPurging] = useState(false);
   const [purgeMessage, setPurgeMessage] = useState(null);
 
-  // AI Inställningar state
+  // AI Inställningar state (Personliga per användare)
   const [aiConfig, setAiConfig] = useState({
+    prio_rules: '',
+    exclude_rules: '',
+    prio_threshold: 75,
     system_prompt: '',
     categories: [],
     lm_studio_url: '',
     lm_studio_model: '',
     is_healthy: false
   });
+  const [showAdvancedPrompt, setShowAdvancedPrompt] = useState(false);
   const [newAiCategory, setNewAiCategory] = useState('');
   const [isSavingAi, setIsSavingAi] = useState(false);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
@@ -172,10 +176,14 @@ const Settings = () => {
     try {
       setIsSavingAi(true);
       await api.put('/ai/config', {
+        prio_rules: aiConfig.prio_rules,
+        exclude_rules: aiConfig.exclude_rules,
+        categories: aiConfig.categories,
+        prio_threshold: aiConfig.prio_threshold,
         system_prompt: aiConfig.system_prompt,
-        categories: aiConfig.categories
+        onboarding_completed: true
       });
-      toast.success('AI-inställningar och prompt har sparats!');
+      toast.success('Dina personliga AI-inställningar har sparats!');
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
       console.error("Could not save AI config", err);
@@ -183,6 +191,36 @@ const Settings = () => {
     } finally {
       setIsSavingAi(false);
     }
+  };
+
+  const handleRegeneratePromptFromRules = () => {
+    const catsStr = (aiConfig.categories && aiConfig.categories.length > 0) 
+      ? aiConfig.categories.join(' | ') 
+      : 'Teknik | Politik | Blåljus | Lokalt | Ekonomi | Nöje | Övrigt';
+    const cleanPrio = aiConfig.prio_rules?.trim() || "Viktiga samhällshändelser, kritiska varningar eller händelser av stor betydelse.";
+    const cleanExclude = aiConfig.exclude_rules?.trim() || "Nöje, skvaller, kändisar, vardagliga sportnotiser eller mat/recept.";
+    const threshold = aiConfig.prio_threshold || 75;
+
+    const generated = `Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
+{
+  "category": "${catsStr}",
+  "priority": "high | medium | low",
+  "prio_score": 1-100,
+  "prio_reason": "Kort motivering till prioritetsnivån på svenska",
+  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen.",
+  "tags": ["tagg1", "tagg2"]
+}
+
+Prioriteringsregler:
+- 'high' (score >= ${threshold}): ${cleanPrio}
+- 'low' (score < 40): ${cleanExclude}
+- 'medium' (score 40-${threshold - 1}): Allt övrigt nyhetsmaterial som varken är akut/viktigt eller trivialt nöje.`;
+
+    setAiConfig(prev => ({
+      ...prev,
+      system_prompt: generated
+    }));
+    toast.success('Prompten genererades om utifrån dina regler');
   };
 
   const handleAddAiCategory = (e) => {
@@ -683,23 +721,111 @@ Prioriteringsregler:
             </div>
           </div>
 
-          {/* Kategorier */}
+          {/* Personliga Prioriteringar */}
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
             <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Tag size={20} style={{ color: 'var(--primary)' }} /> AI Kategorier
+              <Sliders size={20} style={{ color: '#f97316' }} /> Mina Personliga Prioriteringar
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-              Dessa kategorier används av AI för klassificering och visas som filterknappar i Prio-flödet.
+              Här styr du vad AI:n anser vara hög respektive låg prioritet för ditt konto. Ändringarna slår igenom direkt på ditt Prio Flöde.
             </p>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '1.5rem' }}>
+              {/* Hög prio */}
+              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
+                  <ThumbsUp size={16} style={{ color: '#16a34a' }} /> Vad är HÖG prioritet för dig?
+                </label>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.5rem 0' }}>
+                  Nyheter som matchar dessa ämnen eller sökord får hög prio-poäng och visas i ditt Prio Flöde.
+                </p>
+                <textarea
+                  value={aiConfig.prio_rules || ''}
+                  onChange={(e) => setAiConfig({ ...aiConfig, prio_rules: e.target.value })}
+                  placeholder="T.ex. Elbilar och Tesla, lokalpolitik i Göteborg, IT-säkerhet, rymdfart..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.88rem',
+                    resize: 'vertical',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* Låg prio */}
+              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
+                  <ThumbsDown size={16} style={{ color: '#ef4444' }} /> Vad vill du NEDPRIORITERA (Låg prioritet)?
+                </label>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.5rem 0' }}>
+                  Nyheter inom dessa ämnen ges låg prioritet och filtreras bort från ditt Prio Flöde.
+                </p>
+                <textarea
+                  value={aiConfig.exclude_rules || ''}
+                  onChange={(e) => setAiConfig({ ...aiConfig, exclude_rules: e.target.value })}
+                  placeholder="T.ex. Kändisskvaller, melodifestivalen, fotbollsresultat, horoskop eller recept..."
+                  rows={2}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.88rem',
+                    resize: 'vertical',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* Tröskelvärde slider */}
+              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <label style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                    Prioritetströskel för Prio Flödet
+                  </label>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f97316' }}>
+                    {aiConfig.prio_threshold || 75} poäng
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.75rem 0' }}>
+                  Artiklar med poäng över denna nivå visas i ditt Prio Flöde (Standard: 75).
+                </p>
+                <input
+                  type="range"
+                  min="50"
+                  max="90"
+                  step="5"
+                  value={aiConfig.prio_threshold || 75}
+                  onChange={(e) => setAiConfig({ ...aiConfig, prio_threshold: parseInt(e.target.value) })}
+                  style={{ width: '100%', cursor: 'pointer', accentColor: '#f97316' }}
+                />
+              </div>
+            </div>
+
+            {/* Kategorier */}
+            <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem' }}>
+              <Tag size={16} style={{ color: 'var(--primary)' }} /> AI Kategorier
+            </h4>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+              Kategorier som AI använder och som visas som filter i ditt Prio Flöde.
+            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '1rem' }}>
               {(aiConfig.categories || []).map((cat, idx) => (
                 <div 
                   key={idx}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
                     backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)',
-                    padding: '0.35rem 0.75rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)'
+                    padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-main)'
                   }}
                 >
                   <span>{cat}</span>
@@ -709,88 +835,112 @@ Prioriteringsregler:
                     style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
                     title={`Ta bort ${cat}`}
                   >
-                    <X size={14} />
+                    <X size={13} />
                   </button>
                 </div>
               ))}
             </div>
 
-            <form onSubmit={handleAddAiCategory} style={{ display: 'flex', gap: '0.5rem', maxWidth: '400px' }}>
+            <form onSubmit={handleAddAiCategory} style={{ display: 'flex', gap: '0.5rem', maxWidth: '380px' }}>
               <input 
                 type="text" 
                 placeholder="Ny kategori (t.ex. Sport, Kultur)..." 
                 value={newAiCategory} 
                 onChange={(e) => setNewAiCategory(e.target.value)}
-                style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.9rem' }}
+                style={{ flex: 1, padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.85rem' }}
               />
               <button 
                 type="submit"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 1rem', backgroundColor: 'var(--primary)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.9rem', backgroundColor: 'var(--primary)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
               >
-                <Plus size={16} /> Lägg till
+                <Plus size={15} /> Lägg till
               </button>
             </form>
           </div>
 
-          {/* Prompt Redigerare */}
+          {/* Avancerat: Rå Systemprompt (Utfällbar) */}
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FileText size={20} style={{ color: '#f97316' }} /> AI Analysprompt & Prioriteringsregler
+            <div 
+              onClick={() => setShowAdvancedPrompt(!showAdvancedPrompt)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
+            >
+              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
+                <FileText size={18} style={{ color: '#f97316' }} /> Avancerat: Fullständig AI Systemprompt
               </h3>
-              <button 
-                type="button"
-                onClick={handleResetAiPrompt}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
-              >
-                Återställ till standard
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                <span>{showAdvancedPrompt ? 'Dölj' : 'Visa & Redigera'}</span>
+                {showAdvancedPrompt ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </div>
             </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-              Instruktionerna nedan styr hur din lokala modell i LM Studio prioriterar, sammanfattar och klassificerar artiklarna.
-            </p>
 
-            <textarea 
-              value={aiConfig.system_prompt}
-              onChange={(e) => setAiConfig({ ...aiConfig, system_prompt: e.target.value })}
-              rows={18}
+            {showAdvancedPrompt && (
+              <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
+                    Här ser du den råa prompten som skickas till LM Studio vid analys.
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button 
+                      type="button"
+                      onClick={handleRegeneratePromptFromRules}
+                      style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+                    >
+                      Generera om från mina regler
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={handleResetAiPrompt}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+                    >
+                      Återställ till standard
+                    </button>
+                  </div>
+                </div>
+
+                <textarea 
+                  value={aiConfig.system_prompt || ''}
+                  onChange={(e) => setAiConfig({ ...aiConfig, system_prompt: e.target.value })}
+                  rows={16}
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-app)',
+                    color: 'var(--text-main)',
+                    fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                    fontSize: '0.82rem',
+                    lineHeight: '1.5',
+                    resize: 'vertical',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Spara-knapp */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button 
+              type="button"
+              onClick={handleSaveAiConfig}
+              disabled={isSavingAi}
               style={{
-                width: '100%',
-                padding: '1rem',
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.75rem 1.75rem',
+                backgroundColor: '#f97316',
+                color: 'white',
+                border: 'none',
                 borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-app)',
-                color: 'var(--text-main)',
-                fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-                fontSize: '0.85rem',
-                lineHeight: '1.5',
-                resize: 'vertical',
-                boxSizing: 'border-box'
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                cursor: isSavingAi ? 'not-allowed' : 'pointer',
+                boxShadow: '0 2px 8px rgba(249, 115, 22, 0.3)'
               }}
-            />
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-              <button 
-                type="button"
-                onClick={handleSaveAiConfig}
-                disabled={isSavingAi}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.5rem',
-                  padding: '0.65rem 1.5rem',
-                  backgroundColor: '#f97316',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  fontSize: '0.95rem',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(249, 115, 22, 0.3)'
-                }}
-              >
-                {isSavingAi ? <RefreshCw size={18} className="spin" /> : <Check size={18} />}
-                {isSavingAi ? 'Sparar...' : 'Spara AI-inställningar'}
-              </button>
-            </div>
+            >
+              {isSavingAi ? <RefreshCw size={18} className="spin" /> : <Check size={18} />}
+              {isSavingAi ? 'Sparar...' : 'Spara mina AI-inställningar'}
+            </button>
           </div>
 
         </motion.div>

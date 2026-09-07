@@ -179,12 +179,48 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
             
     return None
 
-def analyze_article(title: str, summary: Optional[str] = None, source_title: Optional[str] = None, categories: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+def build_user_prompt(categories: Optional[List[str]] = None, prio_rules: Optional[str] = None, exclude_rules: Optional[str] = None, prio_threshold: int = 75) -> str:
+    """Sammanställer en skräddarsydd systemprompt baserat på användarens specifika regler och kategorier."""
+    cats = [c.strip() for c in categories if c and c.strip()] if categories else DEFAULT_CATEGORIES
+    if not cats:
+        cats = DEFAULT_CATEGORIES
+    cats_str = " | ".join(cats)
+    
+    clean_prio = prio_rules.strip() if prio_rules and prio_rules.strip() else "Viktiga samhällshändelser, kritiska varningar eller händelser av stor betydelse."
+    clean_exclude = exclude_rules.strip() if exclude_rules and exclude_rules.strip() else "Nöje, skvaller, kändisar, vardagliga sportnotiser eller mat/recept."
+    threshold = max(50, min(95, prio_threshold or 75))
+    medium_range_max = threshold - 1
+
+    prompt = f"""Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
+{{
+  "category": "{cats_str}",
+  "priority": "high | medium | low",
+  "prio_score": 1-100,
+  "prio_reason": "Kort motivering till prioritetsnivån på svenska",
+  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen.",
+  "tags": ["tagg1", "tagg2"]
+}}
+
+Prioriteringsregler:
+- 'high' (score >= {threshold}): {clean_prio}
+- 'low' (score < 40): {clean_exclude}
+- 'medium' (score 40-{medium_range_max}): Allt övrigt nyhetsmaterial som varken är akut/viktigt eller trivialt nöje."""
+
+    return prompt
+
+def analyze_article(
+    title: str, 
+    summary: Optional[str] = None, 
+    source_title: Optional[str] = None, 
+    categories: Optional[List[str]] = None,
+    custom_prompt: Optional[str] = None,
+    user_categories: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
     """
     Anropar LM Studio och returnerar ett berikat artikelobjekt.
     Kastar inga ohanterade undantag så anroparen skyddas mot krascher.
     """
-    system_prompt = load_system_prompt()
+    system_prompt = custom_prompt.strip() if (custom_prompt and custom_prompt.strip()) else load_system_prompt()
     model = get_active_model()
     
     # Bygg en kompakt, informativ användarprompt

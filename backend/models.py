@@ -12,6 +12,7 @@ class User(Base):
     feeds = relationship("Feed", back_populates="owner")
     keywords = relationship("Keyword", back_populates="owner")
     push_subscriptions = relationship("PushSubscription", back_populates="owner")
+    ai_settings = relationship("UserAISettings", back_populates="owner", uselist=False, cascade="all, delete-orphan")
 
 class Feed(Base):
     __tablename__ = "feeds"
@@ -75,3 +76,17 @@ class Article(Base):
     tags = Column(String, default="[]")
 
     feed = relationship("Feed", back_populates="articles")
+ 
+class UserAISettings(Base):
+    __tablename__ = "user_ai_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, index=True)
+    prio_rules = Column(String, default="") # Fritext vad användaren prioriterar
+    exclude_rules = Column(String, default="") # Fritext vad som ska nedprioriteras
+    categories = Column(String, default='["Teknik", "Politik", "Blåljus", "Lokalt", "Ekonomi", "Nöje", "Övrigt"]')
+    prio_threshold = Column(Integer, default=75) # Poängtröskel för "high"
+    custom_system_prompt = Column(String, default="") # Anpassad eller genererad systemprompt
+    onboarding_completed = Column(Integer, default=0) # 0 = ej genomförd, 1 = genomförd
+
+    owner = relationship("User", back_populates="ai_settings")

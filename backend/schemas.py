@@ -94,12 +94,20 @@ class ArticleResponse(BaseModel):
         from_attributes = True
 
 class AIConfigUpdate(BaseModel):
-    system_prompt: str
-    categories: List[str]
+    prio_rules: Optional[str] = ""
+    exclude_rules: Optional[str] = ""
+    categories: Optional[List[str]] = []
+    prio_threshold: Optional[int] = 75
+    system_prompt: Optional[str] = ""
+    onboarding_completed: Optional[bool] = None
 
 class AIConfigResponse(BaseModel):
-    system_prompt: str
-    categories: List[str]
-    lm_studio_url: str
-    lm_studio_model: str
-    is_healthy: bool
+    prio_rules: str = ""
+    exclude_rules: str = ""
+    categories: List[str] = []
+    prio_threshold: int = 75
+    system_prompt: str = ""
+    onboarding_completed: bool = False
+    lm_studio_url: str = ""
+    lm_studio_model: str = ""
+    is_healthy: bool = False
