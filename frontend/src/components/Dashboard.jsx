@@ -6,6 +6,7 @@ import api from '../api';
 import ShareModal from './ShareModal';
 import PrioOnboardingModal from './PrioOnboardingModal';
 import PrioritizeModal from './PrioritizeModal';
+import { decodeHtmlEntities } from '../utils/textUtils';
 
 const DEFAULT_CATEGORIES = ['All', 'Technology', 'Politics', 'Emergency', 'Local', 'Economy', 'Entertainment', 'Other'];
 
@@ -53,6 +54,15 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [prioritizeItem, setPrioritizeItem] = useState(null);
+  const [revealedOriginals, setRevealedOriginals] = useState(new Set());
+  const [nowTs, setNowTs] = useState(Math.floor(Date.now() / 1000));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTs(Math.floor(Date.now() / 1000));
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -1046,7 +1056,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }}>
                       {/* Source and original published date */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
-                        <Rss size={14} /> {item.source_title}
+                        <Rss size={14} /> {decodeHtmlEntities(item.source_title)}
                         {item.published && (
                           <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.35rem' }} title="Original publication time">
                             • {formatDateLabel(item.published)} {formatTime(item.published)}
@@ -1090,7 +1100,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           }}
                           title={`Filter by category: ${item.category}`}
                         >
-                          {item.category}
+                          {decodeHtmlEntities(item.category)}
                         </button>
                       )}
                       
@@ -1105,7 +1115,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           fontSize: '0.72rem',
                           opacity: 0.85
                         }}>
-                          {cat}
+                          {decodeHtmlEntities(cat)}
                         </div>
                       ))}
                     </div>
@@ -1157,7 +1167,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   <div className="feed-card-content">
                   {/* Title / Content */}
                   <h3 className="feed-card-title">
-                    {item.title}
+                    {decodeHtmlEntities(item.title)}
                   </h3>
                   
                   {showImages && item.image_url && (
@@ -1174,45 +1184,106 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     </div>
                   )}
                   
-                  {/* AI-sammanfattning (visas när AI är aktivt) */}
-                  {shouldShowAi && item.ai_summary && (
-                    <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                        <Sparkles size={13} /> AI Summary
-                      </div>
-                      <div style={{ 
-                        color: 'var(--text-main)', 
-                        fontSize: '0.95rem', 
-                        lineHeight: '1.5'
-                      }}>
-                        {item.ai_summary}
-                      </div>
-                      {item.prio_reason && (
-                        <>
-                          <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.5rem 0 0.4rem 0', opacity: 0.6 }}></div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: '1.4' }}>
-                            Reason: {item.prio_reason}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                  {/* AI-sammanfattning & Laddningsläge / Fallback */}
+                  {(() => {
+                    const isWaitingForAi = shouldShowAi && !item.ai_summary && (item.ai_processed === 0 || item.ai_processed === null || item.ai_processed === undefined);
+                    const isTimedOut = isWaitingForAi && item.received_ts && (nowTs - item.received_ts > 45);
+                    const showSkeleton = isWaitingForAi && !isTimedOut && !revealedOriginals.has(item.id);
 
-                  {/* Summary - Visas i Klassisk RSS, eller i AI-läge om ingen AI-sammanfattning finns ännu */}
-                  {(!shouldShowAi || !item.ai_summary) && item.summary && (
-                    <div style={{ 
-                      color: 'var(--text-main)', 
-                      fontSize: '0.95rem', 
-                      marginBottom: '0.65rem', 
-                      lineHeight: '1.5',
-                      display: expandedItems[index] ? 'block' : '-webkit-box',
-                      WebkitLineClamp: expandedItems[index] ? 'unset' : 3,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
-                    }}>
-                      {item.summary}
-                    </div>
-                  )}
+                    if (showSkeleton) {
+                      return (
+                        <div style={{
+                          marginBottom: '0.85rem',
+                          padding: '0.75rem 0.9rem',
+                          backgroundColor: 'rgba(249, 115, 22, 0.05)',
+                          border: '1px dashed rgba(249, 115, 22, 0.3)',
+                          borderRadius: '8px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600 }}>
+                              <Loader2 size={13} className="spin" /> Analyzing with AI...
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRevealedOriginals(prev => new Set(prev).add(item.id));
+                              }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-muted)',
+                                fontSize: '0.72rem',
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                                padding: '0.1rem 0.3rem'
+                              }}
+                              title="Click to view original RSS text immediately"
+                            >
+                              Show original text
+                            </button>
+                          </div>
+                          <div className="skeleton-shimmer" style={{ height: '9px', width: '92%', borderRadius: '4px', backgroundColor: 'var(--border-color)', marginBottom: '0.45rem' }} />
+                          <div className="skeleton-shimmer" style={{ height: '9px', width: '68%', borderRadius: '4px', backgroundColor: 'var(--border-color)' }} />
+                        </div>
+                      );
+                    }
+
+                    if (shouldShowAi && item.ai_summary) {
+                      return (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 3 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.25 }}
+                          style={{ marginBottom: '1rem' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                            <Sparkles size={13} /> AI Summary
+                          </div>
+                          <div style={{ 
+                            color: 'var(--text-main)', 
+                            fontSize: '0.95rem', 
+                            lineHeight: '1.5'
+                          }}>
+                            {item.ai_summary}
+                          </div>
+                          {item.prio_reason && (
+                            <>
+                              <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.5rem 0 0.4rem 0', opacity: 0.6 }}></div>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: '1.4' }}>
+                                Reason: {item.prio_reason}
+                              </div>
+                            </>
+                          )}
+                        </motion.div>
+                      );
+                    }
+
+                    if (item.summary) {
+                      return (
+                        <div style={{ marginBottom: '0.65rem' }}>
+                          {shouldShowAi && !item.ai_summary && (
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontStyle: 'italic' }}>
+                              {isTimedOut ? 'AI offline / timeout - showing original text' : 'Original RSS text'}
+                            </div>
+                          )}
+                          <div style={{ 
+                            color: 'var(--text-main)', 
+                            fontSize: '0.95rem', 
+                            lineHeight: '1.5',
+                            display: expandedItems[index] ? 'block' : '-webkit-box',
+                            WebkitLineClamp: expandedItems[index] ? 'unset' : 3,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}>
+                            {item.summary}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return null;
+                  })()}
 
                   {/* Taggar från AI-analys */}
                   {shouldShowAi && item.tags && item.tags.length > 0 && (

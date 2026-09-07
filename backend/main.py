@@ -395,7 +395,7 @@ async def polling_loop():
                     await manager.send_personal_message(f"POLLING_START:{feed.id}", feed.user_id)
                     try:
                         # Kör nätverksanropet i en egen tråd för att inte blockera event-loopen
-                        items = await asyncio.to_thread(rss_parser.fetch_feed_items, feed.url)
+                        items = await asyncio.to_thread(rss_parser.fetch_feed_items, feed.url, feed.title)
                     except Exception as e:
                         print(f"Failed to fetch feed {feed.id}: {e}", flush=True)
                         items = []

@@ -2,10 +2,12 @@ import feedparser
 import time
 import calendar
 import requests
+import html
 
-def fetch_feed_items(url: str):
+def fetch_feed_items(url: str, title: str = None):
     """Fetches and parses an RSS feed, returning a list of items."""
-    print(f"Loading and parsing RSS feed: {url}")
+    display_name = title.strip() if (title and str(title).strip()) else url
+    print(f"Loading and parsing RSS feed: {display_name}")
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -14,7 +16,7 @@ def fetch_feed_items(url: str):
         parsed = feedparser.parse(res.content)
         items = []
         for entry in parsed.entries:
-            categories = [tag.get('term') for tag in entry.get('tags', []) if tag.get('term')]
+            categories = [html.unescape(tag.get('term', '')).strip() for tag in entry.get('tags', []) if tag.get('term')]
             
             published_ts = 0
             if hasattr(entry, 'published_parsed') and entry.published_parsed:
@@ -49,11 +51,11 @@ def fetch_feed_items(url: str):
                 clean_summary = soup.get_text(separator=" ", strip=True)
                 
             items.append({
-                "title": entry.get("title", "No Title"),
+                "title": html.unescape(entry.get("title", "No Title")),
                 "link": entry.get("link", ""),
                 "published": entry.get("published", ""),
                 "published_ts": published_ts,
-                "summary": clean_summary,
+                "summary": html.unescape(clean_summary),
                 "image_url": image_url,
                 "categories": categories,
             })

@@ -1462,3 +1462,13 @@ input:checked + .toggle-slider:before {
   opacity: 0.92;
 }
 
+@keyframes skeletonPulse {
+  0% { opacity: 0.35; }
+  50% { opacity: 0.85; }
+  100% { opacity: 0.35; }
+}
+
+.skeleton-shimmer {
+  animation: skeletonPulse 1.8s ease-in-out infinite;
+}
+
