@@ -1,12 +1,13 @@
 import os
 import json
 import re
+import time
 import requests
 from typing import Optional, Dict, Any, List
 
 LM_STUDIO_URL = os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1/chat/completions")
 LM_STUDIO_MODEL = os.environ.get("LM_STUDIO_MODEL", "")
-LM_STUDIO_TIMEOUT = int(os.environ.get("LM_STUDIO_TIMEOUT", "25"))
+LM_STUDIO_TIMEOUT = int(os.environ.get("LM_STUDIO_TIMEOUT", "120"))
 LM_STUDIO_MAX_TOKENS = int(os.environ.get("LM_STUDIO_MAX_TOKENS", "8192"))
 
 DEFAULT_SYSTEM_PROMPT = """Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
@@ -304,19 +305,23 @@ def analyze_article(
     
     headers = {"Content-Type": "application/json"}
     
+    print(f"[AI Service] Skickar analys till LM Studio ({model}) för '{title[:45]}'... (timeout {LM_STUDIO_TIMEOUT}s)", flush=True)
+    t0 = time.time()
     try:
         response = requests.post(LM_STUDIO_URL, json=payload, headers=headers, timeout=LM_STUDIO_TIMEOUT)
+        dur = round(time.time() - t0, 2)
         if response.status_code != 200:
-            print(f"[AI Service] LM Studio HTTP {response.status_code}: {response.text[:200]}", flush=True)
+            print(f"[AI Service] LM Studio HTTP {response.status_code} efter {dur}s: {response.text[:200]}", flush=True)
             return None
             
         data = response.json()
         choices = data.get("choices", [])
         if not choices:
-            print(f"[AI Service] Inga val returnerades från LM Studio: {data}", flush=True)
+            print(f"[AI Service] Inga val returnerades från LM Studio efter {dur}s: {data}", flush=True)
             return None
             
         raw_message = choices[0].get("message", {}).get("content", "")
+        print(f"[AI Service] Svar mottaget från LM Studio på {dur}s ({len(raw_message)} tecken)", flush=True)
         parsed = extract_json_from_text(raw_message)
         
         if not parsed:
@@ -352,12 +357,23 @@ def analyze_article(
             "ai_summary": ai_summary,
             "tags": tags
         }
+    except requests.exceptions.ConnectTimeout:
+        dur = round(time.time() - t0, 2)
+        print(f"[AI Service] Kunde inte upprätta anslutning till LM Studio på {LM_STUDIO_URL} efter {dur}s (ConnectTimeout)", flush=True)
+        return None
+    except requests.exceptions.ReadTimeout:
+        dur = round(time.time() - t0, 2)
+        print(f"[AI Service] Timeout vid generering: LM Studio svarade inte inom {dur}s (ReadTimeout, gräns {LM_STUDIO_TIMEOUT}s)", flush=True)
+        return None
     except requests.exceptions.ConnectionError:
-        print(f"[AI Service] LM Studio är inte nåbart på {LM_STUDIO_URL} (offline)", flush=True)
+        dur = round(time.time() - t0, 2)
+        print(f"[AI Service] LM Studio är inte nåbart på {LM_STUDIO_URL} (offline efter {dur}s)", flush=True)
         return None
     except requests.exceptions.Timeout:
-        print(f"[AI Service] Timeout mot LM Studio efter {LM_STUDIO_TIMEOUT}s", flush=True)
+        dur = round(time.time() - t0, 2)
+        print(f"[AI Service] Timeout mot LM Studio efter {dur}s (gräns {LM_STUDIO_TIMEOUT}s)", flush=True)
         return None
     except Exception as e:
-        print(f"[AI Service] Oväntat fel vid analys: {e}", flush=True)
+        dur = round(time.time() - t0, 2)
+        print(f"[AI Service] Oväntat fel vid analys efter {dur}s: {e}", flush=True)
         return None
