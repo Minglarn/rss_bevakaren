@@ -82,7 +82,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       });
       
       const feed = myFeedsRef.current.find(f => f.id === feedId);
-      const title = feed ? feed.title : `flöde ${feedId}`;
+      const title = feed ? feed.title : `feed ${feedId}`;
       toast(`Looking for new events in ${title}...`, {
         id: `poll-${feedId}`, // Ensures we don't spam if it starts again quickly
         duration: 6000,
@@ -217,7 +217,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               backgroundColor: location.pathname === '/prio' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
               fontWeight: location.pathname === '/prio' ? 600 : 400
             }}>
-              <Flame size={19} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Flöde"}
+              <Flame size={19} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Feed"}
               {!isCollapsed && prioUnreadCount > 0 && (
                 <span style={{ 
                   marginLeft: 'auto', 
@@ -334,7 +334,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               <span className="bottom-bar-badge">{myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}</span>
             )}
           </div>
-          <span>Hem</span>
+          <span>Home</span>
         </Link>
         {prioEnabled && (
           <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
@@ -355,19 +355,19 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           <div className="icon-wrapper">
             <Filter size={22} />
           </div>
-          <span>Flöden</span>
+          <span>Feeds</span>
         </button>
         <Link to="/manage" className={`bottom-bar-item ${location.pathname === '/manage' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <List size={22} />
           </div>
-          <span>Hantera</span>
+          <span>Manage</span>
         </Link>
         <Link to="/settings" className={`bottom-bar-item ${location.pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <SettingsIcon size={22} />
           </div>
-          <span>Inställningar</span>
+          <span>Settings</span>
         </Link>
         <button 
           className="bottom-bar-item" 
@@ -377,7 +377,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           <div className="icon-wrapper">
             <LogOut size={22} />
           </div>
-          <span>Logga ut</span>
+          <span>Logout</span>
         </button>
       </div>
 
@@ -385,7 +385,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       <div className={`mobile-feeds-sheet-overlay ${isMobileSheetOpen ? 'open' : ''}`} onClick={() => setIsMobileSheetOpen(false)}></div>
       <div className={`mobile-feeds-sheet ${isMobileSheetOpen ? 'open' : ''}`}>
         <div className="sheet-handle"></div>
-        <div className="sheet-title">Mina flöden</div>
+        <div className="sheet-title">My Feeds</div>
         <div className="sheet-content">
           <Link 
             to="/" 
@@ -397,7 +397,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             }}
             onClick={() => setIsMobileSheetOpen(false)}
           >
-            <Home size={20} /> Alla flöden
+            <Home size={20} /> All Feeds
           </Link>
           {prioEnabled && (
             <Link 
@@ -410,7 +410,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               }}
               onClick={() => setIsMobileSheetOpen(false)}
             >
-              <Flame size={20} style={{ color: '#f97316' }} /> Prio Flöde
+              <Flame size={20} style={{ color: '#f97316' }} /> Prio Feed
               {prioUnreadCount > 0 && (
                 <span style={{ backgroundColor: '#f97316', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold', marginLeft: 'auto' }}>
                   {prioUnreadCount}

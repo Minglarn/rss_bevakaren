@@ -7,7 +7,7 @@ import ShareModal from './ShareModal';
 import PrioOnboardingModal from './PrioOnboardingModal';
 import PrioritizeModal from './PrioritizeModal';
 
-const DEFAULT_CATEGORIES = ['Alla', 'Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
+const DEFAULT_CATEGORIES = ['All', 'Technology', 'Politics', 'Emergency', 'Local', 'Economy', 'Entertainment', 'Other'];
 
 const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
@@ -22,23 +22,24 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const feedId = searchParams.get('feedId');
   const articleId = searchParams.get('articleId');
   
-  // Avgör om vi är i Prio-flödet baserat på prop, URL-path (/prio) eller searchParam
   const isPrioMode = isPrioModeProp || location.pathname === '/prio' || searchParams.get('prio') === 'true';
   const [feedMode, setFeedMode] = useState(() => localStorage.getItem('rss_feed_mode') || 'ai');
   const shouldShowAi = isPrioMode || feedMode === 'ai';
 
   useEffect(() => {
-    const handleModeChanged = () => {
+    const handleFeedModeChange = () => {
       setFeedMode(localStorage.getItem('rss_feed_mode') || 'ai');
     };
-    window.addEventListener('feedModeChanged', handleModeChanged);
-    return () => window.removeEventListener('feedModeChanged', handleModeChanged);
+    window.addEventListener('feedModeChanged', handleFeedModeChange);
+    return () => window.removeEventListener('feedModeChanged', handleFeedModeChange);
   }, []);
 
-  const selectedCategory = searchParams.get('category') || 'Alla';
+  const selectedCategory = searchParams.get('category') || 'All';
   const selectedTag = searchParams.get('tag') || '';
   const [analyzingIds, setAnalyzingIds] = useState(new Set());
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  const [isPrioOnboardingOpen, setIsPrioOnboardingOpen] = useState(false);
+  const [prioritizeArticle, setPrioritizeArticle] = useState(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -60,14 +61,14 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         if (res.data) {
           if (Array.isArray(res.data.categories) && res.data.categories.length > 0) {
             const catNames = res.data.categories.map(c => typeof c === 'object' ? c.name : c).filter(Boolean);
-            setCategories(['Alla', ...catNames]);
+            setCategories(['All', ...catNames]);
           }
           if (prioEnabled && isPrioMode && res.data.onboarding_completed === false) {
             setShowOnboarding(true);
           }
         }
       } catch (err) {
-        // Behåll standard om anropet misslyckas
+        // Keep default if call fails
       }
     };
     fetchCategories();
@@ -131,7 +132,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     });
   };
 
-  // Håller alltid uppdaterade referenser så bakgrunds-anrop (WebSocket etc) aldrig fångar gamla filter
+  // Always keep updated references so background calls (WebSocket etc) never capture old filters
   const paramsRef = useRef({});
   paramsRef.current = {
     isPrioMode,
@@ -171,7 +172,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       } else if (fMode === 'ai') {
         queryParts.push('ai_mode=true');
       }
-      if (sCat && sCat !== 'Alla') queryParts.push(`category=${encodeURIComponent(sCat)}`);
+      if (sCat && sCat !== 'All') queryParts.push(`category=${encodeURIComponent(sCat)}`);
       if (sTag && sTag.trim()) queryParts.push(`tag=${encodeURIComponent(sTag.trim())}`);
 
       const url = '/dashboard-feeds' + (queryParts.length > 0 ? '?' + queryParts.join('&') : '');
@@ -183,7 +184,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           setExpandedItems({ 0: true });
         }
       } else {
-        // Uppdatera utan att ändra scroll eller skriva över med fel flöde
+        // Update without changing scroll or overwriting with wrong feed
         setDisplayedFeeds(prev => res.data.slice(0, Math.max(prev.length, itemsPerPage)));
       }
       if (fId) {
@@ -234,7 +235,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           }
           console.log("New articles received via WebSocket! Updating UI...");
         } else if (event.data.startsWith("AI_UPDATED:")) {
-          // Uppdatera dashboard tyst i bakgrunden när AI-berikning sker
+          // Update dashboard silently in background when AI enrichment happens
           fetchFeeds(true);
         } else if (event.data.startsWith("POLLING_START:")) {
           const feedId = parseInt(event.data.split(":")[1]);
@@ -307,13 +308,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   }, [feedId, articleId, showRead, debouncedSearch, isPrioMode, selectedCategory, selectedTag]);
 
   const handleSelectCategory = (cat) => {
-    const newParams = new URLSearchParams(searchParams);
-    if (cat === 'Alla' || selectedCategory === cat) {
-      newParams.delete('category');
+    const nextParams = new URLSearchParams(searchParams);
+    if (cat === 'All' || cat === 'Alla' || selectedCategory === cat) {
+      nextParams.delete('category');
     } else {
-      newParams.set('category', cat);
+      nextParams.set('category', cat);
     }
-    setSearchParams(newParams);
+    setSearchParams(nextParams);
   };
 
   const handleSelectTag = (tag) => {
@@ -665,7 +666,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   border: '1px solid var(--border-color)',
                   flexShrink: 0
                 }} 
-                title="Visa alla flöden"
+                title="Show all feeds"
               >
                 <ArrowLeft size={18} />
               </Link>
@@ -682,8 +683,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             }}>
               {isPrioMode && <Flame size={20} style={{ color: '#f97316', flexShrink: 0 }} />}
               {isPrioMode 
-                ? 'PRIO FLÖDE' 
-                : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'DAGENS NYHETER')}
+                ? 'PRIO FEED' 
+                : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : "TODAY'S NEWS")}
             </h1>
             {isPrioMode && (
               <span className="desktop-only" style={{ 
@@ -692,11 +693,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                 color: '#f97316', 
                 padding: '0.2rem 0.6rem', 
                 borderRadius: '12px', 
-                fontWeight: 600,
+                fontWeight: 600, 
                 border: '1px solid rgba(249, 115, 22, 0.3)',
                 whiteSpace: 'nowrap'
               }}>
-                Endast högprioriterade händelser
+                Only high priority events
               </span>
             )}
           </div>
@@ -712,19 +713,19 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   gap: '0.35rem',
                   padding: '0.35rem 0.65rem',
                   borderRadius: '16px',
-                  border: selectedCategory !== 'Alla' ? '1px solid #f97316' : '1px solid var(--border-color)',
-                  backgroundColor: selectedCategory !== 'Alla' ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-card)',
-                  color: selectedCategory !== 'Alla' ? '#f97316' : 'var(--text-main)',
+                  border: (selectedCategory !== 'All' && selectedCategory !== 'Alla') ? '1px solid #f97316' : '1px solid var(--border-color)',
+                  backgroundColor: (selectedCategory !== 'All' && selectedCategory !== 'Alla') ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-card)',
+                  color: (selectedCategory !== 'All' && selectedCategory !== 'Alla') ? '#f97316' : 'var(--text-main)',
                   fontSize: '0.8rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'all 0.15s',
                   whiteSpace: 'nowrap'
                 }}
-                title="Välj kategori"
+                title="Select category"
               >
-                <Filter size={13} style={{ color: selectedCategory !== 'Alla' ? '#f97316' : 'var(--text-muted)' }} />
-                <span>{selectedCategory === 'Alla' ? 'Kategorier' : selectedCategory}</span>
+                <Filter size={13} style={{ color: (selectedCategory !== 'All' && selectedCategory !== 'Alla') ? '#f97316' : 'var(--text-muted)' }} />
+                <span>{(selectedCategory === 'All' || selectedCategory === 'Alla') ? 'Categories' : selectedCategory}</span>
                 <ChevronDown size={14} style={{ transform: isCategoryMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
               </button>
 
@@ -835,7 +836,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             }}
           >
             <ArrowLeft size={18} />
-            Visa alla händelser
+            View all events
           </Link>
         </div>
       )}
@@ -865,10 +866,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             <Sparkles size={32} />
           </div>
           <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.35rem', fontWeight: 700 }}>
-            Aktivera ditt AI-flöde
+            Enable your AI Feed
           </h2>
           <p style={{ margin: '0 0 1.5rem 0', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5 }}>
-            AI-flödet är för närvarande inaktiverat. När du aktiverar funktionen i inställningarna sammanfattas inkommande artiklar automatiskt och du kan prioritera händelser utifrån dina kategorier och sökord.
+            The AI feed is currently disabled. When you enable the feature in settings, incoming articles are automatically summarized and you can prioritize events based on your categories and keywords.
           </p>
           <Link
             to="/settings"
@@ -885,7 +886,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               fontSize: '0.9rem'
             }}
           >
-            Aktivera i Inställningar
+            Enable in Settings
           </Link>
         </div>
       ) : loading && allFeeds.length === 0 ? (
@@ -919,7 +920,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     }
                 }
                 if (showDivider) {
-                    let text = currentD.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
+                    let text = currentD.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
                     // Capitalize first letter
                     dividerText = text.charAt(0).toUpperCase() + text.slice(1);
                 }
@@ -990,14 +991,14 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     {formatDateLabel(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
                   </div>
                   
-                  {/* Actions: Låst/Läst-knappar */}
+                  {/* Actions: Lock/Read buttons */}
                   <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
-                    {/* Läst-knapp */}
+                    {/* Read button */}
                     {isArticleRead(item.id, item.is_read) ? (
                       <button 
                         onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                        title="Markera som oläst"
+                        title="Mark as unread"
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
@@ -1007,7 +1008,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       <button 
                         onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                        title="Markera som läst"
+                        title="Mark as read"
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
@@ -1015,12 +1016,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       </button>
                     )}
 
-                    {/* Lås-knapp */}
+                    {/* Lock button */}
                     {isArticleLocked(item.id, item.is_locked) ? (
                       <button 
                         onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                        title="Lås upp händelse"
+                        title="Unlock event"
                       >
                         <Lock size={16} />
                       </button>
@@ -1028,7 +1029,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       <button 
                         onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: '1px solid transparent', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                        title="Lås händelse"
+                        title="Lock event"
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
@@ -1047,7 +1048,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
                         <Rss size={14} /> {item.source_title}
                         {item.published && (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.35rem' }} title="Ursprunglig publiceringstid">
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.35rem' }} title="Original publication time">
                             • {formatDateLabel(item.published)} {formatTime(item.published)}
                           </span>
                         )}
@@ -1067,7 +1068,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           fontSize: '0.75rem',
                           fontWeight: 700,
                           letterSpacing: '0.5px'
-                        }} title={item.prio_reason || "Högprioriterad av AI"}>
+                        }} title={item.prio_reason || "High priority by AI"}>
                           <Flame size={13} /> PRIO {item.prio_score ? `${item.prio_score}p` : ''}
                         </span>
                       )}
@@ -1087,7 +1088,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             cursor: 'pointer',
                             transition: 'all 0.15s'
                           }}
-                          title={`Filtrera på kategori: ${item.category}`}
+                          title={`Filter by category: ${item.category}`}
                         >
                           {item.category}
                         </button>
@@ -1109,7 +1110,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       ))}
                     </div>
 
-                    {/* Verktygsknappar: Prioritera, Analysera och Dela */}
+                    {/* Action buttons: Prioritize, Analyze and Share */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       {prioEnabled && (
                         <button
@@ -1118,7 +1119,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             e.stopPropagation();
                             setPrioritizeItem(item);
                           }}
-                          title={item.priority === 'high' ? "Prioriterad (klicka för att ändra/bevaka ämne)" : "Prioritera händelse / bevaka ämne"}
+                          title={item.priority === 'high' ? "Prioritized (click to edit/monitor topic)" : "Prioritize event / monitor topic"}
                           style={{
                             color: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : undefined,
                             backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? 'rgba(249, 115, 22, 0.12)' : undefined
@@ -1132,7 +1133,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         <button
                           className="feed-card-share-btn"
                           onClick={(e) => triggerAnalysis(e, item.id)}
-                          title={item.ai_processed ? "Gör om AI-analys" : "Kör AI-analys nu"}
+                          title={item.ai_processed ? "Rerun AI analysis" : "Run AI analysis now"}
                           style={{ color: analyzingIds.has(item.id) ? '#f97316' : undefined }}
                         >
                           {analyzingIds.has(item.id) ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
@@ -1145,7 +1146,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           e.stopPropagation();
                           setShareItem(item);
                         }}
-                        title="Dela händelse"
+                        title="Share event"
                       >
                         <Share2 size={16} />
                       </button>
@@ -1177,7 +1178,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   {shouldShowAi && item.ai_summary && (
                     <div style={{ marginBottom: '1rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                        <Sparkles size={13} /> AI-sammanfattning
+                        <Sparkles size={13} /> AI Summary
                       </div>
                       <div style={{ 
                         color: 'var(--text-main)', 
@@ -1190,7 +1191,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         <>
                           <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.5rem 0 0.4rem 0', opacity: 0.6 }}></div>
                           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: '1.4' }}>
-                            Motivering: {item.prio_reason}
+                            Reason: {item.prio_reason}
                           </div>
                         </>
                       )}
@@ -1236,7 +1237,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                               cursor: 'pointer',
                               transition: 'all 0.15s'
                             }}
-                            title={`Filtrera på tagg: #${tag}`}
+                            title={`Filter by tag: #${tag}`}
                           >
                             <Tag size={11} /> {tag}
                           </button>
@@ -1254,14 +1255,14 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     >
                       {item.ai_summary && item.summary && (
                         <div style={{ marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                          <strong style={{ display: 'block', color: 'var(--text-main)', marginBottom: '0.25rem' }}>RSS Ingress:</strong>
+                          <strong style={{ display: 'block', color: 'var(--text-main)', marginBottom: '0.25rem' }}>RSS Lead:</strong>
                           {item.summary}
                         </div>
                       )}
 
                       {scrapingUrls[item.link] ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
-                          <Loader2 className="spin" size={16} /> Hämtar hela artikeln...
+                          <Loader2 className="spin" size={16} /> Fetching full article...
                         </div>
                       ) : scrapedContents[item.link] && scrapedContents[item.link] !== item.summary ? (
                         <div style={{ whiteSpace: 'pre-line' }}>
@@ -1269,13 +1270,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         </div>
                       ) : (
                         <div style={{ color: 'var(--text-muted)' }}>
-                          Ingen ytterligare text kunde hämtas automatiskt. Läs hela på originalkällan.
+                          No further text could be fetched automatically. Read the full article on the original source.
                         </div>
                       )}
                       
                       <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
-                          <ExternalLink size={16} /> Läs på originalkällan
+                          <ExternalLink size={16} /> Read at original source
                         </a>
                         <button
                           onClick={(e) => {
@@ -1296,7 +1297,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             cursor: 'pointer'
                           }}
                         >
-                          <Share2 size={14} style={{ color: 'var(--primary)' }} /> Dela händelse
+                          <Share2 size={14} style={{ color: 'var(--primary)' }} /> Share event
                         </button>
                       </div>
                     </motion.div>

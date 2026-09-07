@@ -23,16 +23,16 @@ const ShareModal = ({ item, onClose }) => {
     return text.replace(/<[^>]+>/g, '').trim();
   };
 
-  const title = item.title || 'Händelse';
+  const title = item.title || 'Event';
   const summaryText = getCleanSummary(item.summary);
   const url = item.link || '';
   const canNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
 
   const getFormattedMessage = () => {
     if (summaryText) {
-      return `${title}\n\n${summaryText}\n\nLänk: ${url}`;
+      return `${title}\n\n${summaryText}\n\nLink: ${url}`;
     }
-    return `${title}\n\nLänk: ${url}`;
+    return `${title}\n\nLink: ${url}`;
   };
 
   const handleNativeShare = async () => {
@@ -45,7 +45,7 @@ const ShareModal = ({ item, onClose }) => {
       onClose();
     } catch (err) {
       if (err.name !== 'AbortError') {
-        console.error('Kunde inte dela via systemdelning:', err);
+        console.error('Could not share via native share:', err);
       }
     }
   };
@@ -68,7 +68,7 @@ const ShareModal = ({ item, onClose }) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      toast.success('Kopierat till urklipp!', {
+      toast.success('Copied to clipboard!', {
         duration: 2500,
         style: {
           borderRadius: '8px',
@@ -82,8 +82,8 @@ const ShareModal = ({ item, onClose }) => {
         onClose();
       }, 700);
     } catch (err) {
-      console.error('Kunde inte kopiera till urklipp:', err);
-      toast.error('Kunde inte kopiera');
+      console.error('Could not copy to clipboard:', err);
+      toast.error('Could not copy');
     }
   };
 
@@ -148,7 +148,7 @@ const ShareModal = ({ item, onClose }) => {
               }}>
                 <Share2 size={18} />
               </div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Dela händelse</h3>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Share Event</h3>
             </div>
             <button
               onClick={onClose}
@@ -163,7 +163,7 @@ const ShareModal = ({ item, onClose }) => {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
-              title="Stäng"
+              title="Close"
             >
               <X size={20} />
             </button>
@@ -177,7 +177,7 @@ const ShareModal = ({ item, onClose }) => {
             fontSize: '0.9rem'
           }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-              {item.source_title || 'Källa'}
+              {item.source_title || 'Source'}
             </div>
             <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.35rem', lineHeight: '1.4' }}>
               {item.title}
@@ -233,8 +233,8 @@ const ShareModal = ({ item, onClose }) => {
               >
                 <Share2 size={18} />
                 <div style={{ flex: 1 }}>
-                  <div>Dela via systemet</div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 400, opacity: 0.9 }}>Öppnar telefonens vanliga delningsmeny</div>
+                  <div>Share via device</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 400, opacity: 0.9 }}>Opens the device native share menu</div>
                 </div>
               </button>
             )}
@@ -309,8 +309,8 @@ const ShareModal = ({ item, onClose }) => {
                 <Copy size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
               )}
               <div style={{ flex: 1 }}>
-                <div>{copied ? 'Kopierat!' : 'Kopiera text och länk'}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>Placerar rubrik, text och länk i urklipp</div>
+                <div>{copied ? 'Copied!' : 'Copy text and link'}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>Copies title, summary and link to clipboard</div>
               </div>
             </button>
           </div>

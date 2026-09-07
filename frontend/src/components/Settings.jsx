@@ -82,7 +82,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
   const getWeightBadge = (weight) => {
     if (weight >= 8) {
       return {
-        label: 'Alltid PRIO (75-100p)',
+        label: 'Always PRIO (75-100p)',
         color: '#16a34a',
         bg: 'rgba(22, 163, 74, 0.12)',
         border: '1px solid rgba(22, 163, 74, 0.3)'
@@ -90,7 +90,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
     }
     if (weight >= 5) {
       return {
-        label: 'Normalt flöde (50-70p)',
+        label: 'Standard feed (50-70p)',
         color: '#0284c7',
         bg: 'rgba(2, 132, 199, 0.12)',
         border: '1px solid rgba(2, 132, 199, 0.25)'
@@ -98,14 +98,14 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
     }
     if (weight >= 1) {
       return {
-        label: 'Låg prio (10-40p)',
+        label: 'Low prio (10-40p)',
         color: 'var(--text-muted)',
         bg: 'rgba(100, 116, 139, 0.1)',
         border: '1px solid var(--border-color)'
       };
     }
     return {
-      label: 'Ignoreras (0p - Aldrig PRIO)',
+      label: 'Ignored (0p - Never PRIO)',
       color: '#ef4444',
       bg: 'rgba(239, 68, 68, 0.12)',
       border: '1px solid rgba(239, 68, 68, 0.3)'
@@ -143,13 +143,13 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
       const res = await api.get('/ai/config');
       setAiConfig(res.data);
       if (res.data.is_healthy) {
-        toast.success(`Ansluten till LM Studio! ${res.data.available_models?.length || 0} modeller tillgängliga.`);
+        toast.success(`Connected to LM Studio! ${res.data.available_models?.length || 0} models available.`);
       } else {
-        toast.error('Kunde inte nå LM Studio.');
+        toast.error('Could not reach LM Studio.');
       }
     } catch (err) {
       console.error("Could not fetch AI config", err);
-      toast.error('Fel vid anslutningstest.');
+      toast.error('Error testing connection.');
     } finally {
       setIsLoadingAi(false);
     }
@@ -317,12 +317,12 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
         setAiConfig(res.data);
       }
       toast.success(nextState 
-        ? 'Ditt personliga PRIO-flöde är nu aktiverat!' 
-        : 'PRIO-flödet är nu inaktiverat. Klassiskt RSS-läge är aktivt.');
+        ? 'Your personal PRIO feed is now enabled!' 
+        : 'The PRIO feed is now disabled. Classic RSS mode is active.');
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
-      console.error("Kunde inte ändra status för PRIO-flöde:", err);
-      toast.error('Kunde inte uppdatera PRIO-status');
+      console.error("Could not change PRIO status:", err);
+      toast.error('Could not update PRIO status');
     } finally {
       setIsSavingAi(false);
     }
@@ -349,11 +349,11 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
         setAiConfig(res.data);
       }
       setIsCustomPromptEdited(false);
-      toast.success('Dina personliga AI-inställningar har sparats!');
+      toast.success('Your personal AI settings have been saved!');
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
       console.error("Could not save AI config", err);
-      toast.error('Kunde inte spara AI-inställningarna');
+      toast.error('Could not save AI settings');
     } finally {
       setIsSavingAi(false);
     }
@@ -366,7 +366,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
     const currentCats = aiConfig.categories || [];
     const exists = currentCats.some(c => (typeof c === 'object' ? c.name : c).toLowerCase() === cat.toLowerCase());
     if (exists) {
-      toast.error('Kategorin finns redan');
+      toast.error('Category already exists');
       return;
     }
     const updatedCats = [
@@ -396,7 +396,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
   };
 
   const handleResetAiCategories = () => {
-    if (!window.confirm("Vill du återställa alla kategorier och vikter till standard?")) return;
+    if (!window.confirm("Do you want to reset all categories and weights to default?")) return;
     setAiConfig(prev => {
       const updated = { ...prev, categories: DEFAULT_CATS_WEIGHTS };
       if (!isCustomPromptEdited) {
@@ -404,7 +404,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
       }
       return updated;
     });
-    toast.success('Kategorier och standardvikter har återställts');
+    toast.success('Categories and default weights restored');
   };
 
   const handleRegeneratePromptFromRules = () => {
@@ -414,11 +414,11 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
       system_prompt: generated
     }));
     setIsCustomPromptEdited(false);
-    toast.success('Prompten genererades om från dina kategorier');
+    toast.success('Prompt regenerated from your categories');
   };
 
   const handleResetAiPrompt = () => {
-    if (!window.confirm("Vill du återställa analysprompten och kategorierna till standardinställningen?")) return;
+    if (!window.confirm("Do you want to reset the analysis prompt and categories to default?")) return;
     const generated = updatePromptFromRules(DEFAULT_CATS_WEIGHTS);
     setAiConfig(prev => ({
       ...prev,
@@ -426,7 +426,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
       system_prompt: generated
     }));
     setIsCustomPromptEdited(false);
-    toast.success('Prompten har återställts till standard');
+    toast.success('Prompt reset to default');
   };
 
   return (
@@ -476,7 +476,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
             gap: '0.4rem'
           }}
         >
-          <Sparkles size={16} style={{ color: activeTab === 'ai' ? '#f97316' : 'inherit' }} /> AI Analys & Prompt
+          <Sparkles size={16} style={{ color: activeTab === 'ai' ? '#f97316' : 'inherit' }} /> AI Analysis & Prompt
         </button>
       </div>
 
@@ -615,13 +615,13 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
 
             <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
               <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sparkles size={18} style={{ color: '#f97316' }} /> Visningsläge för nyhetsflödet (Dashboard)
+                <Sparkles size={18} style={{ color: '#f97316' }} /> Feed Display Mode (Dashboard)
               </h4>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ maxWidth: '500px' }}>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Välj flödestyp för Dashboard</div>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Choose Feed Mode for Dashboard</div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                    Välj om ditt ordinarie nyhetsflöde ska berikas med automatiska AI-sammanfattningar, taggar och kategorier eller visas i klassiskt avskalat RSS-läge.
+                    Choose whether your regular news feed should be enriched with automatic AI summaries, tags, and categories or displayed in classic minimalist RSS mode.
                   </div>
                 </div>
                 <select 
@@ -629,8 +629,8 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                   onChange={(e) => handleFeedModeChange(e.target.value)}
                   style={{ flex: 'none', width: 'auto', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: 600 }}
                 >
-                  <option value="ai">AI-flöde (Sammanfattningar & taggar)</option>
-                  <option value="classic">Klassisk RSS (Rå text utan AI)</option>
+                  <option value="ai">AI Feed (Summaries & Tags)</option>
+                  <option value="classic">Classic RSS (Raw text without AI)</option>
                 </select>
               </div>
             </div>
@@ -887,7 +887,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem', fontWeight: 700 }}>
-                      Personligt PRIO-flöde
+                      Personal PRIO Feed
                     </h3>
                     <span style={{
                       fontSize: '0.72rem',
@@ -898,13 +898,13 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                       color: aiConfig.prio_enabled ? '#f97316' : 'var(--text-muted)',
                       border: aiConfig.prio_enabled ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid var(--border-color)'
                     }}>
-                      {aiConfig.prio_enabled ? 'AKTIVERAT' : 'INAKTIVERAT'}
+                      {aiConfig.prio_enabled ? 'ENABLED' : 'DISABLED'}
                     </span>
                   </div>
                   <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
                     {aiConfig.prio_enabled 
-                      ? 'Ditt personliga PRIO-flöde är aktivt. Inkommande artiklar poängsätts och filtreras mot dina regler.'
-                      : 'När funktionen är avstängd fungerar appen som en ren, klassisk RSS-läsare utan AI-analyser och förbrukar inga bakgrundsresurser.'}
+                      ? 'Your personal PRIO feed is active. Incoming articles are scored and filtered against your rules.'
+                      : 'When disabled, the app works as a pure, classic RSS reader without AI analyses and consumes no background resources.'}
                   </p>
                 </div>
               </div>
@@ -933,7 +933,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                 gap: '0.75rem'
               }}>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Vill du börja prioritera och skräddarsy ditt nyhetsflöde med AI?
+                  Want to start prioritizing and tailoring your news feed with AI?
                 </div>
                 <button
                   type="button"
@@ -953,7 +953,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                     cursor: 'pointer'
                   }}
                 >
-                  <Flame size={16} /> Aktivera & skapa flöde
+                  <Flame size={16} /> Enable & create feed
                 </button>
               </div>
             )}
@@ -974,22 +974,22 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                   borderRadius: '6px', cursor: 'pointer', color: 'var(--text-main)', fontSize: '0.8rem'
                 }}
               >
-                <RefreshCw size={14} className={isLoadingAi ? 'spin' : ''} /> Kontrollera anslutning
+                <RefreshCw size={14} className={isLoadingAi ? 'spin' : ''} /> Check connection
               </button>
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
               <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Anslutningsstatus</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Connection Status</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: aiConfig.is_healthy ? '#16a34a' : '#ef4444' }}>
                   <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: aiConfig.is_healthy ? '#16a34a' : '#ef4444', display: 'inline-block' }}></span>
-                  {aiConfig.is_healthy ? 'Ansluten till LM Studio' : 'Offline / Ingen kontakt'}
+                  {aiConfig.is_healthy ? 'Connected to LM Studio' : 'Offline / No connection'}
                 </div>
               </div>
 
               <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                  AI-modell
+                  AI Model
                 </div>
                 {aiConfig.available_models && aiConfig.available_models.length > 0 ? (
                   <select
@@ -1007,20 +1007,20 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                       cursor: 'pointer'
                     }}
                   >
-                    <option value="">Standard i LM Studio (Automatisk)</option>
+                    <option value="">LM Studio Default (Automatic)</option>
                     {aiConfig.available_models.map(m => (
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </select>
                 ) : (
                   <div style={{ fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {aiConfig.lm_studio_model || 'Standard i LM Studio'}
+                    {aiConfig.lm_studio_model || 'LM Studio Default'}
                   </div>
                 )}
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
                   {aiConfig.available_models?.length 
-                    ? `${aiConfig.available_models.length} modeller tillgängliga i LM Studio` 
-                    : 'Inga modeller hittades'}
+                    ? `${aiConfig.available_models.length} models available in LM Studio` 
+                    : 'No models found'}
                 </div>
               </div>
 
@@ -1036,10 +1036,10 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
           {/* Prioriterade sökord & orter (Garanterad 100% PRIO) */}
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
             <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Hash size={20} style={{ color: '#f97316' }} /> Prioriterade sökord & orter (Alltid 100% PRIO)
+              <Hash size={20} style={{ color: '#f97316' }} /> Prioritized Keywords & Topics (Always 100% PRIO)
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-              Alla artiklar som innehåller något av dina bevakningsord (t.ex. din hemort som <strong>Trosa</strong> eller favoritämne som <strong>Tesla</strong>) tilldelas omedelbart <strong>100 poäng</strong> och visas alltid i PRIO-flödet oavsett kategori.
+              All articles containing any of your watch words (e.g. your hometown like <strong>Trosa</strong> or favorite topics like <strong>Tesla</strong>) will instantly receive <strong>100 points</strong> and always appear in the PRIO feed regardless of category.
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '1.25rem' }}>
@@ -1065,7 +1065,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                       type="button"
                       onClick={() => handleDeleteKeyword(kw.id)}
                       style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
-                      title={`Ta bort ${kw.keyword}`}
+                      title={`Remove ${kw.keyword}`}
                     >
                       <X size={14} />
                     </button>
@@ -1073,7 +1073,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                 ))
               ) : (
                 <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                  Inga prioriterade sökord tillagda ännu. Lägg till sökord nedan för garanterad 100% PRIO.
+                  No prioritized keywords added yet. Add keywords below for guaranteed 100% PRIO.
                 </div>
               )}
             </div>
@@ -1081,7 +1081,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
             <form onSubmit={handleAddKeyword} style={{ display: 'flex', gap: '0.5rem', maxWidth: '440px' }}>
               <input 
                 type="text" 
-                placeholder="Lägg till prioriterat ord (t.ex. Trosa, Tesla, AI)..." 
+                placeholder="Add priority keyword (e.g. Tesla, AI)..." 
                 value={newKeyword} 
                 onChange={(e) => setNewKeyword(e.target.value)}
                 style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.85rem' }}
@@ -1090,7 +1090,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                 type="submit"
                 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 1rem', backgroundColor: '#f97316', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
               >
-                <Plus size={15} /> Lägg till
+                <Plus size={15} /> Add
               </button>
             </form>
           </div>
@@ -1099,7 +1099,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sliders size={20} style={{ color: '#f97316' }} /> Kategori-reglage & Prioritering (0–10)
+                <Sliders size={20} style={{ color: '#f97316' }} /> Category Sliders & Priority (0–10)
               </h3>
               <button
                 type="button"
@@ -1113,12 +1113,12 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                   textDecoration: 'underline'
                 }}
               >
-                Återställ standardvikter
+                Reset default weights
               </button>
             </div>
             
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-              AI klassificerar varje nyhet till en av dessa kategorier. Kategori-värdet avgör sedan om artikeln hamnar i PRIO-flödet eller i det vanliga flödet:
+              AI classifies each article into one of these categories. The category weight determines whether the article appears in the PRIO feed or the regular feed:
             </p>
 
             <div style={{
@@ -1132,10 +1132,10 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
               marginBottom: '1.25rem',
               fontSize: '0.78rem'
             }}>
-              <div><strong style={{ color: '#16a34a' }}>8–10:</strong> Alltid PRIO (75–100p)</div>
-              <div><strong style={{ color: '#0284c7' }}>5–7:</strong> Normalt flöde (50–70p)</div>
-              <div><strong style={{ color: 'var(--text-muted)' }}>1–4:</strong> Låg prio (10–40p)</div>
-              <div><strong style={{ color: '#ef4444' }}>0:</strong> Ignoreras (Aldrig PRIO)</div>
+              <div><strong style={{ color: '#16a34a' }}>8–10:</strong> Always PRIO (75–100p)</div>
+              <div><strong style={{ color: '#0284c7' }}>5–7:</strong> Normal feed (50–70p)</div>
+              <div><strong style={{ color: 'var(--text-muted)' }}>1–4:</strong> Low prio (10–40p)</div>
+              <div><strong style={{ color: '#ef4444' }}>0:</strong> Ignored (Never PRIO)</div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.25rem' }}>
@@ -1215,7 +1215,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                           display: 'flex',
                           alignItems: 'center'
                         }}
-                        title={`Ta bort ${name}`}
+                        title={`Remove ${name}`}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -1228,7 +1228,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
             <form onSubmit={handleAddAiCategory} style={{ display: 'flex', gap: '0.5rem', maxWidth: '400px' }}>
               <input 
                 type="text" 
-                placeholder="Ny kategori (t.ex. Försvar, Forskning)..." 
+                placeholder="New category (e.g. Defense, Research)..." 
                 value={newAiCategory} 
                 onChange={(e) => setNewAiCategory(e.target.value)}
                 style={{ flex: 1, padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.85rem' }}
@@ -1237,7 +1237,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                 type="submit"
                 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.9rem', backgroundColor: 'var(--primary)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
               >
-                <Plus size={15} /> Lägg till kategori
+                <Plus size={15} /> Add category
               </button>
             </form>
           </div>
@@ -1249,10 +1249,10 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
             >
               <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
-                <FileText size={18} style={{ color: '#f97316' }} /> Avancerat: Fullständig AI Systemprompt
+                <FileText size={18} style={{ color: '#f97316' }} /> Advanced: Full AI System Prompt
               </h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                <span>{showAdvancedPrompt ? 'Dölj' : 'Visa & Redigera'}</span>
+                <span>{showAdvancedPrompt ? 'Hide' : 'Show & Edit'}</span>
                 {showAdvancedPrompt ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </div>
             </div>
@@ -1261,7 +1261,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
               <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
-                    Här ser du den råa prompten som skickas till LM Studio vid analys.
+                    Here you see the raw prompt sent to LM Studio during analysis.
                   </p>
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <button 
@@ -1269,14 +1269,14 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                       onClick={handleRegeneratePromptFromRules}
                       style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
                     >
-                      Generera om från mina regler
+                      Regenerate from my rules
                     </button>
                     <button 
                       type="button"
                       onClick={handleResetAiPrompt}
                       style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
                     >
-                      Återställ till standard
+                      Reset to default
                     </button>
                   </div>
                 </div>
@@ -1326,7 +1326,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
               }}
             >
               {isSavingAi ? <RefreshCw size={18} className="spin" /> : <Check size={18} />}
-              {isSavingAi ? 'Sparar...' : 'Spara mina AI-inställningar'}
+              {isSavingAi ? 'Saving...' : 'Save my AI settings'}
             </button>
           </div>
 

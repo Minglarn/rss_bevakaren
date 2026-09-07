@@ -34,7 +34,7 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
   const toggleCategory = (cat) => {
     if (selectedCategories.includes(cat)) {
       if (selectedCategories.length === 1) {
-        toast.error('Du måste ha minst en kategori vald');
+        toast.error('You must have at least one category selected');
         return;
       }
       setSelectedCategories(selectedCategories.filter(c => c !== cat));
@@ -48,7 +48,7 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
     const c = newCatInput.trim();
     if (!c) return;
     if (selectedCategories.some(cat => cat.toLowerCase() === c.toLowerCase())) {
-      toast.error('Kategorin finns redan');
+      toast.error('Category already exists');
       return;
     }
     setSelectedCategories([...selectedCategories, c]);
@@ -67,13 +67,13 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
       };
 
       await api.put('/ai/config', payload);
-      toast.success(isDefault ? 'Standardregler aktiverade för ditt Prio Flöde' : 'Dina personliga AI-prioriteringar har sparats!');
+      toast.success(isDefault ? 'Default rules activated for your Prio Feed' : 'Your personal AI priorities have been saved!');
       window.dispatchEvent(new Event('aiConfigUpdated'));
       if (onSaved) onSaved();
       onClose();
     } catch (err) {
-      console.error('Kunde inte spara onboarding-inställningar', err);
-      toast.error('Ett fel uppstod när inställningarna skulle sparas');
+      console.error('Could not save onboarding settings', err);
+      toast.error('An error occurred while saving settings');
     } finally {
       setIsSaving(false);
     }
@@ -136,10 +136,10 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
               </div>
               <div>
                 <h2 style={{ margin: 0, fontSize: '1.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  Personligt Prio Flöde
+                  Personal Prio Feed
                 </h2>
                 <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Träna AI:n att lyfta fram exakt de nyheter som är viktiga för dig.
+                  Train the AI to highlight the exact news that matter to you.
                 </p>
               </div>
             </div>
@@ -153,25 +153,25 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
                 padding: '0.35rem',
                 borderRadius: '6px'
               }}
-              title="Stäng och använd standard"
+              title="Close and use defaults"
             >
               <X size={20} />
             </button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Fråga 1: Vad är Hög Prio? */}
+            {/* Question 1: High Prio */}
             <div style={{ backgroundColor: 'var(--bg-app)', padding: '1.15rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                <ThumbsUp size={16} style={{ color: '#16a34a' }} /> Vad är HÖG prioritet för dig?
+                <ThumbsUp size={16} style={{ color: '#16a34a' }} /> What is HIGH priority for you?
               </label>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.6rem 0' }}>
-                Beskriv ämnen, företag, teknologier eller specifika geografiska platser som alltid ska lyftas fram.
+                Describe topics, companies, technologies, or specific locations that should always be prioritized.
               </p>
               <textarea
                 value={prioRules}
                 onChange={(e) => setPrioRules(e.target.value)}
-                placeholder="T.ex. Elbilar och Tesla, nyheter om Göteborg, IT-säkerhet, rymdfart och viktiga samhällsvarningar..."
+                placeholder="E.g. Electric vehicles and Tesla, local news, cybersecurity, spaceflight, critical alerts..."
                 rows={3}
                 style={{
                   width: '100%',
@@ -188,18 +188,18 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
               />
             </div>
 
-            {/* Fråga 2: Vad är Låg Prio? */}
+            {/* Question 2: Low Prio */}
             <div style={{ backgroundColor: 'var(--bg-app)', padding: '1.15rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                <ThumbsDown size={16} style={{ color: '#ef4444' }} /> Vad vill du NEDPRIORITERA (Låg prioritet)?
+                <ThumbsDown size={16} style={{ color: '#ef4444' }} /> What should be DEPRIORITIZED (Low priority)?
               </label>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.6rem 0' }}>
-                Ämnen som du inte vill bli störd av i ditt prioriterade flöde.
+                Topics you do not want cluttering your prioritized feed.
               </p>
               <textarea
                 value={excludeRules}
                 onChange={(e) => setExcludeRules(e.target.value)}
-                placeholder="T.ex. Kändisskvaller, melodifestivalen, vardagliga fotbollsresultat, horoskop eller recept..."
+                placeholder="E.g. Celebrity gossip, TV reality shows, routine sports scores, horoscopes..."
                 rows={2}
                 style={{
                   width: '100%',
@@ -216,13 +216,13 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
               />
             </div>
 
-            {/* Fråga 3: Kategorier */}
+            {/* Question 3: Categories */}
             <div style={{ backgroundColor: 'var(--bg-app)', padding: '1.15rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                <Tag size={16} style={{ color: 'var(--primary)' }} /> Välj dina intressekategorier
+                <Tag size={16} style={{ color: 'var(--primary)' }} /> Choose your categories of interest
               </label>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.6rem 0' }}>
-                Klicka på en kategori för att välja eller välja bort den som filter i Prio Flödet.
+                Click on a category to select or deselect it as a filter in the Prio Feed.
               </p>
               
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '0.75rem' }}>
@@ -255,7 +255,7 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <input
                   type="text"
-                  placeholder="Lägg till egen kategori..."
+                  placeholder="Add custom category..."
                   value={newCatInput}
                   onChange={(e) => setNewCatInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleAddCategory(e); }}
@@ -282,13 +282,13 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
                     cursor: 'pointer'
                   }}
                 >
-                  Lägg till
+                  Add
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Footer med åtgärder */}
+          {/* Footer with Actions */}
           <div 
             style={{
               display: 'flex',
@@ -315,7 +315,7 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
                 padding: '0.4rem 0.2rem'
               }}
             >
-              Använd standardregler
+              Use default rules
             </button>
 
             <button
@@ -341,11 +341,11 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
               {isSaving ? (
                 <>
                   <Loader2 size={16} className="spin" />
-                  <span>Sparar preferenser...</span>
+                  <span>Saving preferences...</span>
                 </>
               ) : (
                 <>
-                  <span>Aktivera Mitt Prio Flöde</span>
+                  <span>Activate My Prio Feed</span>
                   <ArrowRight size={16} />
                 </>
               )}

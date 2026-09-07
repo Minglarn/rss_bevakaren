@@ -94,8 +94,8 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
       }
       onClose();
     } catch (err) {
-      console.error('Kunde inte prioritera artikel:', err);
-      setError('Kunde inte uppdatera prioriteringen. Försök igen.');
+      console.error('Could not prioritize article:', err);
+      setError('Could not update priority. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -161,10 +161,10 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                  Prioritera i PRIO-flödet
+                  Prioritize in PRIO Feed
                 </h3>
                 <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Flytta händelsen till ditt prioriterade flöde
+                  Move event to your prioritized feed
                 </p>
               </div>
             </div>
@@ -188,7 +188,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
 
           {/* Body */}
           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Artikelns förhandsvisning */}
+            {/* Article preview */}
             <div style={{
               backgroundColor: 'var(--bg-app)',
               border: '1px solid var(--border-color)',
@@ -203,16 +203,16 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
               </div>
             </div>
 
-            {/* Ämne inmatning */}
+            {/* Topic input */}
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                Ämne eller sökord att bevaka framöver:
+                Topic or keyword to monitor in the future:
               </label>
               <input
                 type="text"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                placeholder="t.ex. Saab, Riksbanken, Försvarsmakten..."
+                placeholder="e.g. Saab, Central Bank, Defense..."
                 style={{
                   width: '100%',
                   padding: '0.65rem 0.85rem',
@@ -226,15 +226,15 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
                 }}
               />
               <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Fältet är automatiskt förifyllt med förslag från artikeln. Du kan redigera texten eller klicka på ett snabbval nedan.
+                Field is automatically pre-filled with suggestions from the article. You can edit the text or click a suggestion below.
               </p>
             </div>
 
-            {/* Förslag från artikel */}
+            {/* Suggestions from article */}
             {suggestedTags.length > 0 && (
               <div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
-                  Förslag från artikeln (klicka för att välja):
+                  Suggestions from article (click to select):
                 </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                   {suggestedTags.map((t, idx) => (
@@ -263,7 +263,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
               </div>
             )}
 
-            {/* Checkbox för bevakningsord */}
+            {/* Checkbox for keyword list */}
             {topic.trim().length > 0 && (
               <label style={{
                 display: 'flex',
@@ -286,7 +286,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
                 />
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <BellRing size={14} style={{ color: '#f97316' }} />
-                  Lägg även till som aktivt bevakningsord i söklistan
+                  Also add as an active keyword in your monitor list
                 </span>
               </label>
             )}
@@ -330,7 +330,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
                 fontWeight: 500
               }}
             >
-              Avbryt
+              Cancel
             </button>
 
             <button
@@ -348,7 +348,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
                 fontWeight: 500
               }}
             >
-              Endast denna artikel
+              Only this article
             </button>
 
             <button
@@ -375,7 +375,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
               ) : (
                 <Flame size={16} />
               )}
-              Prioritera & bevaka ämne
+              Prioritize & monitor topic
             </button>
           </div>
         </motion.div>
