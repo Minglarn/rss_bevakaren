@@ -567,10 +567,23 @@ async def ai_processing_loop():
                         if art.feed and art.feed.user_id:
                             await manager.send_personal_message(f"AI_UPDATED:{art.id}", art.feed.user_id)
                     else:
-                        # Om analysen misslyckades för just denna, sov en kort stund
-                        print(f"[AI] Analys gav inget svar för artikel {art.id} (LM Studio pausar)", flush=True)
-                        await asyncio.sleep(10)
-                        break
+                        # Kontrollera om LM Studio är offline eller om det var fel på just denna artikel
+                        is_online = await asyncio.to_thread(ai_service.check_lm_studio_health)
+                        if not is_online:
+                            print(f"[AI] LM Studio svarar inte (offline/pausar). Försöker igen senare för artikel {art.id}", flush=True)
+                            await asyncio.sleep(10)
+                            break
+                        else:
+                            # LM Studio är online men analysen kunde inte slutföras för denna artikel.
+                            # Sätt standardvärden så att inte en enskild artikel blockerar hela kön i en oändlig loop.
+                            print(f"[AI] Varning: Analys misslyckades för artikel {art.id}. Tilldelar standardvärden så kön inte blockeras.", flush=True)
+                            art.ai_processed = 1
+                            art.category = "Övrigt"
+                            art.priority = "medium"
+                            art.prio_score = 50
+                            art.prio_reason = "Standardprioritering (AI-analys kunde inte slutföras)"
+                            art.tags = "[]"
+                            db.commit()
                         
             finally:
                 db.close()

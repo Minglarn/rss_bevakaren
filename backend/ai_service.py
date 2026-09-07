@@ -4,10 +4,10 @@ import re
 import requests
 from typing import Optional, Dict, Any, List
 
-# Miljövariabler
 LM_STUDIO_URL = os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1/chat/completions")
 LM_STUDIO_MODEL = os.environ.get("LM_STUDIO_MODEL", "")
 LM_STUDIO_TIMEOUT = int(os.environ.get("LM_STUDIO_TIMEOUT", "25"))
+LM_STUDIO_MAX_TOKENS = int(os.environ.get("LM_STUDIO_MAX_TOKENS", "8192"))
 
 DEFAULT_SYSTEM_PROMPT = """Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {
@@ -150,8 +150,9 @@ def get_active_model() -> str:
     return "local-model"
 
 def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
-    """Robust extrahering av JSON ur modellens svar även om den omslutit med markdown."""
-    text = text.strip()
+    """Robust extrahering av JSON ur modellens svar även om den omslutit med markdown, resonemang eller blivit avhuggen."""
+    # Ta bort eventuella resonemangsblock (<think>...</think>) från t.ex. DeepSeek-R1 eller Qwen
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
     
     # 1. Direkt JSON-parsning
     try:
@@ -175,8 +176,59 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
         try:
             return json.loads(json_candidate)
         except Exception:
-            pass
+            # Försök städa bort eventuella trailing commas: {"a": 1,} -> {"a": 1}
+            fixed = re.sub(r",\s*([\]}])", r"\1", json_candidate)
+            try:
+                return json.loads(fixed)
+            except Exception:
+                pass
             
+    # 4. Fallback: Fältextrahering med regex om JSON har syntaxfel (t.ex. o-escapade citattecken eller avhugget svar)
+    result = {}
+    cat_m = re.search(r'"category"\s*:\s*"([^"]+)"', text)
+    if cat_m:
+        result["category"] = cat_m.group(1).strip()
+
+    prio_m = re.search(r'"priority"\s*:\s*"([^"]+)"', text)
+    if prio_m:
+        result["priority"] = prio_m.group(1).strip()
+
+    score_m = re.search(r'"prio_score"\s*:\s*(\d+)', text)
+    if score_m:
+        try:
+            result["prio_score"] = int(score_m.group(1))
+        except Exception:
+            pass
+
+    # Extrahera prio_reason (hanterar även ev citat inuti texten)
+    reason_m = re.search(r'"prio_reason"\s*:\s*"(.*?)(?:"\s*,\s*"\w+"\s*:|"$|"[\r\n])', text, re.DOTALL)
+    if reason_m:
+        result["prio_reason"] = reason_m.group(1).strip()
+    else:
+        reason_m = re.search(r'"prio_reason"\s*:\s*"([^"]+)"', text)
+        if reason_m:
+            result["prio_reason"] = reason_m.group(1).strip()
+
+    # Extrahera summary
+    summary_m = re.search(r'"summary"\s*:\s*"(.*?)(?:"\s*,\s*"\w+"\s*:|"$|"[\r\n])', text, re.DOTALL)
+    if summary_m:
+        result["summary"] = summary_m.group(1).strip()
+    else:
+        summary_m = re.search(r'"summary"\s*:\s*"([^"\r\n]+)', text)
+        if summary_m:
+            result["summary"] = summary_m.group(1).strip()
+
+    # Extrahera tags
+    tags_m = re.search(r'"tags"\s*:\s*\[(.*?)\]', text, re.DOTALL)
+    if tags_m:
+        tags_raw = tags_m.group(1)
+        result["tags"] = [t.strip().strip('"\'') for t in tags_raw.split(",") if t.strip().strip('"\'')]
+    else:
+        result["tags"] = []
+
+    if "category" in result or "priority" in result or "prio_score" in result:
+        return result
+
     return None
 
 def build_user_prompt(categories: Optional[List[str]] = None, prio_rules: Optional[str] = None, exclude_rules: Optional[str] = None, prio_threshold: int = 75) -> str:
@@ -243,7 +295,7 @@ def analyze_article(
     payload = {
         "model": model,
         "temperature": 0.1,
-        "max_tokens": 400,
+        "max_tokens": LM_STUDIO_MAX_TOKENS,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -268,7 +320,7 @@ def analyze_article(
         parsed = extract_json_from_text(raw_message)
         
         if not parsed:
-            print(f"[AI Service] Kunde inte parsa JSON från svaret: {raw_message[:200]}", flush=True)
+            print(f"[AI Service] Kunde inte parsa JSON från svaret ({len(raw_message)} tecken): {raw_message[:500]}", flush=True)
             return None
             
         # Normalisera och validera fälten
