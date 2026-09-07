@@ -254,11 +254,11 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
 
           {/* Feeds List */}
           {!isCollapsed && myFeeds.length > 0 && (
-            <div style={{ marginTop: '2rem' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', paddingLeft: '1rem' }}>
+            <div style={{ marginTop: '1.25rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem', paddingLeft: '0.75rem' }}>
                 My Feeds
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                 {myFeeds.map(feed => {
                   const isActive = new URLSearchParams(location.search).get('feedId') === String(feed.id);
                   return (
@@ -266,27 +266,27 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
                     to={`/?feedId=${feed.id}`} 
                     key={feed.id} 
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem',
+                      display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0.75rem',
                       color: isActive ? 'var(--primary)' : 'var(--text-main)', 
-                      fontSize: '0.9rem',
+                      fontSize: '0.875rem',
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       textDecoration: 'none',
                       backgroundColor: isActive ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       fontWeight: isActive ? 600 : 400
                     }}
                   >
-                    <Hash size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} /> 
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Hash size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} /> 
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       {feed.title}
-                      {pollingFeeds.has(feed.id) && <RefreshCw size={12} className="spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />}
+                      {pollingFeeds.has(feed.id) && <RefreshCw size={11} className="spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />}
                     </span>
                     {!isCollapsed && feed.unread_count > 0 && (
                       <span style={{ 
                         backgroundColor: '#ef4444', 
                         color: 'white', 
                         fontSize: '0.65rem', 
-                        padding: '0.1rem 0.4rem', 
+                        padding: '0.05rem 0.35rem', 
                         borderRadius: '10px', 
                         fontWeight: 'bold',
                         marginLeft: 'auto'
