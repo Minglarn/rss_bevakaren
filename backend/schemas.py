@@ -111,3 +111,7 @@ class AIConfigResponse(BaseModel):
     lm_studio_url: str = ""
     lm_studio_model: str = ""
     is_healthy: bool = False
+
+class ArticlePrioritizeRequest(BaseModel):
+    topic: Optional[str] = None
+    add_as_keyword: bool = True

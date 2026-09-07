@@ -522,6 +522,21 @@ async def ai_processing_loop():
                         art.prio_reason = analysis.get("prio_reason", "")
                         art.ai_summary = analysis.get("ai_summary", "")
                         art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
+                        
+                        # Kontrollera användarens bevakningsord och förstärk prioritet vid träff
+                        if user_id:
+                            user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == user_id).all()
+                            text_to_check = f"{art.title or ''} {art.summary or ''}".lower()
+                            matched_kw = [kw.keyword for kw in user_keywords if kw.keyword and kw.keyword.lower() in text_to_check]
+                            if matched_kw:
+                                art.priority = "high"
+                                art.prio_score = max(art.prio_score, 90)
+                                kw_str = ", ".join(matched_kw)
+                                if art.prio_reason:
+                                    art.prio_reason += f" (Träff på bevakningsord: {kw_str})"
+                                else:
+                                    art.prio_reason = f"Träff på bevakningsord: {kw_str}"
+
                         db.commit()
                         print(f"[AI] Klar artikel {art.id} -> {art.category} | {art.priority.upper()} ({art.prio_score}p)", flush=True)
                         
@@ -842,6 +857,88 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
     db.commit()
     return {"status": "ok", "article_id": art.id, "analysis": analysis}
+
+@app.post("/articles/{article_id}/prioritize")
+async def prioritize_article(
+    article_id: int,
+    req: schemas.ArticlePrioritizeRequest,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    art = db.query(models.Article).join(models.Feed).filter(
+        models.Article.id == article_id,
+        models.Feed.user_id == current_user.id
+    ).first()
+    if not art:
+        raise HTTPException(status_code=404, detail="Artikeln hittades inte.")
+
+    topic_clean = req.topic.strip() if req.topic else ""
+
+    # Uppdatera artikelprioritering
+    art.priority = "high"
+    art.prio_score = 100
+    art.ai_processed = 1
+    if topic_clean:
+        art.prio_reason = f"Prioriterad av användaren: {topic_clean}"
+    else:
+        art.prio_reason = "Manuellt prioriterad av användaren"
+
+    # Om ett ämne angavs, uppdatera användarens AI-inställningar (prio_rules) och anpassat system prompt
+    if topic_clean:
+        user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+        if not user_ai:
+            user_ai = models.UserAISettings(
+                user_id=current_user.id,
+                prio_rules=f"- {topic_clean}",
+                prio_threshold=75
+            )
+            db.add(user_ai)
+        else:
+            existing_rules = user_ai.prio_rules.strip() if user_ai.prio_rules else ""
+            if topic_clean.lower() not in existing_rules.lower():
+                if existing_rules:
+                    user_ai.prio_rules = f"{existing_rules}\n- {topic_clean}"
+                else:
+                    user_ai.prio_rules = f"- {topic_clean}"
+
+        parsed_cats = ["Teknik", "Ekonomi", "Politik", "Säkerhet", "Vetenskap", "Kultur", "Sport", "Övrigt"]
+        if user_ai.categories:
+            try:
+                parsed_cats = json.loads(user_ai.categories)
+            except Exception:
+                pass
+
+        user_ai.custom_system_prompt = ai_service.build_user_prompt(
+            categories=parsed_cats,
+            prio_rules=user_ai.prio_rules,
+            exclude_rules=user_ai.exclude_rules or "",
+            prio_threshold=user_ai.prio_threshold or 75
+        )
+
+        # Lägg även till som sökbart bevakningsord om valt
+        if req.add_as_keyword:
+            existing_kw = db.query(models.Keyword).filter(
+                models.Keyword.user_id == current_user.id,
+                models.Keyword.keyword.ilike(topic_clean)
+            ).first()
+            if not existing_kw:
+                new_kw = models.Keyword(keyword=topic_clean, user_id=current_user.id)
+                db.add(new_kw)
+
+    db.commit()
+
+    # Skicka WebSocket-uppdateringar till klienten
+    await manager.send_personal_message(f"AI_UPDATED:{art.id}", current_user.id)
+    await manager.send_personal_message("STATS_UPDATE", current_user.id)
+
+    return {
+        "status": "ok",
+        "article_id": art.id,
+        "priority": art.priority,
+        "prio_score": art.prio_score,
+        "prio_reason": art.prio_reason,
+        "topic_added": bool(topic_clean)
+    }
 
 @app.get("/prio/unread-count")
 def get_prio_unread_count(

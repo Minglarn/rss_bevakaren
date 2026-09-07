@@ -5,6 +5,7 @@ import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import ShareModal from './ShareModal';
 import PrioOnboardingModal from './PrioOnboardingModal';
+import PrioritizeModal from './PrioritizeModal';
 
 const DEFAULT_CATEGORIES = ['Alla', 'Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
 
@@ -38,6 +39,7 @@ const Dashboard = ({ isPrioModeProp = false }) => {
   }, [searchTerm]);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [prioritizeItem, setPrioritizeItem] = useState(null);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -979,8 +981,23 @@ const Dashboard = ({ isPrioModeProp = false }) => {
                       ))}
                     </div>
 
-                    {/* Verktygsknappar: Analysera (endast i Prio) och Dela */}
+                    {/* Verktygsknappar: Prioritera, Analysera (endast i Prio) och Dela */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <button
+                        className="feed-card-share-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPrioritizeItem(item);
+                        }}
+                        title={item.priority === 'high' ? "Prioriterad (klicka för att ändra/bevaka ämne)" : "Prioritera händelse / bevaka ämne"}
+                        style={{
+                          color: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : undefined,
+                          backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? 'rgba(249, 115, 22, 0.12)' : undefined
+                        }}
+                      >
+                        <Flame size={16} />
+                      </button>
+
                       {isPrioMode && (
                         <button
                           className="feed-card-share-btn"
@@ -1201,6 +1218,40 @@ const Dashboard = ({ isPrioModeProp = false }) => {
           onClose={() => setShareItem(null)} 
         />
       )}
+
+      {/* Prioritera / bevaka dialog */}
+      <PrioritizeModal
+        isOpen={!!prioritizeItem}
+        article={prioritizeItem}
+        onClose={() => setPrioritizeItem(null)}
+        onPrioritized={(artId, data) => {
+          setAllFeeds(prev => prev.map(a => {
+            if (a.id === artId) {
+              return {
+                ...a,
+                priority: data.priority || 'high',
+                prio_score: data.prio_score || 100,
+                prio_reason: data.prio_reason || a.prio_reason,
+                ai_processed: 1
+              };
+            }
+            return a;
+          }));
+          setDisplayedFeeds(prev => prev.map(a => {
+            if (a.id === artId) {
+              return {
+                ...a,
+                priority: data.priority || 'high',
+                prio_score: data.prio_score || 100,
+                prio_reason: data.prio_reason || a.prio_reason,
+                ai_processed: 1
+              };
+            }
+            return a;
+          }));
+          window.dispatchEvent(new Event('feedsUpdated'));
+        }}
+      />
 
       {/* Onboarding för Prio Flöde */}
       <PrioOnboardingModal

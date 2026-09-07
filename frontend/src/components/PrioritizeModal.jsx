@@ -1,0 +1,346 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Flame, X, Tag, Check, Loader2, Sparkles, BellRing } from 'lucide-react';
+import api from '../api';
+
+const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
+  const [topic, setTopic] = useState('');
+  const [addAsKeyword, setAddAsKeyword] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [suggestedTags, setSuggestedTags] = useState([]);
+
+  useEffect(() => {
+    if (article) {
+      setError(null);
+      // Försök extrahera taggar eller nyckelord från artikeln
+      let tags = [];
+      if (article.tags) {
+        try {
+          const parsed = typeof article.tags === 'string' ? JSON.parse(article.tags) : article.tags;
+          if (Array.isArray(parsed)) tags = parsed;
+        } catch (e) {
+          // ignore
+        }
+      }
+      if (tags.length === 0 && article.categories && Array.isArray(article.categories)) {
+        tags = article.categories;
+      }
+      setSuggestedTags(tags.filter(t => typeof t === 'string' && t.trim().length > 1));
+
+      // Om det finns en förvald tagg eller kategori kan vi föreslå den
+      if (tags.length > 0 && typeof tags[0] === 'string') {
+        setTopic(tags[0]);
+      } else {
+        setTopic('');
+      }
+    }
+  }, [article]);
+
+  if (!isOpen || !article) return null;
+
+  const handlePrioritize = async (saveTopic) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const payload = {
+        topic: saveTopic ? topic.trim() : null,
+        add_as_keyword: saveTopic ? addAsKeyword : false
+      };
+      const res = await api.post(`/articles/${article.id}/prioritize`, payload);
+      if (onPrioritized) {
+        onPrioritized(article.id, res.data);
+      }
+      onClose();
+    } catch (err) {
+      console.error('Kunde inte prioritera artikel:', err);
+      setError('Kunde inte uppdatera prioriteringen. Försök igen.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100,
+          padding: '1rem'
+        }}
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 15 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '520px',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div style={{
+            padding: '1.25rem 1.5rem',
+            borderBottom: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'linear-gradient(to right, rgba(249, 115, 22, 0.08), transparent)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div style={{
+                backgroundColor: 'rgba(249, 115, 22, 0.15)',
+                color: '#f97316',
+                padding: '0.5rem',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Flame size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                  Prioritera i PRIO-flödet
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Flytta händelsen till ditt prioriterade flöde
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '0.4rem',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Artikelns förhandsvisning */}
+            <div style={{
+              backgroundColor: 'var(--bg-app)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              padding: '0.85rem 1rem'
+            }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, marginBottom: '0.25rem' }}>
+                {article.source_title}
+              </div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 500, lineHeight: 1.4 }}>
+                {article.title}
+              </div>
+            </div>
+
+            {/* Ämne inmatning */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
+                Ämne eller sökord att bevaka framöver (valfritt)
+              </label>
+              <input
+                type="text"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="t.ex. Saab, Riksbanken, Försvarsmakten..."
+                style={{
+                  width: '100%',
+                  padding: '0.65rem 0.85rem',
+                  backgroundColor: 'var(--bg-app)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-main)',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                När du anger ett ämne tränas din personliga AI att automatiskt prioritera framtida artiklar med detta innehåll.
+              </p>
+            </div>
+
+            {/* Förslag från artikel */}
+            {suggestedTags.length > 0 && (
+              <div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
+                  Förslag från artikeln (klicka för att välja):
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {suggestedTags.map((t, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setTopic(t)}
+                      style={{
+                        background: topic.toLowerCase() === t.toLowerCase() ? 'rgba(249, 115, 22, 0.2)' : 'var(--bg-app)',
+                        border: topic.toLowerCase() === t.toLowerCase() ? '1px solid #f97316' : '1px solid var(--border-color)',
+                        color: topic.toLowerCase() === t.toLowerCase() ? '#f97316' : 'var(--text-muted)',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem'
+                      }}
+                    >
+                      <Tag size={11} />
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Checkbox för bevakningsord */}
+            {topic.trim().length > 0 && (
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                color: 'var(--text-main)'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={addAsKeyword}
+                  onChange={(e) => setAddAsKeyword(e.target.checked)}
+                  style={{
+                    accentColor: '#f97316',
+                    width: '16px',
+                    height: '16px',
+                    cursor: 'pointer'
+                  }}
+                />
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <BellRing size={14} style={{ color: '#f97316' }} />
+                  Lägg även till som aktivt bevakningsord i söklistan
+                </span>
+              </label>
+            )}
+
+            {error && (
+              <div style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#ef4444',
+                padding: '0.6rem 0.8rem',
+                borderRadius: '6px',
+                fontSize: '0.8rem'
+              }}>
+                {error}
+              </div>
+            )}
+          </div>
+
+          {/* Footer Actions */}
+          <div style={{
+            padding: '1rem 1.5rem',
+            borderTop: '1px solid var(--border-color)',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            gap: '0.75rem',
+            backgroundColor: 'var(--bg-app)'
+          }}>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              style={{
+                backgroundColor: 'transparent',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-muted)',
+                padding: '0.55rem 1rem',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                fontWeight: 500
+              }}
+            >
+              Avbryt
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handlePrioritize(false)}
+              disabled={loading}
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-main)',
+                padding: '0.55rem 1rem',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                fontWeight: 500
+              }}
+            >
+              Endast denna artikel
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handlePrioritize(true)}
+              disabled={loading || !topic.trim()}
+              style={{
+                backgroundColor: '#f97316',
+                border: 'none',
+                color: '#ffffff',
+                padding: '0.55rem 1.1rem',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: (!loading && topic.trim()) ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                opacity: (!loading && topic.trim()) ? 1 : 0.6
+              }}
+            >
+              {loading ? (
+                <Loader2 size={16} className="spin" />
+              ) : (
+                <Flame size={16} />
+              )}
+              Prioritera & bevaka ämne
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
+
+export default PrioritizeModal;
