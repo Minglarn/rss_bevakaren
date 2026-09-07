@@ -9,7 +9,7 @@ import PrioritizeModal from './PrioritizeModal';
 
 const DEFAULT_CATEGORIES = ['Alla', 'Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
 
-const Dashboard = ({ isPrioModeProp = false, prioEnabled = true }) => {
+const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const location = useLocation();
   const [allFeeds, setAllFeeds] = useState([]);
@@ -50,7 +50,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = true }) => {
           if (Array.isArray(res.data.categories) && res.data.categories.length > 0) {
             setCategories(['Alla', ...res.data.categories]);
           }
-          if (isPrioMode && res.data.onboarding_completed === false) {
+          if (prioEnabled && isPrioMode && res.data.onboarding_completed === false) {
             setShowOnboarding(true);
           }
         }

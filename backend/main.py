@@ -34,10 +34,13 @@ def ensure_db_migrations():
         try:
             res = conn.execute(text("PRAGMA table_info(user_ai_settings)"))
             cols = [row[1] for row in res.fetchall()]
-            if cols and "prio_enabled" not in cols:
-                conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN prio_enabled INTEGER DEFAULT 0"))
+            if cols:
+                if "prio_enabled" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN prio_enabled INTEGER DEFAULT 0"))
+                    conn.commit()
+                    print("[DB] Added prio_enabled column to user_ai_settings", flush=True)
+                conn.execute(text("UPDATE user_ai_settings SET prio_enabled = 0 WHERE prio_enabled IS NULL"))
                 conn.commit()
-                print("[DB] Added prio_enabled column to user_ai_settings", flush=True)
         except Exception as e:
             print(f"[DB] Migration notice: {e}", flush=True)
 
@@ -910,11 +913,9 @@ async def prioritize_article(
             user_id=current_user.id,
             prio_rules=f"- {topic_clean}" if topic_clean else "",
             prio_threshold=75,
-            prio_enabled=1
+            prio_enabled=0
         )
         db.add(user_ai)
-    else:
-        user_ai.prio_enabled = 1
 
     if topic_clean:
         existing_rules = user_ai.prio_rules.strip() if user_ai.prio_rules else ""
