@@ -1,100 +1,99 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.07.26-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.07.27-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
 
 ![Dashboard Screenshot](screenshot_1.jpg)
 
-RSS-Bevakaren är ett modernt, självhostat system för att övervaka, filtrera, prioritera och presentera RSS-flöden i realtid. Systemet kombinerar en robust Python-backend, ett responsivt React-gränssnitt och en kraftfull AI-motor för automatisk analys, sammanfattning och prioritering av nyheter.
+RSS-Bevakaren is a modern, self-hosted system for monitoring, filtering, prioritizing, and presenting RSS feeds in real time. The system combines a robust Python backend, a responsive React frontend, and a powerful local AI engine for automated analysis, summarization, clickbait detection, and news prioritization.
 
 ---
 
-## Huvudfunktioner
+## Key Features
 
-- **Fleranvändarsystem:** Säkert inloggningssystem med JWT-autentisering där varje användare har sina egna flöden, filter och personliga AI-inställningar.
-- **Flödeshantering:** Lägg till, organisera och ta bort RSS-flöden. Inbyggt stöd för i princip alla RSS- och Atom-format samt WordPress-flöden.
-- **Två Visningslägen (AI & Klassisk RSS):** Välj själv under inställningarna om du vill ha ett AI-berikat nyhetsflöde eller en minimalistisk och snabb klassisk RSS-vy.
-- **Clickbait-detektering & Anti-Clickbait:** Automatisk identifiering och flaggning av klickbeten och sensationsartiklar, med direkt avslöjande sammanfattning och nedprioritering i PRIO-flödet.
-- **AI Skeleton Shimmer & Mjuka Övergångar:** Nya artiklar visar en pulserande laddningsindikator medan AI-analysen pågår och fadas in mjukt utan ryckiga layout-skutt.
-- **Robust Timeout- & Offline-fallback:** Om AI-motorn är avstängd eller har timeout visas originaltexten från RSS automatiskt efter 45 sekunder, eller direkt med ett klick på "Show original text".
-- **Dedikerat Prio-flöde:** Automatisk identifiering av högprioriterade nyheter baserat på dina personliga regler, nyckelord och kategorivikter.
-- **Artikelläsning & Delning:** Läs hela artiklar direkt i applikationen via inbyggd artikel-skrapning, dela via telefonens delningsmeny/SMS/WhatsApp eller kopiera text och länk.
-- **PWA & WebPush:** Progressiv webbapplikation med blixtsnabba push-notiser både på dator och mobil, även när applikationen är stängd.
-- **Automatiskt Underhåll:** Inbyggd rensningsfunktion för att gallra bort gammal historik efter ett valbart antal dagar.
-
----
-
-## AI-Motorn och Prio-systemet
-
-RSS-Bevakaren har en inbyggd AI-motor som kan kopplas mot en lokal språkmodell (t.ex. via LM Studio, Ollama eller LocalAI) eller valfri OpenAI-kompatibel tjänst.
-
-### Vad AI-motorn gör
-
-Varje ny artikel som hämtas skickas genom AI-analysen:
-
-1. **Kärnfull sammanfattning:** Skapar en 1-2 meningars sammanfattning på svenska som snabbt låter dig avgöra om artikeln är värd att läsa.
-2. **Klickbete-detektering (Anti-Clickbait):**
-   - Identifierar om rubriken är sensationalistisk eller medvetet undanhåller viktig fakta (s.k. *curiosity gap*).
-   - Flaggar artikeln med en röd varningsbadge: `Clickbait warning`.
-   - Visar AI:ns motivering direkt på kortet (*Clickbait notice: ...*), fullt läsbart även på mobil utan att behöva hovra eller klicka.
-   - **Avslöjar svaret direkt:** Sammanfattningen instrueras att omedelbart punktera klickbetet och svara på vem eller vad händelsen rör redan i första meningen.
-   - **Rensar PRIO-flödet:** Klickbeten sänks automatiskt till låg prioritet (max 25 poäng) så att de inte förorenar ditt personliga PRIO-flöde.
-3. **Klassificering:** Delar in artikeln i konfigurerade kategorier (Teknik, Politik, Blåljus, Ekonomi, Lokalt, Motor, etc.).
-4. **Relevanspoäng & Prioritering:** Artikeln tilldelas en prioritetspoäng (0-100) och motivering baserat på dina inställningar och kategorivikter.
-5. **Automatiska Taggar:** Genererar relevanta ämnestaggar för artikeln för enkel filtrering.
+- **Multi-User Architecture:** Secure authentication with JWT tokens where each user has their own feeds, filters, and personal AI preferences.
+- **Feed Management:** Add, organize, and remove RSS and Atom feeds. Built-in support for nearly all standard RSS/Atom specifications and WordPress feeds.
+- **Two Display Modes (AI Feed & Classic RSS):** Choose between an AI-enriched feed with concise summaries or a fast, minimalist raw RSS view.
+- **Clickbait Detection & Anti-Clickbait:** Intelligent identification of sensationalist and withholding headlines. AI summaries bust the clickbait right away, warning badges flag the article, and clickbait is automatically demoted from your priority stream.
+- **AI Skeleton Shimmer & Smooth Transitions:** New articles display a discreet loading shimmer while AI processing takes place and smoothly fade in without disruptive layout shifts.
+- **Robust Timeout & Offline Fallback:** If your local LLM engine (e.g. LM Studio) is offline or times out, articles automatically fall back to the original RSS text after 45 seconds, or instantly with a single click.
+- **Dedicated Prio Feed:** Real-time prioritization based on your customized rules, monitored keywords, and category weights.
+- **Full Article Reading & Sharing:** Scrape and read complete articles directly within the app, share via device native share menu, SMS, or WhatsApp, and copy links with one tap.
+- **PWA & Web Push:** Progressive Web App with instant push notifications on both desktop and mobile devices, even when the application is closed.
+- **Automatic Housekeeping:** Automatic database cleanup to prune old history after a configurable retention period.
 
 ---
 
-### Så hanterar du AI-delen i Inställningar
+## AI Engine and Priority System
 
-AI-konfigurationen är personlig och styrs via fliken **AI Analysis & Prompt** i **Settings**.
+RSS-Bevakaren includes a built-in AI processing pipeline that connects to local LLMs (such as LM Studio, Ollama, or LocalAI) or any OpenAI-compatible API endpoint.
 
-#### 1. Anslutning till LLM / LM Studio
-- **API Bas-URL:** Ange adressen till din lokala LLM-server, exempelvis `http://192.168.1.50:1234/v1`.
-- **Statuskontroll & Modellval:** Klicka på "Check connection". Systemet verifierar uppkopplingen och hämtar automatiskt in en lista över alla tillgängliga modeller i en rullgardinsmeny.
-- **Självläkande bakgrundskö:** Om LM Studio är upptaget eller avstängt pausar kön tyst och kontrollerar hälsan var 30:e sekund. När LM Studio startas igen återupptas analysen automatiskt och artiklarna uppdateras i realtid via WebSocket.
+### What the AI Engine Does
 
-#### 2. Kategoriviktning (0 - 10)
-Under sektionen *Category Sliders & Priority* finns skjutreglage för varje kategori:
-- Sätt ett högre värde (t.ex. 8-10) på ämnen du bryr dig mest om (t.ex. Blåljus, Teknik).
-- Artiklar som tilldelas en kategori med vikt **8 eller högre** kvalificerar sig automatiskt in i **Prio Feed**.
-- Lägre värderade kategorier visas fortfarande i det vanliga flödet men tynger inte ner Prio-flödet.
+Every incoming article passes through the background AI pipeline:
 
-#### 3. Bevakningsord (Absolut Prioritet)
-I fältet för *Prioritized Keywords & Topics* kan du ange ord eller fraser (exempelvis: `Trosa, Nvidia, Försvarsmakten, Riksbanken`).
-- Alla artiklar vars rubrik eller text matchar något av dessa ord får **omedelbart 100 poäng och högsta prioritet**, oavsett vilken kategori de tillhör.
-
-#### 4. Promptmall och Systeminstruktioner
-Du kan finjustera systemprompten direkt i gränssnittet för att ge modellen instruktioner om tonläge, språk, klickbete-gränser och bedömningskriterier. Standardmallen levereras färdigkonfigurerad för optimalt resultat och snabb JSON-respons.
+1. **Concise Summaries:** Generates a 1-2 sentence informative summary that lets you digest the core event in seconds.
+2. **Clickbait Detection (Anti-Clickbait):**
+   - Detects sensationalism, exaggerated claims, and intentional curiosity gaps.
+   - Flags the article with a clear warning badge: `Clickbait warning`.
+   - Displays the explanation directly inside the summary block (*Clickbait notice: ...*), making it effortless to read on mobile without hovering.
+   - **Busts the Clickbait:** The summary is instructed to immediately reveal the core facts and answer the headline's mystery in the very first sentence.
+   - **Cleans the Prio Feed:** Clickbait articles are automatically capped at low priority (maximum 25 points), preventing spam from cluttering your Prio Feed.
+3. **Categorization:** Classifies articles into your chosen categories (Technology, Politics, Emergency, Economy, Local, Motor, etc.).
+4. **Relevance Scoring & Prioritization:** Scores articles from 0 to 100 based on your personal weights and keyword rules.
+5. **Automated Tags:** Extracts relevant topical tags for instant hashtag filtering.
 
 ---
 
-## Visningslägen: AI Feed vs Classic RSS
+### Managing AI in Settings
 
-Under **Settings -> User Interface** kan du välja hur du vill att det ordinarie nyhetsflödet (Dashboard) ska presenteras:
+All AI options are customizable per user under **Settings -> AI Analysis & Prompt**:
 
-- **AI Feed (Summaries & Tags):** Alla artiklar i nyhetsflödet visar AI-sammanfattning, ämnestaggar, klickbetesvarning och kategori. Nya artiklar laddas med en mjuk skeleton-indikator (*Analyzing with AI...*).
-- **Classic RSS (Raw text without AI):** Avskalad och snabb vy för dig som föredrar att läsa källans originalingress utan AI-bearbetning.
+#### 1. LLM / LM Studio Connection
+- **API Base URL:** Enter the address of your local LLM server (e.g., `http://192.168.1.50:1234/v1`).
+- **Connection Test & Model Selector:** Click "Check connection" to verify status. The app automatically fetches all installed models into a dropdown menu.
+- **Self-Healing Background Queue:** If LM Studio is busy or shut down, the queue quietly pauses and performs health checks every 30 seconds. Once LM Studio becomes available again, processing resumes automatically, and articles update on your screen in real time via WebSockets.
 
-Oavsett vilket läge du väljer för Dashboard finns alltid fliken **Prio Feed** tillgänglig i sidomenyn, där enbart de viktigaste nyheterna samlas.
+#### 2. Category Weights (0 - 10)
+Under *Category Sliders & Priority*, adjust the priority of each topic:
+- High values (8-10) qualify incoming articles directly for the **Prio Feed**.
+- Lower values keep articles in the standard timeline without cluttering your prioritized view.
+
+#### 3. Monitored Keywords (Guaranteed 100% Priority)
+Add critical keywords or locations in *Prioritized Keywords & Topics* (e.g. `Stockholm, Nvidia, Defense, Central Bank`).
+- Any article containing a matched keyword receives an **immediate 100 points score and High priority**, regardless of its category.
+
+#### 4. Custom System Prompt
+Review and edit the active system prompt directly in the web UI. You can adjust the tone, category definitions, clickbait criteria, or language preferences on the fly.
 
 ---
 
-## Arkitektur
+## Display Modes: AI Feed vs Classic RSS
 
-Systemet är uppbyggt av två mikrotjänster:
+Configure your preferred viewing mode under **Settings -> User Interface**:
 
-- **Backend:** Python med FastAPI, SQLAlchemy, APScheduler för asynkrona bakgrundsjobb, och SQLite som databas.
-- **Frontend:** Modern SPA byggd med React, Vite, Framer Motion för följsamma animeringar och Lucide Icons.
-- **Driftsättning:** Optimerade flerstegs Docker-byggen publicerade på GitHub Container Registry (GHCR).
+- **AI Feed (Summaries & Tags):** Displays AI summaries, category tags, clickbait warnings, and priority indicators. Unprocessed articles display a skeleton loading state (*Analyzing with AI...*).
+- **Classic RSS (Raw text without AI):** Streamlined and fast feed displaying the original RSS feed ingress text without AI manipulation.
+
+Regardless of your dashboard setting, the **Prio Feed** remains accessible in the sidebar navigation to track high-priority events.
 
 ---
 
-## Driftsättning med Docker Compose
+## Architecture
 
-Skapa en fil med namnet `docker-compose.yml` på din server:
+The application is structured into two lightweight microservices:
+
+- **Backend:** Python with FastAPI, SQLAlchemy, APScheduler for background tasks, and SQLite for persistence.
+- **Frontend:** Modern Single Page Application (SPA) built with React, Vite, Framer Motion, and Lucide Icons.
+- **Deployment:** Multi-stage Docker images published to GitHub Container Registry (GHCR).
+
+---
+
+## Deployment with Docker Compose
+
+Create a `docker-compose.yml` file on your server:
 
 ```yaml
 services:
@@ -107,7 +106,7 @@ services:
     environment:
       - DATABASE_URL=sqlite:////data/rss.db
       - APP_USERNAME=admin
-      - APP_PASSWORD=ditt_hemliga_losenord
+      - APP_PASSWORD=your_secure_password
     restart: unless-stopped
 
   frontend:
@@ -116,23 +115,23 @@ services:
       - "8093:80"
     environment:
       - TZ=Europe/Stockholm
-      - VITE_API_URL=http://din-server-ip:8094
+      - VITE_API_URL=http://your-server-ip:8094
     restart: unless-stopped
     depends_on:
       - backend
 ```
 
-Starta tjänsterna:
+Launch the services:
 ```bash
 docker-compose pull
 docker-compose up -d
 ```
 
-Öppna din webbläsare på `http://din-server-ip:8093` och logga in.
+Navigate to `http://your-server-ip:8093` in your browser and sign in.
 
 ---
 
-## Versionshantering
+## Versioning
 
-Projektet använder Calendar Versioning (CalVer), exempelvis `2026.09.07.26`.
-Versionsnumret uppdateras vid varje release och garanterar full spårbarhet mellan källkod och Docker-avbildningar.
+This project strictly adheres to Calendar Versioning (CalVer), for example `2026.09.07.27`.
+Version numbers are updated on every release, ensuring complete traceability across source code, container tags, and release notes.
