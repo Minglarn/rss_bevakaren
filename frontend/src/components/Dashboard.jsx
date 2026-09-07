@@ -1188,11 +1188,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       <div style={{ 
                         color: 'var(--text-main)', 
                         fontSize: '0.95rem', 
-                        lineHeight: '1.5',
-                        display: expandedItems[index] ? 'block' : '-webkit-box',
-                        WebkitLineClamp: expandedItems[index] ? 'unset' : 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
+                        lineHeight: '1.5'
                       }}>
                         {item.ai_summary}
                       </div>
