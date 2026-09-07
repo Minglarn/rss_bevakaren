@@ -3,6 +3,38 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, X, Tag, Check, Loader2, Sparkles, BellRing } from 'lucide-react';
 import api from '../api';
 
+const STOP_WORDS = new Set([
+  'och', 'i', 'att', 'det', 'som', 'en', 'på', 'är', 'av', 'för', 'med', 'till', 'den',
+  'har', 'de', 'inte', 'om', 'ett', 'men', 'var', 'jag', 'ska', 'får', 'kan', 'man',
+  'hur', 'så', 'här', 'efter', 'mot', 'vid', 'under', 'nya', 'mer', 'bli', 'blev',
+  'just', 'nu', 'vill', 'ska', 'vara', 'sig', 'eller', 'vi', 'du', 'han', 'hon',
+  'där', 'då', 'in', 'ut', 'upp', 'ner', 'över'
+]);
+
+function extractKeywordsFromTitle(title) {
+  if (!title) return [];
+  const suggestions = [];
+  const colonParts = title.split(':');
+  if (colonParts.length > 1 && colonParts[0].trim().length >= 3 && colonParts[0].trim().length <= 25) {
+    suggestions.push(colonParts[0].trim());
+  }
+
+  const words = title
+    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+    .split(/\s+/)
+    .map(w => w.trim())
+    .filter(w => w.length > 3 && !STOP_WORDS.has(w.toLowerCase()));
+
+  for (const w of words) {
+    const formatted = w.charAt(0).toUpperCase() + w.slice(1);
+    if (!suggestions.some(s => s.toLowerCase() === formatted.toLowerCase())) {
+      suggestions.push(formatted);
+    }
+  }
+
+  return suggestions.slice(0, 5);
+}
+
 const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
   const [topic, setTopic] = useState('');
   const [addAsKeyword, setAddAsKeyword] = useState(true);
@@ -24,13 +56,22 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
         }
       }
       if (tags.length === 0 && article.categories && Array.isArray(article.categories)) {
-        tags = article.categories;
+        tags = article.categories.filter(c => c && c.toLowerCase() !== 'alla' && c.toLowerCase() !== 'övrigt');
       }
-      setSuggestedTags(tags.filter(t => typeof t === 'string' && t.trim().length > 1));
 
-      // Om det finns en förvald tagg eller kategori kan vi föreslå den
-      if (tags.length > 0 && typeof tags[0] === 'string') {
-        setTopic(tags[0]);
+      // Om varken taggar eller kategorier fanns, plocka smarta nyckelord ur rubriken
+      if (tags.length === 0 && article.title) {
+        tags = extractKeywordsFromTitle(article.title);
+      }
+
+      const validTags = tags.filter(t => typeof t === 'string' && t.trim().length > 1);
+      setSuggestedTags(validTags);
+
+      // Förifyll alltid fältet med det bästa förslaget
+      if (validTags.length > 0) {
+        setTopic(validTags[0]);
+      } else if (article.source_title) {
+        setTopic(article.source_title);
       } else {
         setTopic('');
       }
@@ -165,7 +206,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
             {/* Ämne inmatning */}
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                Ämne eller sökord att bevaka framöver (valfritt)
+                Ämne eller sökord att bevaka framöver:
               </label>
               <input
                 type="text"
@@ -185,7 +226,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
                 }}
               />
               <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                När du anger ett ämne tränas din personliga AI att automatiskt prioritera framtida artiklar med detta innehåll.
+                Fältet är automatiskt förifyllt med förslag från artikeln. Du kan redigera texten eller klicka på ett snabbval nedan.
               </p>
             </div>
 
