@@ -973,13 +973,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   style={{ 
                     filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
                     userSelect: 'none', 
-                    WebkitUserSelect: 'none',
-                    border: (shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75))
-                      ? '1px solid rgba(249, 115, 22, 0.45)' 
-                      : undefined,
-                    boxShadow: (shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75))
-                      ? '0 4px 14px rgba(249, 115, 22, 0.08)' 
-                      : undefined
+                    WebkitUserSelect: 'none'
                   }}
                 >
                 {/* Left colored bar */}

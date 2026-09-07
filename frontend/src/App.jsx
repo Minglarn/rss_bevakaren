@@ -170,7 +170,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
 
         <div style={{ 
           padding: isCollapsed ? '0 1rem' : '0 1.5rem', 
-          marginBottom: '2rem', 
+          marginBottom: '1.25rem', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: isCollapsed ? 'center' : 'flex-start',
@@ -186,15 +186,15 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           )}
         </div>
 
-        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0 1rem', overflowY: 'auto', overflowX: 'hidden' }}>
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.2rem', padding: '0 0.75rem', overflowY: 'auto', overflowX: 'hidden' }}>
           <Link to="/" style={{
-            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
             borderRadius: '8px', textDecoration: 'none',
             color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-muted)',
             backgroundColor: location.pathname === '/' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             fontWeight: location.pathname === '/' ? 600 : 400
           }}>
-            <Rss size={20} /> {!isCollapsed && "Dashboard"}
+            <Rss size={19} /> {!isCollapsed && "Dashboard"}
             {!isCollapsed && myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
               <span style={{ 
                 marginLeft: 'auto', 
@@ -211,13 +211,13 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           </Link>
           {prioEnabled && (
             <Link to="/prio" style={{
-              display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
+              display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
               borderRadius: '8px', textDecoration: 'none',
               color: location.pathname === '/prio' ? '#f97316' : 'var(--text-muted)',
               backgroundColor: location.pathname === '/prio' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
               fontWeight: location.pathname === '/prio' ? 600 : 400
             }}>
-              <Flame size={20} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Flöde"}
+              <Flame size={19} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Flöde"}
               {!isCollapsed && prioUnreadCount > 0 && (
                 <span style={{ 
                   marginLeft: 'auto', 
@@ -234,22 +234,22 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             </Link>
           )}
           <Link to="/manage" style={{
-            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
             borderRadius: '8px', textDecoration: 'none',
             color: location.pathname === '/manage' ? 'var(--primary)' : 'var(--text-muted)',
             backgroundColor: location.pathname === '/manage' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             fontWeight: location.pathname === '/manage' ? 600 : 400
           }}>
-            <List size={20} /> {!isCollapsed && "Manage RSS"}
+            <List size={19} /> {!isCollapsed && "Manage RSS"}
           </Link>
           <Link to="/settings" style={{
-            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
             borderRadius: '8px', textDecoration: 'none',
             color: location.pathname === '/settings' ? 'var(--primary)' : 'var(--text-muted)',
             backgroundColor: location.pathname === '/settings' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             fontWeight: location.pathname === '/settings' ? 600 : 400
           }}>
-            <SettingsIcon size={20} /> {!isCollapsed && "Settings"}
+            <SettingsIcon size={19} /> {!isCollapsed && "Settings"}
           </Link>
 
           {/* Feeds List */}
