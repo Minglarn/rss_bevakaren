@@ -255,6 +255,16 @@ def run_db_migrations(db_path: str):
         except Exception as e:
             print(f"Migration 12 error: {e}")
 
+        # Migration 13: Add clickbait columns to articles
+        for col_def in [
+            ("is_clickbait", "INTEGER DEFAULT 0"),
+            ("clickbait_reason", "TEXT DEFAULT ''")
+        ]:
+            try:
+                cur.execute(f"ALTER TABLE articles ADD COLUMN {col_def[0]} {col_def[1]};")
+            except sqlite3.OperationalError:
+                pass
+
         conn.commit()
         conn.close()
         size_kb = os.path.getsize(db_path) / 1024
@@ -592,6 +602,8 @@ async def ai_processing_loop():
                         art.prio_reason = analysis.get("prio_reason", "")
                         art.ai_summary = analysis.get("ai_summary", "")
                         art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
+                        art.is_clickbait = analysis.get("is_clickbait", 0)
+                        art.clickbait_reason = analysis.get("clickbait_reason", "")
                         
                         # STEG 1: Specifika bevakningsord (trumfar allt -> 100p & HIGH)
                         if user_id:
@@ -877,7 +889,9 @@ def get_dashboard_feeds(
             "prio_score": art.prio_score or 0 if include_ai else 0,
             "prio_reason": art.prio_reason or "" if include_ai else "",
             "ai_summary": art.ai_summary if include_ai else None,
-            "tags": parsed_tags if include_ai else []
+            "tags": parsed_tags if include_ai else [],
+            "is_clickbait": art.is_clickbait or 0 if include_ai else 0,
+            "clickbait_reason": art.clickbait_reason or "" if include_ai else ""
         }
         response_items.append(art_dict)
         
@@ -918,6 +932,8 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     art.prio_reason = analysis.get("prio_reason", "")
     art.ai_summary = analysis.get("ai_summary", "")
     art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
+    art.is_clickbait = analysis.get("is_clickbait", 0)
+    art.clickbait_reason = analysis.get("clickbait_reason", "")
 
     # STEG 1: Specifika bevakningsord (trumfar allt -> 100p & HIGH)
     user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == current_user.id).all()

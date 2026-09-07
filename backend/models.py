@@ -74,6 +74,8 @@ class Article(Base):
     prio_reason = Column(String, default="")
     ai_summary = Column(String, nullable=True)
     tags = Column(String, default="[]")
+    is_clickbait = Column(Integer, default=0)
+    clickbait_reason = Column(String, default="")
 
     feed = relationship("Feed", back_populates="articles")
  

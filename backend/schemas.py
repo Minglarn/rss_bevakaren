@@ -89,6 +89,8 @@ class ArticleResponse(BaseModel):
     prio_reason: Optional[str] = ""
     ai_summary: Optional[str] = None
     tags: Optional[List[str]] = []
+    is_clickbait: Optional[int] = 0
+    clickbait_reason: Optional[str] = ""
 
     class Config:
         from_attributes = True

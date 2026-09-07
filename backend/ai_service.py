@@ -31,9 +31,12 @@ DEFAULT_CATEGORIES_STR = " | ".join(DEFAULT_CATEGORIES)
 DEFAULT_SYSTEM_PROMPT = f"""Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {{
   "category": "Välj den mest passande av följande kategorier: {DEFAULT_CATEGORIES_STR}",
-  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen.",
-  "tags": ["tagg1", "tagg2"]
-}}"""
+  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen. VIKTIGT: Om rubriken är klickbete eller undanhåller vem/vad händelsen rör, ska sammanfattningen omedelbart och rakt på sak avslöja svaret i första meningen.",
+  "tags": ["tagg1", "tagg2"],
+  "is_clickbait": false,
+  "clickbait_reason": ""
+}}
+Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överdriven eller medvetet undanhåller central information för att locka till klick (och ange då en kort motivering i "clickbait_reason"). Annars sätt false och tom sträng."""
 
 def get_prompt_config_path() -> str:
     """Hittar eller skapar sökvägen till prompt-konfigurationsfilen i delad datamapp."""
@@ -245,6 +248,19 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
     else:
         result["tags"] = []
 
+    # Extrahera is_clickbait och clickbait_reason
+    cb_m = re.search(r'"is_clickbait"\s*:\s*(true|false)', text, re.IGNORECASE)
+    if cb_m:
+        result["is_clickbait"] = cb_m.group(1).lower() == "true"
+
+    cb_reason_m = re.search(r'"clickbait_reason"\s*:\s*"(.*?)(?:"\s*,\s*"\w+"\s*:|"$|"[\r\n])', text, re.DOTALL)
+    if cb_reason_m:
+        result["clickbait_reason"] = cb_reason_m.group(1).strip()
+    else:
+        cb_reason_m = re.search(r'"clickbait_reason"\s*:\s*"([^"]+)"', text)
+        if cb_reason_m:
+            result["clickbait_reason"] = cb_reason_m.group(1).strip()
+
     if "category" in result or "priority" in result or "prio_score" in result:
         return result
 
@@ -273,9 +289,12 @@ def build_user_prompt(categories: Optional[Any] = None, prio_rules: Optional[str
     prompt = f"""Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {{
   "category": "Välj den mest passande av följande kategorier: {cats_str}",
-  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen.",
-  "tags": ["tagg1", "tagg2"]
-}}"""
+  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen. VIKTIGT: Om rubriken är klickbete eller undanhåller vem/vad händelsen rör, ska sammanfattningen omedelbart och rakt på sak avslöja svaret i första meningen.",
+  "tags": ["tagg1", "tagg2"],
+  "is_clickbait": false,
+  "clickbait_reason": ""
+}}
+Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överdriven eller medvetet undanhåller central information för att locka till klick (och ange då en kort motivering i "clickbait_reason"). Annars sätt false och tom sträng."""
     return prompt
 
 def calculate_priority(
@@ -440,13 +459,29 @@ def analyze_article(
         else:
             tags = []
             
+        # Klickbete-hantering
+        raw_cb = parsed.get("is_clickbait", False)
+        is_clickbait = bool(raw_cb) if isinstance(raw_cb, bool) else (str(raw_cb).lower() in ("true", "1"))
+        clickbait_reason = str(parsed.get("clickbait_reason", "")).strip()
+
+        # Om klickbete upptäcks, sänk prio så att den inte hamnar i PRIO-flödet
+        if is_clickbait:
+            prio_score = min(prio_score, 25)
+            priority = "low"
+            if not prio_reason:
+                prio_reason = f"Clickbait headline: {clickbait_reason}" if clickbait_reason else "Clickbait headline"
+            else:
+                prio_reason += f" (Clickbait: {clickbait_reason})" if clickbait_reason else " (Clickbait)"
+
         return {
             "category": category,
             "priority": priority,
             "prio_score": prio_score,
             "prio_reason": prio_reason,
             "ai_summary": ai_summary,
-            "tags": tags
+            "tags": tags,
+            "is_clickbait": 1 if is_clickbait else 0,
+            "clickbait_reason": clickbait_reason
         }
     except requests.exceptions.ConnectTimeout:
         dur = round(time.time() - t0, 2)

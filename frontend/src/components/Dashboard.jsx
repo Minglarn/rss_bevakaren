@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown } from 'lucide-react';
+import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle } from 'lucide-react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import ShareModal from './ShareModal';
@@ -1083,6 +1083,25 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         </span>
                       )}
 
+                      {/* Clickbait Warning Badge */}
+                      {shouldShowAi && Boolean(item.is_clickbait) && (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                          color: '#ef4444',
+                          border: '1px solid rgba(239, 68, 68, 0.35)',
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.3px'
+                        }} title={item.clickbait_reason || "Clickbait headline"}>
+                          <AlertTriangle size={12} /> Clickbait warning
+                        </span>
+                      )}
+
                       {/* AI Kategori */}
                       {shouldShowAi && item.category && (
                         <button
@@ -1247,6 +1266,26 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           }}>
                             {item.ai_summary}
                           </div>
+                          {Boolean(item.is_clickbait) && (
+                            <div style={{
+                              fontSize: '0.8rem',
+                              color: '#ef4444',
+                              lineHeight: '1.4',
+                              marginTop: '0.5rem',
+                              padding: '0.35rem 0.65rem',
+                              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                              borderRadius: '6px',
+                              borderLeft: '3px solid #ef4444',
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: '0.4rem'
+                            }}>
+                              <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444' }} />
+                              <span>
+                                <strong>Clickbait notice:</strong> {item.clickbait_reason || "Headline withholds key facts or exaggerates to force clicks."}
+                              </span>
+                            </div>
+                          )}
                           {item.prio_reason && (
                             <>
                               <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.5rem 0 0.4rem 0', opacity: 0.6 }}></div>
