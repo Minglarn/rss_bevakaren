@@ -93,10 +93,14 @@ class ArticleResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class CategoryItem(BaseModel):
+    name: str
+    weight: int = 5
+
 class AIConfigUpdate(BaseModel):
     prio_rules: Optional[str] = ""
     exclude_rules: Optional[str] = ""
-    categories: Optional[List[str]] = []
+    categories: Optional[List[Any]] = []
     prio_threshold: Optional[int] = 75
     system_prompt: Optional[str] = ""
     onboarding_completed: Optional[bool] = None
@@ -106,7 +110,7 @@ class AIConfigUpdate(BaseModel):
 class AIConfigResponse(BaseModel):
     prio_rules: str = ""
     exclude_rules: str = ""
-    categories: List[str] = []
+    categories: List[Dict[str, Any]] = []
     prio_threshold: int = 75
     system_prompt: str = ""
     onboarding_completed: bool = False

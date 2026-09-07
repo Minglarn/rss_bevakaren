@@ -10,22 +10,30 @@ LM_STUDIO_MODEL = os.environ.get("LM_STUDIO_MODEL", "")
 LM_STUDIO_TIMEOUT = int(os.environ.get("LM_STUDIO_TIMEOUT", "120"))
 LM_STUDIO_MAX_TOKENS = int(os.environ.get("LM_STUDIO_MAX_TOKENS", "8192"))
 
-DEFAULT_SYSTEM_PROMPT = """Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
-{
-  "category": "Teknik | Politik | Blåljus | Lokalt | Ekonomi | Nöje | Övrigt",
-  "priority": "high | medium | low",
-  "prio_score": 1-100,
-  "prio_reason": "Kort motivering till prioritetsnivån på svenska",
+DEFAULT_CATEGORIES_WITH_WEIGHTS = [
+    {"name": "Blåljus", "weight": 10},
+    {"name": "Lokalt", "weight": 8},
+    {"name": "Inrikes", "weight": 6},
+    {"name": "Utrikes", "weight": 5},
+    {"name": "Politik", "weight": 4},
+    {"name": "Ekonomi", "weight": 5},
+    {"name": "Teknik", "weight": 9},
+    {"name": "Motor", "weight": 7},
+    {"name": "Vetenskap & Hälsa", "weight": 6},
+    {"name": "Sport", "weight": 1},
+    {"name": "Nöje & Kultur", "weight": 0},
+    {"name": "Övrigt", "weight": 3}
+]
+
+DEFAULT_CATEGORIES = [c["name"] for c in DEFAULT_CATEGORIES_WITH_WEIGHTS]
+DEFAULT_CATEGORIES_STR = " | ".join(DEFAULT_CATEGORIES)
+
+DEFAULT_SYSTEM_PROMPT = f"""Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
+{{
+  "category": "Välj den mest passande av följande kategorier: {DEFAULT_CATEGORIES_STR}",
   "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen.",
   "tags": ["tagg1", "tagg2"]
-}
-
-Prioriteringsregler:
-- 'high' (score >= 75): Handlar specifikt om Tesla/elbilar, lokalpolitik/viktiga lokala samhällshändelser, eller kritiska blåljus/samhällsvarningar.
-- 'medium' (score 40-74): Allmän teknik, ekonomi, bredare inrikespolitik.
-- 'low' (score < 40): Nöje, skvaller, kändisar, vardagliga sportnotiser eller mat/recept."""
-
-DEFAULT_CATEGORIES = ["Teknik", "Politik", "Blåljus", "Lokalt", "Ekonomi", "Nöje", "Övrigt"]
+}}"""
 
 def get_prompt_config_path() -> str:
     """Hittar eller skapar sökvägen till prompt-konfigurationsfilen i delad datamapp."""
@@ -242,34 +250,102 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
 
     return None
 
-def build_user_prompt(categories: Optional[List[str]] = None, prio_rules: Optional[str] = None, exclude_rules: Optional[str] = None, prio_threshold: int = 75) -> str:
-    """Sammanställer en skräddarsydd systemprompt baserat på användarens specifika regler och kategorier."""
-    cats = [c.strip() for c in categories if c and c.strip()] if categories else DEFAULT_CATEGORIES
-    if not cats:
-        cats = DEFAULT_CATEGORIES
+def extract_category_names(categories_input: Any) -> List[str]:
+    """Extraherar en lista med kategorinamn oavsett om indata är dict, list av dicts eller strängar."""
+    if not categories_input:
+        return DEFAULT_CATEGORIES
+    names = []
+    if isinstance(categories_input, list):
+        for c in categories_input:
+            if isinstance(c, dict) and "name" in c:
+                names.append(str(c["name"]).strip())
+            elif isinstance(c, str) and c.strip():
+                names.append(c.strip())
+    elif isinstance(categories_input, dict):
+        names = [str(k).strip() for k in categories_input.keys() if str(k).strip()]
+    return names if names else DEFAULT_CATEGORIES
+
+def build_user_prompt(categories: Optional[Any] = None, prio_rules: Optional[str] = None, exclude_rules: Optional[str] = None, prio_threshold: int = 75) -> str:
+    """Sammanställer en skräddarsydd systemprompt baserat på användarens specifika kategorier."""
+    cats = extract_category_names(categories)
     cats_str = " | ".join(cats)
     
-    clean_prio = prio_rules.strip() if prio_rules and prio_rules.strip() else "Viktiga samhällshändelser, kritiska varningar eller händelser av stor betydelse."
-    clean_exclude = exclude_rules.strip() if exclude_rules and exclude_rules.strip() else "Nöje, skvaller, kändisar, vardagliga sportnotiser eller mat/recept."
-    threshold = max(50, min(95, prio_threshold or 75))
-    medium_range_max = threshold - 1
-
     prompt = f"""Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {{
-  "category": "{cats_str}",
-  "priority": "high | medium | low",
-  "prio_score": 1-100,
-  "prio_reason": "Kort motivering till prioritetsnivån på svenska",
+  "category": "Välj den mest passande av följande kategorier: {cats_str}",
   "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen.",
   "tags": ["tagg1", "tagg2"]
-}}
-
-Prioriteringsregler:
-- 'high' (score >= {threshold}): {clean_prio}
-- 'low' (score < 40): {clean_exclude}
-- 'medium' (score 40-{medium_range_max}): Allt övrigt nyhetsmaterial som varken är akut/viktigt eller trivialt nöje."""
-
+}}"""
     return prompt
+
+def calculate_priority(
+    category: str,
+    categories_config: Any,
+    matched_keywords: Optional[List[str]] = None
+) -> Dict[str, Any]:
+    """
+    Beräknar deterministisk prioritet och poäng:
+    1. Träff på specifika bevakningsord ger ALLTID högsta prioritet (100 poäng).
+    2. Kategori-vikt (0-10) styr grundpoäng:
+       - 8-10: high (80-100p) -> Direkt till PRIO-flödet
+       - 5-7: medium (50-70p) -> Ordinarie flöde
+       - 1-4: low (10-40p) -> Ordinarie flöde
+       - 0: low (0p) -> Ignoreras helt från PRIO
+    """
+    if matched_keywords and len(matched_keywords) > 0:
+        kw_str = ", ".join(matched_keywords)
+        return {
+            "priority": "high",
+            "prio_score": 100,
+            "prio_reason": f"Träff på bevakningsord: {kw_str}"
+        }
+    
+    weights_map = {c["name"].lower(): c["weight"] for c in DEFAULT_CATEGORIES_WITH_WEIGHTS}
+    if isinstance(categories_config, list):
+        for item in categories_config:
+            if isinstance(item, dict) and "name" in item:
+                try:
+                    weights_map[str(item["name"]).strip().lower()] = int(item.get("weight", 5))
+                except Exception:
+                    pass
+            elif isinstance(item, str):
+                weights_map[item.strip().lower()] = weights_map.get(item.strip().lower(), 5)
+    elif isinstance(categories_config, dict):
+        for k, v in categories_config.items():
+            try:
+                weights_map[str(k).strip().lower()] = int(v)
+            except Exception:
+                pass
+                
+    clean_cat = str(category or "Övrigt").strip()
+    weight = weights_map.get(clean_cat.lower(), weights_map.get("övrigt", 3))
+    weight = max(0, min(10, weight))
+    score = weight * 10
+    
+    if weight >= 8:
+        return {
+            "priority": "high",
+            "prio_score": max(75, score),
+            "prio_reason": f"Högprioriterad kategori: {clean_cat} ({weight}/10)"
+        }
+    elif weight >= 5:
+        return {
+            "priority": "medium",
+            "prio_score": score,
+            "prio_reason": f"Normalprioriterad kategori: {clean_cat} ({weight}/10)"
+        }
+    elif weight >= 1:
+        return {
+            "priority": "low",
+            "prio_score": score,
+            "prio_reason": f"Lågprioriterad kategori: {clean_cat} ({weight}/10)"
+        }
+    else:
+        return {
+            "priority": "low",
+            "prio_score": 0,
+            "prio_reason": f"Ignorerad kategori: {clean_cat} (0/10)"
+        }
 
 def analyze_article(
     title: str, 
@@ -339,19 +415,23 @@ def analyze_article(
             print(f"[AI Service] Kunde inte parsa JSON från svaret ({len(raw_message)} tecken): {raw_message[:500]}", flush=True)
             return None
             
-        # Normalisera och validera fälten
-        category = str(parsed.get("category", "Övrigt")).strip()
-        priority = str(parsed.get("priority", "low")).strip().lower()
-        if priority not in ["high", "medium", "low"]:
-            priority = "low"
+        # Normalisera kategori och matcha mot användarens definierade kategorier
+        raw_cat = str(parsed.get("category", "Övrigt")).strip()
+        category = "Övrigt"
+        valid_cats = extract_category_names(user_categories)
+        for valid_cat in valid_cats:
+            if valid_cat.lower() == raw_cat.lower() or valid_cat.lower() in raw_cat.lower():
+                category = valid_cat
+                break
+        if category == "Övrigt" and raw_cat and raw_cat.lower() != "övrigt" and len(raw_cat) < 30:
+            category = raw_cat
+
+        # Beräkna deterministisk prioritet och poäng baserat på kategori-vikt
+        prio_calc = calculate_priority(category, user_categories)
+        priority = prio_calc["priority"]
+        prio_score = prio_calc["prio_score"]
+        prio_reason = prio_calc["prio_reason"]
             
-        try:
-            prio_score = int(parsed.get("prio_score", 10))
-            prio_score = max(1, min(100, prio_score))
-        except (ValueError, TypeError):
-            prio_score = 75 if priority == "high" else (50 if priority == "medium" else 20)
-            
-        prio_reason = str(parsed.get("prio_reason", "")).strip()
         ai_summary = str(parsed.get("summary", "")).strip()
         
         raw_tags = parsed.get("tags", [])

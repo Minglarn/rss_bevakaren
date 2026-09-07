@@ -79,6 +79,48 @@ def get_version():
 VERSION = get_version()
 LAST_UPDATE = "2026-09-07"
 
+def normalize_user_categories(cats_raw: Any) -> List[Dict[str, Any]]:
+    """Säkerställer att kategorier returneras som en lista av dicts: [{'name': '...', 'weight': X}, ...]."""
+    if not cats_raw:
+        return list(ai_service.DEFAULT_CATEGORIES_WITH_WEIGHTS)
+    
+    parsed = cats_raw
+    if isinstance(cats_raw, str):
+        try:
+            parsed = json.loads(cats_raw)
+        except Exception:
+            parsed = []
+            
+    if not parsed:
+        return list(ai_service.DEFAULT_CATEGORIES_WITH_WEIGHTS)
+        
+    result = []
+    default_map = {c["name"].lower(): c["weight"] for c in ai_service.DEFAULT_CATEGORIES_WITH_WEIGHTS}
+    
+    if isinstance(parsed, list):
+        for item in parsed:
+            if isinstance(item, dict) and "name" in item:
+                name = str(item["name"]).strip()
+                try:
+                    w = int(item.get("weight", default_map.get(name.lower(), 5)))
+                except Exception:
+                    w = 5
+                result.append({"name": name, "weight": max(0, min(10, w))})
+            elif isinstance(item, str) and item.strip():
+                name = item.strip()
+                w = default_map.get(name.lower(), 5)
+                result.append({"name": name, "weight": w})
+    elif isinstance(parsed, dict):
+        for k, v in parsed.items():
+            name = str(k).strip()
+            try:
+                w = int(v)
+            except Exception:
+                w = 5
+            result.append({"name": name, "weight": max(0, min(10, w))})
+            
+    return result if result else list(ai_service.DEFAULT_CATEGORIES_WITH_WEIGHTS)
+
 def run_db_migrations(db_path: str):
     if not os.path.exists(db_path):
         return
@@ -202,6 +244,16 @@ def run_db_migrations(db_path: str):
             cur.execute("ALTER TABLE user_ai_settings ADD COLUMN selected_model TEXT DEFAULT '';")
         except sqlite3.OperationalError:
             pass
+
+        # Migration 12: Upgrade categories in user_ai_settings to weighted format
+        try:
+            cur.execute("SELECT id, categories FROM user_ai_settings WHERE categories IS NOT NULL AND categories != '';")
+            rows = cur.fetchall()
+            for r_id, r_cats in rows:
+                norm = normalize_user_categories(r_cats)
+                cur.execute("UPDATE user_ai_settings SET categories = ? WHERE id = ?;", (json.dumps(norm, ensure_ascii=False), r_id))
+        except Exception as e:
+            print(f"Migration 12 error: {e}")
 
         conn.commit()
         conn.close()
@@ -512,26 +564,11 @@ async def ai_processing_loop():
                             continue
 
                         if user_ai:
+                            user_cats = normalize_user_categories(user_ai.categories)
                             if user_ai.custom_system_prompt and user_ai.custom_system_prompt.strip():
                                 user_prompt = user_ai.custom_system_prompt.strip()
-                            elif user_ai.prio_rules or user_ai.exclude_rules:
-                                parsed_c = None
-                                if user_ai.categories:
-                                    try:
-                                        parsed_c = json.loads(user_ai.categories)
-                                    except Exception:
-                                        pass
-                                user_prompt = ai_service.build_user_prompt(
-                                    categories=parsed_c,
-                                    prio_rules=user_ai.prio_rules,
-                                    exclude_rules=user_ai.exclude_rules,
-                                    prio_threshold=user_ai.prio_threshold or 75
-                                )
-                            if user_ai.categories:
-                                try:
-                                    user_cats = json.loads(user_ai.categories)
-                                except Exception:
-                                    pass
+                            else:
+                                user_prompt = ai_service.build_user_prompt(categories=user_cats)
 
                     user_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
                     print(f"[AI] Bearbetar artikel {art.id} för user {user_id} (modell: {user_model or 'auto'}): '{art.title[:50]}...'...", flush=True)
@@ -556,19 +593,16 @@ async def ai_processing_loop():
                         art.ai_summary = analysis.get("ai_summary", "")
                         art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
                         
-                        # Kontrollera användarens bevakningsord och förstärk prioritet vid träff
+                        # STEG 1: Specifika bevakningsord (trumfar allt -> 100p & HIGH)
                         if user_id:
                             user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == user_id).all()
                             text_to_check = f"{art.title or ''} {art.summary or ''}".lower()
                             matched_kw = [kw.keyword for kw in user_keywords if kw.keyword and kw.keyword.lower() in text_to_check]
                             if matched_kw:
                                 art.priority = "high"
-                                art.prio_score = max(art.prio_score, 90)
+                                art.prio_score = 100
                                 kw_str = ", ".join(matched_kw)
-                                if art.prio_reason:
-                                    art.prio_reason += f" (Träff på bevakningsord: {kw_str})"
-                                else:
-                                    art.prio_reason = f"Träff på bevakningsord: {kw_str}"
+                                art.prio_reason = f"Träff på bevakningsord: {kw_str}"
 
                         db.commit()
                         print(f"[AI] Klar artikel {art.id} -> {art.category} | {art.priority.upper()} ({art.prio_score}p)", flush=True)
@@ -858,29 +892,8 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
 
     # Hämta användarens personliga AI-inställningar
     user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
-    user_prompt = None
-    user_cats = None
-    if user_ai:
-        if user_ai.custom_system_prompt and user_ai.custom_system_prompt.strip():
-            user_prompt = user_ai.custom_system_prompt.strip()
-        elif user_ai.prio_rules or user_ai.exclude_rules:
-            parsed_c = None
-            if user_ai.categories:
-                try:
-                    parsed_c = json.loads(user_ai.categories)
-                except Exception:
-                    pass
-            user_prompt = ai_service.build_user_prompt(
-                categories=parsed_c,
-                prio_rules=user_ai.prio_rules,
-                exclude_rules=user_ai.exclude_rules,
-                prio_threshold=user_ai.prio_threshold or 75
-            )
-        if user_ai.categories:
-            try:
-                user_cats = json.loads(user_ai.categories)
-            except Exception:
-                pass
+    user_cats = normalize_user_categories(user_ai.categories if user_ai else None)
+    user_prompt = user_ai.custom_system_prompt.strip() if (user_ai and user_ai.custom_system_prompt and user_ai.custom_system_prompt.strip()) else ai_service.build_user_prompt(categories=user_cats)
 
     user_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
     analysis = await asyncio.to_thread(
@@ -903,6 +916,17 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     art.prio_reason = analysis.get("prio_reason", "")
     art.ai_summary = analysis.get("ai_summary", "")
     art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
+
+    # STEG 1: Specifika bevakningsord (trumfar allt -> 100p & HIGH)
+    user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == current_user.id).all()
+    text_to_check = f"{art.title or ''} {art.summary or ''}".lower()
+    matched_kw = [kw.keyword for kw in user_keywords if kw.keyword and kw.keyword.lower() in text_to_check]
+    if matched_kw:
+        art.priority = "high"
+        art.prio_score = 100
+        kw_str = ", ".join(matched_kw)
+        art.prio_reason = f"Träff på bevakningsord: {kw_str}"
+
     db.commit()
     return {"status": "ok", "article_id": art.id, "analysis": analysis}
 
@@ -1017,13 +1041,13 @@ def get_ai_config(
     
     available_models = ai_service.get_available_models()
     if not user_ai:
-        global_cfg = ai_service.load_ai_config()
+        cats = normalize_user_categories(None)
         return schemas.AIConfigResponse(
             prio_rules="",
             exclude_rules="",
-            categories=global_cfg.get("categories", ai_service.DEFAULT_CATEGORIES),
+            categories=cats,
             prio_threshold=75,
-            system_prompt=global_cfg.get("system_prompt", ai_service.DEFAULT_SYSTEM_PROMPT),
+            system_prompt=ai_service.build_user_prompt(categories=cats),
             onboarding_completed=False,
             prio_enabled=False,
             lm_studio_url=ai_service.LM_STUDIO_URL,
@@ -1032,10 +1056,7 @@ def get_ai_config(
             is_healthy=ai_service.check_lm_studio_health()
         )
         
-    try:
-        cats = json.loads(user_ai.categories) if user_ai.categories else ai_service.DEFAULT_CATEGORIES
-    except Exception:
-        cats = ai_service.DEFAULT_CATEGORIES
+    cats = normalize_user_categories(user_ai.categories)
 
     prompt = user_ai.custom_system_prompt
     if not prompt or not prompt.strip():
@@ -1086,9 +1107,9 @@ def update_ai_config(
         user_ai.prio_rules = config.prio_rules.strip()
     if config.exclude_rules is not None:
         user_ai.exclude_rules = config.exclude_rules.strip()
-    if config.categories is not None and len(config.categories) > 0:
-        clean_cats = [c.strip() for c in config.categories if c and c.strip()]
-        user_ai.categories = json.dumps(clean_cats, ensure_ascii=False)
+    if config.categories is not None:
+        norm_cats = normalize_user_categories(config.categories)
+        user_ai.categories = json.dumps(norm_cats, ensure_ascii=False)
     if config.prio_threshold is not None:
         user_ai.prio_threshold = max(50, min(95, config.prio_threshold))
     if config.onboarding_completed is not None:
@@ -1096,10 +1117,7 @@ def update_ai_config(
     if config.lm_studio_model is not None:
         user_ai.selected_model = config.lm_studio_model.strip()
 
-    try:
-        cats = json.loads(user_ai.categories) if user_ai.categories else ai_service.DEFAULT_CATEGORIES
-    except Exception:
-        cats = ai_service.DEFAULT_CATEGORIES
+    cats = normalize_user_categories(user_ai.categories)
 
     if config.system_prompt and config.system_prompt.strip():
         user_ai.custom_system_prompt = config.system_prompt.strip()

@@ -37,26 +37,72 @@ const Settings = () => {
   const [isSavingAi, setIsSavingAi] = useState(false);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
 
-  const updatePromptFromRules = (prio, exclude, thresh, cats) => {
-    const catsStr = (cats && cats.length > 0) ? cats.join(' | ') : 'Teknik | Politik | Blåljus | Lokalt | Ekonomi | Nöje | Övrigt';
-    const cleanPrio = prio?.trim() || "Viktiga samhällshändelser, kritiska varningar eller händelser av stor betydelse.";
-    const cleanExclude = exclude?.trim() || "Nöje, skvaller, kändisar, vardagliga sportnotiser eller mat/recept.";
-    const threshold = thresh || 75;
+  const DEFAULT_CATS_WEIGHTS = [
+    { name: 'Blåljus', weight: 10 },
+    { name: 'Lokalt', weight: 8 },
+    { name: 'Teknik', weight: 9 },
+    { name: 'Motor', weight: 7 },
+    { name: 'Inrikes', weight: 6 },
+    { name: 'Vetenskap & Hälsa', weight: 6 },
+    { name: 'Utrikes', weight: 5 },
+    { name: 'Ekonomi', weight: 5 },
+    { name: 'Politik', weight: 4 },
+    { name: 'Övrigt', weight: 3 },
+    { name: 'Sport', weight: 1 },
+    { name: 'Nöje & Kultur', weight: 0 }
+  ];
 
-    return `Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
+  const updatePromptFromRules = (cats) => {
+    const list = Array.isArray(cats) && cats.length > 0
+      ? cats.map(c => typeof c === 'object' ? c.name : c).filter(Boolean)
+      : DEFAULT_CATS_WEIGHTS.map(c => c.name);
+    const catsStr = list.join(' | ');
+
+    return `Du är en svensk nyhetsanalytiker och klassificerare för en personlig nyhetsbevakare.
+Din enda uppgift är att läsa artikeln och klassificera den i EXAKT EN av följande tillåtna kategorier, samt ge en kort svensk sammanfattning och 1-3 relevanta taggar.
+
+TILLÅTNA KATEGORIER:
+${catsStr}
+
+Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra kommentarer:
 {
-  "category": "${catsStr}",
-  "priority": "high | medium | low",
-  "prio_score": 1-100,
-  "prio_reason": "Kort motivering till prioritetsnivån på svenska",
+  "category": "<exakt en av de tillåtna kategorierna>",
   "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen.",
   "tags": ["tagg1", "tagg2"]
-}
+}`;
+  };
 
-Prioriteringsregler:
-- 'high' (score >= ${threshold}): ${cleanPrio}
-- 'low' (score < 40): ${cleanExclude}
-- 'medium' (score 40-${threshold - 1}): Allt övrigt nyhetsmaterial som varken är akut/viktigt eller trivialt nöje.`;
+  const getWeightBadge = (weight) => {
+    if (weight >= 8) {
+      return {
+        label: 'Alltid PRIO (75-100p)',
+        color: '#16a34a',
+        bg: 'rgba(22, 163, 74, 0.12)',
+        border: '1px solid rgba(22, 163, 74, 0.3)'
+      };
+    }
+    if (weight >= 5) {
+      return {
+        label: 'Normalt flöde (50-70p)',
+        color: '#0284c7',
+        bg: 'rgba(2, 132, 199, 0.12)',
+        border: '1px solid rgba(2, 132, 199, 0.25)'
+      };
+    }
+    if (weight >= 1) {
+      return {
+        label: 'Låg prio (10-40p)',
+        color: 'var(--text-muted)',
+        bg: 'rgba(100, 116, 139, 0.1)',
+        border: '1px solid var(--border-color)'
+      };
+    }
+    return {
+      label: 'Ignoreras (0p - Aldrig PRIO)',
+      color: '#ef4444',
+      bg: 'rgba(239, 68, 68, 0.12)',
+      border: '1px solid rgba(239, 68, 68, 0.3)'
+    };
   };
 
   const toggleImages = () => {
@@ -228,33 +274,18 @@ Prioriteringsregler:
     }
   };
 
-  const handlePrioRulesChange = (val) => {
+  const handleCategoryWeightChange = (catName, newWeight) => {
     setAiConfig(prev => {
-      const updated = { ...prev, prio_rules: val };
-      if (!isCustomPromptEdited) {
-        updated.system_prompt = updatePromptFromRules(val, prev.exclude_rules, prev.prio_threshold, prev.categories);
-      }
-      return updated;
-    });
-  };
-
-  const handleExcludeRulesChange = (val) => {
-    setAiConfig(prev => {
-      const updated = { ...prev, exclude_rules: val };
-      if (!isCustomPromptEdited) {
-        updated.system_prompt = updatePromptFromRules(prev.prio_rules, val, prev.prio_threshold, prev.categories);
-      }
-      return updated;
-    });
-  };
-
-  const handlePrioThresholdChange = (val) => {
-    setAiConfig(prev => {
-      const updated = { ...prev, prio_threshold: val };
-      if (!isCustomPromptEdited) {
-        updated.system_prompt = updatePromptFromRules(prev.prio_rules, prev.exclude_rules, val, prev.categories);
-      }
-      return updated;
+      const rawCats = prev.categories || [];
+      const updated = rawCats.map(c => {
+        const name = typeof c === 'object' ? c.name : c;
+        const weight = typeof c === 'object' ? c.weight : 5;
+        if (name.toLowerCase() === catName.toLowerCase()) {
+          return { name, weight: newWeight };
+        }
+        return typeof c === 'object' ? c : { name, weight };
+      });
+      return { ...prev, categories: updated };
     });
   };
 
@@ -262,10 +293,13 @@ Prioriteringsregler:
     const nextState = !aiConfig.prio_enabled;
     try {
       setIsSavingAi(true);
+      const formattedCats = (aiConfig.categories || []).map(c => 
+        typeof c === 'object' ? { name: c.name, weight: c.weight ?? 5 } : { name: c, weight: 5 }
+      );
       const res = await api.put('/ai/config', {
         prio_rules: aiConfig.prio_rules || '',
         exclude_rules: aiConfig.exclude_rules || '',
-        categories: aiConfig.categories || [],
+        categories: formattedCats,
         prio_threshold: aiConfig.prio_threshold || 75,
         system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
         onboarding_completed: true,
@@ -291,10 +325,13 @@ Prioriteringsregler:
     if (e) e.preventDefault();
     try {
       setIsSavingAi(true);
+      const formattedCats = (aiConfig.categories || []).map(c => 
+        typeof c === 'object' ? { name: c.name, weight: c.weight ?? 5 } : { name: c, weight: 5 }
+      );
       const res = await api.put('/ai/config', {
         prio_rules: aiConfig.prio_rules || '',
         exclude_rules: aiConfig.exclude_rules || '',
-        categories: aiConfig.categories || [],
+        categories: formattedCats,
         prio_threshold: aiConfig.prio_threshold || 75,
         system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
         onboarding_completed: true,
@@ -315,34 +352,24 @@ Prioriteringsregler:
     }
   };
 
-  const handleRegeneratePromptFromRules = () => {
-    const generated = updatePromptFromRules(
-      aiConfig.prio_rules,
-      aiConfig.exclude_rules,
-      aiConfig.prio_threshold,
-      aiConfig.categories
-    );
-    setAiConfig(prev => ({
-      ...prev,
-      system_prompt: generated
-    }));
-    setIsCustomPromptEdited(false);
-    toast.success('Prompten genererades om utifrån dina regler');
-  };
-
   const handleAddAiCategory = (e) => {
     e.preventDefault();
     const cat = newAiCategory.trim();
     if (!cat) return;
-    if (aiConfig.categories && aiConfig.categories.some(c => c.toLowerCase() === cat.toLowerCase())) {
+    const currentCats = aiConfig.categories || [];
+    const exists = currentCats.some(c => (typeof c === 'object' ? c.name : c).toLowerCase() === cat.toLowerCase());
+    if (exists) {
       toast.error('Kategorin finns redan');
       return;
     }
-    const updatedCats = [...(aiConfig.categories || []), cat];
+    const updatedCats = [
+      ...currentCats.map(c => typeof c === 'object' ? c : { name: c, weight: 5 }), 
+      { name: cat, weight: 5 }
+    ];
     setAiConfig(prev => {
       const updated = { ...prev, categories: updatedCats };
       if (!isCustomPromptEdited) {
-        updated.system_prompt = updatePromptFromRules(prev.prio_rules, prev.exclude_rules, prev.prio_threshold, updatedCats);
+        updated.system_prompt = updatePromptFromRules(updatedCats);
       }
       return updated;
     });
@@ -350,29 +377,49 @@ Prioriteringsregler:
   };
 
   const handleRemoveAiCategory = (catToRemove) => {
-    const updatedCats = (aiConfig.categories || []).filter(c => c !== catToRemove);
+    const currentCats = aiConfig.categories || [];
+    const updatedCats = currentCats.filter(c => (typeof c === 'object' ? c.name : c).toLowerCase() !== catToRemove.toLowerCase());
     setAiConfig(prev => {
       const updated = { ...prev, categories: updatedCats };
       if (!isCustomPromptEdited) {
-        updated.system_prompt = updatePromptFromRules(prev.prio_rules, prev.exclude_rules, prev.prio_threshold, updatedCats);
+        updated.system_prompt = updatePromptFromRules(updatedCats);
       }
       return updated;
     });
   };
 
-  const handleResetAiPrompt = () => {
-    if (!window.confirm("Vill du återställa analysprompten och prioriteringarna till standardinställningen?")) return;
-    const defaultCats = ['Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
-    const generated = updatePromptFromRules('', '', 75, defaultCats);
+  const handleResetAiCategories = () => {
+    if (!window.confirm("Vill du återställa alla kategorier och vikter till standard?")) return;
+    setAiConfig(prev => {
+      const updated = { ...prev, categories: DEFAULT_CATS_WEIGHTS };
+      if (!isCustomPromptEdited) {
+        updated.system_prompt = updatePromptFromRules(DEFAULT_CATS_WEIGHTS);
+      }
+      return updated;
+    });
+    toast.success('Kategorier och standardvikter har återställts');
+  };
+
+  const handleRegeneratePromptFromRules = () => {
+    const generated = updatePromptFromRules(aiConfig.categories);
     setAiConfig(prev => ({
       ...prev,
-      prio_rules: '',
-      exclude_rules: '',
-      prio_threshold: 75,
-      categories: defaultCats,
       system_prompt: generated
     }));
     setIsCustomPromptEdited(false);
+    toast.success('Prompten genererades om från dina kategorier');
+  };
+
+  const handleResetAiPrompt = () => {
+    if (!window.confirm("Vill du återställa analysprompten och kategorierna till standardinställningen?")) return;
+    const generated = updatePromptFromRules(DEFAULT_CATS_WEIGHTS);
+    setAiConfig(prev => ({
+      ...prev,
+      categories: DEFAULT_CATS_WEIGHTS,
+      system_prompt: generated
+    }));
+    setIsCustomPromptEdited(false);
+    toast.success('Prompten har återställts till standard');
   };
 
   return (
@@ -957,130 +1004,202 @@ Prioriteringsregler:
             </div>
           </div>
 
-          {/* Personliga Prioriteringar */}
+          {/* Prioriterade sökord & orter (Garanterad 100% PRIO) */}
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
             <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Sliders size={20} style={{ color: '#f97316' }} /> Mina Personliga Prioriteringar
+              <Hash size={20} style={{ color: '#f97316' }} /> Prioriterade sökord & orter (Alltid 100% PRIO)
             </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-              Här styr du vad AI:n anser vara hög respektive låg prioritet för ditt konto. Ändringarna slår igenom direkt på ditt Prio Flöde.
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.5 }}>
+              Alla artiklar som innehåller något av dina bevakningsord (t.ex. din hemort som <strong>Trosa</strong> eller favoritämne som <strong>Tesla</strong>) tilldelas omedelbart <strong>100 poäng</strong> och visas alltid i PRIO-flödet oavsett kategori.
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '1.5rem' }}>
-              {/* Hög prio */}
-              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
-                  <ThumbsUp size={16} style={{ color: '#16a34a' }} /> Vad är HÖG prioritet för dig?
-                </label>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.5rem 0' }}>
-                  Nyheter som matchar dessa ämnen eller sökord får hög prio-poäng och visas i ditt Prio Flöde.
-                </p>
-                <textarea
-                  value={aiConfig.prio_rules || ''}
-                  onChange={(e) => handlePrioRulesChange(e.target.value)}
-                  placeholder="T.ex. Elbilar och Tesla, lokalpolitik i Göteborg, IT-säkerhet, rymdfart..."
-                  rows={3}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                    fontSize: '0.88rem',
-                    resize: 'vertical',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              {/* Låg prio */}
-              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
-                  <ThumbsDown size={16} style={{ color: '#ef4444' }} /> Vad vill du NEDPRIORITERA (Låg prioritet)?
-                </label>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.5rem 0' }}>
-                  Nyheter inom dessa ämnen ges låg prioritet och filtreras bort från ditt Prio Flöde.
-                </p>
-                <textarea
-                  value={aiConfig.exclude_rules || ''}
-                  onChange={(e) => handleExcludeRulesChange(e.target.value)}
-                  placeholder="T.ex. Kändisskvaller, melodifestivalen, fotbollsresultat, horoskop eller recept..."
-                  rows={2}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                    fontSize: '0.88rem',
-                    resize: 'vertical',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
-              {/* Tröskelvärde slider */}
-              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                  <label style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                    Prioritetströskel för Prio Flödet
-                  </label>
-                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f97316' }}>
-                    {aiConfig.prio_threshold || 75} poäng
-                  </span>
-                </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.75rem 0' }}>
-                  Artiklar med poäng över denna nivå visas i ditt Prio Flöde (Standard: 75).
-                </p>
-                <input
-                  type="range"
-                  min="50"
-                  max="90"
-                  step="5"
-                  value={aiConfig.prio_threshold || 75}
-                  onChange={(e) => handlePrioThresholdChange(parseInt(e.target.value))}
-                  style={{ width: '100%', cursor: 'pointer', accentColor: '#f97316' }}
-                />
-              </div>
-            </div>
-
-            {/* Kategorier */}
-            <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem' }}>
-              <Tag size={16} style={{ color: 'var(--primary)' }} /> AI Kategorier
-            </h4>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
-              Kategorier som AI använder och som visas som filter i ditt Prio Flöde.
-            </p>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '1rem' }}>
-              {(aiConfig.categories || []).map((cat, idx) => (
-                <div 
-                  key={idx}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                    backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)',
-                    padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-main)'
-                  }}
-                >
-                  <span>{cat}</span>
-                  <button 
-                    type="button"
-                    onClick={() => handleRemoveAiCategory(cat)}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
-                    title={`Ta bort ${cat}`}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '1.25rem' }}>
+              {keywords.length > 0 ? (
+                keywords.map((kw) => (
+                  <div 
+                    key={kw.id}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      backgroundColor: 'rgba(249, 115, 22, 0.12)',
+                      border: '1px solid rgba(249, 115, 22, 0.3)',
+                      color: 'var(--text-main)',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.84rem',
+                      fontWeight: 600
+                    }}
                   >
-                    <X size={13} />
-                  </button>
+                    <span>{kw.keyword}</span>
+                    <button 
+                      type="button"
+                      onClick={() => handleDeleteKeyword(kw.id)}
+                      style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
+                      title={`Ta bort ${kw.keyword}`}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  Inga prioriterade sökord tillagda ännu. Lägg till sökord nedan för garanterad 100% PRIO.
                 </div>
-              ))}
+              )}
             </div>
 
-            <form onSubmit={handleAddAiCategory} style={{ display: 'flex', gap: '0.5rem', maxWidth: '380px' }}>
+            <form onSubmit={handleAddKeyword} style={{ display: 'flex', gap: '0.5rem', maxWidth: '440px' }}>
               <input 
                 type="text" 
-                placeholder="Ny kategori (t.ex. Sport, Kultur)..." 
+                placeholder="Lägg till prioriterat ord (t.ex. Trosa, Tesla, AI)..." 
+                value={newKeyword} 
+                onChange={(e) => setNewKeyword(e.target.value)}
+                style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+              />
+              <button 
+                type="submit"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 1rem', backgroundColor: '#f97316', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+              >
+                <Plus size={15} /> Lägg till
+              </button>
+            </form>
+          </div>
+
+          {/* Kategori-viktning (0–10) */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sliders size={20} style={{ color: '#f97316' }} /> Kategori-reglage & Prioritering (0–10)
+              </h3>
+              <button
+                type="button"
+                onClick={handleResetAiCategories}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  textDecoration: 'underline'
+                }}
+              >
+                Återställ standardvikter
+              </button>
+            </div>
+            
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.5 }}>
+              AI klassificerar varje nyhet till en av dessa kategorier. Kategori-värdet avgör sedan om artikeln hamnar i PRIO-flödet eller i det vanliga flödet:
+            </p>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '0.5rem',
+              backgroundColor: 'var(--bg-app)',
+              padding: '0.75rem',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)',
+              marginBottom: '1.25rem',
+              fontSize: '0.78rem'
+            }}>
+              <div><strong style={{ color: '#16a34a' }}>8–10:</strong> Alltid PRIO (75–100p)</div>
+              <div><strong style={{ color: '#0284c7' }}>5–7:</strong> Normalt flöde (50–70p)</div>
+              <div><strong style={{ color: 'var(--text-muted)' }}>1–4:</strong> Låg prio (10–40p)</div>
+              <div><strong style={{ color: '#ef4444' }}>0:</strong> Ignoreras (Aldrig PRIO)</div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.25rem' }}>
+              {(aiConfig.categories || []).map((catItem, idx) => {
+                const name = typeof catItem === 'object' ? catItem.name : catItem;
+                const weight = typeof catItem === 'object' && typeof catItem.weight === 'number' ? catItem.weight : 5;
+                const badge = getWeightBadge(weight);
+                return (
+                  <div 
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem',
+                      padding: '0.65rem 0.9rem',
+                      backgroundColor: 'var(--bg-app)',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <div style={{ minWidth: '140px', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <Tag size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-main)' }}>{name}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '200px' }}>
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        step="1"
+                        value={weight}
+                        onChange={(e) => handleCategoryWeightChange(name, parseInt(e.target.value))}
+                        style={{
+                          flex: 1,
+                          cursor: 'pointer',
+                          accentColor: weight >= 8 ? '#16a34a' : weight >= 5 ? '#0284c7' : weight >= 1 ? '#64748b' : '#ef4444'
+                        }}
+                      />
+                      <span style={{
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        color: 'var(--text-main)',
+                        minWidth: '38px',
+                        textAlign: 'right',
+                        fontFamily: 'monospace'
+                      }}>
+                        {weight}/10
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <span style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        padding: '0.2rem 0.55rem',
+                        borderRadius: '12px',
+                        backgroundColor: badge.bg,
+                        color: badge.color,
+                        border: badge.border,
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {badge.label}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAiCategory(name)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: '0.2rem',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        title={`Ta bort ${name}`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <form onSubmit={handleAddAiCategory} style={{ display: 'flex', gap: '0.5rem', maxWidth: '400px' }}>
+              <input 
+                type="text" 
+                placeholder="Ny kategori (t.ex. Försvar, Forskning)..." 
                 value={newAiCategory} 
                 onChange={(e) => setNewAiCategory(e.target.value)}
                 style={{ flex: 1, padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.85rem' }}
@@ -1089,7 +1208,7 @@ Prioriteringsregler:
                 type="submit"
                 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.9rem', backgroundColor: 'var(--primary)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
               >
-                <Plus size={15} /> Lägg till
+                <Plus size={15} /> Lägg till kategori
               </button>
             </form>
           </div>
