@@ -15,6 +15,22 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
 
   if (!isOpen) return null;
 
+  React.useEffect(() => {
+    const loadExisting = async () => {
+      try {
+        const res = await api.get('/ai/config');
+        if (res.data) {
+          if (res.data.prio_rules) setPrioRules(res.data.prio_rules);
+          if (res.data.exclude_rules) setExcludeRules(res.data.exclude_rules);
+          if (res.data.categories && res.data.categories.length > 0) setSelectedCategories(res.data.categories);
+        }
+      } catch (err) {
+        // Ignorera
+      }
+    };
+    loadExisting();
+  }, [isOpen]);
+
   const toggleCategory = (cat) => {
     if (selectedCategories.includes(cat)) {
       if (selectedCategories.length === 1) {

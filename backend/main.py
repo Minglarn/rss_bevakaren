@@ -908,7 +908,7 @@ def get_ai_config(
         is_healthy=ai_service.check_lm_studio_health()
     )
 
-@app.put("/ai/config")
+@app.put("/ai/config", response_model=schemas.AIConfigResponse)
 def update_ai_config(
     config: schemas.AIConfigUpdate, 
     db: Session = Depends(database.get_db),
@@ -931,15 +931,15 @@ def update_ai_config(
     if config.onboarding_completed is not None:
         user_ai.onboarding_completed = 1 if config.onboarding_completed else 0
 
+    try:
+        cats = json.loads(user_ai.categories) if user_ai.categories else ai_service.DEFAULT_CATEGORIES
+    except Exception:
+        cats = ai_service.DEFAULT_CATEGORIES
+
     if config.system_prompt and config.system_prompt.strip():
         user_ai.custom_system_prompt = config.system_prompt.strip()
     else:
         # Generera prompt från de uppdaterade reglerna och kategorierna
-        try:
-            cats = json.loads(user_ai.categories) if user_ai.categories else ai_service.DEFAULT_CATEGORIES
-        except Exception:
-            cats = ai_service.DEFAULT_CATEGORIES
-            
         user_ai.custom_system_prompt = ai_service.build_user_prompt(
             categories=cats,
             prio_rules=user_ai.prio_rules,
@@ -948,7 +948,19 @@ def update_ai_config(
         )
 
     db.commit()
-    return {"status": "ok", "message": "Användarens AI-inställningar har sparats"}
+    db.refresh(user_ai)
+
+    return schemas.AIConfigResponse(
+        prio_rules=user_ai.prio_rules or "",
+        exclude_rules=user_ai.exclude_rules or "",
+        categories=cats,
+        prio_threshold=user_ai.prio_threshold or 75,
+        system_prompt=user_ai.custom_system_prompt or "",
+        onboarding_completed=bool(user_ai.onboarding_completed),
+        lm_studio_url=ai_service.LM_STUDIO_URL,
+        lm_studio_model=ai_service.get_active_model(),
+        is_healthy=ai_service.check_lm_studio_health()
+    )
 
 import requests
 from bs4 import BeautifulSoup

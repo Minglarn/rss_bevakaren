@@ -30,9 +30,32 @@ const Settings = () => {
     is_healthy: false
   });
   const [showAdvancedPrompt, setShowAdvancedPrompt] = useState(false);
+  const [isCustomPromptEdited, setIsCustomPromptEdited] = useState(false);
   const [newAiCategory, setNewAiCategory] = useState('');
   const [isSavingAi, setIsSavingAi] = useState(false);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
+
+  const updatePromptFromRules = (prio, exclude, thresh, cats) => {
+    const catsStr = (cats && cats.length > 0) ? cats.join(' | ') : 'Teknik | Politik | Blåljus | Lokalt | Ekonomi | Nöje | Övrigt';
+    const cleanPrio = prio?.trim() || "Viktiga samhällshändelser, kritiska varningar eller händelser av stor betydelse.";
+    const cleanExclude = exclude?.trim() || "Nöje, skvaller, kändisar, vardagliga sportnotiser eller mat/recept.";
+    const threshold = thresh || 75;
+
+    return `Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
+{
+  "category": "${catsStr}",
+  "priority": "high | medium | low",
+  "prio_score": 1-100,
+  "prio_reason": "Kort motivering till prioritetsnivån på svenska",
+  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen.",
+  "tags": ["tagg1", "tagg2"]
+}
+
+Prioriteringsregler:
+- 'high' (score >= ${threshold}): ${cleanPrio}
+- 'low' (score < 40): ${cleanExclude}
+- 'medium' (score 40-${threshold - 1}): Allt övrigt nyhetsmaterial som varken är akut/viktigt eller trivialt nöje.`;
+  };
 
   const toggleImages = () => {
     const val = !showImages;
@@ -80,6 +103,20 @@ const Settings = () => {
     if ('Notification' in window && Notification.permission === 'granted') {
       setPushEnabled(true);
     }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'ai') {
+      fetchAiConfig();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const handleConfigUpdate = () => {
+      fetchAiConfig();
+    };
+    window.addEventListener('aiConfigUpdated', handleConfigUpdate);
+    return () => window.removeEventListener('aiConfigUpdated', handleConfigUpdate);
   }, []);
 
   const handleAddKeyword = async (e) => {
@@ -171,18 +208,52 @@ const Settings = () => {
     }
   };
 
+  const handlePrioRulesChange = (val) => {
+    setAiConfig(prev => {
+      const updated = { ...prev, prio_rules: val };
+      if (!isCustomPromptEdited) {
+        updated.system_prompt = updatePromptFromRules(val, prev.exclude_rules, prev.prio_threshold, prev.categories);
+      }
+      return updated;
+    });
+  };
+
+  const handleExcludeRulesChange = (val) => {
+    setAiConfig(prev => {
+      const updated = { ...prev, exclude_rules: val };
+      if (!isCustomPromptEdited) {
+        updated.system_prompt = updatePromptFromRules(prev.prio_rules, val, prev.prio_threshold, prev.categories);
+      }
+      return updated;
+    });
+  };
+
+  const handlePrioThresholdChange = (val) => {
+    setAiConfig(prev => {
+      const updated = { ...prev, prio_threshold: val };
+      if (!isCustomPromptEdited) {
+        updated.system_prompt = updatePromptFromRules(prev.prio_rules, prev.exclude_rules, val, prev.categories);
+      }
+      return updated;
+    });
+  };
+
   const handleSaveAiConfig = async (e) => {
     if (e) e.preventDefault();
     try {
       setIsSavingAi(true);
-      await api.put('/ai/config', {
-        prio_rules: aiConfig.prio_rules,
-        exclude_rules: aiConfig.exclude_rules,
-        categories: aiConfig.categories,
-        prio_threshold: aiConfig.prio_threshold,
-        system_prompt: aiConfig.system_prompt,
+      const res = await api.put('/ai/config', {
+        prio_rules: aiConfig.prio_rules || '',
+        exclude_rules: aiConfig.exclude_rules || '',
+        categories: aiConfig.categories || [],
+        prio_threshold: aiConfig.prio_threshold || 75,
+        system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
         onboarding_completed: true
       });
+      if (res.data) {
+        setAiConfig(res.data);
+      }
+      setIsCustomPromptEdited(false);
       toast.success('Dina personliga AI-inställningar har sparats!');
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
@@ -194,32 +265,17 @@ const Settings = () => {
   };
 
   const handleRegeneratePromptFromRules = () => {
-    const catsStr = (aiConfig.categories && aiConfig.categories.length > 0) 
-      ? aiConfig.categories.join(' | ') 
-      : 'Teknik | Politik | Blåljus | Lokalt | Ekonomi | Nöje | Övrigt';
-    const cleanPrio = aiConfig.prio_rules?.trim() || "Viktiga samhällshändelser, kritiska varningar eller händelser av stor betydelse.";
-    const cleanExclude = aiConfig.exclude_rules?.trim() || "Nöje, skvaller, kändisar, vardagliga sportnotiser eller mat/recept.";
-    const threshold = aiConfig.prio_threshold || 75;
-
-    const generated = `Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
-{
-  "category": "${catsStr}",
-  "priority": "high | medium | low",
-  "prio_score": 1-100,
-  "prio_reason": "Kort motivering till prioritetsnivån på svenska",
-  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen.",
-  "tags": ["tagg1", "tagg2"]
-}
-
-Prioriteringsregler:
-- 'high' (score >= ${threshold}): ${cleanPrio}
-- 'low' (score < 40): ${cleanExclude}
-- 'medium' (score 40-${threshold - 1}): Allt övrigt nyhetsmaterial som varken är akut/viktigt eller trivialt nöje.`;
-
+    const generated = updatePromptFromRules(
+      aiConfig.prio_rules,
+      aiConfig.exclude_rules,
+      aiConfig.prio_threshold,
+      aiConfig.categories
+    );
     setAiConfig(prev => ({
       ...prev,
       system_prompt: generated
     }));
+    setIsCustomPromptEdited(false);
     toast.success('Prompten genererades om utifrån dina regler');
   };
 
@@ -231,43 +287,41 @@ Prioriteringsregler:
       toast.error('Kategorin finns redan');
       return;
     }
-    setAiConfig(prev => ({
-      ...prev,
-      categories: [...(prev.categories || []), cat]
-    }));
+    const updatedCats = [...(aiConfig.categories || []), cat];
+    setAiConfig(prev => {
+      const updated = { ...prev, categories: updatedCats };
+      if (!isCustomPromptEdited) {
+        updated.system_prompt = updatePromptFromRules(prev.prio_rules, prev.exclude_rules, prev.prio_threshold, updatedCats);
+      }
+      return updated;
+    });
     setNewAiCategory('');
   };
 
   const handleRemoveAiCategory = (catToRemove) => {
-    setAiConfig(prev => ({
-      ...prev,
-      categories: prev.categories.filter(c => c !== catToRemove)
-    }));
+    const updatedCats = (aiConfig.categories || []).filter(c => c !== catToRemove);
+    setAiConfig(prev => {
+      const updated = { ...prev, categories: updatedCats };
+      if (!isCustomPromptEdited) {
+        updated.system_prompt = updatePromptFromRules(prev.prio_rules, prev.exclude_rules, prev.prio_threshold, updatedCats);
+      }
+      return updated;
+    });
   };
 
   const handleResetAiPrompt = () => {
-    if (!window.confirm("Vill du återställa analysprompten till standardinställningen?")) return;
-    const catsStr = (aiConfig.categories && aiConfig.categories.length > 0) 
-      ? aiConfig.categories.join(' | ') 
-      : 'Teknik | Politik | Blåljus | Lokalt | Ekonomi | Nöje | Övrigt';
-    const defaultPrompt = `Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
-{
-  "category": "${catsStr}",
-  "priority": "high | medium | low",
-  "prio_score": 1-100,
-  "prio_reason": "Kort motivering till prioritetsnivån på svenska",
-  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen.",
-  "tags": ["tagg1", "tagg2"]
-}
-
-Prioriteringsregler:
-- 'high' (score >= 75): Handlar specifikt om Tesla/elbilar, lokalpolitik/viktiga lokala samhällshändelser, eller kritiska blåljus/samhällsvarningar.
-- 'medium' (score 40-74): Allmän teknik, ekonomi, bredare inrikespolitik.
-- 'low' (score < 40): Nöje, skvaller, kändisar, vardagliga sportnotiser eller mat/recept.`;
+    if (!window.confirm("Vill du återställa analysprompten och prioriteringarna till standardinställningen?")) return;
+    const defaultCats = ['Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
+    const generated = updatePromptFromRules('', '', 75, defaultCats);
     setAiConfig(prev => ({
       ...prev,
-      system_prompt: defaultPrompt
+      prio_rules: '',
+      exclude_rules: '',
+      prio_threshold: 75,
+      categories: defaultCats,
+      system_prompt: generated
     }));
+    setIsCustomPromptEdited(false);
   };
 
   return (
@@ -741,7 +795,7 @@ Prioriteringsregler:
                 </p>
                 <textarea
                   value={aiConfig.prio_rules || ''}
-                  onChange={(e) => setAiConfig({ ...aiConfig, prio_rules: e.target.value })}
+                  onChange={(e) => handlePrioRulesChange(e.target.value)}
                   placeholder="T.ex. Elbilar och Tesla, lokalpolitik i Göteborg, IT-säkerhet, rymdfart..."
                   rows={3}
                   style={{
@@ -768,7 +822,7 @@ Prioriteringsregler:
                 </p>
                 <textarea
                   value={aiConfig.exclude_rules || ''}
-                  onChange={(e) => setAiConfig({ ...aiConfig, exclude_rules: e.target.value })}
+                  onChange={(e) => handleExcludeRulesChange(e.target.value)}
                   placeholder="T.ex. Kändisskvaller, melodifestivalen, fotbollsresultat, horoskop eller recept..."
                   rows={2}
                   style={{
@@ -804,7 +858,7 @@ Prioriteringsregler:
                   max="90"
                   step="5"
                   value={aiConfig.prio_threshold || 75}
-                  onChange={(e) => setAiConfig({ ...aiConfig, prio_threshold: parseInt(e.target.value) })}
+                  onChange={(e) => handlePrioThresholdChange(parseInt(e.target.value))}
                   style={{ width: '100%', cursor: 'pointer', accentColor: '#f97316' }}
                 />
               </div>
@@ -899,7 +953,10 @@ Prioriteringsregler:
 
                 <textarea 
                   value={aiConfig.system_prompt || ''}
-                  onChange={(e) => setAiConfig({ ...aiConfig, system_prompt: e.target.value })}
+                  onChange={(e) => {
+                    setIsCustomPromptEdited(true);
+                    setAiConfig({ ...aiConfig, system_prompt: e.target.value });
+                  }}
                   rows={16}
                   style={{
                     width: '100%',
