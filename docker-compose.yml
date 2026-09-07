@@ -2,7 +2,7 @@
 
 services:
   backend:
-    image: ghcr.io/minglarn/rss_bevakaren_backend:beta
+    image: ghcr.io/minglarn/rss_bevakaren_backend:main
     ports:
       - "8094:8000"
     volumes:
@@ -22,7 +22,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/minglarn/rss_bevakaren_frontend:beta
+    image: ghcr.io/minglarn/rss_bevakaren_frontend:main
     ports:
       - "8093:80"
     environment:
