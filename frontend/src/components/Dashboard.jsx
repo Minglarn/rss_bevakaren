@@ -9,7 +9,7 @@ import PrioritizeModal from './PrioritizeModal';
 
 const DEFAULT_CATEGORIES = ['Alla', 'Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
 
-const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
+const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = false }) => {
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const location = useLocation();
   const [allFeeds, setAllFeeds] = useState([]);
@@ -22,8 +22,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const feedId = searchParams.get('feedId');
   const articleId = searchParams.get('articleId');
   
-  // Avgör om vi är i Prio-flödet baserat på prop, URL-path (/prio) eller searchParam
-  const isPrioMode = isPrioModeProp || location.pathname === '/prio' || searchParams.get('prio') === 'true';
+  // Avgör om vi är i AI-läget:
+  const isAiMode = mode === 'ai' || isPrioModeProp || location.pathname === '/ai' || location.pathname === '/prio' || searchParams.get('mode') === 'ai';
+  // I AI-läget: är "Endast PRIO" aktiverat?
+  const isPrioOnly = isAiMode && (searchParams.get('prio_only') === 'true' || searchParams.get('prio') === 'true');
+  const isPrioMode = isAiMode; // För intern bakåtkompatibilitet
   const selectedCategory = searchParams.get('category') || 'Alla';
   const selectedTag = searchParams.get('tag') || '';
   const [analyzingIds, setAnalyzingIds] = useState(new Set());
@@ -48,9 +51,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         const res = await api.get('/ai/config');
         if (res.data) {
           if (Array.isArray(res.data.categories) && res.data.categories.length > 0) {
-            setCategories(['Alla', ...res.data.categories]);
+            const catNames = res.data.categories.map(c => typeof c === 'object' ? c.name : c).filter(Boolean);
+            setCategories(['Alla', ...catNames]);
           }
-          if (prioEnabled && isPrioMode && res.data.onboarding_completed === false) {
+          if (prioEnabled && isAiMode && res.data.onboarding_completed === false) {
             setShowOnboarding(true);
           }
         }
@@ -65,7 +69,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     };
     window.addEventListener('aiConfigUpdated', handleConfigUpdate);
     return () => window.removeEventListener('aiConfigUpdated', handleConfigUpdate);
-  }, [isPrioMode]);
+  }, [isAiMode]);
   
   const [readItems, setReadItems] = useState(new Set());
   const [unreadItems, setUnreadItems] = useState(new Set());
@@ -122,7 +126,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   // Håller alltid uppdaterade referenser så bakgrunds-anrop (WebSocket etc) aldrig fångar gamla filter
   const paramsRef = useRef({});
   paramsRef.current = {
-    isPrioMode,
+    isAiMode,
+    isPrioOnly,
     feedId,
     articleId,
     showRead,
@@ -133,7 +138,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
   const fetchFeeds = useCallback(async (isBackground = false) => {
     const {
-      isPrioMode: pMode,
+      isAiMode: aiMode,
+      isPrioOnly: pOnly,
       feedId: fId,
       articleId: aId,
       showRead: sRead,
@@ -152,7 +158,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       if (aId) queryParts.push(`article_id=${encodeURIComponent(aId)}`);
       if (sRead) queryParts.push('show_read=true');
       if (dSearch) queryParts.push(`search=${encodeURIComponent(dSearch)}`);
-      if (pMode) queryParts.push('prio_only=true');
+      if (aiMode) {
+        queryParts.push('ai_mode=true');
+        if (pOnly) {
+          queryParts.push('prio_only=true');
+        }
+      }
       if (sCat && sCat !== 'Alla') queryParts.push(`category=${encodeURIComponent(sCat)}`);
       if (sTag && sTag.trim()) queryParts.push(`tag=${encodeURIComponent(sTag.trim())}`);
 
@@ -630,10 +641,82 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         </div>
       </div>
 
-      <div className="dashboard-header" style={{ marginBottom: isPrioMode ? '0.35rem' : undefined }}>
+      {/* Läges-väljare (Segmented control) och underfilter */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'inline-flex', padding: '0.25rem', backgroundColor: 'var(--bg-card)', borderRadius: '10px', border: '1px solid var(--border-color)', gap: '0.25rem' }}>
+          <Link
+            to="/"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+              padding: '0.45rem 1rem', borderRadius: '7px',
+              textDecoration: 'none', fontSize: '0.86rem', fontWeight: !isAiMode ? 700 : 500,
+              backgroundColor: !isAiMode ? 'var(--primary)' : 'transparent',
+              color: !isAiMode ? '#ffffff' : 'var(--text-muted)',
+              transition: 'all 0.15s'
+            }}
+          >
+            <Rss size={15} /> Klassisk RSS
+          </Link>
+          {prioEnabled && (
+            <Link
+              to="/ai"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+                padding: '0.45rem 1rem', borderRadius: '7px',
+                textDecoration: 'none', fontSize: '0.86rem', fontWeight: isAiMode ? 700 : 500,
+                backgroundColor: isAiMode ? '#f97316' : 'transparent',
+                color: isAiMode ? '#ffffff' : 'var(--text-muted)',
+                transition: 'all 0.15s'
+              }}
+            >
+              <Sparkles size={15} /> AI Flöde
+            </Link>
+          )}
+        </div>
+
+        {/* AI Flöde: Underfilter (Alla vs Endast PRIO) */}
+        {isAiMode && prioEnabled && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', backgroundColor: 'var(--bg-card)', padding: '0.25rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+            <button
+              onClick={() => {
+                const p = new URLSearchParams(searchParams);
+                p.delete('prio_only');
+                p.delete('prio');
+                setSearchParams(p);
+              }}
+              style={{
+                padding: '0.35rem 0.75rem', borderRadius: '7px', border: 'none',
+                backgroundColor: !isPrioOnly ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
+                color: !isPrioOnly ? '#f97316' : 'var(--text-muted)',
+                fontWeight: !isPrioOnly ? 700 : 500, fontSize: '0.8rem', cursor: 'pointer'
+              }}
+            >
+              Alla med AI
+            </button>
+            <button
+              onClick={() => {
+                const p = new URLSearchParams(searchParams);
+                p.set('prio_only', 'true');
+                setSearchParams(p);
+              }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                padding: '0.35rem 0.75rem', borderRadius: '7px', border: 'none',
+                backgroundColor: isPrioOnly ? '#f97316' : 'transparent',
+                color: isPrioOnly ? '#ffffff' : 'var(--text-muted)',
+                fontWeight: isPrioOnly ? 700 : 500, fontSize: '0.8rem', cursor: 'pointer'
+              }}
+            >
+              <Flame size={13} /> Endast PRIO
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="dashboard-header" style={{ marginBottom: isAiMode ? '0.35rem' : undefined }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-            {(feedId || isPrioMode) && (
+            {(feedId || isAiMode) && (
               <Link 
                 to="/" 
                 style={{ 
@@ -653,21 +736,21 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               </Link>
             )}
             <h1 style={{ 
-              color: isPrioMode ? '#f97316' : 'var(--primary)', 
+              color: isAiMode ? '#f97316' : 'var(--primary)', 
               margin: 0, 
-              fontSize: isPrioMode ? '1.25rem' : '1.4rem', 
+              fontSize: isAiMode ? '1.25rem' : '1.4rem', 
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
               whiteSpace: 'nowrap'
             }}>
-              {isPrioMode && <Flame size={20} style={{ color: '#f97316', flexShrink: 0 }} />}
-              {isPrioMode 
-                ? 'PRIO FLÖDE' 
-                : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'DAGENS NYHETER')}
+              {isAiMode ? <Sparkles size={20} style={{ color: '#f97316', flexShrink: 0 }} /> : <Rss size={20} style={{ color: 'var(--primary)', flexShrink: 0 }} />}
+              {isAiMode 
+                ? (isPrioOnly ? 'PRIO NYHETER' : 'AI NYHETSFLÖDE') 
+                : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'KLASSISK RSS')}
             </h1>
-            {isPrioMode && (
+            {isAiMode && (
               <span className="desktop-only" style={{ 
                 fontSize: '0.75rem', 
                 backgroundColor: 'rgba(249, 115, 22, 0.15)', 
@@ -678,7 +761,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                 border: '1px solid rgba(249, 115, 22, 0.3)',
                 whiteSpace: 'nowrap'
               }}>
-                Endast högprioriterade händelser
+                {isPrioOnly ? 'Endast prioriterade händelser' : 'Alla artiklar sammanfattas med AI'}
               </span>
             )}
           </div>
@@ -844,13 +927,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             justifyContent: 'center',
             margin: '0 auto 1.25rem auto'
           }}>
-            <Flame size={32} />
+            <Sparkles size={32} />
           </div>
           <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.35rem', fontWeight: 700 }}>
-            Skapa ditt personliga PRIO-flöde
+            Aktivera ditt AI-flöde
           </h2>
           <p style={{ margin: '0 0 1.5rem 0', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5 }}>
-            PRIO-flödet är för närvarande inaktiverat. När du aktiverar funktionen i inställningarna analyseras och filtreras inkommande artiklar automatiskt mot dina personliga preferenser och intresseområden.
+            AI-flödet är för närvarande inaktiverat. När du aktiverar funktionen i inställningarna sammanfattas inkommande artiklar automatiskt och du kan prioritera händelser utifrån dina kategorier och sökord.
           </p>
           <Link
             to="/settings"
@@ -956,8 +1039,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
                     userSelect: 'none', 
                     WebkitUserSelect: 'none',
-                    border: undefined,
-                    boxShadow: undefined
+                    border: (isAiMode && (item.priority === 'high' || (item.prio_score || 0) >= 75))
+                      ? '1px solid rgba(249, 115, 22, 0.45)' 
+                      : undefined,
+                    boxShadow: (isAiMode && (item.priority === 'high' || (item.prio_score || 0) >= 75))
+                      ? '0 4px 14px rgba(249, 115, 22, 0.08)' 
+                      : undefined
                   }}
                 >
                 {/* Left colored bar */}
@@ -1052,18 +1139,18 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           fontWeight: 700,
                           letterSpacing: '0.5px'
                         }} title={item.prio_reason || "Högprioriterad av AI"}>
-                          <Flame size={13} /> PRIO {item.prio_score ? item.prio_score : ''}
+                          <Flame size={13} /> PRIO {item.prio_score ? `${item.prio_score}p` : ''}
                         </span>
                       )}
 
-                      {/* AI Kategori - Endast i Prio-flödet */}
-                      {isPrioMode && item.category && (
+                      {/* AI Kategori - I AI Flödet */}
+                      {isAiMode && item.category && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
                           style={{
                             color: selectedCategory === item.category ? '#ffffff' : 'var(--text-muted)',
                             padding: '0.15rem 0.55rem',
-                            backgroundColor: selectedCategory === item.category ? 'var(--primary)' : 'var(--bg-app)',
+                            backgroundColor: selectedCategory === item.category ? '#f97316' : 'var(--bg-app)',
                             border: '1px solid var(--border-color)',
                             borderRadius: '4px',
                             fontSize: '0.75rem',
@@ -1157,11 +1244,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     </div>
                   )}
                   
-                  {/* AI-sammanfattning (visas ENBART i PRIO flödet) */}
-                  {isPrioMode && item.ai_summary && (
+                  {/* AI-sammanfattning (visas i AI Flödet på alla artiklar som analyserats) */}
+                  {isAiMode && item.ai_summary && (
                     <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                        <Sparkles size={13} style={{ color: 'var(--primary)' }} /> AI-genererad sammanfattning
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                        <Sparkles size={13} /> AI-sammanfattning
                       </div>
                       <div style={{ 
                         color: 'var(--text-main)', 
@@ -1185,8 +1272,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     </div>
                   )}
 
-                  {/* Summary - Visas alltid i Dashboard, eller i Prio om ingen AI-sammanfattning finns */}
-                  {(!isPrioMode || !item.ai_summary) && item.summary && (
+                  {/* Summary - Visas alltid i Klassisk RSS, eller i AI Flöde om ingen AI-sammanfattning finns ännu */}
+                  {(!isAiMode || !item.ai_summary) && item.summary && (
                     <div style={{ 
                       color: 'var(--text-main)', 
                       fontSize: '0.95rem', 

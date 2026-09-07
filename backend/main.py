@@ -788,12 +788,14 @@ def get_dashboard_feeds(
     show_read: Optional[bool] = False, 
     search: Optional[str] = None, 
     article_id: Optional[int] = None,
+    ai_mode: Optional[bool] = False,
     prio_only: Optional[bool] = False,
     category: Optional[str] = None,
     tag: Optional[str] = None,
     db: Session = Depends(database.get_db), 
     current_user: models.User = Depends(auth.get_current_user)
 ):
+    include_ai = bool(ai_mode or prio_only)
     query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == current_user.id)
     if article_id:
         query = query.filter(models.Article.id == article_id)
@@ -825,7 +827,7 @@ def get_dashboard_feeds(
             query = query.filter(models.Article.tags.ilike(f"%{clean_tag}%"))
             
         if search:
-            if prio_only:
+            if include_ai:
                 query = query.filter(or_(
                     models.Article.title.ilike(f"%{search}%"), 
                     models.Article.summary.ilike(f"%{search}%"),
@@ -846,7 +848,7 @@ def get_dashboard_feeds(
         cats = art.categories.split(",") if art.categories else []
         
         parsed_tags = []
-        if prio_only and art.tags:
+        if include_ai and art.tags:
             try:
                 parsed_tags = json.loads(art.tags)
             except Exception:
@@ -868,14 +870,14 @@ def get_dashboard_feeds(
             "received_ts": art.received_ts,
             "is_read": art.is_read or 0,
             "is_locked": art.is_locked or 0,
-            # AI-fält levereras ENBART i PRIO-flödet - Dashboard förblir 100% omodifierad precis som förut
-            "ai_processed": art.ai_processed or 0 if prio_only else 0,
-            "category": art.category if prio_only else None,
-            "priority": art.priority if prio_only else None,
-            "prio_score": art.prio_score or 0 if prio_only else 0,
-            "prio_reason": art.prio_reason or "" if prio_only else "",
-            "ai_summary": art.ai_summary if prio_only else None,
-            "tags": parsed_tags if prio_only else []
+            # AI-fält levereras i AI-läget och PRIO-läget - Klassiskt läge förblir 100% rått och snabbt
+            "ai_processed": art.ai_processed or 0 if include_ai else 0,
+            "category": art.category if include_ai else None,
+            "priority": art.priority if include_ai else None,
+            "prio_score": art.prio_score or 0 if include_ai else 0,
+            "prio_reason": art.prio_reason or "" if include_ai else "",
+            "ai_summary": art.ai_summary if include_ai else None,
+            "tags": parsed_tags if include_ai else []
         }
         response_items.append(art_dict)
         
