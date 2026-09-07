@@ -9,7 +9,7 @@ import PrioritizeModal from './PrioritizeModal';
 
 const DEFAULT_CATEGORIES = ['Alla', 'Teknik', 'Politik', 'Blåljus', 'Lokalt', 'Ekonomi', 'Nöje', 'Övrigt'];
 
-const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = false }) => {
+const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const location = useLocation();
   const [allFeeds, setAllFeeds] = useState([]);
@@ -22,11 +22,19 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
   const feedId = searchParams.get('feedId');
   const articleId = searchParams.get('articleId');
   
-  // Avgör om vi är i AI-läget:
-  const isAiMode = mode === 'ai' || isPrioModeProp || location.pathname === '/ai' || location.pathname === '/prio' || searchParams.get('mode') === 'ai';
-  // I AI-läget: är "Endast PRIO" aktiverat?
-  const isPrioOnly = isAiMode && (searchParams.get('prio_only') === 'true' || searchParams.get('prio') === 'true');
-  const isPrioMode = isAiMode; // För intern bakåtkompatibilitet
+  // Avgör om vi är i Prio-flödet baserat på prop, URL-path (/prio) eller searchParam
+  const isPrioMode = isPrioModeProp || location.pathname === '/prio' || searchParams.get('prio') === 'true';
+  const [feedMode, setFeedMode] = useState(() => localStorage.getItem('rss_feed_mode') || 'ai');
+  const shouldShowAi = isPrioMode || feedMode === 'ai';
+
+  useEffect(() => {
+    const handleModeChanged = () => {
+      setFeedMode(localStorage.getItem('rss_feed_mode') || 'ai');
+    };
+    window.addEventListener('feedModeChanged', handleModeChanged);
+    return () => window.removeEventListener('feedModeChanged', handleModeChanged);
+  }, []);
+
   const selectedCategory = searchParams.get('category') || 'Alla';
   const selectedTag = searchParams.get('tag') || '';
   const [analyzingIds, setAnalyzingIds] = useState(new Set());
@@ -54,7 +62,7 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
             const catNames = res.data.categories.map(c => typeof c === 'object' ? c.name : c).filter(Boolean);
             setCategories(['Alla', ...catNames]);
           }
-          if (prioEnabled && isAiMode && res.data.onboarding_completed === false) {
+          if (prioEnabled && isPrioMode && res.data.onboarding_completed === false) {
             setShowOnboarding(true);
           }
         }
@@ -69,7 +77,7 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
     };
     window.addEventListener('aiConfigUpdated', handleConfigUpdate);
     return () => window.removeEventListener('aiConfigUpdated', handleConfigUpdate);
-  }, [isAiMode]);
+  }, [isPrioMode]);
   
   const [readItems, setReadItems] = useState(new Set());
   const [unreadItems, setUnreadItems] = useState(new Set());
@@ -126,8 +134,8 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
   // Håller alltid uppdaterade referenser så bakgrunds-anrop (WebSocket etc) aldrig fångar gamla filter
   const paramsRef = useRef({});
   paramsRef.current = {
-    isAiMode,
-    isPrioOnly,
+    isPrioMode,
+    feedMode,
     feedId,
     articleId,
     showRead,
@@ -138,8 +146,8 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
 
   const fetchFeeds = useCallback(async (isBackground = false) => {
     const {
-      isAiMode: aiMode,
-      isPrioOnly: pOnly,
+      isPrioMode: pMode,
+      feedMode: fMode,
       feedId: fId,
       articleId: aId,
       showRead: sRead,
@@ -158,11 +166,10 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
       if (aId) queryParts.push(`article_id=${encodeURIComponent(aId)}`);
       if (sRead) queryParts.push('show_read=true');
       if (dSearch) queryParts.push(`search=${encodeURIComponent(dSearch)}`);
-      if (aiMode) {
+      if (pMode) {
+        queryParts.push('prio_only=true');
+      } else if (fMode === 'ai') {
         queryParts.push('ai_mode=true');
-        if (pOnly) {
-          queryParts.push('prio_only=true');
-        }
       }
       if (sCat && sCat !== 'Alla') queryParts.push(`category=${encodeURIComponent(sCat)}`);
       if (sTag && sTag.trim()) queryParts.push(`tag=${encodeURIComponent(sTag.trim())}`);
@@ -641,82 +648,10 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
         </div>
       </div>
 
-      {/* Läges-väljare (Segmented control) och underfilter */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
-        <div style={{ display: 'inline-flex', padding: '0.25rem', backgroundColor: 'var(--bg-card)', borderRadius: '10px', border: '1px solid var(--border-color)', gap: '0.25rem' }}>
-          <Link
-            to="/"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
-              padding: '0.45rem 1rem', borderRadius: '7px',
-              textDecoration: 'none', fontSize: '0.86rem', fontWeight: !isAiMode ? 700 : 500,
-              backgroundColor: !isAiMode ? 'var(--primary)' : 'transparent',
-              color: !isAiMode ? '#ffffff' : 'var(--text-muted)',
-              transition: 'all 0.15s'
-            }}
-          >
-            <Rss size={15} /> Klassisk RSS
-          </Link>
-          {prioEnabled && (
-            <Link
-              to="/ai"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
-                padding: '0.45rem 1rem', borderRadius: '7px',
-                textDecoration: 'none', fontSize: '0.86rem', fontWeight: isAiMode ? 700 : 500,
-                backgroundColor: isAiMode ? '#f97316' : 'transparent',
-                color: isAiMode ? '#ffffff' : 'var(--text-muted)',
-                transition: 'all 0.15s'
-              }}
-            >
-              <Sparkles size={15} /> AI Flöde
-            </Link>
-          )}
-        </div>
-
-        {/* AI Flöde: Underfilter (Alla vs Endast PRIO) */}
-        {isAiMode && prioEnabled && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', backgroundColor: 'var(--bg-card)', padding: '0.25rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-            <button
-              onClick={() => {
-                const p = new URLSearchParams(searchParams);
-                p.delete('prio_only');
-                p.delete('prio');
-                setSearchParams(p);
-              }}
-              style={{
-                padding: '0.35rem 0.75rem', borderRadius: '7px', border: 'none',
-                backgroundColor: !isPrioOnly ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
-                color: !isPrioOnly ? '#f97316' : 'var(--text-muted)',
-                fontWeight: !isPrioOnly ? 700 : 500, fontSize: '0.8rem', cursor: 'pointer'
-              }}
-            >
-              Alla med AI
-            </button>
-            <button
-              onClick={() => {
-                const p = new URLSearchParams(searchParams);
-                p.set('prio_only', 'true');
-                setSearchParams(p);
-              }}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                padding: '0.35rem 0.75rem', borderRadius: '7px', border: 'none',
-                backgroundColor: isPrioOnly ? '#f97316' : 'transparent',
-                color: isPrioOnly ? '#ffffff' : 'var(--text-muted)',
-                fontWeight: isPrioOnly ? 700 : 500, fontSize: '0.8rem', cursor: 'pointer'
-              }}
-            >
-              <Flame size={13} /> Endast PRIO
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="dashboard-header" style={{ marginBottom: isAiMode ? '0.35rem' : undefined }}>
+      <div className="dashboard-header" style={{ marginBottom: isPrioMode ? '0.35rem' : undefined }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-            {(feedId || isAiMode) && (
+            {(feedId || isPrioMode) && (
               <Link 
                 to="/" 
                 style={{ 
@@ -736,21 +671,21 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
               </Link>
             )}
             <h1 style={{ 
-              color: isAiMode ? '#f97316' : 'var(--primary)', 
+              color: isPrioMode ? '#f97316' : 'var(--primary)', 
               margin: 0, 
-              fontSize: isAiMode ? '1.25rem' : '1.4rem', 
+              fontSize: isPrioMode ? '1.25rem' : '1.4rem', 
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
               whiteSpace: 'nowrap'
             }}>
-              {isAiMode ? <Sparkles size={20} style={{ color: '#f97316', flexShrink: 0 }} /> : <Rss size={20} style={{ color: 'var(--primary)', flexShrink: 0 }} />}
-              {isAiMode 
-                ? (isPrioOnly ? 'PRIO NYHETER' : 'AI NYHETSFLÖDE') 
-                : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'KLASSISK RSS')}
+              {isPrioMode && <Flame size={20} style={{ color: '#f97316', flexShrink: 0 }} />}
+              {isPrioMode 
+                ? 'PRIO FLÖDE' 
+                : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : 'DAGENS NYHETER')}
             </h1>
-            {isAiMode && (
+            {isPrioMode && (
               <span className="desktop-only" style={{ 
                 fontSize: '0.75rem', 
                 backgroundColor: 'rgba(249, 115, 22, 0.15)', 
@@ -761,7 +696,7 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
                 border: '1px solid rgba(249, 115, 22, 0.3)',
                 whiteSpace: 'nowrap'
               }}>
-                {isPrioOnly ? 'Endast prioriterade händelser' : 'Alla artiklar sammanfattas med AI'}
+                Endast högprioriterade händelser
               </span>
             )}
           </div>
@@ -1039,10 +974,10 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
                     filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
                     userSelect: 'none', 
                     WebkitUserSelect: 'none',
-                    border: (isAiMode && (item.priority === 'high' || (item.prio_score || 0) >= 75))
+                    border: (shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75))
                       ? '1px solid rgba(249, 115, 22, 0.45)' 
                       : undefined,
-                    boxShadow: (isAiMode && (item.priority === 'high' || (item.prio_score || 0) >= 75))
+                    boxShadow: (shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75))
                       ? '0 4px 14px rgba(249, 115, 22, 0.08)' 
                       : undefined
                   }}
@@ -1124,8 +1059,8 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
                         )}
                       </div>
 
-                      {/* PRIO Badge vid hög prioritet - Endast i Prio-flödet */}
-                      {isPrioMode && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (
+                      {/* PRIO Badge vid hög prioritet */}
+                      {shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (
                         <span style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -1143,8 +1078,8 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
                         </span>
                       )}
 
-                      {/* AI Kategori - I AI Flödet */}
-                      {isAiMode && item.category && (
+                      {/* AI Kategori */}
+                      {shouldShowAi && item.category && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
                           style={{
@@ -1244,8 +1179,8 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
                     </div>
                   )}
                   
-                  {/* AI-sammanfattning (visas i AI Flödet på alla artiklar som analyserats) */}
-                  {isAiMode && item.ai_summary && (
+                  {/* AI-sammanfattning (visas när AI är aktivt) */}
+                  {shouldShowAi && item.ai_summary && (
                     <div style={{ marginBottom: '1rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>
                         <Sparkles size={13} /> AI-sammanfattning
@@ -1272,8 +1207,8 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
                     </div>
                   )}
 
-                  {/* Summary - Visas alltid i Klassisk RSS, eller i AI Flöde om ingen AI-sammanfattning finns ännu */}
-                  {(!isAiMode || !item.ai_summary) && item.summary && (
+                  {/* Summary - Visas i Klassisk RSS, eller i AI-läge om ingen AI-sammanfattning finns ännu */}
+                  {(!shouldShowAi || !item.ai_summary) && item.summary && (
                     <div style={{ 
                       color: 'var(--text-main)', 
                       fontSize: '0.95rem', 
@@ -1288,8 +1223,8 @@ const Dashboard = ({ mode = 'classic', isPrioModeProp = false, prioEnabled = fal
                     </div>
                   )}
 
-                  {/* Taggar från AI-analys - Visas endast i Prio-flödet */}
-                  {isPrioMode && item.tags && item.tags.length > 0 && (
+                  {/* Taggar från AI-analys */}
+                  {shouldShowAi && item.tags && item.tags.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem' }}>
                       {item.tags.map((tag, tIdx) => {
                         const isTagActive = selectedTag.toLowerCase() === tag.toLowerCase();

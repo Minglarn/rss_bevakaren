@@ -194,7 +194,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             backgroundColor: location.pathname === '/' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             fontWeight: location.pathname === '/' ? 600 : 400
           }}>
-            <Rss size={20} /> {!isCollapsed && "Klassisk RSS"}
+            <Rss size={20} /> {!isCollapsed && "Dashboard"}
             {!isCollapsed && myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
               <span style={{ 
                 marginLeft: 'auto', 
@@ -210,14 +210,14 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             )}
           </Link>
           {prioEnabled && (
-            <Link to="/ai" style={{
+            <Link to="/prio" style={{
               display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
               borderRadius: '8px', textDecoration: 'none',
-              color: (location.pathname === '/ai' || location.pathname === '/prio') ? '#f97316' : 'var(--text-muted)',
-              backgroundColor: (location.pathname === '/ai' || location.pathname === '/prio') ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
-              fontWeight: (location.pathname === '/ai' || location.pathname === '/prio') ? 600 : 400
+              color: location.pathname === '/prio' ? '#f97316' : 'var(--text-muted)',
+              backgroundColor: location.pathname === '/prio' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+              fontWeight: location.pathname === '/prio' ? 600 : 400
             }}>
-              <Sparkles size={20} style={{ color: '#f97316' }} /> {!isCollapsed && "AI Flöde"}
+              <Flame size={20} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Flöde"}
               {!isCollapsed && prioUnreadCount > 0 && (
                 <span style={{ 
                   marginLeft: 'auto', 
@@ -329,22 +329,22 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       <div className="mobile-bottom-bar">
         <Link to="/" className={`bottom-bar-item ${location.pathname === '/' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
-            <Rss size={22} />
+            <Home size={22} />
             {myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
               <span className="bottom-bar-badge">{myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}</span>
             )}
           </div>
-          <span>Klassisk</span>
+          <span>Hem</span>
         </Link>
         {prioEnabled && (
-          <Link to="/ai" className={`bottom-bar-item ${(location.pathname === '/ai' || location.pathname === '/prio') ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+          <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
             <div className="icon-wrapper">
-              <Sparkles size={22} style={{ color: (location.pathname === '/ai' || location.pathname === '/prio') ? '#f97316' : 'inherit' }} />
+              <Flame size={22} style={{ color: location.pathname === '/prio' ? '#f97316' : 'inherit' }} />
               {prioUnreadCount > 0 && (
                 <span className="bottom-bar-badge" style={{ backgroundColor: '#f97316' }}>{prioUnreadCount}</span>
               )}
             </div>
-            <span style={{ color: (location.pathname === '/ai' || location.pathname === '/prio') ? '#f97316' : undefined }}>AI Flöde</span>
+            <span style={{ color: location.pathname === '/prio' ? '#f97316' : undefined }}>Prio</span>
           </Link>
         )}
         <button 
@@ -397,20 +397,20 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             }}
             onClick={() => setIsMobileSheetOpen(false)}
           >
-            <Rss size={20} /> Klassisk RSS
+            <Home size={20} /> Alla flöden
           </Link>
           {prioEnabled && (
             <Link 
-              to="/ai" 
+              to="/prio" 
               style={{
                 display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem',
-                color: (location.pathname === '/ai' || location.pathname === '/prio') ? '#f97316' : 'var(--text-main)', 
-                backgroundColor: (location.pathname === '/ai' || location.pathname === '/prio') ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+                color: location.pathname === '/prio' ? '#f97316' : 'var(--text-main)', 
+                backgroundColor: location.pathname === '/prio' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
                 borderRadius: '12px', textDecoration: 'none', fontWeight: 600
               }}
               onClick={() => setIsMobileSheetOpen(false)}
             >
-              <Sparkles size={20} style={{ color: '#f97316' }} /> AI Flöde
+              <Flame size={20} style={{ color: '#f97316' }} /> Prio Flöde
               {prioUnreadCount > 0 && (
                 <span style={{ backgroundColor: '#f97316', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold', marginLeft: 'auto' }}>
                   {prioUnreadCount}
@@ -515,9 +515,9 @@ const App = () => {
       <Router>
         <AppLayout onLogout={handleLogout} prioEnabled={prioEnabled}>
           <Routes>
-            <Route path="/" element={<Dashboard mode="classic" prioEnabled={prioEnabled} />} />
-            <Route path="/ai" element={<Dashboard mode="ai" prioEnabled={prioEnabled} />} />
-            <Route path="/prio" element={<Dashboard mode="ai" prioEnabled={prioEnabled} />} />
+            <Route path="/" element={<Dashboard isPrioModeProp={false} prioEnabled={prioEnabled} />} />
+            <Route path="/prio" element={<Dashboard isPrioModeProp={true} prioEnabled={prioEnabled} />} />
+            <Route path="/ai" element={<Navigate to="/prio" replace />} />
             <Route path="/manage" element={<RssManager />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />

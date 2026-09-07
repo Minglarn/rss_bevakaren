@@ -14,9 +14,16 @@ const Settings = () => {
   const [sysInfo, setSysInfo] = useState(null);
   const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
   const [theme, setTheme] = useState(() => localStorage.getItem('rss_theme') || 'light');
+  const [feedMode, setFeedMode] = useState(() => localStorage.getItem('rss_feed_mode') || 'ai');
   const [purgeDays, setPurgeDays] = useState(30);
   const [isPurging, setIsPurging] = useState(false);
   const [purgeMessage, setPurgeMessage] = useState(null);
+
+  const handleFeedModeChange = (val) => {
+    setFeedMode(val);
+    localStorage.setItem('rss_feed_mode', val);
+    window.dispatchEvent(new Event('feedModeChanged'));
+  };
 
   // AI Inställningar state (Personliga per användare)
   const [aiConfig, setAiConfig] = useState({
@@ -586,7 +593,7 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
               </div>
             </div>
 
-            <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
               <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <ImageIcon size={18} /> Display
               </h4>
@@ -603,6 +610,28 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                   />
                   <span className="toggle-slider"></span>
                 </label>
+              </div>
+            </div>
+
+            <div style={{ padding: '1.5rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sparkles size={18} style={{ color: '#f97316' }} /> Visningsläge för nyhetsflödet (Dashboard)
+              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ maxWidth: '500px' }}>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Välj flödestyp för Dashboard</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    Välj om ditt ordinarie nyhetsflöde ska berikas med automatiska AI-sammanfattningar, taggar och kategorier eller visas i klassiskt avskalat RSS-läge.
+                  </div>
+                </div>
+                <select 
+                  value={feedMode}
+                  onChange={(e) => handleFeedModeChange(e.target.value)}
+                  style={{ flex: 'none', width: 'auto', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: 600 }}
+                >
+                  <option value="ai">AI-flöde (Sammanfattningar & taggar)</option>
+                  <option value="classic">Klassisk RSS (Rå text utan AI)</option>
+                </select>
               </div>
             </div>
           </div>
