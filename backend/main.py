@@ -863,26 +863,30 @@ async def ai_processing_loop():
                         push_info = None
 
                         try:
+                            feed_notify_setting = feed_obj.notify_enabled if (feed_obj and feed_obj.notify_enabled is not None) else 1
+                            feed_notifs_on = (feed_notify_setting == 1)
+
                             threshold = (user_ai.prio_threshold if (user_ai and user_ai.prio_threshold) else 75)
                             is_prio = (art.priority and str(art.priority).lower() == "high") or ((art.prio_score or 0) >= threshold)
 
-                            if matched_kw:
-                                should_send_push = True
-                                kw_str = ", ".join(matched_kw)
-                                push_title = f"Bevakningsord ({kw_str}): {art.title}"
-                                context_tag = "Bevakningsord-Push"
-                            elif user_ai and user_ai.prio_enabled and is_prio:
-                                if user_ai.prio_notify_only:
+                            # Om notiser är avstängda för flödet skickas inga notiser (artikeln analyseras och visas dock i PRIO-flödet)
+                            if not feed_notifs_on:
+                                should_send_push = False
+                            else:
+                                if matched_kw:
                                     should_send_push = True
-                                else:
-                                    feed_notify_setting = feed_obj.notify_enabled if (feed_obj and feed_obj.notify_enabled is not None) else 1
-                                    if feed_notify_setting == 0 or feed_notify_setting == 1:
-                                        should_send_push = True
-                                push_title = f"PRIO ({source or 'RSS'}): {art.title}"
-                                context_tag = "PRIO-Push"
-                            elif user_ai and user_ai.prio_enabled and not user_ai.prio_notify_only:
-                                feed_notify_setting = feed_obj.notify_enabled if (feed_obj and feed_obj.notify_enabled is not None) else 1
-                                if feed_notify_setting == 1:
+                                    kw_str = ", ".join(matched_kw)
+                                    push_title = f"Bevakningsord ({kw_str}): {art.title}"
+                                    context_tag = "Bevakningsord-Push"
+                                elif user_ai and user_ai.prio_enabled and is_prio:
+                                    should_send_push = True
+                                    push_title = f"PRIO ({source or 'RSS'}): {art.title}"
+                                    context_tag = "PRIO-Push"
+                                elif user_ai and user_ai.prio_enabled and not user_ai.prio_notify_only:
+                                    should_send_push = True
+                                    push_title = f"{source or 'RSS'}: {art.title}"
+                                    context_tag = "Flöde-Push"
+                                elif not user_ai or not user_ai.prio_enabled:
                                     should_send_push = True
                                     push_title = f"{source or 'RSS'}: {art.title}"
                                     context_tag = "Flöde-Push"

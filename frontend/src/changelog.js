@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.12',
+    date: '2026-09-08',
+    title: 'Logisk notishierarki: Flödesklockan styr pushnotiser',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Överordnad flödesklocka för notiser',
+        description: 'Om notiser är avstängda för ett specifikt flöde skickas nu inga pushnotiser alls från den källan, vilket förhindrar oönskade notiser från flöden du valt att tysta.'
+      },
+      {
+        type: 'improvement',
+        title: 'Bibehållen analys för PRIO-flödet',
+        description: 'Även när notiser är avstängda för ett flöde analyseras artiklarna som vanligt av AI och visas i appens PRIO-vy om de uppnår relevanströskeln.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.11',
     date: '2026-09-08',
     title: 'Strukturerad och renodlad loggning i Docker',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
