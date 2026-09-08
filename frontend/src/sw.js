@@ -85,7 +85,14 @@ self.addEventListener('push', function(event) {
 
     event.waitUntil(
       self.registration.showNotification(title, options).catch(err => {
-        console.error('SW showNotification error:', err);
+        console.warn('SW showNotification with full options failed, attempting minimal fallback:', err);
+        return self.registration.showNotification(title, {
+          body: options.body,
+          icon: '/pwa-192x192.png',
+          data: options.data
+        });
+      }).catch(fallbackErr => {
+        console.error('SW showNotification fallback also failed:', fallbackErr);
       })
     );
   }

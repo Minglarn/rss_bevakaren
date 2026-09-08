@@ -1,9 +1,36 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.08',
+    date: '2026-09-08',
+    title: 'Utökad Push-diagnostik, Enhetshantering & Doze-fix',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Hög prioritet (Urgency: high) & TTL på alla push-notiser',
+        description: 'Webb-pushnotiser skickas nu med RFC 8030 Urgency: high och TTL 24 timmar, vilket förhindrar att mobilens energisparläge eller Doze mode fördröjer eller tappar notiser när skärmen är släckt.'
+      },
+      {
+        type: 'feature',
+        title: 'Översikt & hantering av anslutna push-enheter',
+        description: 'Under Inställningar visas nu samtliga registrerade webbläsare och enheter (mobil, dator) med senast aktiva tidpunkt, möjlighet att ta bort enskilda enheter eller rensa alla gamla enheter med ett klick.'
+      },
+      {
+        type: 'improvement',
+        title: 'Tydlig serverdiagnostik med HTTP-status per enhet',
+        description: 'Backend loggar nu exakt vilken enhet som tar emot notisen samt HTTP-svarskoden från FCM/push-tjänsten (t.ex. HTTP 201 OK eller automatisk radering vid HTTP 410 Gone).'
+      },
+      {
+        type: 'fix',
+        title: 'Mjukare clickbait-filter för sakliga nyheter',
+        description: 'Uppdaterat systemprompten så att sakliga rapporteringar aldrig felaktigt stämplas som clickbait.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.07',
     date: '2026-09-08',
     title: 'Fix för PRIO-notiser & räknare vid start',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

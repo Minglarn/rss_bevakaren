@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
@@ -11,6 +11,8 @@ const Settings = () => {
   const [keywords, setKeywords] = useState([]);
   const [newKeyword, setNewKeyword] = useState('');
   const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushDevices, setPushDevices] = useState([]);
+  const [isLoadingDevices, setIsLoadingDevices] = useState(false);
   const [feeds, setFeeds] = useState([]);
   const [sysInfo, setSysInfo] = useState(null);
   const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
@@ -173,16 +175,32 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
   };
 
+  const fetchPushDevices = async () => {
+    try {
+      setIsLoadingDevices(true);
+      const res = await api.get('/push/subscriptions');
+      setPushDevices(res.data || []);
+    } catch (err) {
+      console.error("Could not load push devices:", err);
+    } finally {
+      setIsLoadingDevices(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     checkPushSubscriptionStatus().then(active => {
       setPushEnabled(active);
     });
+    fetchPushDevices();
   }, []);
 
   useEffect(() => {
     if (activeTab === 'ai') {
       fetchAiConfig();
+    }
+    if (activeTab === 'notifications') {
+      fetchPushDevices();
     }
   }, [activeTab]);
 
@@ -226,6 +244,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       const subEndpoint = await subscribeToWebPush();
       if (subEndpoint) {
         setPushEnabled(true);
+        await fetchPushDevices();
         toast.success('Push-notiser är nu aktiverade på denna enhet!', { id: 'push-toggle' });
       } else {
         toast.error('Kunde inte slutföra prenumerationen mot webbläsaren eller servern.', { id: 'push-toggle' });
@@ -244,6 +263,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       } else {
         toast.error('Ingen aktiv prenumeration hittades för ditt konto.', { id: 'push-test' });
       }
+      await fetchPushDevices();
     } catch (e) {
       console.error("Test push failed", e);
       const detail = e.response?.data?.detail || 'Kunde inte skicka testnotis.';
@@ -267,10 +287,44 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         }
       }
       setPushEnabled(false);
+      await fetchPushDevices();
       toast.success('Enheten är nu avregistrerad från push-notiser.');
     } catch (e) {
       console.error("Unsubscribe failed", e);
       toast.error('Kunde inte avregistrera enheten.');
+    }
+  };
+
+  const handleClearAllDevices = async () => {
+    if (!window.confirm("Vill du rensa samtliga sparade enheter från push-notiser? Därefter kan du återaktivera notiser på denna enhet.")) return;
+    try {
+      await api.delete('/push/subscriptions/all');
+      if ('serviceWorker' in navigator) {
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          const sub = await reg.pushManager.getSubscription();
+          if (sub) await sub.unsubscribe();
+        } catch (swErr) {
+          console.warn(swErr);
+        }
+      }
+      setPushEnabled(false);
+      await fetchPushDevices();
+      toast.success("Samtliga push-enheter har rensats från databasen.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Kunde inte rensa enheter.");
+    }
+  };
+
+  const handleDeleteDevice = async (id) => {
+    try {
+      await api.delete(`/push/subscriptions/${id}`);
+      await fetchPushDevices();
+      toast.success("Enheten togs bort.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Kunde inte ta bort enheten.");
     }
   };
 
@@ -841,6 +895,149 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Registrerade enheter för push-notiser */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Smartphone size={18} style={{ color: 'var(--primary)' }} />
+                <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 600 }}>
+                  Registrerade enheter ({pushDevices.length})
+                </h4>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button
+                  onClick={fetchPushDevices}
+                  disabled={isLoadingDevices}
+                  title="Uppdatera lista"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.35rem 0.65rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-app)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <RefreshCw size={13} className={isLoadingDevices ? 'animate-spin' : ''} /> Uppdatera
+                </button>
+                {pushDevices.length > 0 && (
+                  <button
+                    onClick={handleClearAllDevices}
+                    title="Rensa alla sparade enheter"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.35rem 0.65rem',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                      color: '#ef4444',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Trash2 size={13} /> Rensa alla enheter
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem', paddingLeft: '0.35rem', paddingRight: '0.35rem', lineHeight: 1.45 }}>
+              Här visas de enheter och webbläsare som är kopplade till ditt användarkonto. Pushnotiser skickas till samtliga aktiva enheter i listan med hög prioritet. Om du bytt telefon eller har gamla sessioner kvar kan du ta bort dem här.
+            </p>
+
+            {pushDevices.length === 0 ? (
+              <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
+                Inga enheter är för närvarande registrerade för push-notiser. Klicka på "Aktivera push-notiser" ovan för att registrera denna enhet.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {pushDevices.map(dev => {
+                  const isMobile = (dev.device_name || '').toLowerCase().includes('android') || (dev.device_name || '').toLowerCase().includes('iphone');
+                  const updatedDate = dev.updated_at ? new Date(dev.updated_at * 1000).toLocaleString('sv-SE') : (dev.created_at ? new Date(dev.created_at * 1000).toLocaleString('sv-SE') : 'Okänt datum');
+                  return (
+                    <div
+                      key={dev.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.75rem 0.9rem',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--bg-app)',
+                        border: dev.is_current ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid var(--border-color)',
+                        gap: '0.75rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                        <div style={{
+                          padding: '0.5rem',
+                          borderRadius: '8px',
+                          backgroundColor: dev.is_current ? 'rgba(34, 197, 94, 0.12)' : 'var(--bg-card)',
+                          color: dev.is_current ? '#22c55e' : 'var(--text-muted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {isMobile ? <Smartphone size={18} /> : <Laptop size={18} />}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                              {dev.device_name}
+                            </span>
+                            {dev.is_current && (
+                              <span style={{
+                                fontSize: '0.68rem',
+                                padding: '0.1rem 0.45rem',
+                                borderRadius: '10px',
+                                fontWeight: 700,
+                                backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                                color: '#22c55e',
+                                border: '1px solid rgba(34, 197, 94, 0.3)'
+                              }}>
+                                Denna enhet
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            Senast aktiv: {updatedDate} | Id: ...{dev.endpoint_snippet}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleDeleteDevice(dev.id)}
+                        title="Ta bort enhet"
+                        style={{
+                          padding: '0.4rem',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Inställning för att endast få notiser på PRIO-flödet */}

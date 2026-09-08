@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Request
 import asyncio
 import time
 from fastapi.security import OAuth2PasswordRequestForm
@@ -9,7 +9,7 @@ from datetime import timedelta
 import os
 import json
 
-import models, schemas, database, auth, ai_service
+import models, schemas, database, auth, ai_service, rss_parser
 from pydantic import BaseModel
 import logging
 import builtins
@@ -68,6 +68,25 @@ def ensure_db_migrations():
         except Exception as e:
             print(f"[DB] Migration notice for feeds: {e}", flush=True)
 
+        try:
+            res_subs = conn.execute(text("PRAGMA table_info(push_subscriptions)"))
+            s_cols = [row[1] for row in res_subs.fetchall()]
+            if s_cols:
+                if "user_agent" not in s_cols:
+                    conn.execute(text("ALTER TABLE push_subscriptions ADD COLUMN user_agent TEXT DEFAULT ''"))
+                    conn.commit()
+                    print("[DB] Added user_agent column to push_subscriptions", flush=True)
+                if "created_at" not in s_cols:
+                    conn.execute(text("ALTER TABLE push_subscriptions ADD COLUMN created_at INTEGER DEFAULT 0"))
+                    conn.commit()
+                    print("[DB] Added created_at column to push_subscriptions", flush=True)
+                if "updated_at" not in s_cols:
+                    conn.execute(text("ALTER TABLE push_subscriptions ADD COLUMN updated_at INTEGER DEFAULT 0"))
+                    conn.commit()
+                    print("[DB] Added updated_at column to push_subscriptions", flush=True)
+        except Exception as e:
+            print(f"[DB] Migration notice for push_subscriptions: {e}", flush=True)
+
 ensure_db_migrations()
 
 app = FastAPI(title="RSS Bevakaren API")
@@ -101,7 +120,7 @@ def get_version():
         return "unknown"
 
 VERSION = get_version()
-LAST_UPDATE = "2026-09-07"
+LAST_UPDATE = "2026-09-08"
 
 def normalize_user_categories(cats_raw: Any) -> List[Dict[str, Any]]:
     """Säkerställer att kategorier returneras som en lista av dicts: [{'name': '...', 'weight': X}, ...]."""
@@ -289,6 +308,17 @@ def run_db_migrations(db_path: str):
             except sqlite3.OperationalError:
                 pass
 
+        # Migration 14: Add user_agent, created_at, updated_at to push_subscriptions
+        for col_def in [
+            ("user_agent", "TEXT DEFAULT ''"),
+            ("created_at", "INTEGER DEFAULT 0"),
+            ("updated_at", "INTEGER DEFAULT 0")
+        ]:
+            try:
+                cur.execute(f"ALTER TABLE push_subscriptions ADD COLUMN {col_def[0]} {col_def[1]};")
+            except sqlite3.OperationalError:
+                pass
+
         conn.commit()
         conn.close()
         size_kb = os.path.getsize(db_path) / 1024
@@ -408,6 +438,150 @@ async def websocket_endpoint(websocket: WebSocket):
         except RuntimeError:
             pass
 
+from pywebpush import webpush, WebPushException
+import base64
+from cryptography.hazmat.primitives.asymmetric import ec
+
+def base64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode('utf-8').rstrip('=')
+
+def get_or_create_vapid_keys():
+    keys_path = "/data/vapid_keys.json"
+    if not os.path.exists("/data"):
+        keys_path = "vapid_keys.json"
+        
+    if os.path.exists(keys_path):
+        with open(keys_path, "r") as f:
+            return json.load(f)
+            
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    private_numbers = private_key.private_numbers()
+    private_bytes = private_numbers.private_value.to_bytes(32, byteorder='big')
+    
+    public_key = private_key.public_key()
+    public_numbers = public_key.public_numbers()
+    x = public_numbers.x.to_bytes(32, byteorder='big')
+    y = public_numbers.y.to_bytes(32, byteorder='big')
+    public_bytes = b'\x04' + x + y
+    
+    keys = {
+        "private_key": base64url_encode(private_bytes),
+        "public_key": base64url_encode(public_bytes),
+        "sub": "mailto:admin@example.com"
+    }
+    
+    with open(keys_path, "w") as f:
+        json.dump(keys, f)
+        
+    return keys
+
+VAPID_KEYS = get_or_create_vapid_keys()
+
+def parse_device_name(ua: Optional[str]) -> str:
+    if not ua:
+        return "Okänd enhet"
+    ua_lower = ua.lower()
+    
+    os_name = "Enhet"
+    if "android" in ua_lower:
+        os_name = "Android"
+    elif "iphone" in ua_lower:
+        os_name = "iPhone"
+    elif "ipad" in ua_lower:
+        os_name = "iPad"
+    elif "windows" in ua_lower:
+        os_name = "Windows"
+    elif "macintosh" in ua_lower or "mac os" in ua_lower:
+        os_name = "macOS"
+    elif "cros" in ua_lower:
+        os_name = "ChromeOS"
+    elif "linux" in ua_lower:
+        os_name = "Linux"
+
+    browser_name = "Webbläsare"
+    if "edg/" in ua_lower or "edge/" in ua_lower:
+        browser_name = "Edge"
+    elif "samsungbrowser" in ua_lower:
+        browser_name = "Samsung Internet"
+    elif "chrome" in ua_lower and "chromium" not in ua_lower:
+        browser_name = "Chrome"
+    elif "firefox" in ua_lower:
+        browser_name = "Firefox"
+    elif "safari" in ua_lower and "chrome" not in ua_lower:
+        browser_name = "Safari"
+    elif "opera" in ua_lower or "opr/" in ua_lower:
+        browser_name = "Opera"
+
+    return f"{os_name} ({browser_name})"
+
+def send_push_notification_to_user(
+    db: Session,
+    user_id: int,
+    title: str,
+    body: str,
+    url: str = "/",
+    article_id: Optional[int] = None,
+    context: str = "Push"
+) -> int:
+    """
+    Skickar web-push till samtliga registrerade enheter för en användare med hög prioritet (Urgency: high) och TTL.
+    Hanterar fel, tar bort inaktuella enheter (HTTP 404/410) och loggar full diagnostik med enhetstyp och statuskod.
+    """
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    u_display = user.username if user else f"user_{user_id}"
+
+    subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == user_id).all()
+    if not subs:
+        print(f"[{context}] Notis triggad ('{title}': '{body[:35]}...') men användare '{u_display}' har inga aktiva enheter i databasen.", flush=True)
+        return 0
+
+    print(f"[{context}] Skickar notis ('{title}') till '{u_display}' ({len(subs)} registrerad(e) enhet(er))...", flush=True)
+    delivered_count = 0
+
+    for idx, sub in enumerate(subs, 1):
+        dev_desc = parse_device_name(sub.user_agent)
+        endpoint_snippet = sub.endpoint[-28:] if sub.endpoint else "okänd"
+        
+        try:
+            resp = webpush(
+                subscription_info={
+                    "endpoint": sub.endpoint,
+                    "keys": {
+                        "p256dh": sub.p256dh,
+                        "auth": sub.auth
+                    }
+                },
+                data=json.dumps({
+                    "title": title,
+                    "body": body,
+                    "url": url or "/",
+                    "article_id": article_id
+                }),
+                vapid_private_key=VAPID_KEYS["private_key"],
+                vapid_claims={"sub": VAPID_KEYS["sub"]},
+                ttl=86400,
+                headers={"Urgency": "high"}
+            )
+            delivered_count += 1
+            status_code = resp.status_code if resp else 200
+            print(f"[{context}] [Enhet {idx}/{len(subs)}: {dev_desc}] Levererad till '{u_display}' (...{endpoint_snippet}) -> HTTP {status_code}", flush=True)
+        except WebPushException as ex:
+            resp_code = getattr(ex.response, "status_code", None) if getattr(ex, "response", None) is not None else None
+            resp_text = getattr(ex.response, "text", "") if getattr(ex, "response", None) is not None else str(ex)
+            if resp_code in [404, 410]:
+                print(f"[{context}] [Enhet {idx}/{len(subs)}: {dev_desc}] Prenumerationen har löpt ut eller ogiltigförklarats (HTTP {resp_code}). Enheten raderas ur databasen för '{u_display}'.", flush=True)
+                try:
+                    db.delete(sub)
+                    db.commit()
+                except Exception:
+                    db.rollback()
+            else:
+                print(f"[{context}] [Enhet {idx}/{len(subs)}: {dev_desc}] Fel vid push till '{u_display}' (HTTP {resp_code}): {resp_text[:140]}", flush=True)
+        except Exception as e:
+            print(f"[{context}] [Enhet {idx}/{len(subs)}: {dev_desc}] Oväntat fel vid push till '{u_display}': {e}", flush=True)
+
+    return delivered_count
+
 async def polling_loop():
     print("Background polling loop started", flush=True)
     while True:
@@ -510,31 +684,15 @@ async def polling_loop():
                                         notify_body = art.title
                                         
                                 if should_notify:
-                                    if not subs:
-                                        print(f"[Push] Notis triggad för '{art.title[:45]}' men användare '{user_name}' har inga aktiva enheter registrerade.", flush=True)
-                                    else:
-                                        for sub in subs:
-                                            try:
-                                                webpush(
-                                                    subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
-                                                    data=json.dumps({
-                                                        "title": notify_title,
-                                                        "body": notify_body,
-                                                        "url": art.link,
-                                                        "article_id": art.id
-                                                    }),
-                                                    vapid_private_key=VAPID_KEYS["private_key"],
-                                                    vapid_claims={"sub": VAPID_KEYS["sub"]}
-                                                )
-                                                print(f"Sent push notification to user '{user_name}'", flush=True)
-                                            except WebPushException as ex:
-                                                print(f"WebPushException for feed {feed.id} (user '{user_name}'): {repr(ex)}", flush=True)
-                                                if getattr(ex, "response", None) is not None and ex.response.status_code in [404, 410]:
-                                                    db.delete(sub)
-                                                    db.commit()
-                                                    print(f"Removed invalid Push subscription for user '{user_name}'", flush=True)
-                                            except Exception as ex:
-                                                print(f"Unexpected error during webpush for user '{user_name}': {ex}", flush=True)
+                                    send_push_notification_to_user(
+                                        db=db,
+                                        user_id=feed.user_id,
+                                        title=notify_title,
+                                        body=notify_body or "Ny artikel",
+                                        url=art.link or "/",
+                                        article_id=art.id,
+                                        context="Push"
+                                    )
                     else:
                         print(f"Polling done for feed {feed.id} ({feed.title}): 0 new articles.", flush=True)
                     
@@ -683,33 +841,15 @@ async def ai_processing_loop():
                             print(f"[Push] Artikel {art.id} ('{art.title[:35]}...'): is_prio={is_prio} (prio={art.priority}, score={art.prio_score}/{threshold}), should_send={should_send_prio}", flush=True)
 
                             if should_send_prio:
-                                subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == user_id).all()
-                                if subs:
-                                    prio_title = f"PRIO: {source or 'RSS'}"
-                                    prio_body = art.title
-                                    for sub in subs:
-                                        try:
-                                            webpush(
-                                                subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
-                                                data=json.dumps({
-                                                    "title": prio_title,
-                                                    "body": prio_body,
-                                                    "url": art.link or "/",
-                                                    "article_id": art.id
-                                                }),
-                                                vapid_private_key=VAPID_KEYS["private_key"],
-                                                vapid_claims={"sub": VAPID_KEYS["sub"]}
-                                            )
-                                            print(f"[Push] Skickade PRIO-pushnotis för artikel {art.id} till '{u_display}'", flush=True)
-                                        except WebPushException as ex:
-                                            print(f"[Push] WebPushException för artikel {art.id} ('{u_display}'): {repr(ex)}", flush=True)
-                                            if ex.response and ex.response.status_code in [404, 410]:
-                                                db.delete(sub)
-                                                db.commit()
-                                        except Exception as e:
-                                            print(f"[Push] Oväntat fel vid PRIO-webpush för '{u_display}': {e}", flush=True)
-                                else:
-                                    print(f"[Push] PRIO-notis kvalificerad för '{art.title[:35]}' men användare '{u_display}' har inga aktiva enheter.", flush=True)
+                                send_push_notification_to_user(
+                                    db=db,
+                                    user_id=user_id,
+                                    title=f"PRIO: {source or 'RSS'}",
+                                    body=art.title or "Ny prioriterad artikel",
+                                    url=art.link or "/",
+                                    article_id=art.id,
+                                    context="PRIO-Push"
+                                )
                         except Exception as push_err:
                             print(f"[Push] Fel vid utvärdering av PRIO-notis för artikel {art.id}: {push_err}", flush=True)
                         
@@ -1307,54 +1447,21 @@ def scrape_article(
         return {"content": "Could not load article automatically."}
 
 from pywebpush import webpush, WebPushException
-import json
-import base64
-from cryptography.hazmat.primitives.asymmetric import ec
-
-def base64url_encode(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode('utf-8').rstrip('=')
-
-def get_or_create_vapid_keys():
-    import os
-    keys_path = "/data/vapid_keys.json"
-    
-    if not os.path.exists("/data"):
-        keys_path = "vapid_keys.json"
-        
-    if os.path.exists(keys_path):
-        with open(keys_path, "r") as f:
-            return json.load(f)
-            
-    private_key = ec.generate_private_key(ec.SECP256R1())
-    private_numbers = private_key.private_numbers()
-    private_bytes = private_numbers.private_value.to_bytes(32, byteorder='big')
-    
-    public_key = private_key.public_key()
-    public_numbers = public_key.public_numbers()
-    x = public_numbers.x.to_bytes(32, byteorder='big')
-    y = public_numbers.y.to_bytes(32, byteorder='big')
-    public_bytes = b'\x04' + x + y
-    
-    keys = {
-        "private_key": base64url_encode(private_bytes),
-        "public_key": base64url_encode(public_bytes),
-        "sub": "mailto:admin@example.com"
-    }
-    
-    with open(keys_path, "w") as f:
-        json.dump(keys, f)
-        
-    return keys
-
-VAPID_KEYS = get_or_create_vapid_keys()
-
 @app.get("/push/vapid-public-key")
 def get_vapid_public_key():
     return {"public_key": VAPID_KEYS["public_key"]}
 
 @app.post("/push/subscribe", response_model=dict)
-def subscribe_push(sub: schemas.PushSubscriptionCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    # Upsert baserat på endpoint för att förhindra krasch på unique constraint
+def subscribe_push(
+    sub: schemas.PushSubscriptionCreate, 
+    request: Request,
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    user_agent = request.headers.get("user-agent", "")
+    now_ts = int(time.time())
+    dev_name = parse_device_name(user_agent)
+
     existing = db.query(models.PushSubscription).filter(
         models.PushSubscription.endpoint == sub.endpoint
     ).first()
@@ -1363,18 +1470,23 @@ def subscribe_push(sub: schemas.PushSubscriptionCreate, db: Session = Depends(da
         existing.user_id = current_user.id
         existing.p256dh = sub.p256dh
         existing.auth = sub.auth
+        existing.user_agent = user_agent
+        existing.updated_at = now_ts
         db.commit()
-        print(f"[Push] Uppdaterade prenumeration för enhet kopplad till '{current_user.username}'", flush=True)
+        print(f"[Push] Uppdaterade prenumeration för enhet ({dev_name}) kopplad till '{current_user.username}'", flush=True)
     else:
         db_sub = models.PushSubscription(
             endpoint=sub.endpoint,
             p256dh=sub.p256dh,
             auth=sub.auth,
-            user_id=current_user.id
+            user_id=current_user.id,
+            user_agent=user_agent,
+            created_at=now_ts,
+            updated_at=now_ts
         )
         db.add(db_sub)
         db.commit()
-        print(f"[Push] Registrerade ny prenumerationsenhet för '{current_user.username}'", flush=True)
+        print(f"[Push] Registrerade ny prenumerationsenhet ({dev_name}) för '{current_user.username}'", flush=True)
     
     return {"status": "ok"}
 
@@ -1392,46 +1504,75 @@ def unsubscribe_push(sub: schemas.PushSubscriptionCreate, db: Session = Depends(
         
     return {"status": "ok"}
 
+@app.get("/push/subscriptions", response_model=List[schemas.PushDeviceInfo])
+def get_user_push_subscriptions(
+    request: Request,
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    current_ua = request.headers.get("user-agent", "")
+    subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == current_user.id).all()
+    result = []
+    for sub in subs:
+        endpoint_snip = sub.endpoint[-28:] if sub.endpoint else "okänd"
+        dev_title = parse_device_name(sub.user_agent)
+        is_cur = bool(current_ua and sub.user_agent and current_ua == sub.user_agent)
+        result.append(schemas.PushDeviceInfo(
+            id=sub.id,
+            endpoint_snippet=endpoint_snip,
+            device_name=dev_title,
+            user_agent=sub.user_agent or "",
+            created_at=sub.created_at or 0,
+            updated_at=sub.updated_at or 0,
+            is_current=is_cur
+        ))
+    return result
+
+@app.delete("/push/subscriptions/all", response_model=dict)
+def delete_all_push_subscriptions(
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    deleted_count = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == current_user.id).delete()
+    db.commit()
+    print(f"[Push] Raderade samtliga {deleted_count} push-prenumerationer för '{current_user.username}'", flush=True)
+    return {"status": "ok", "deleted": deleted_count}
+
+@app.delete("/push/subscriptions/{sub_id}", response_model=dict)
+def delete_push_subscription(
+    sub_id: int,
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    sub = db.query(models.PushSubscription).filter(
+        models.PushSubscription.id == sub_id,
+        models.PushSubscription.user_id == current_user.id
+    ).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Prenumerationen hittades inte")
+    db.delete(sub)
+    db.commit()
+    print(f"[Push] Raderade enhet #{sub_id} för '{current_user.username}'", flush=True)
+    return {"status": "ok"}
+
 class TestPushRequest(BaseModel):
     endpoint: Optional[str] = None
 
 @app.post("/push/test", response_model=dict)
 def test_push(req: Optional[TestPushRequest] = None, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    query = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == current_user.id)
-    if req and req.endpoint:
-        query = query.filter(models.PushSubscription.endpoint == req.endpoint)
-    subs = query.all()
+    subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == current_user.id).all()
     if not subs:
         raise HTTPException(status_code=400, detail="Ingen aktiv push-prenumeration hittades för denna användare.")
         
-    success_count = 0
-    for sub in subs:
-        try:
-            webpush(
-                subscription_info={
-                    "endpoint": sub.endpoint,
-                    "keys": {
-                        "p256dh": sub.p256dh,
-                        "auth": sub.auth
-                    }
-                },
-                data=json.dumps({
-                    "title": "Testnotis från RSS-Bevakaren",
-                    "body": "Webb-pushnotiser fungerar som förväntat på denna enhet.",
-                    "url": "/"
-                }),
-                vapid_private_key=VAPID_KEYS["private_key"],
-                vapid_claims={"sub": VAPID_KEYS["sub"]}
-            )
-            success_count += 1
-            print(f"[Push] Skickade testnotis till '{current_user.username}'", flush=True)
-        except WebPushException as ex:
-            print(f"[Push] Fel vid testnotis för '{current_user.username}': {repr(ex)}", flush=True)
-            if ex.response and ex.response.status_code in [404, 410]:
-                db.delete(sub)
-                db.commit()
-                
-    return {"status": "ok", "sent": success_count}
+    sent_count = send_push_notification_to_user(
+        db=db,
+        user_id=current_user.id,
+        title="Testnotis från RSS-Bevakaren",
+        body="Webb-pushnotiser fungerar som förväntat på denna enhet.",
+        url="/",
+        context="TestPush"
+    )
+    return {"status": "ok", "sent": sent_count}
 
 @app.get("/system/info")
 def get_system_info(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):

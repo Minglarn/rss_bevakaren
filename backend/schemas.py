@@ -62,9 +62,21 @@ class PushSubscriptionCreate(PushSubscriptionBase):
 class PushSubscriptionResponse(PushSubscriptionBase):
     id: int
     user_id: int
+    user_agent: Optional[str] = ""
+    created_at: Optional[int] = 0
+    updated_at: Optional[int] = 0
 
     class Config:
         from_attributes = True
+
+class PushDeviceInfo(BaseModel):
+    id: int
+    endpoint_snippet: str
+    device_name: str
+    user_agent: Optional[str] = ""
+    created_at: Optional[int] = 0
+    updated_at: Optional[int] = 0
+    is_current: Optional[bool] = False
 
 class ArticleResponse(BaseModel):
     id: int

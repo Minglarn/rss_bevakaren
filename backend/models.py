@@ -48,6 +48,9 @@ class PushSubscription(Base):
     p256dh = Column(String)
     auth = Column(String)
     user_id = Column(Integer, ForeignKey("users.id"))
+    user_agent = Column(String, default="")
+    created_at = Column(Integer, default=0)
+    updated_at = Column(Integer, default=0)
 
     owner = relationship("User", back_populates="push_subscriptions")
 
