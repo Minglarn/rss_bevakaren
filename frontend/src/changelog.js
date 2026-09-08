@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.11',
+    date: '2026-09-08',
+    title: 'Strukturerad och renodlad loggning i Docker',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Adaptivt och strukturerat loggformat (Förslag B)',
+        description: 'Prio-händelser och bevakningsord visas nu som tydliga inramade block i Docker-loggen med användare, källa, svarstid och leveransstatus, medan vanliga artiklar loggas i ett rent 2-raders format.'
+      },
+      {
+        type: 'improvement',
+        title: 'Borttaget tekniskt brus i backend-loggen',
+        description: 'Tog bort chattiga debug-utskrifter från LM Studio-anrop och interna loopar så att containerloggen är ren, överskådlig och behaglig att följa.'
+      },
+      {
+        type: 'improvement',
+        title: 'Kompakt och tydlig RSS-pollning',
+        description: 'Pollningsloggen visar nu källa, antal nya artiklar samt id-intervall, och döljer tysta sökningar utan nya artiklar.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.10',
     date: '2026-09-08',
     title: 'Rika Push-notiser med AI-sammanfattning & Artikelbild',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

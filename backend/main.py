@@ -529,23 +529,29 @@ def send_push_notification_to_user(
     url: str = "/",
     article_id: Optional[int] = None,
     image_url: Optional[str] = None,
-    context: str = "Push"
-) -> int:
+    context: str = "Push",
+    silent: bool = False
+) -> dict:
     """
     Skickar web-push till samtliga registrerade enheter för en användare med hög prioritet (Urgency: high) och TTL.
-    Hanterar fel, tar bort inaktuella enheter (HTTP 404/410) och loggar full diagnostik med enhetstyp och statuskod.
+    Hanterar fel, tar bort inaktuella enheter (HTTP 404/410) och returnerar sammanställning över leveransen.
     """
     user = db.query(models.User).filter(models.User.id == user_id).first()
     u_display = user.username if user else f"user_{user_id}"
 
     subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == user_id).all()
     if not subs:
-        print(f"[{context}] Notis triggad ('{title}': '{body[:35]}...') men användare '{u_display}' har inga aktiva enheter i databasen.", flush=True)
-        return 0
+        if not silent:
+            print(f"[{context}] Notis triggad ('{title}': '{body[:35]}...') men användare '{u_display}' har inga aktiva enheter i databasen.", flush=True)
+        return {"delivered": 0, "total": 0, "status_code": None, "has_image": bool(image_url), "errors": []}
 
     img_info = " med bild" if image_url else ""
-    print(f"[{context}] Skickar notis ('{title}'){img_info} till '{u_display}' ({len(subs)} registrerad(e) enhet(er))...", flush=True)
+    if not silent:
+        print(f"[{context}] Skickar notis ('{title}'){img_info} till '{u_display}' ({len(subs)} registrerad(e) enhet(er))...", flush=True)
+
     delivered_count = 0
+    last_status_code = None
+    errors = []
 
     for idx, sub in enumerate(subs, 1):
         dev_desc = parse_device_name(sub.user_agent)
@@ -577,10 +583,14 @@ def send_push_notification_to_user(
             )
             delivered_count += 1
             status_code = resp.status_code if resp else 200
-            print(f"[{context}] [Enhet {idx}/{len(subs)}: {dev_desc}] Levererad till '{u_display}' (...{endpoint_snippet}) -> HTTP {status_code}", flush=True)
+            last_status_code = status_code
+            if not silent:
+                print(f"[{context}] [Enhet {idx}/{len(subs)}: {dev_desc}] Levererad till '{u_display}' (...{endpoint_snippet}) -> HTTP {status_code}", flush=True)
         except WebPushException as ex:
             resp_code = getattr(ex.response, "status_code", None) if getattr(ex, "response", None) is not None else None
             resp_text = getattr(ex.response, "text", "") if getattr(ex, "response", None) is not None else str(ex)
+            last_status_code = resp_code
+            errors.append(f"HTTP {resp_code}: {resp_text[:80]}")
             if resp_code in [404, 410]:
                 print(f"[{context}] [Enhet {idx}/{len(subs)}: {dev_desc}] Prenumerationen har löpt ut eller ogiltigförklarats (HTTP {resp_code}). Enheten raderas ur databasen för '{u_display}'.", flush=True)
                 try:
@@ -591,9 +601,16 @@ def send_push_notification_to_user(
             else:
                 print(f"[{context}] [Enhet {idx}/{len(subs)}: {dev_desc}] Fel vid push till '{u_display}' (HTTP {resp_code}): {resp_text[:140]}", flush=True)
         except Exception as e:
+            errors.append(str(e))
             print(f"[{context}] [Enhet {idx}/{len(subs)}: {dev_desc}] Oväntat fel vid push till '{u_display}': {e}", flush=True)
 
-    return delivered_count
+    return {
+        "delivered": delivered_count,
+        "total": len(subs),
+        "status_code": last_status_code or (201 if delivered_count > 0 else 500),
+        "has_image": bool(image_url),
+        "errors": errors
+    }
 
 async def polling_loop():
     print("Background polling loop started", flush=True)
@@ -650,7 +667,11 @@ async def polling_loop():
                             new_articles.append(new_article)
                     
                     if new_articles:
-                        print(f"Found {len(new_articles)} new articles for feed {feed.id} ({feed.title})", flush=True)
+                        feed_title = feed.title or "RSS"
+                        first_id = new_articles[0].id
+                        last_id = new_articles[-1].id
+                        id_range = f"#{first_id}" if first_id == last_id else f"#{first_id}-#{last_id}"
+                        print(f"[POLL] {feed_title}: {len(new_articles)} nya artiklar sparade ({id_range})", flush=True)
                         db.commit()
                         # Send WS update
                         await manager.send_personal_message(f"NEW_ARTICLES:{feed.id}:{len(new_articles)}", feed.user_id)
@@ -662,7 +683,7 @@ async def polling_loop():
                         is_initial_poll = (feed.last_polled == 0)
                         
                         if is_initial_poll:
-                            print(f"Initial load of feed {feed.id}, skipping notifications for old posts.", flush=True)
+                            print(f"[POLL] {feed_title}: Initial inläsning slutförd, hoppar över historiska notiser.", flush=True)
                         else:
                             user_ai_pref = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == feed.user_id).first()
                             only_prio = bool(user_ai_pref and user_ai_pref.prio_enabled and user_ai_pref.prio_notify_only)
@@ -709,8 +730,6 @@ async def polling_loop():
                                             image_url=art.image_url,
                                             context="Rå-Push"
                                         )
-                    else:
-                        print(f"Polling done for feed {feed.id} ({feed.title}): 0 new articles.", flush=True)
                     
                     # Update last polled time
                     feed.last_polled = int(time.time())
@@ -799,7 +818,6 @@ async def ai_processing_loop():
                     user_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
                     u_rec = db.query(models.User).filter(models.User.id == user_id).first() if user_id else None
                     u_display = u_rec.username if u_rec else f"user_{user_id}"
-                    print(f"[AI] Bearbetar artikel {art.id} för användare '{u_display}' (modell: {user_model or 'auto'}): '{art.title[:50]}...'...", flush=True)
                     
                     analysis = await asyncio.to_thread(
                         ai_service.analyze_article,
@@ -822,6 +840,7 @@ async def ai_processing_loop():
                         art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
                         art.is_clickbait = analysis.get("is_clickbait", 0)
                         art.clickbait_reason = analysis.get("clickbait_reason", "")
+                        dur = analysis.get("duration_s", 0.0)
                         
                         # STEG 1: Specifika bevakningsord (trumfar allt -> 100p & HIGH)
                         matched_kw = []
@@ -836,16 +855,16 @@ async def ai_processing_loop():
                                 art.prio_reason = f"Träff på bevakningsord: {kw_str}"
 
                         db.commit()
-                        print(f"[AI] Klar artikel {art.id} -> {art.category} | {art.priority.upper()} ({art.prio_score}p)", flush=True)
 
-                        # Skicka pushnotis för PRIO, bevakningsord eller flöde med AI-sammanfattning och bild
+                        # Avgör om pushnotis ska skickas för PRIO, bevakningsord eller flöde
+                        should_send_push = False
+                        push_title = ""
+                        context_tag = "Push"
+                        push_info = None
+
                         try:
                             threshold = (user_ai.prio_threshold if (user_ai and user_ai.prio_threshold) else 75)
                             is_prio = (art.priority and str(art.priority).lower() == "high") or ((art.prio_score or 0) >= threshold)
-
-                            should_send_push = False
-                            push_title = ""
-                            context_tag = "Push"
 
                             if matched_kw:
                                 should_send_push = True
@@ -868,12 +887,9 @@ async def ai_processing_loop():
                                     push_title = f"{source or 'RSS'}: {art.title}"
                                     context_tag = "Flöde-Push"
 
-                            print(f"[Push] Artikel {art.id} ('{art.title[:35]}...'): is_prio={is_prio} (prio={art.priority}, score={art.prio_score}/{threshold}), matched_kw={bool(matched_kw)}, should_send={should_send_push}", flush=True)
-
                             if should_send_push and user_id:
-                                # Prioritera AI-sammanfattningen som body! Fallback till art.summary eller art.title
                                 push_body = art.ai_summary or art.summary or art.title or "Ny artikel"
-                                send_push_notification_to_user(
+                                push_info = send_push_notification_to_user(
                                     db=db,
                                     user_id=user_id,
                                     title=push_title,
@@ -881,11 +897,49 @@ async def ai_processing_loop():
                                     url=art.link or "/",
                                     article_id=art.id,
                                     image_url=art.image_url,
-                                    context=context_tag
+                                    context=context_tag,
+                                    silent=True
                                 )
                         except Exception as push_err:
-                            print(f"[Push] Fel vid utvärdering av push-notis för artikel {art.id}: {push_err}", flush=True)
-                        
+                            print(f"[Push] Fel vid hantering av push-notis för artikel {art.id}: {push_err}", flush=True)
+
+                        # LOGGNING ENLIGT FÖRSLAG B (Adaptivt format)
+                        if should_send_push:
+                            tag_name = "BEVAKNINGSORD" if matched_kw else "PRIO-NOTIS"
+                            kw_info = f": {', '.join(matched_kw)}" if matched_kw else ""
+                            
+                            if push_info:
+                                deliv_cnt = push_info.get("delivered", 0)
+                                total_devs = push_info.get("total", 0)
+                                sc = push_info.get("status_code", 200)
+                                img_str = ", med bild" if art.image_url else ""
+                                if total_devs == 0:
+                                    deliv_str = "Inga aktiva enheter registrerade"
+                                elif deliv_cnt > 0:
+                                    deliv_str = f"Skickad till {deliv_cnt} enhet(er) (HTTP {sc}{img_str})"
+                                else:
+                                    err_summary = f" ({'; '.join(push_info.get('errors', []))})" if push_info.get("errors") else ""
+                                    deliv_str = f"Misslyckades skicka till {total_devs} enhet(er){err_summary}"
+                            else:
+                                deliv_str = "Kunde inte skicka notis (användare saknas eller fel uppstod)"
+
+                            print(
+                                f"====================================================================\n"
+                                f"[{tag_name}{kw_info}] Användare: {u_display} | Källa: {source or 'RSS'} | #{art.id}\n"
+                                f"  Titel:    \"{art.title}\"\n"
+                                f"  Analys:   {art.category} | {art.priority.upper()} ({art.prio_score}p) | Svarstid: {dur}s\n"
+                                f"  Leverans: {deliv_str}\n"
+                                f"====================================================================",
+                                flush=True
+                            )
+                        else:
+                            # Kompakt 2-raders format för vanliga artiklar
+                            print(
+                                f"[AI: {u_display}] {source or 'RSS'} #{art.id} | {art.category} | {art.priority.upper()} ({art.prio_score}p) | {dur}s\n"
+                                f"  \"{art.title}\"",
+                                flush=True
+                            )
+
                         # Skicka WS-signal om AI-uppdatering till användaren
                         if user_id:
                             await manager.send_personal_message(f"AI_UPDATED:{art.id}", user_id)
@@ -1597,7 +1651,7 @@ def test_push(req: Optional[TestPushRequest] = None, db: Session = Depends(datab
     if not subs:
         raise HTTPException(status_code=400, detail="Ingen aktiv push-prenumeration hittades för denna användare.")
         
-    sent_count = send_push_notification_to_user(
+    push_res = send_push_notification_to_user(
         db=db,
         user_id=current_user.id,
         title="Testnotis från RSS-Bevakaren",
@@ -1605,6 +1659,7 @@ def test_push(req: Optional[TestPushRequest] = None, db: Session = Depends(datab
         url="/",
         context="TestPush"
     )
+    sent_count = push_res.get("delivered", 0) if isinstance(push_res, dict) else push_res
     return {"status": "ok", "sent": sent_count}
 
 @app.get("/system/info")

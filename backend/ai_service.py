@@ -434,7 +434,6 @@ def analyze_article(
     
     headers = {"Content-Type": "application/json"}
     
-    print(f"[AI Service] Skickar analys till LM Studio ({model}) för '{title[:45]}'... (timeout {LM_STUDIO_TIMEOUT}s)", flush=True)
     t0 = time.time()
     try:
         response = requests.post(LM_STUDIO_URL, json=payload, headers=headers, timeout=LM_STUDIO_TIMEOUT)
@@ -450,7 +449,6 @@ def analyze_article(
             return None
             
         raw_message = choices[0].get("message", {}).get("content", "")
-        print(f"[AI Service] Svar mottaget från LM Studio på {dur}s ({len(raw_message)} tecken)", flush=True)
         parsed = extract_json_from_text(raw_message)
         
         if not parsed:
@@ -514,7 +512,8 @@ def analyze_article(
             "ai_summary": ai_summary,
             "tags": tags,
             "is_clickbait": 1 if is_clickbait else 0,
-            "clickbait_reason": clickbait_reason
+            "clickbait_reason": clickbait_reason,
+            "duration_s": dur
         }
     except requests.exceptions.ConnectTimeout:
         dur = round(time.time() - t0, 2)
