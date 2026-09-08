@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
-import { requestNotificationPermission, sendNotification, subscribeToWebPush } from '../utils/notifications';
+import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
 import packageJson from '../../package.json';
 
 const Settings = () => {
@@ -37,7 +37,8 @@ const Settings = () => {
     lm_studio_model: '',
     available_models: [],
     is_healthy: false,
-    prio_enabled: false
+    prio_enabled: false,
+    prio_notify_only: false
   });
   const [showAdvancedPrompt, setShowAdvancedPrompt] = useState(false);
   const [isCustomPromptEdited, setIsCustomPromptEdited] = useState(false);
@@ -171,9 +172,9 @@ Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överd
 
   useEffect(() => {
     fetchData();
-    if ('Notification' in window && Notification.permission === 'granted') {
-      setPushEnabled(true);
-    }
+    checkPushSubscriptionStatus().then(active => {
+      setPushEnabled(active);
+    });
   }, []);
 
   useEffect(() => {
@@ -218,37 +219,55 @@ Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överd
     }
     
     if (granted) {
-      setPushEnabled(true);
+      toast.loading('Registrerar notiser för denna enhet...', { id: 'push-toggle' });
       const subEndpoint = await subscribeToWebPush();
       if (subEndpoint) {
-        try {
-          await api.post('/push/test', { endpoint: subEndpoint });
-        } catch (e) {
-          console.error("Test push failed", e);
-        }
+        setPushEnabled(true);
+        toast.success('Push-notiser är nu aktiverade på denna enhet!', { id: 'push-toggle' });
       } else {
-        alert("Could not register subscription on the server.");
+        toast.error('Kunde inte slutföra prenumerationen mot webbläsaren eller servern.', { id: 'push-toggle' });
       }
+    } else {
+      toast.error('Tillåtelse för notiser nekades i din webbläsare.');
+    }
+  };
+
+  const handleTestPush = async () => {
+    try {
+      toast.loading('Skickar testnotis...', { id: 'push-test' });
+      const res = await api.post('/push/test');
+      if (res.data && res.data.sent > 0) {
+        toast.success(`Testnotis skickad till ${res.data.sent} enhet(er)!`, { id: 'push-test' });
+      } else {
+        toast.error('Ingen aktiv prenumeration hittades för ditt konto.', { id: 'push-test' });
+      }
+    } catch (e) {
+      console.error("Test push failed", e);
+      const detail = e.response?.data?.detail || 'Kunde inte skicka testnotis.';
+      toast.error(detail, { id: 'push-test' });
     }
   };
 
   const handleUnsubscribe = async () => {
-    if (!window.confirm("Are you sure you want to completely unregister this device from push notifications?")) return;
+    if (!window.confirm("Är du säker på att du vill avregistrera denna enhet helt från push-notiser?")) return;
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-      if (subscription) {
-        // We only need the endpoint, but we pass dummy keys to satisfy the schema
-        await api.post('/push/unsubscribe', { 
-          endpoint: subscription.endpoint, 
-          p256dh: "dummy", 
-          auth: "dummy" 
-        });
-        await subscription.unsubscribe();
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          await api.post('/push/unsubscribe', { 
+            endpoint: subscription.endpoint, 
+            p256dh: "dummy", 
+            auth: "dummy" 
+          });
+          await subscription.unsubscribe();
+        }
       }
       setPushEnabled(false);
+      toast.success('Enheten är nu avregistrerad från push-notiser.');
     } catch (e) {
       console.error("Unsubscribe failed", e);
+      toast.error('Kunde inte avregistrera enheten.');
     }
   };
 
@@ -309,18 +328,52 @@ Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överd
         system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
         onboarding_completed: true,
         prio_enabled: nextState,
+        prio_notify_only: aiConfig.prio_notify_only ?? false,
         lm_studio_model: aiConfig.lm_studio_model || ''
       });
       if (res.data) {
         setAiConfig(res.data);
       }
       toast.success(nextState 
-        ? 'Your personal PRIO feed is now enabled!' 
-        : 'The PRIO feed is now disabled. Classic RSS mode is active.');
+        ? 'Ditt personliga PRIO-flöde är nu aktiverat!' 
+        : 'PRIO-flödet är avaktiverat. Klassiskt RSS-läge är aktivt.');
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
       console.error("Could not change PRIO status:", err);
-      toast.error('Could not update PRIO status');
+      toast.error('Kunde inte uppdatera PRIO-status.');
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
+
+  const handleTogglePrioNotifyOnly = async () => {
+    const nextState = !aiConfig.prio_notify_only;
+    try {
+      setIsSavingAi(true);
+      const formattedCats = (aiConfig.categories || []).map(c => 
+        typeof c === 'object' ? { name: c.name, weight: c.weight ?? 5 } : { name: c, weight: 5 }
+      );
+      const res = await api.put('/ai/config', {
+        prio_rules: aiConfig.prio_rules || '',
+        exclude_rules: aiConfig.exclude_rules || '',
+        categories: formattedCats,
+        prio_threshold: aiConfig.prio_threshold || 75,
+        system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
+        onboarding_completed: true,
+        prio_enabled: aiConfig.prio_enabled ?? false,
+        prio_notify_only: nextState,
+        lm_studio_model: aiConfig.lm_studio_model || ''
+      });
+      if (res.data) {
+        setAiConfig(res.data);
+      }
+      toast.success(nextState 
+        ? 'Notiser begränsade till endast PRIO-flödet och bevakningsord.' 
+        : 'Notiser aktiverade för alla artiklar i dina flöden.');
+      window.dispatchEvent(new Event('aiConfigUpdated'));
+    } catch (err) {
+      console.error("Could not change PRIO notify only status:", err);
+      toast.error('Kunde inte spara inställningen.');
     } finally {
       setIsSavingAi(false);
     }
@@ -341,17 +394,18 @@ Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överd
         system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
         onboarding_completed: true,
         prio_enabled: aiConfig.prio_enabled ?? false,
+        prio_notify_only: aiConfig.prio_notify_only ?? false,
         lm_studio_model: aiConfig.lm_studio_model || ''
       });
       if (res.data) {
         setAiConfig(res.data);
       }
       setIsCustomPromptEdited(false);
-      toast.success('Your personal AI settings have been saved!');
+      toast.success('Dina personliga AI-inställningar har sparats!');
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
       console.error("Could not save AI config", err);
-      toast.error('Could not save AI settings');
+      toast.error('Kunde inte spara AI-inställningarna.');
     } finally {
       setIsSavingAi(false);
     }
@@ -703,50 +757,134 @@ Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överd
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
-            <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Bell size={20} /> Web Push Notifications (PWA)
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem' }}>
-              Enable notifications in your browser to receive a push notification directly on your screen/mobile when a monitored keyword appears in a feed.
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Bell size={20} /> Webb-pushnotiser (PWA)
+              </h3>
+              <span style={{
+                fontSize: '0.75rem',
+                padding: '0.2rem 0.6rem',
+                borderRadius: '12px',
+                fontWeight: 700,
+                backgroundColor: pushEnabled ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-app)',
+                color: pushEnabled ? '#22c55e' : 'var(--text-muted)',
+                border: pushEnabled ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border-color)'
+              }}>
+                {pushEnabled ? 'AKTIVERAD PÅ DENNA ENHET' : 'EJ AKTIVERAD'}
+              </span>
+            </div>
+            
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem', paddingRight: '0.35rem', lineHeight: 1.5 }}>
+              Aktivera notiser i din webbläsare för att ta emot push-notiser direkt till mobilen eller skrivbordet när nya artiklar anländer eller bevakningsord triggas.
             </p>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', paddingLeft: '0.35rem' }}>
+
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
               <button 
                 onClick={togglePush}
                 style={{
-                  padding: '0.75rem 1.5rem',
+                  padding: '0.65rem 1.25rem',
                   borderRadius: '8px',
                   border: pushEnabled ? '1px solid var(--border-color)' : 'none',
                   backgroundColor: pushEnabled ? 'var(--bg-app)' : 'var(--primary)',
                   color: pushEnabled ? 'var(--text-main)' : 'white',
                   fontWeight: 600,
+                  fontSize: '0.88rem',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem'
                 }}
               >
-                <Bell size={18} /> {pushEnabled ? 'Notifications are on' : 'Turn on notifications'}
+                <Bell size={16} /> {pushEnabled ? 'Förnya / Återaktivera prenumeration' : 'Aktivera push-notiser'}
+              </button>
+
+              <button 
+                onClick={handleTestPush}
+                style={{
+                  padding: '0.65rem 1.25rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-main)',
+                  fontWeight: 600,
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <Send size={16} style={{ color: 'var(--primary)' }} /> Skicka testnotis till enheten
               </button>
               
               {pushEnabled && (
                 <button 
                   onClick={handleUnsubscribe}
                   style={{
-                    padding: '0.75rem 1.5rem',
+                    padding: '0.65rem 1.25rem',
                     borderRadius: '8px',
-                    border: '1px solid #ef4444',
-                    backgroundColor: 'transparent',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
                     color: '#ef4444',
                     fontWeight: 600,
+                    fontSize: '0.88rem',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem'
                   }}
                 >
-                  Unsubscribe
+                  Avregistrera denna enhet
                 </button>
               )}
+            </div>
+          </div>
+
+          {/* Inställning för att endast få notiser på PRIO-flödet */}
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            padding: '1.25rem 0.6rem',
+            borderRadius: '12px',
+            marginBottom: '1.5rem',
+            border: aiConfig.prio_notify_only ? '1px solid rgba(249, 115, 22, 0.4)' : '1px solid var(--border-color)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
+              <div style={{ flex: 1, minWidth: '240px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Flame size={18} style={{ color: '#f97316' }} /> Endast notiser för PRIO-flödet
+                  </h4>
+                  <span style={{
+                    fontSize: '0.7rem',
+                    padding: '0.15rem 0.45rem',
+                    borderRadius: '10px',
+                    fontWeight: 700,
+                    backgroundColor: aiConfig.prio_notify_only ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-app)',
+                    color: aiConfig.prio_notify_only ? '#f97316' : 'var(--text-muted)',
+                    border: aiConfig.prio_notify_only ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid var(--border-color)'
+                  }}>
+                    {aiConfig.prio_notify_only ? 'AKTIVT' : 'AV'}
+                  </span>
+                </div>
+                <p style={{ margin: '0.4rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.45 }}>
+                  När detta val är aktiverat skickas notiser endast för artiklar som klassas som PRIO eller matchar dina bevakningsord. Perfekt om du bevakar stora flöden som Expressen eller Aftonbladet med hundratals artiklar om dagen och endast vill bli störd av de få som verkligen är intressanta.
+                </p>
+                {!aiConfig.prio_enabled && (
+                  <p style={{ margin: '0.4rem 0 0 0', color: '#eab308', fontSize: '0.8rem', fontWeight: 500 }}>
+                    Tips: Du behöver också ha personligt PRIO-flöde aktiverat under fliken AI Analys för att AI-bedömningen ska genomföras.
+                  </p>
+                )}
+              </div>
+              <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={!!aiConfig.prio_notify_only}
+                  onChange={handleTogglePrioNotifyOnly}
+                  disabled={isSavingAi}
+                />
+                <span className="toggle-slider"></span>
+              </label>
             </div>
           </div>
 
@@ -960,6 +1098,37 @@ Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överd
                 <span className="toggle-slider"></span>
               </label>
             </div>
+
+            {aiConfig.prio_enabled && (
+              <div style={{
+                marginTop: '0.25rem',
+                paddingTop: '0.75rem',
+                borderTop: '1px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem'
+              }}>
+                <div style={{ flex: 1, minWidth: '220px' }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Bell size={15} style={{ color: '#f97316' }} /> Begränsa push-notiser till endast PRIO
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                    Stoppar vanliga notiser och skickar endast när en artikel blir PRIO eller matchar bevakningsord.
+                  </div>
+                </div>
+                <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!aiConfig.prio_notify_only}
+                    onChange={handleTogglePrioNotifyOnly}
+                    disabled={isSavingAi}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
+              </div>
+            )}
 
             {!aiConfig.prio_enabled && (
               <div style={{

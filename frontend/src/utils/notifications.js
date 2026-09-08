@@ -17,7 +17,7 @@ function urlBase64ToUint8Array(base64String) {
 
 export const requestNotificationPermission = async () => {
   if (!('Notification' in window)) {
-    console.log('This browser does not support desktop notifications');
+    console.log('This browser does not support notifications');
     return false;
   }
 
@@ -30,6 +30,22 @@ export const requestNotificationPermission = async () => {
   return permission === 'granted';
 };
 
+export const checkPushSubscriptionStatus = async () => {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+    return false;
+  }
+  if (Notification.permission !== 'granted') {
+    return false;
+  }
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    return !!subscription;
+  } catch (e) {
+    return false;
+  }
+};
+
 export const subscribeToWebPush = async () => {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     return false;
@@ -40,6 +56,17 @@ export const subscribeToWebPush = async () => {
     const publicVapidKey = vapidRes.data.public_key;
 
     const registration = await navigator.serviceWorker.ready;
+    
+    // Rensa eventuell äldre prenumerationstoken så att nyckeln garanterat matchar servern
+    const existingSub = await registration.pushManager.getSubscription();
+    if (existingSub) {
+      try {
+        await existingSub.unsubscribe();
+      } catch (unsubErr) {
+        console.warn('Could not cleanly unsubscribe previous token:', unsubErr);
+      }
+    }
+
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
@@ -67,6 +94,7 @@ export const sendNotification = (title, options = {}) => {
   if (Notification.permission === 'granted') {
     const defaultOptions = {
       icon: '/pwa-192x192.png',
+      badge: '/badge.png'
     };
     
     if ('serviceWorker' in navigator) {

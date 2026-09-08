@@ -91,6 +91,7 @@ class UserAISettings(Base):
     custom_system_prompt = Column(String, default="") # Anpassad eller genererad systemprompt
     onboarding_completed = Column(Integer, default=0) # 0 = ej genomförd, 1 = genomförd
     prio_enabled = Column(Integer, default=0) # 0 = inaktiverad, 1 = aktivt personligt PRIO-flöde
+    prio_notify_only = Column(Integer, default=0) # 1 = endast notiser för PRIO-flödet, 0 = alla artiklar
     selected_model = Column(String, default="") # Vald LM Studio-modell (tom = standard/aktiv)
 
     owner = relationship("User", back_populates="ai_settings")

@@ -60,32 +60,34 @@ async function setToken(token) {
 // Handle Push Events
 self.addEventListener('push', function(event) {
   if (event.data) {
+    let title = 'RSS Monitor';
+    let options = {
+      body: 'You have a new notification',
+      icon: '/pwa-192x192.png',
+      badge: '/badge.png',
+      vibrate: [200, 100, 200],
+      renotify: true,
+      data: {
+        url: '/'
+      }
+    };
+
     try {
       const data = event.data.json();
-      const options = {
-        body: data.body || 'You have a new notification',
-        icon: '/pwa-192x192.png',
-        data: {
-          url: data.url || '/',
-          article_id: data.article_id
-        },
-        actions: [
-          { action: 'mark_read', title: 'Mark as Read' },
-          { action: 'open_event', title: 'Open Event' }
-        ]
-      };
-      event.waitUntil(
-        self.registration.showNotification(data.title || 'RSS Monitor', options)
-      );
+      title = data.title || title;
+      options.body = data.body || options.body;
+      options.tag = data.article_id ? `rss-art-${data.article_id}` : `rss-${Date.now()}`;
+      if (data.url) options.data.url = data.url;
+      if (data.article_id) options.data.article_id = data.article_id;
     } catch(e) {
-      // Fallback if not json
-      event.waitUntil(
-        self.registration.showNotification('RSS Monitor', {
-          body: event.data.text(),
-          icon: '/pwa-192x192.png'
-        })
-      );
+      options.body = event.data.text();
     }
+
+    event.waitUntil(
+      self.registration.showNotification(title, options).catch(err => {
+        console.error('SW showNotification error:', err);
+      })
+    );
   }
 });
 

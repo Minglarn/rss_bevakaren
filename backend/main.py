@@ -39,10 +39,28 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN prio_enabled INTEGER DEFAULT 0"))
                     conn.commit()
                     print("[DB] Added prio_enabled column to user_ai_settings", flush=True)
+                if "prio_notify_only" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN prio_notify_only INTEGER DEFAULT 0"))
+                    conn.commit()
+                    print("[DB] Added prio_notify_only column to user_ai_settings", flush=True)
                 conn.execute(text("UPDATE user_ai_settings SET prio_enabled = 0 WHERE prio_enabled IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET prio_notify_only = 0 WHERE prio_notify_only IS NULL"))
                 conn.commit()
         except Exception as e:
-            print(f"[DB] Migration notice: {e}", flush=True)
+            print(f"[DB] Migration notice for user_ai_settings: {e}", flush=True)
+
+        try:
+            res_feeds = conn.execute(text("PRAGMA table_info(feeds)"))
+            f_cols = [row[1] for row in res_feeds.fetchall()]
+            if f_cols:
+                if "notify_enabled" not in f_cols:
+                    conn.execute(text("ALTER TABLE feeds ADD COLUMN notify_enabled INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added notify_enabled column to feeds", flush=True)
+                conn.execute(text("UPDATE feeds SET notify_enabled = 1 WHERE notify_enabled IS NULL"))
+                conn.commit()
+        except Exception as e:
+            print(f"[DB] Migration notice for feeds: {e}", flush=True)
 
 ensure_db_migrations()
 
@@ -453,53 +471,64 @@ async def polling_loop():
                         if is_initial_poll:
                             print(f"Initial load of feed {feed.id}, skipping notifications for old posts.", flush=True)
                         else:
+                            user_ai_pref = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == feed.user_id).first()
+                            only_prio = bool(user_ai_pref and user_ai_pref.prio_enabled and user_ai_pref.prio_notify_only)
+
+                            user_name = feed.owner.username if (feed.owner and feed.owner.username) else None
+                            if not user_name:
+                                u_rec = db.query(models.User).filter(models.User.id == feed.user_id).first()
+                                user_name = u_rec.username if u_rec else f"user_{feed.user_id}"
+
+                            subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
+
                             for art in new_articles:
                                 should_notify = False
                                 notify_title = ""
                                 notify_body = ""
                                 
-                                if getattr(feed, "notify_enabled", 1) == 1:
+                                # Om användaren har valt 'Endast PRIO-notiser' hoppar vi över direktnotiser för vanliga artiklar här
+                                # (de skickas i stället så fort AI bekräftar PRIO-status)
+                                is_feed_notify = feed.notify_enabled if feed.notify_enabled is not None else 1
+                                if not only_prio and is_feed_notify == 1:
                                     should_notify = True
                                     notify_title = f"{feed.title or 'RSS'}"
                                     notify_body = art.title
                                     
+                                # Bevakningsord skickas ALLTID direkt oavsett PRIO-läge
                                 if kw_texts:
                                     search_text = f"{art.title or ''} {art.summary or ''}".lower()
                                     matched_kws = [k for k in kw_texts if k in search_text]
                                     if matched_kws:
                                         should_notify = True
-                                        notify_title = "New monitored keyword found!"
-                                        notify_body = f"Monitored keyword '{matched_kws[0]}' found in: {art.title}"
+                                        notify_title = f"Bevakningsord: {matched_kws[0]}"
+                                        notify_body = art.title
                                         
                                 if should_notify:
-                                    user_name = feed.owner.username if (feed.owner and feed.owner.username) else None
-                                    if not user_name:
-                                        u_rec = db.query(models.User).filter(models.User.id == feed.user_id).first()
-                                        user_name = u_rec.username if u_rec else f"user_{feed.user_id}"
-
-                                    subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
-                                    for sub in subs:
-                                        try:
-                                            webpush(
-                                                subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
-                                                data=json.dumps({
-                                                    "title": notify_title,
-                                                    "body": notify_body,
-                                                    "url": art.link,
-                                                    "article_id": art.id
-                                                }),
-                                                vapid_private_key=VAPID_KEYS["private_key"],
-                                                vapid_claims={"sub": VAPID_KEYS["sub"]}
-                                            )
-                                            print(f"Sent push notification to user '{user_name}'", flush=True)
-                                        except WebPushException as ex:
-                                            print(f"WebPushException for feed {feed.id} (user '{user_name}'): {repr(ex)}", flush=True)
-                                            if getattr(ex, "response", None) is not None and ex.response.status_code in [404, 410]:
-                                                db.delete(sub)
-                                                db.commit()
-                                                print(f"Removed invalid Push subscription for user '{user_name}'", flush=True)
-                                        except Exception as ex:
-                                            print(f"Unexpected error during webpush for user '{user_name}': {ex}", flush=True)
+                                    if not subs:
+                                        print(f"[Push] Notis triggad för '{art.title[:45]}' men användare '{user_name}' har inga aktiva enheter registrerade.", flush=True)
+                                    else:
+                                        for sub in subs:
+                                            try:
+                                                webpush(
+                                                    subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
+                                                    data=json.dumps({
+                                                        "title": notify_title,
+                                                        "body": notify_body,
+                                                        "url": art.link,
+                                                        "article_id": art.id
+                                                    }),
+                                                    vapid_private_key=VAPID_KEYS["private_key"],
+                                                    vapid_claims={"sub": VAPID_KEYS["sub"]}
+                                                )
+                                                print(f"Sent push notification to user '{user_name}'", flush=True)
+                                            except WebPushException as ex:
+                                                print(f"WebPushException for feed {feed.id} (user '{user_name}'): {repr(ex)}", flush=True)
+                                                if getattr(ex, "response", None) is not None and ex.response.status_code in [404, 410]:
+                                                    db.delete(sub)
+                                                    db.commit()
+                                                    print(f"Removed invalid Push subscription for user '{user_name}'", flush=True)
+                                            except Exception as ex:
+                                                print(f"Unexpected error during webpush for user '{user_name}': {ex}", flush=True)
                     else:
                         print(f"Polling done for feed {feed.id} ({feed.title}): 0 new articles.", flush=True)
                     
@@ -610,6 +639,7 @@ async def ai_processing_loop():
                         art.clickbait_reason = analysis.get("clickbait_reason", "")
                         
                         # STEG 1: Specifika bevakningsord (trumfar allt -> 100p & HIGH)
+                        matched_kw = []
                         if user_id:
                             user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == user_id).all()
                             text_to_check = f"{art.title or ''} {art.summary or ''}".lower()
@@ -622,6 +652,38 @@ async def ai_processing_loop():
 
                         db.commit()
                         print(f"[AI] Klar artikel {art.id} -> {art.category} | {art.priority.upper()} ({art.prio_score}p)", flush=True)
+
+                        # Skicka PRIO-pushnotis om användaren har aktiverat 'Endast PRIO-notiser' och artikeln inte redan notifierats via bevakningsord
+                        if user_id and user_ai and user_ai.prio_enabled and user_ai.prio_notify_only:
+                            feed_notify = art.feed.notify_enabled if (art.feed and art.feed.notify_enabled is not None) else 1
+                            if art.priority == "high" and not matched_kw and feed_notify == 1:
+                                subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == user_id).all()
+                                if subs:
+                                    prio_title = f"PRIO: {art.feed.title if art.feed else 'RSS'}"
+                                    prio_body = art.title
+                                    for sub in subs:
+                                        try:
+                                            webpush(
+                                                subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
+                                                data=json.dumps({
+                                                    "title": prio_title,
+                                                    "body": prio_body,
+                                                    "url": art.link,
+                                                    "article_id": art.id
+                                                }),
+                                                vapid_private_key=VAPID_KEYS["private_key"],
+                                                vapid_claims={"sub": VAPID_KEYS["sub"]}
+                                            )
+                                            print(f"[Push] Skickade PRIO-pushnotis för artikel {art.id} till användare '{u_display}'", flush=True)
+                                        except WebPushException as ex:
+                                            print(f"WebPushException för PRIO-artikel {art.id} (användare '{u_display}'): {repr(ex)}", flush=True)
+                                            if ex.response and ex.response.status_code in [404, 410]:
+                                                db.delete(sub)
+                                                db.commit()
+                                        except Exception as e:
+                                            print(f"Oväntat fel vid PRIO-webpush för användare '{u_display}': {e}", flush=True)
+                                else:
+                                    print(f"[Push] PRIO-notis triggad för '{art.title[:45]}' men användare '{u_display}' har inga aktiva enheter registrerade.", flush=True)
                         
                         # Skicka WS-signal om AI-uppdatering till användaren
                         if art.feed and art.feed.user_id:
@@ -1072,6 +1134,7 @@ def get_ai_config(
             system_prompt=ai_service.build_user_prompt(categories=cats),
             onboarding_completed=False,
             prio_enabled=False,
+            prio_notify_only=False,
             lm_studio_url=ai_service.LM_STUDIO_URL,
             lm_studio_model="",
             available_models=available_models,
@@ -1093,6 +1156,7 @@ def get_ai_config(
         system_prompt=prompt,
         onboarding_completed=bool(user_ai.onboarding_completed),
         prio_enabled=bool(user_ai.prio_enabled),
+        prio_notify_only=bool(user_ai.prio_notify_only),
         lm_studio_url=ai_service.LM_STUDIO_URL,
         lm_studio_model=user_ai.selected_model or "",
         available_models=available_models,
@@ -1121,6 +1185,8 @@ def update_ai_config(
 
     if config.prio_enabled is not None:
         user_ai.prio_enabled = 1 if config.prio_enabled else 0
+    if config.prio_notify_only is not None:
+        user_ai.prio_notify_only = 1 if config.prio_notify_only else 0
     if config.prio_rules is not None:
         user_ai.prio_rules = config.prio_rules.strip()
     if config.exclude_rules is not None:
@@ -1160,6 +1226,7 @@ def update_ai_config(
         system_prompt=user_ai.custom_system_prompt or "",
         onboarding_completed=bool(user_ai.onboarding_completed),
         prio_enabled=bool(user_ai.prio_enabled),
+        prio_notify_only=bool(user_ai.prio_notify_only),
         lm_studio_url=ai_service.LM_STUDIO_URL,
         lm_studio_model=user_ai.selected_model or "",
         available_models=available_models,
@@ -1259,13 +1326,18 @@ def get_vapid_public_key():
 
 @app.post("/push/subscribe", response_model=dict)
 def subscribe_push(sub: schemas.PushSubscriptionCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    # Check if exists
+    # Upsert baserat på endpoint för att förhindra krasch på unique constraint
     existing = db.query(models.PushSubscription).filter(
-        models.PushSubscription.endpoint == sub.endpoint,
-        models.PushSubscription.user_id == current_user.id
+        models.PushSubscription.endpoint == sub.endpoint
     ).first()
     
-    if not existing:
+    if existing:
+        existing.user_id = current_user.id
+        existing.p256dh = sub.p256dh
+        existing.auth = sub.auth
+        db.commit()
+        print(f"[Push] Uppdaterade prenumeration för enhet kopplad till '{current_user.username}'", flush=True)
+    else:
         db_sub = models.PushSubscription(
             endpoint=sub.endpoint,
             p256dh=sub.p256dh,
@@ -1274,6 +1346,7 @@ def subscribe_push(sub: schemas.PushSubscriptionCreate, db: Session = Depends(da
         )
         db.add(db_sub)
         db.commit()
+        print(f"[Push] Registrerade ny prenumerationsenhet för '{current_user.username}'", flush=True)
     
     return {"status": "ok"}
 
@@ -1287,6 +1360,7 @@ def unsubscribe_push(sub: schemas.PushSubscriptionCreate, db: Session = Depends(
     if existing:
         db.delete(existing)
         db.commit()
+        print(f"[Push] Avregistrerade prenumerationsenhet för '{current_user.username}'", flush=True)
         
     return {"status": "ok"}
 
@@ -1300,7 +1374,7 @@ def test_push(req: Optional[TestPushRequest] = None, db: Session = Depends(datab
         query = query.filter(models.PushSubscription.endpoint == req.endpoint)
     subs = query.all()
     if not subs:
-        raise HTTPException(status_code=400, detail="No push subscription found for this user.")
+        raise HTTPException(status_code=400, detail="Ingen aktiv push-prenumeration hittades för denna användare.")
         
     success_count = 0
     for sub in subs:
@@ -1313,14 +1387,18 @@ def test_push(req: Optional[TestPushRequest] = None, db: Session = Depends(datab
                         "auth": sub.auth
                     }
                 },
-                data=json.dumps({"title": "Test from Server!", "body": "Web Push is now working perfectly!"}),
+                data=json.dumps({
+                    "title": "Testnotis från RSS-Bevakaren",
+                    "body": "Webb-pushnotiser fungerar som förväntat på denna enhet.",
+                    "url": "/"
+                }),
                 vapid_private_key=VAPID_KEYS["private_key"],
                 vapid_claims={"sub": VAPID_KEYS["sub"]}
             )
             success_count += 1
-            print(f"Successfully sent test push to {sub.endpoint}", flush=True)
+            print(f"[Push] Skickade testnotis till '{current_user.username}'", flush=True)
         except WebPushException as ex:
-            print(f"Web Push Error: {repr(ex)}")
+            print(f"[Push] Fel vid testnotis för '{current_user.username}': {repr(ex)}", flush=True)
             if ex.response and ex.response.status_code in [404, 410]:
                 db.delete(sub)
                 db.commit()

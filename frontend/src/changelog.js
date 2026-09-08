@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.06',
+    date: '2026-09-08',
+    title: 'Robust Web Push & Notisfilter för PRIO-flödet',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Endast notiser för PRIO-flödet',
+        description: 'Ny inställning som gör att du kan välja att endast få pushnotiser för viktiga händelser (PRIO) och bevakningsord, vilket förhindrar notis-spam från stora nyhetssajter som Expressen och Aftonbladet.'
+      },
+      {
+        type: 'fix',
+        title: 'Åtgärdad registrering av mobilnotiser',
+        description: 'Förbättrad återanslutning av Web Push i mobilen som automatiskt rensar gamla tokens och säkerställer registrering på servern.'
+      },
+      {
+        type: 'improvement',
+        title: 'Direkt testknapp & förbättrade push-loggar',
+        description: 'Möjlighet att skicka en direkt testnotis från inställningarna, samt detaljerad serverloggning om vilka enheter som tar emot notiser.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.05',
     date: '2026-09-08',
     title: 'Användarnamn i push-logg & Systemtema-stöd',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

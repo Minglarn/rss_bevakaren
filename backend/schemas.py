@@ -107,6 +107,7 @@ class AIConfigUpdate(BaseModel):
     system_prompt: Optional[str] = ""
     onboarding_completed: Optional[bool] = None
     prio_enabled: Optional[bool] = None
+    prio_notify_only: Optional[bool] = None
     lm_studio_model: Optional[str] = None
 
 class AIConfigResponse(BaseModel):
@@ -117,6 +118,7 @@ class AIConfigResponse(BaseModel):
     system_prompt: str = ""
     onboarding_completed: bool = False
     prio_enabled: bool = False
+    prio_notify_only: bool = False
     lm_studio_url: str = ""
     lm_studio_model: str = ""
     available_models: List[str] = []
