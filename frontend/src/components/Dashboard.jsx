@@ -504,11 +504,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     if (!expandedItems[index] && !scrapedContents[link]) {
       const feedItems = allFeeds.filter(f => f.link === link);
       const isScrapeEnabled = feedItems.length > 0 && feedItems[0].scrape_enabled !== false;
+      const feedName = feedItems[0]?.source_title || '';
       
       if (isScrapeEnabled) {
         setScrapingUrls(prev => ({ ...prev, [link]: true }));
         try {
-          const res = await api.get(`/scrape?url=${encodeURIComponent(link)}`);
+          const res = await api.get(`/scrape?url=${encodeURIComponent(link)}${feedName ? `&feed_name=${encodeURIComponent(feedName)}` : ''}`);
           setScrapedContents(prev => ({ ...prev, [link]: res.data.content }));
         } catch (err) {
           console.error("Scrape error", err);

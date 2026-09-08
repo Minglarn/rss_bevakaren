@@ -1,9 +1,55 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.05',
+    date: '2026-09-08',
+    title: 'Användarnamn i push-logg & Systemtema-stöd',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Tydligare push-loggning i backend',
+        description: 'Push-notifieringsloggar visar nu användarens faktiska användarnamn i stället för ett numeriskt ID.'
+      },
+      {
+        type: 'feature',
+        title: 'Automatiskt systemtema (Auto / System)',
+        description: 'Applikationen kan nu automatiskt följa operativsystemets inställning för ljust eller mörkt tema på både mobil och dator.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.08.04',
+    date: '2026-09-08',
+    title: 'Förbättrad design av ändringslogg (Tema & Desktopvy)',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Fullt temastöd (Ljust & Mörkt)',
+        description: 'Ändringsloggen anpassar sig nu perfekt efter det valda temat i applikationen med korrekt kontrast och färgåtergivning.'
+      },
+      {
+        type: 'improvement',
+        title: 'Bredare layout och ökad läsbarhet på desktop',
+        description: 'Dialogrutan utnyttjar skärmens bredd bättre och textstorlekarna har höjts väsentligt för en behagligare läsupplevelse.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.08.03',
+    date: '2026-09-08',
+    title: 'Förbättrad loggning vid webbskrapning',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Renare backend-loggar',
+        description: 'Långa webbadresser i skrapningsloggen har ersatts med det faktiska flödesnamnet för bättre läsbarhet och överskådlighet.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.02',
     date: '2026-09-08',
     title: 'Vad är nytt-dialog och Clickbait-skydd',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

@@ -472,6 +472,11 @@ async def polling_loop():
                                         notify_body = f"Monitored keyword '{matched_kws[0]}' found in: {art.title}"
                                         
                                 if should_notify:
+                                    user_name = feed.owner.username if (feed.owner and feed.owner.username) else None
+                                    if not user_name:
+                                        u_rec = db.query(models.User).filter(models.User.id == feed.user_id).first()
+                                        user_name = u_rec.username if u_rec else f"user_{feed.user_id}"
+
                                     subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
                                     for sub in subs:
                                         try:
@@ -486,15 +491,15 @@ async def polling_loop():
                                                 vapid_private_key=VAPID_KEYS["private_key"],
                                                 vapid_claims={"sub": VAPID_KEYS["sub"]}
                                             )
-                                            print(f"Sent push notification to user {feed.user_id}", flush=True)
+                                            print(f"Sent push notification to user '{user_name}'", flush=True)
                                         except WebPushException as ex:
-                                            print(f"WebPushException for feed {feed.id}: {repr(ex)}", flush=True)
+                                            print(f"WebPushException for feed {feed.id} (user '{user_name}'): {repr(ex)}", flush=True)
                                             if getattr(ex, "response", None) is not None and ex.response.status_code in [404, 410]:
                                                 db.delete(sub)
                                                 db.commit()
-                                                print(f"Removed invalid Push subscription for user {feed.user_id}", flush=True)
+                                                print(f"Removed invalid Push subscription for user '{user_name}'", flush=True)
                                         except Exception as ex:
-                                            print(f"Unexpected error during webpush: {ex}", flush=True)
+                                            print(f"Unexpected error during webpush for user '{user_name}': {ex}", flush=True)
                     else:
                         print(f"Polling done for feed {feed.id} ({feed.title}): 0 new articles.", flush=True)
                     
@@ -578,7 +583,9 @@ async def ai_processing_loop():
                             user_prompt = ai_service.ensure_clickbait_in_prompt(user_ai.custom_system_prompt, categories=user_cats)
 
                     user_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
-                    print(f"[AI] Bearbetar artikel {art.id} för user {user_id} (modell: {user_model or 'auto'}): '{art.title[:50]}...'...", flush=True)
+                    u_rec = db.query(models.User).filter(models.User.id == user_id).first()
+                    u_display = u_rec.username if u_rec else f"user_{user_id}"
+                    print(f"[AI] Bearbetar artikel {art.id} för användare '{u_display}' (modell: {user_model or 'auto'}): '{art.title[:50]}...'...", flush=True)
                     
                     analysis = await asyncio.to_thread(
                         ai_service.analyze_article,
@@ -1163,8 +1170,20 @@ import requests
 from bs4 import BeautifulSoup
 
 @app.get("/scrape")
-def scrape_article(url: str, current_username: str = Depends(auth.get_current_username)):
-    print(f"Scraping started for URL: {url}")
+def scrape_article(
+    url: str, 
+    feed_name: Optional[str] = None, 
+    db: Session = Depends(database.get_db), 
+    current_username: str = Depends(auth.get_current_username)
+):
+    display_name = feed_name.strip() if (feed_name and feed_name.strip()) else None
+    if not display_name:
+        art = db.query(models.Article).filter(models.Article.link == url).first()
+        if art and art.feed:
+            display_name = art.feed.title or art.feed.url
+            
+    name_str = display_name if display_name else "Okänt flöde"
+    print(f"Scraping started for feed: {name_str}")
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -1189,7 +1208,7 @@ def scrape_article(url: str, current_username: str = Depends(auth.get_current_us
             
         return {"content": text_content}
     except Exception as e:
-        print(f"Scrape error for {url}: {e}")
+        print(f"Scrape error for feed '{name_str}': {e}")
         return {"content": "Could not load article automatically."}
 
 from pywebpush import webpush, WebPushException

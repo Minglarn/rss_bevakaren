@@ -113,17 +113,43 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
   }, [location]);
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
     const applyTheme = () => {
-      const theme = localStorage.getItem('rss_theme') || 'light';
-      if (theme === 'dark') {
+      const savedTheme = localStorage.getItem('rss_theme') || 'system';
+      let isDark = false;
+      if (savedTheme === 'dark') {
+        isDark = true;
+      } else if (savedTheme === 'light') {
+        isDark = false;
+      } else {
+        // Följ operativsystemets inställning (mobil eller dator)
+        isDark = mediaQuery.matches;
+      }
+
+      if (isDark) {
         document.body.classList.add('theme-dark');
       } else {
         document.body.classList.remove('theme-dark');
       }
     };
+
     applyTheme();
+
+    const handleSystemChange = () => {
+      const savedTheme = localStorage.getItem('rss_theme') || 'system';
+      if (savedTheme === 'system') {
+        applyTheme();
+      }
+    };
+
     window.addEventListener('themeChanged', applyTheme);
-    return () => window.removeEventListener('themeChanged', applyTheme);
+    mediaQuery.addEventListener('change', handleSystemChange);
+
+    return () => {
+      window.removeEventListener('themeChanged', applyTheme);
+      mediaQuery.removeEventListener('change', handleSystemChange);
+    };
   }, []);
 
   return (

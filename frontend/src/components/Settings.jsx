@@ -14,7 +14,7 @@ const Settings = () => {
   const [feeds, setFeeds] = useState([]);
   const [sysInfo, setSysInfo] = useState(null);
   const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
-  const [theme, setTheme] = useState(() => localStorage.getItem('rss_theme') || 'light');
+  const [theme, setTheme] = useState(() => localStorage.getItem('rss_theme') || 'system');
   const [feedMode, setFeedMode] = useState(() => localStorage.getItem('rss_feed_mode') || 'ai');
   const [purgeDays, setPurgeDays] = useState(30);
   const [isPurging, setIsPurging] = useState(false);
@@ -578,13 +578,14 @@ Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överd
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Appearance</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Choose between light and dark theme.</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Choose between system default, light, or dark theme.</div>
                 </div>
                 <select 
                   value={theme}
                   onChange={toggleTheme}
                   style={{ flex: 'none', width: 'auto', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
                 >
+                  <option value="system">Auto (System)</option>
                   <option value="light">Light Theme</option>
                   <option value="dark">Dark Theme</option>
                 </select>
