@@ -96,5 +96,8 @@ class UserAISettings(Base):
     prio_enabled = Column(Integer, default=0) # 0 = inaktiverad, 1 = aktivt personligt PRIO-flöde
     prio_notify_only = Column(Integer, default=0) # 1 = endast notiser för PRIO-flödet, 0 = alla artiklar
     selected_model = Column(String, default="") # Vald LM Studio-modell (tom = standard/aktiv)
+    push_include_title = Column(Integer, default=1) # 1 = skicka artikelrubrik som titel, 0 = endast källa/kontext
+    push_include_image = Column(Integer, default=1) # 1 = bifoga artikelbild i notis, 0 = skicka utan bild
+    push_include_summary = Column(Integer, default=1) # 1 = skicka AI-sammanfattning som text, 0 = använd ingress/standard
 
     owner = relationship("User", back_populates="ai_settings")

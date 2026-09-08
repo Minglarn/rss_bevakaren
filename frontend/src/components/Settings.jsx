@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
@@ -40,7 +40,10 @@ const Settings = () => {
     available_models: [],
     is_healthy: false,
     prio_enabled: false,
-    prio_notify_only: false
+    prio_notify_only: false,
+    push_include_title: true,
+    push_include_image: true,
+    push_include_summary: true
   });
   const [showAdvancedPrompt, setShowAdvancedPrompt] = useState(false);
   const [isCustomPromptEdited, setIsCustomPromptEdited] = useState(false);
@@ -386,7 +389,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         onboarding_completed: true,
         prio_enabled: nextState,
         prio_notify_only: aiConfig.prio_notify_only ?? false,
-        lm_studio_model: aiConfig.lm_studio_model || ''
+        lm_studio_model: aiConfig.lm_studio_model || '',
+        push_include_title: aiConfig.push_include_title ?? true,
+        push_include_image: aiConfig.push_include_image ?? true,
+        push_include_summary: aiConfig.push_include_summary ?? true
       });
       if (res.data) {
         setAiConfig(res.data);
@@ -419,7 +425,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         onboarding_completed: true,
         prio_enabled: aiConfig.prio_enabled ?? false,
         prio_notify_only: nextState,
-        lm_studio_model: aiConfig.lm_studio_model || ''
+        lm_studio_model: aiConfig.lm_studio_model || '',
+        push_include_title: aiConfig.push_include_title ?? true,
+        push_include_image: aiConfig.push_include_image ?? true,
+        push_include_summary: aiConfig.push_include_summary ?? true
       });
       if (res.data) {
         setAiConfig(res.data);
@@ -431,6 +440,43 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     } catch (err) {
       console.error("Could not change PRIO notify only status:", err);
       toast.error('Kunde inte spara inställningen.');
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
+
+  const handleTogglePushSetting = async (key, label) => {
+    const currentVal = aiConfig[key] !== false;
+    const nextVal = !currentVal;
+    try {
+      setIsSavingAi(true);
+      const formattedCats = (aiConfig.categories || []).map(c => 
+        typeof c === 'object' ? { name: c.name, weight: c.weight ?? 5 } : { name: c, weight: 5 }
+      );
+      const payload = {
+        prio_rules: aiConfig.prio_rules || '',
+        exclude_rules: aiConfig.exclude_rules || '',
+        categories: formattedCats,
+        prio_threshold: aiConfig.prio_threshold || 75,
+        system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
+        onboarding_completed: true,
+        prio_enabled: aiConfig.prio_enabled ?? false,
+        prio_notify_only: aiConfig.prio_notify_only ?? false,
+        lm_studio_model: aiConfig.lm_studio_model || '',
+        push_include_title: aiConfig.push_include_title ?? true,
+        push_include_image: aiConfig.push_include_image ?? true,
+        push_include_summary: aiConfig.push_include_summary ?? true,
+        [key]: nextVal
+      };
+      const res = await api.put('/ai/config', payload);
+      if (res.data) {
+        setAiConfig(res.data);
+      }
+      toast.success(`${label} är nu ${nextVal ? 'aktiverad' : 'avstängd'}.`);
+      window.dispatchEvent(new Event('aiConfigUpdated'));
+    } catch (err) {
+      console.error(`Could not update push setting ${key}:`, err);
+      toast.error('Kunde inte spara notisinställningen.');
     } finally {
       setIsSavingAi(false);
     }
@@ -452,7 +498,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         onboarding_completed: true,
         prio_enabled: aiConfig.prio_enabled ?? false,
         prio_notify_only: aiConfig.prio_notify_only ?? false,
-        lm_studio_model: aiConfig.lm_studio_model || ''
+        lm_studio_model: aiConfig.lm_studio_model || '',
+        push_include_title: aiConfig.push_include_title ?? true,
+        push_include_image: aiConfig.push_include_image ?? true,
+        push_include_summary: aiConfig.push_include_summary ?? true
       });
       if (res.data) {
         setAiConfig(res.data);
@@ -1085,6 +1134,115 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 />
                 <span className="toggle-slider"></span>
               </label>
+            </div>
+          </div>
+
+          {/* Anpassa innehåll i pushnotiser */}
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            padding: '1.25rem 0.6rem',
+            borderRadius: '12px',
+            marginBottom: '1.5rem',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)'
+          }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 600, paddingLeft: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Sliders size={18} style={{ color: 'var(--primary)' }} /> Innehåll i Pushnotiser
+            </h4>
+            <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.85rem', paddingLeft: '0.35rem', lineHeight: 1.45 }}>
+              Välj vilken information som ska inkluderas i dina webb-pushnotiser. Du kan anpassa titel, bilder och sammanfattningar utifrån dina personliga preferenser.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
+              {/* Toggle 1: Artikelrubrik */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.75rem 0.9rem',
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                gap: '1rem'
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.92rem' }}>
+                    <Type size={16} style={{ color: 'var(--primary)' }} /> Skicka med artikelrubrik (Titel)
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
+                    När aktiv visas artikelns fullständiga rubrik i notisens titel. Vid avstängd visas endast händelse och källa (t.ex. PRIO: Aftonbladet).
+                  </div>
+                </div>
+                <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={aiConfig.push_include_title !== false}
+                    onChange={() => handleTogglePushSetting('push_include_title', 'Artikelrubrik')}
+                    disabled={isSavingAi}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
+              </div>
+
+              {/* Toggle 2: Artikelbild */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.75rem 0.9rem',
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                gap: '1rem'
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.92rem' }}>
+                    <ImageIcon size={16} style={{ color: '#10b981' }} /> Skicka med artikelbild
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
+                    Visar en stor och tydlig förhandsvisningsbild i notisen på mobiler och datorer när artikeln innehåller en bild.
+                  </div>
+                </div>
+                <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={aiConfig.push_include_image !== false}
+                    onChange={() => handleTogglePushSetting('push_include_image', 'Artikelbild')}
+                    disabled={isSavingAi}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
+              </div>
+
+              {/* Toggle 3: AI-sammanfattning */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.75rem 0.9rem',
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                gap: '1rem'
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.92rem' }}>
+                    <Sparkles size={16} style={{ color: '#f97316' }} /> Skicka med AI-sammanfattning
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
+                    Skickar med de 3 informativa AI-meningarna som notisens textkropp så att du direkt ser kärnhändelsen.
+                  </div>
+                </div>
+                <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={aiConfig.push_include_summary !== false}
+                    onChange={() => handleTogglePushSetting('push_include_summary', 'AI-sammanfattning')}
+                    disabled={isSavingAi}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
+              </div>
             </div>
           </div>
 

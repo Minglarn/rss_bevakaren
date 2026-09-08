@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.14',
+    date: '2026-09-08',
+    title: 'Anpassningsbart innehåll i Pushnotiser',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Skicka med artikelrubrik (Titel på/av)',
+        description: 'Välj om artikelns fullständiga rubrik ska inkluderas i notisens titel eller om du endast vill se källan och händelsetypen för mer diskreta notiser.'
+      },
+      {
+        type: 'feature',
+        title: 'Skicka med artikelbild (Bild på/av)',
+        description: 'Möjlighet att slå av eller på stora förhandsvisningsbilder i mobilen och datorns notiscenter för att spara data eller minska skärmytan.'
+      },
+      {
+        type: 'feature',
+        title: 'Skicka med AI-sammanfattning (Sammanfattning på/av)',
+        description: 'Välj om den informativa 3-meningars AI-analysen ska skickas som notistext eller om du föredrar kort ingress/standardtext.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.13',
     date: '2026-09-08',
     title: 'Tydligare röd sidobord och indikering för klickbete',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

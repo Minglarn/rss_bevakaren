@@ -43,8 +43,23 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN prio_notify_only INTEGER DEFAULT 0"))
                     conn.commit()
                     print("[DB] Added prio_notify_only column to user_ai_settings", flush=True)
+                if "push_include_title" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN push_include_title INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added push_include_title column to user_ai_settings", flush=True)
+                if "push_include_image" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN push_include_image INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added push_include_image column to user_ai_settings", flush=True)
+                if "push_include_summary" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN push_include_summary INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added push_include_summary column to user_ai_settings", flush=True)
                 conn.execute(text("UPDATE user_ai_settings SET prio_enabled = 0 WHERE prio_enabled IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET prio_notify_only = 0 WHERE prio_notify_only IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET push_include_title = 1 WHERE push_include_title IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET push_include_image = 1 WHERE push_include_image IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET push_include_summary = 1 WHERE push_include_summary IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = NULL WHERE custom_system_prompt IS NOT NULL AND custom_system_prompt NOT LIKE '%SAKLIGA NYHETER%'"))
                 conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = REPLACE(custom_system_prompt, 'Max två korta', 'Max tre korta') WHERE custom_system_prompt LIKE '%Max två korta%'"))
                 conn.commit()
@@ -873,26 +888,31 @@ async def ai_processing_loop():
                             if not feed_notifs_on:
                                 should_send_push = False
                             else:
+                                inc_title = bool(user_ai.push_include_title if (user_ai and user_ai.push_include_title is not None) else 1)
+                                inc_image = bool(user_ai.push_include_image if (user_ai and user_ai.push_include_image is not None) else 1)
+                                inc_summary = bool(user_ai.push_include_summary if (user_ai and user_ai.push_include_summary is not None) else 1)
+
                                 if matched_kw:
                                     should_send_push = True
                                     kw_str = ", ".join(matched_kw)
-                                    push_title = f"Bevakningsord ({kw_str}): {art.title}"
+                                    push_title = f"Bevakningsord ({kw_str}): {art.title}" if inc_title else f"Bevakningsord ({kw_str})"
                                     context_tag = "Bevakningsord-Push"
                                 elif user_ai and user_ai.prio_enabled and is_prio:
                                     should_send_push = True
-                                    push_title = f"PRIO ({source or 'RSS'}): {art.title}"
+                                    push_title = f"PRIO ({source or 'RSS'}): {art.title}" if inc_title else f"PRIO ({source or 'RSS'})"
                                     context_tag = "PRIO-Push"
                                 elif user_ai and user_ai.prio_enabled and not user_ai.prio_notify_only:
                                     should_send_push = True
-                                    push_title = f"{source or 'RSS'}: {art.title}"
+                                    push_title = f"{source or 'RSS'}: {art.title}" if inc_title else f"{source or 'RSS'}"
                                     context_tag = "Flöde-Push"
                                 elif not user_ai or not user_ai.prio_enabled:
                                     should_send_push = True
-                                    push_title = f"{source or 'RSS'}: {art.title}"
+                                    push_title = f"{source or 'RSS'}: {art.title}" if inc_title else f"{source or 'RSS'}"
                                     context_tag = "Flöde-Push"
 
                             if should_send_push and user_id:
-                                push_body = art.ai_summary or art.summary or art.title or "Ny artikel"
+                                push_body = (art.ai_summary or art.summary or art.title or "Ny artikel") if inc_summary else (art.summary or art.title or "Ny artikel")
+                                push_img = art.image_url if inc_image else None
                                 push_info = send_push_notification_to_user(
                                     db=db,
                                     user_id=user_id,
@@ -900,7 +920,7 @@ async def ai_processing_loop():
                                     body=push_body,
                                     url=art.link or "/",
                                     article_id=art.id,
-                                    image_url=art.image_url,
+                                    image_url=push_img,
                                     context=context_tag,
                                     silent=True
                                 )
@@ -1397,7 +1417,10 @@ def get_ai_config(
             lm_studio_url=ai_service.LM_STUDIO_URL,
             lm_studio_model="",
             available_models=available_models,
-            is_healthy=ai_service.check_lm_studio_health()
+            is_healthy=ai_service.check_lm_studio_health(),
+            push_include_title=True,
+            push_include_image=True,
+            push_include_summary=True
         )
         
     cats = normalize_user_categories(user_ai.categories)
@@ -1419,7 +1442,10 @@ def get_ai_config(
         lm_studio_url=ai_service.LM_STUDIO_URL,
         lm_studio_model=user_ai.selected_model or "",
         available_models=available_models,
-        is_healthy=ai_service.check_lm_studio_health()
+        is_healthy=ai_service.check_lm_studio_health(),
+        push_include_title=bool(user_ai.push_include_title if user_ai.push_include_title is not None else 1),
+        push_include_image=bool(user_ai.push_include_image if user_ai.push_include_image is not None else 1),
+        push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1)
     )
 
 @app.get("/ai/models")
@@ -1460,6 +1486,13 @@ def update_ai_config(
     if config.lm_studio_model is not None:
         user_ai.selected_model = config.lm_studio_model.strip()
 
+    if config.push_include_title is not None:
+        user_ai.push_include_title = 1 if config.push_include_title else 0
+    if config.push_include_image is not None:
+        user_ai.push_include_image = 1 if config.push_include_image else 0
+    if config.push_include_summary is not None:
+        user_ai.push_include_summary = 1 if config.push_include_summary else 0
+
     cats = normalize_user_categories(user_ai.categories)
 
     if config.system_prompt and config.system_prompt.strip():
@@ -1489,7 +1522,10 @@ def update_ai_config(
         lm_studio_url=ai_service.LM_STUDIO_URL,
         lm_studio_model=user_ai.selected_model or "",
         available_models=available_models,
-        is_healthy=ai_service.check_lm_studio_health()
+        is_healthy=ai_service.check_lm_studio_health(),
+        push_include_title=bool(user_ai.push_include_title if user_ai.push_include_title is not None else 1),
+        push_include_image=bool(user_ai.push_include_image if user_ai.push_include_image is not None else 1),
+        push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1)
     )
 
 import requests

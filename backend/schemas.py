@@ -121,6 +121,9 @@ class AIConfigUpdate(BaseModel):
     prio_enabled: Optional[bool] = None
     prio_notify_only: Optional[bool] = None
     lm_studio_model: Optional[str] = None
+    push_include_title: Optional[bool] = None
+    push_include_image: Optional[bool] = None
+    push_include_summary: Optional[bool] = None
 
 class AIConfigResponse(BaseModel):
     prio_rules: str = ""
@@ -135,6 +138,9 @@ class AIConfigResponse(BaseModel):
     lm_studio_model: str = ""
     available_models: List[str] = []
     is_healthy: bool = False
+    push_include_title: bool = True
+    push_include_image: bool = True
+    push_include_summary: bool = True
 
 class ArticlePrioritizeRequest(BaseModel):
     topic: Optional[str] = None
