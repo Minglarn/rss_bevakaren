@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.10',
+    date: '2026-09-08',
+    title: 'Rika Push-notiser med AI-sammanfattning & Artikelbild',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'AI-sammanfattning direkt i notisen',
+        description: 'Pushnotiser innehåller nu den informativa 3-meningars AI-sammanfattningen som text istället för att bara upprepa rubriken, så att du direkt ser vad som hänt.'
+      },
+      {
+        type: 'feature',
+        title: 'Stora artikelbilder i notisen',
+        description: 'Om artikeln innehåller en bild skickas den med och förhandsvisas i storformat direkt i telefonens notiscenter.'
+      },
+      {
+        type: 'improvement',
+        title: 'Borttagen duplicerad app-ikon',
+        description: 'Tog bort den redundanta blå ikonen till höger i notiskortet på Android för en ren och snygg presentation.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.09',
     date: '2026-09-08',
     title: 'AI-sammanfattning utökad till 3 meningar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

@@ -60,10 +60,9 @@ async function setToken(token) {
 // Handle Push Events
 self.addEventListener('push', function(event) {
   if (event.data) {
-    let title = 'RSS Monitor';
+    let title = 'RSS Bevakaren';
     let options = {
-      body: 'You have a new notification',
-      icon: '/pwa-192x192.png',
+      body: 'Ny notis mottagen',
       badge: '/badge.png',
       vibrate: [200, 100, 200],
       renotify: true,
@@ -79,6 +78,9 @@ self.addEventListener('push', function(event) {
       options.tag = data.article_id ? `rss-art-${data.article_id}` : `rss-${Date.now()}`;
       if (data.url) options.data.url = data.url;
       if (data.article_id) options.data.article_id = data.article_id;
+      if (data.image) {
+        options.image = data.image;
+      }
     } catch(e) {
       options.body = event.data.text();
     }
@@ -86,11 +88,15 @@ self.addEventListener('push', function(event) {
     event.waitUntil(
       self.registration.showNotification(title, options).catch(err => {
         console.warn('SW showNotification with full options failed, attempting minimal fallback:', err);
-        return self.registration.showNotification(title, {
+        const fallbackOptions = {
           body: options.body,
-          icon: '/pwa-192x192.png',
+          badge: '/badge.png',
           data: options.data
-        });
+        };
+        if (options.image) {
+          fallbackOptions.image = options.image;
+        }
+        return self.registration.showNotification(title, fallbackOptions);
       }).catch(fallbackErr => {
         console.error('SW showNotification fallback also failed:', fallbackErr);
       })

@@ -528,6 +528,7 @@ def send_push_notification_to_user(
     body: str,
     url: str = "/",
     article_id: Optional[int] = None,
+    image_url: Optional[str] = None,
     context: str = "Push"
 ) -> int:
     """
@@ -542,7 +543,8 @@ def send_push_notification_to_user(
         print(f"[{context}] Notis triggad ('{title}': '{body[:35]}...') men användare '{u_display}' har inga aktiva enheter i databasen.", flush=True)
         return 0
 
-    print(f"[{context}] Skickar notis ('{title}') till '{u_display}' ({len(subs)} registrerad(e) enhet(er))...", flush=True)
+    img_info = " med bild" if image_url else ""
+    print(f"[{context}] Skickar notis ('{title}'){img_info} till '{u_display}' ({len(subs)} registrerad(e) enhet(er))...", flush=True)
     delivered_count = 0
 
     for idx, sub in enumerate(subs, 1):
@@ -550,6 +552,15 @@ def send_push_notification_to_user(
         endpoint_snippet = sub.endpoint[-28:] if sub.endpoint else "okänd"
         
         try:
+            payload = {
+                "title": title,
+                "body": body,
+                "url": url or "/",
+                "article_id": article_id
+            }
+            if image_url:
+                payload["image"] = image_url
+
             resp = webpush(
                 subscription_info={
                     "endpoint": sub.endpoint,
@@ -558,12 +569,7 @@ def send_push_notification_to_user(
                         "auth": sub.auth
                     }
                 },
-                data=json.dumps({
-                    "title": title,
-                    "body": body,
-                    "url": url or "/",
-                    "article_id": article_id
-                }),
+                data=json.dumps(payload),
                 vapid_private_key=VAPID_KEYS["private_key"],
                 vapid_claims={"sub": VAPID_KEYS["sub"]},
                 ttl=86400,
@@ -668,38 +674,41 @@ async def polling_loop():
 
                             subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
 
-                            for art in new_articles:
-                                should_notify = False
-                                notify_title = ""
-                                notify_body = ""
-                                
-                                # Om användaren har valt 'Endast PRIO-notiser' hoppar vi över direktnotiser för vanliga artiklar här
-                                # (de skickas i stället så fort AI bekräftar PRIO-status)
-                                is_feed_notify = feed.notify_enabled if feed.notify_enabled is not None else 1
-                                if not only_prio and is_feed_notify == 1:
-                                    should_notify = True
-                                    notify_title = f"{feed.title or 'RSS'}"
-                                    notify_body = art.title
+                            ai_enabled_for_user = bool(user_ai_pref and user_ai_pref.prio_enabled)
+
+                            # Om AI är aktiverat överlåter vi notissändningen till ai_processing_loop
+                            # så att notisen berikas med den färdiga AI-sammanfattningen och artikelns bild!
+                            if not ai_enabled_for_user:
+                                for art in new_articles:
+                                    should_notify = False
+                                    notify_title = ""
+                                    notify_body = ""
                                     
-                                # Bevakningsord skickas ALLTID direkt oavsett PRIO-läge
-                                if kw_texts:
-                                    search_text = f"{art.title or ''} {art.summary or ''}".lower()
-                                    matched_kws = [k for k in kw_texts if k in search_text]
-                                    if matched_kws:
+                                    is_feed_notify = feed.notify_enabled if feed.notify_enabled is not None else 1
+                                    if is_feed_notify == 1:
                                         should_notify = True
-                                        notify_title = f"Bevakningsord: {matched_kws[0]}"
-                                        notify_body = art.title
+                                        notify_title = f"{feed.title or 'RSS'}: {art.title}"
+                                        notify_body = art.summary or art.title
                                         
-                                if should_notify:
-                                    send_push_notification_to_user(
-                                        db=db,
-                                        user_id=feed.user_id,
-                                        title=notify_title,
-                                        body=notify_body or "Ny artikel",
-                                        url=art.link or "/",
-                                        article_id=art.id,
-                                        context="Push"
-                                    )
+                                    if kw_texts:
+                                        search_text = f"{art.title or ''} {art.summary or ''}".lower()
+                                        matched_kws = [k for k in kw_texts if k in search_text]
+                                        if matched_kws:
+                                            should_notify = True
+                                            notify_title = f"Bevakningsord ({matched_kws[0]}): {art.title}"
+                                            notify_body = art.summary or art.title
+                                            
+                                    if should_notify:
+                                        send_push_notification_to_user(
+                                            db=db,
+                                            user_id=feed.user_id,
+                                            title=notify_title,
+                                            body=notify_body or "Ny artikel",
+                                            url=art.link or "/",
+                                            article_id=art.id,
+                                            image_url=art.image_url,
+                                            context="Rå-Push"
+                                        )
                     else:
                         print(f"Polling done for feed {feed.id} ({feed.title}): 0 new articles.", flush=True)
                     
@@ -829,36 +838,53 @@ async def ai_processing_loop():
                         db.commit()
                         print(f"[AI] Klar artikel {art.id} -> {art.category} | {art.priority.upper()} ({art.prio_score}p)", flush=True)
 
-                        # Skicka PRIO-pushnotis
+                        # Skicka pushnotis för PRIO, bevakningsord eller flöde med AI-sammanfattning och bild
                         try:
                             threshold = (user_ai.prio_threshold if (user_ai and user_ai.prio_threshold) else 75)
                             is_prio = (art.priority and str(art.priority).lower() == "high") or ((art.prio_score or 0) >= threshold)
 
-                            # Om användaren har aktiverat PRIO-flödet och artikeln klassats som PRIO (och inte redan skickats som bevakningsord)
-                            should_send_prio = False
-                            if user_id and user_ai and user_ai.prio_enabled and is_prio and not matched_kw:
+                            should_send_push = False
+                            push_title = ""
+                            context_tag = "Push"
+
+                            if matched_kw:
+                                should_send_push = True
+                                kw_str = ", ".join(matched_kw)
+                                push_title = f"Bevakningsord ({kw_str}): {art.title}"
+                                context_tag = "Bevakningsord-Push"
+                            elif user_ai and user_ai.prio_enabled and is_prio:
                                 if user_ai.prio_notify_only:
-                                    should_send_prio = True
+                                    should_send_push = True
                                 else:
-                                    # Om feeden inte hade notiser på vid råpoll, skicka ändå när artikeln visar sig vara PRIO
                                     feed_notify_setting = feed_obj.notify_enabled if (feed_obj and feed_obj.notify_enabled is not None) else 1
-                                    if feed_notify_setting == 0:
-                                        should_send_prio = True
+                                    if feed_notify_setting == 0 or feed_notify_setting == 1:
+                                        should_send_push = True
+                                push_title = f"PRIO ({source or 'RSS'}): {art.title}"
+                                context_tag = "PRIO-Push"
+                            elif user_ai and user_ai.prio_enabled and not user_ai.prio_notify_only:
+                                feed_notify_setting = feed_obj.notify_enabled if (feed_obj and feed_obj.notify_enabled is not None) else 1
+                                if feed_notify_setting == 1:
+                                    should_send_push = True
+                                    push_title = f"{source or 'RSS'}: {art.title}"
+                                    context_tag = "Flöde-Push"
 
-                            print(f"[Push] Artikel {art.id} ('{art.title[:35]}...'): is_prio={is_prio} (prio={art.priority}, score={art.prio_score}/{threshold}), should_send={should_send_prio}", flush=True)
+                            print(f"[Push] Artikel {art.id} ('{art.title[:35]}...'): is_prio={is_prio} (prio={art.priority}, score={art.prio_score}/{threshold}), matched_kw={bool(matched_kw)}, should_send={should_send_push}", flush=True)
 
-                            if should_send_prio:
+                            if should_send_push and user_id:
+                                # Prioritera AI-sammanfattningen som body! Fallback till art.summary eller art.title
+                                push_body = art.ai_summary or art.summary or art.title or "Ny artikel"
                                 send_push_notification_to_user(
                                     db=db,
                                     user_id=user_id,
-                                    title=f"PRIO: {source or 'RSS'}",
-                                    body=art.title or "Ny prioriterad artikel",
+                                    title=push_title,
+                                    body=push_body,
                                     url=art.link or "/",
                                     article_id=art.id,
-                                    context="PRIO-Push"
+                                    image_url=art.image_url,
+                                    context=context_tag
                                 )
                         except Exception as push_err:
-                            print(f"[Push] Fel vid utvärdering av PRIO-notis för artikel {art.id}: {push_err}", flush=True)
+                            print(f"[Push] Fel vid utvärdering av push-notis för artikel {art.id}: {push_err}", flush=True)
                         
                         # Skicka WS-signal om AI-uppdatering till användaren
                         if user_id:
