@@ -55,16 +55,39 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN push_include_summary INTEGER DEFAULT 1"))
                     conn.commit()
                     print("[DB] Added push_include_summary column to user_ai_settings", flush=True)
+                if "auto_purge_enabled" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN auto_purge_enabled INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added auto_purge_enabled column to user_ai_settings", flush=True)
+                if "auto_purge_days" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN auto_purge_days INTEGER DEFAULT 30"))
+                    conn.commit()
+                    print("[DB] Added auto_purge_days column to user_ai_settings", flush=True)
                 conn.execute(text("UPDATE user_ai_settings SET prio_enabled = 0 WHERE prio_enabled IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET prio_notify_only = 0 WHERE prio_notify_only IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET push_include_title = 1 WHERE push_include_title IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET push_include_image = 1 WHERE push_include_image IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET push_include_summary = 1 WHERE push_include_summary IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET auto_purge_enabled = 1 WHERE auto_purge_enabled IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET auto_purge_days = 30 WHERE auto_purge_days IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = NULL WHERE custom_system_prompt IS NOT NULL AND custom_system_prompt NOT LIKE '%SAKLIGA NYHETER%'"))
                 conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = REPLACE(custom_system_prompt, 'Max två korta', 'Max tre korta') WHERE custom_system_prompt LIKE '%Max två korta%'"))
                 conn.commit()
         except Exception as e:
             print(f"[DB] Migration notice for user_ai_settings: {e}", flush=True)
+
+        try:
+            res_art = conn.execute(text("PRAGMA table_info(articles)"))
+            art_cols = [row[1] for row in res_art.fetchall()]
+            if art_cols:
+                if "allow_push" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN allow_push INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added allow_push column to articles", flush=True)
+                conn.execute(text("UPDATE articles SET allow_push = 1 WHERE allow_push IS NULL"))
+                conn.commit()
+        except Exception as e:
+            print(f"[DB] Migration notice for articles: {e}", flush=True)
 
         try:
             res_feeds = conn.execute(text("PRAGMA table_info(feeds)"))
@@ -391,9 +414,10 @@ async def startup_event():
     db.commit()
     db.close()
     
-    # Start the background polling task and AI enrichment task
+    # Start background polling, AI enrichment and scheduled nightly purge
     asyncio.create_task(polling_loop())
     asyncio.create_task(ai_processing_loop())
+    asyncio.create_task(scheduled_purge_loop())
 
 class ConnectionManager:
     def __init__(self):
@@ -627,6 +651,51 @@ def send_push_notification_to_user(
         "errors": errors
     }
 
+async def scheduled_purge_loop():
+    print("[PURGE] Schemalagd nattlig rensningsloop startad (körs kl 03:00 varje natt)", flush=True)
+    while True:
+        try:
+            now = datetime.now()
+            # Beräkna väntetid till kl 03:00 nästa natt
+            target = now.replace(hour=3, minute=0, second=0, microsecond=0)
+            if now >= target:
+                target += timedelta(days=1)
+            wait_seconds = (target - now).total_seconds()
+            
+            # Sov fram till kl 03:00
+            await asyncio.sleep(wait_seconds)
+            
+            print(f"[PURGE] Startar nattlig schemalagd rensning ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})...", flush=True)
+            db = database.SessionLocal()
+            try:
+                all_settings = db.query(models.UserAISettings).filter(
+                    models.UserAISettings.auto_purge_enabled == 1
+                ).all()
+                total_deleted = 0
+                for setting in all_settings:
+                    days = setting.auto_purge_days or 30
+                    cutoff_ts = int(time.time()) - (days * 24 * 60 * 60)
+                    query = db.query(models.Article).join(models.Feed).filter(
+                        models.Feed.user_id == setting.user_id,
+                        models.Article.received_ts < cutoff_ts,
+                        or_(models.Article.is_locked == 0, models.Article.is_locked == None)
+                    )
+                    count = query.count()
+                    if count > 0:
+                        article_ids = [a.id for a in query.all()]
+                        db.query(models.Article).filter(models.Article.id.in_(article_ids)).delete(synchronize_session=False)
+                        db.commit()
+                        total_deleted += count
+                print(f"[PURGE] Nattlig schemalagd rensning slutförd. Raderade {total_deleted} gamla olåsta artiklar.", flush=True)
+            finally:
+                db.close()
+                
+            # Sov 60 sekunder så vi inte körs igen under samma minut
+            await asyncio.sleep(60)
+        except Exception as e:
+            print(f"[PURGE] Fel i schemalagd rensningsloop: {e}", flush=True)
+            await asyncio.sleep(3600)
+
 async def polling_loop():
     print("Background polling loop started", flush=True)
     while True:
@@ -641,7 +710,6 @@ async def polling_loop():
                 
                 # Check if it's time to poll
                 if current_time - feed.last_polled >= interval_sec:
-                    # Time to poll!
                     short_url = (feed.url[:40] + '...') if len(feed.url) > 40 else feed.url
                     print(f"Polling feed {feed.id} ({feed.title}) [{short_url}]...", flush=True)
                     
@@ -653,7 +721,9 @@ async def polling_loop():
                         print(f"Failed to fetch feed {feed.id}: {e}", flush=True)
                         items = []
                     
+                    is_initial_poll = (feed.last_polled == 0 or feed.last_polled is None)
                     new_articles = []
+                    
                     for item in items:
                         # Use link or title as GUID if GUID is missing
                         guid = item.get("link") or item.get("title")
@@ -666,17 +736,27 @@ async def polling_loop():
                         
                         if not existing:
                             cat_str = ",".join(item.get("categories", []))
+                            pub_ts = item.get("published_ts") or 0
+                            
+                            # Tyst initial inläsning och tidsfilter (> 2 timmar gammal = ingen push)
+                            art_allow_push = 1
+                            if is_initial_poll:
+                                art_allow_push = 0
+                            elif pub_ts > 0 and (current_time - pub_ts > 7200):
+                                art_allow_push = 0
+                                
                             new_article = models.Article(
                                 feed_id=feed.id,
                                 guid=guid,
                                 title=item.get("title"),
                                 link=item.get("link"),
                                 published=item.get("published"),
-                                published_ts=item.get("published_ts"),
+                                published_ts=pub_ts,
                                 summary=item.get("summary"),
                                 image_url=item.get("image_url"),
                                 categories=cat_str,
-                                received_ts=current_time
+                                received_ts=current_time,
+                                allow_push=art_allow_push
                             )
                             db.add(new_article)
                             new_articles.append(new_article)
@@ -686,36 +766,38 @@ async def polling_loop():
                         first_id = new_articles[0].id
                         last_id = new_articles[-1].id
                         id_range = f"#{first_id}" if first_id == last_id else f"#{first_id}-#{last_id}"
+                        
+                        # Burst-skydd: Om fler än 2 artiklar i en och samma poll kvalificerar sig för push, begränsa till max 2 nyaste
+                        if not is_initial_poll:
+                            push_eligible = [a for a in new_articles if a.allow_push == 1]
+                            if len(push_eligible) > 2:
+                                for a in push_eligible[:-2]:
+                                    a.allow_push = 0
+                                print(f"[ANTI-BURST] '{feed_title}': {len(push_eligible)} artiklar. Begränsar push till de 2 nyaste för att förhindra notis-bombning.", flush=True)
+
                         print(f"[POLL] {feed_title}: {len(new_articles)} nya artiklar sparade ({id_range})", flush=True)
                         db.commit()
-                        # Send WS update
-                        await manager.send_personal_message(f"NEW_ARTICLES:{feed.id}:{len(new_articles)}", feed.user_id)
+                        
+                        if is_initial_poll:
+                            print(f"[POLL] {feed_title}: Initial inläsning slutförd, artiklar sparade tyst utan push-notiser.", flush=True)
+                            await manager.send_personal_message(f"INITIAL_ARTICLES:{feed.id}:{len(new_articles)}", feed.user_id)
+                        else:
+                            await manager.send_personal_message(f"NEW_ARTICLES:{feed.id}:{len(new_articles)}", feed.user_id)
                         
                         # Check keywords and feed notify settings
                         user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == feed.user_id).all()
                         kw_texts = [kw.keyword.lower() for kw in user_keywords] if user_keywords else []
                         
-                        is_initial_poll = (feed.last_polled == 0)
-                        
-                        if is_initial_poll:
-                            print(f"[POLL] {feed_title}: Initial inläsning slutförd, hoppar över historiska notiser.", flush=True)
-                        else:
+                        if not is_initial_poll:
                             user_ai_pref = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == feed.user_id).first()
-                            only_prio = bool(user_ai_pref and user_ai_pref.prio_enabled and user_ai_pref.prio_notify_only)
-
-                            user_name = feed.owner.username if (feed.owner and feed.owner.username) else None
-                            if not user_name:
-                                u_rec = db.query(models.User).filter(models.User.id == feed.user_id).first()
-                                user_name = u_rec.username if u_rec else f"user_{feed.user_id}"
-
-                            subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == feed.user_id).all()
-
                             ai_enabled_for_user = bool(user_ai_pref and user_ai_pref.prio_enabled)
 
-                            # Om AI är aktiverat överlåter vi notissändningen till ai_processing_loop
-                            # så att notisen berikas med den färdiga AI-sammanfattningen och artikelns bild!
+                            # Om AI inte är aktiverat skickas traditionell rå-push (endast för tillåtna artiklar)
                             if not ai_enabled_for_user:
                                 for art in new_articles:
+                                    if art.allow_push != 1:
+                                        continue
+                                        
                                     should_notify = False
                                     notify_title = ""
                                     notify_body = ""
@@ -884,8 +966,12 @@ async def ai_processing_loop():
                             threshold = (user_ai.prio_threshold if (user_ai and user_ai.prio_threshold) else 75)
                             is_prio = (art.priority and str(art.priority).lower() == "high") or ((art.prio_score or 0) >= threshold)
 
-                            # Om notiser är avstängda för flödet skickas inga notiser (artikeln analyseras och visas dock i PRIO-flödet)
+                            # Om notiser är avstängda för flödet eller artikeln är markerad som tyst/initial/gammal skickas inga notiser
                             if not feed_notifs_on:
+                                should_send_push = False
+                            elif getattr(art, 'allow_push', 1) == 0:
+                                should_send_push = False
+                            elif art.published_ts and (now - art.published_ts > 7200):
                                 should_send_push = False
                             else:
                                 inc_title = bool(user_ai.push_include_title if (user_ai and user_ai.push_include_title is not None) else 1)
@@ -1072,6 +1158,15 @@ def update_feed(feed_id: int, feed: schemas.FeedCreate, db: Session = Depends(da
     db_feed = db.query(models.Feed).filter(models.Feed.id == feed_id, models.Feed.user_id == current_user.id).first()
     if not db_feed:
         raise HTTPException(status_code=404, detail="Feed not found")
+        
+    was_disabled = (db_feed.include_in_dashboard == 0 or db_feed.notify_enabled == 0)
+    now_enabled = (bool(feed.include_in_dashboard) and bool(feed.notify_enabled))
+
+    # Om flödet eller dess notiser aktiveras: Spärra alla befintliga artiklar från att trigga retroaktiva pushnotiser
+    if was_disabled and now_enabled:
+        db.query(models.Article).filter(models.Article.feed_id == feed_id).update({models.Article.allow_push: 0}, synchronize_session=False)
+        print(f"[FEED] Flöde #{feed_id} aktiverat. Alla befintliga artiklar spärrades från att skicka retroaktiva notiser.", flush=True)
+
     db_feed.url = feed.url
     db_feed.title = feed.title
     db_feed.polling_interval = feed.polling_interval
@@ -1420,7 +1515,9 @@ def get_ai_config(
             is_healthy=ai_service.check_lm_studio_health(),
             push_include_title=True,
             push_include_image=True,
-            push_include_summary=True
+            push_include_summary=True,
+            auto_purge_enabled=True,
+            auto_purge_days=30
         )
         
     cats = normalize_user_categories(user_ai.categories)
@@ -1445,7 +1542,9 @@ def get_ai_config(
         is_healthy=ai_service.check_lm_studio_health(),
         push_include_title=bool(user_ai.push_include_title if user_ai.push_include_title is not None else 1),
         push_include_image=bool(user_ai.push_include_image if user_ai.push_include_image is not None else 1),
-        push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1)
+        push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1),
+        auto_purge_enabled=bool(user_ai.auto_purge_enabled if user_ai.auto_purge_enabled is not None else 1),
+        auto_purge_days=int(user_ai.auto_purge_days or 30)
     )
 
 @app.get("/ai/models")
@@ -1492,6 +1591,10 @@ def update_ai_config(
         user_ai.push_include_image = 1 if config.push_include_image else 0
     if config.push_include_summary is not None:
         user_ai.push_include_summary = 1 if config.push_include_summary else 0
+    if config.auto_purge_enabled is not None:
+        user_ai.auto_purge_enabled = 1 if config.auto_purge_enabled else 0
+    if config.auto_purge_days is not None:
+        user_ai.auto_purge_days = max(1, min(365, config.auto_purge_days))
 
     cats = normalize_user_categories(user_ai.categories)
 

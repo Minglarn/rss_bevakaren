@@ -103,6 +103,7 @@ class ArticleResponse(BaseModel):
     tags: Optional[List[str]] = []
     is_clickbait: Optional[int] = 0
     clickbait_reason: Optional[str] = ""
+    allow_push: Optional[int] = 1
 
     class Config:
         from_attributes = True
@@ -124,6 +125,8 @@ class AIConfigUpdate(BaseModel):
     push_include_title: Optional[bool] = None
     push_include_image: Optional[bool] = None
     push_include_summary: Optional[bool] = None
+    auto_purge_enabled: Optional[bool] = None
+    auto_purge_days: Optional[int] = None
 
 class AIConfigResponse(BaseModel):
     prio_rules: str = ""
@@ -141,6 +144,8 @@ class AIConfigResponse(BaseModel):
     push_include_title: bool = True
     push_include_image: bool = True
     push_include_summary: bool = True
+    auto_purge_enabled: bool = True
+    auto_purge_days: int = 30
 
 class ArticlePrioritizeRequest(BaseModel):
     topic: Optional[str] = None

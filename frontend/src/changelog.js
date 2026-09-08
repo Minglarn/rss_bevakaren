@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.16',
+    date: '2026-09-08',
+    title: 'Automatisk schemalagd purge samt skydd mot notis-bombning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Automatisk schemalagd databasrensning (Purge)',
+        description: 'Underhåll av databasen sker nu automatiskt varje natt kl 03:00 i bakgrunden. Rensar olåsta artiklar äldre än det inställda antalet dagar (standard 30 dagar) för att optimera prestanda och lagring.'
+      },
+      {
+        type: 'feature',
+        title: 'Skydd mot notis-bombning vid flödesaktivering',
+        description: 'När ett flöde eller dess notiser aktiveras sker en tyst initial inläsning där befintliga artiklar markeras utan att skicka pushnotiser. Dessutom spärras historiska artiklar äldre än 2 timmar från pushnotiser.'
+      },
+      {
+        type: 'improvement',
+        title: 'Burst-skydd och synkroniserad databasinställning',
+        description: 'Om fler än två nya artiklar anländer i ett och samma anrop begränsas pushnotiserna till de två allra nyaste händelserna för att undvika överhopning av meddelanden på mobil och dator. Inställningar för nattlig schemaläggning styrs direkt från Database-fliken.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.15',
     date: '2026-09-08',
     title: 'Engelsk översättning av notiser & ny databasöversikt',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

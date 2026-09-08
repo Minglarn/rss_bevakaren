@@ -79,6 +79,7 @@ class Article(Base):
     tags = Column(String, default="[]")
     is_clickbait = Column(Integer, default=0)
     clickbait_reason = Column(String, default="")
+    allow_push = Column(Integer, default=1) # 1 = tillåt pushnotis, 0 = tyst/initial/gammal artikel
 
     feed = relationship("Feed", back_populates="articles")
  
@@ -99,5 +100,7 @@ class UserAISettings(Base):
     push_include_title = Column(Integer, default=1) # 1 = skicka artikelrubrik som titel, 0 = endast källa/kontext
     push_include_image = Column(Integer, default=1) # 1 = bifoga artikelbild i notis, 0 = skicka utan bild
     push_include_summary = Column(Integer, default=1) # 1 = skicka AI-sammanfattning som text, 0 = använd ingress/standard
+    auto_purge_enabled = Column(Integer, default=1) # 1 = automatisk nattlig rensning aktiv, 0 = avstängd
+    auto_purge_days = Column(Integer, default=30) # Antal dagar att spara olåsta artiklar innan rensning
 
     owner = relationship("User", back_populates="ai_settings")

@@ -45,7 +45,9 @@ const Settings = () => {
     prio_notify_only: false,
     push_include_title: true,
     push_include_image: true,
-    push_include_summary: true
+    push_include_summary: true,
+    auto_purge_enabled: true,
+    auto_purge_days: 30
   });
   const [showAdvancedPrompt, setShowAdvancedPrompt] = useState(false);
   const [isCustomPromptEdited, setIsCustomPromptEdited] = useState(false);
@@ -139,6 +141,9 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       setIsLoadingAi(true);
       const res = await api.get('/ai/config');
       setAiConfig(res.data);
+      if (res.data?.auto_purge_days) {
+        setPurgeDays(res.data.auto_purge_days);
+      }
     } catch (err) {
       console.error("Could not fetch AI config", err);
     } finally {
@@ -222,6 +227,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
     if (activeTab === 'database') {
       fetchDbStats();
+      fetchAiConfig();
     }
   }, [activeTab]);
 
@@ -357,6 +363,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       const res = await api.post(`/system/purge?days=${purgeDays}`);
       setPurgeMessage(`Purge complete! ${res.data.deleted} old events were deleted.`);
       fetchData(); // Updates database statistics
+      fetchDbStats();
     } catch (err) {
       console.error(err);
       setPurgeMessage("An error occurred during purging.");
@@ -497,6 +504,69 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       toast.error('Failed to save notification setting.');
     } finally {
       setIsSavingAi(false);
+    }
+  };
+
+  const handleToggleAutoPurge = async () => {
+    const currentVal = aiConfig.auto_purge_enabled !== false;
+    const nextVal = !currentVal;
+    try {
+      setIsSavingAi(true);
+      const formattedCats = (aiConfig.categories || []).map(c => 
+        typeof c === 'object' ? { name: c.name, weight: c.weight ?? 5 } : { name: c, weight: 5 }
+      );
+      const res = await api.put('/ai/config', {
+        prio_rules: aiConfig.prio_rules || '',
+        exclude_rules: aiConfig.exclude_rules || '',
+        categories: formattedCats,
+        prio_threshold: aiConfig.prio_threshold || 75,
+        system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
+        onboarding_completed: true,
+        prio_enabled: aiConfig.prio_enabled ?? false,
+        prio_notify_only: aiConfig.prio_notify_only ?? false,
+        lm_studio_model: aiConfig.lm_studio_model || '',
+        push_include_title: aiConfig.push_include_title ?? true,
+        push_include_image: aiConfig.push_include_image ?? true,
+        push_include_summary: aiConfig.push_include_summary ?? true,
+        auto_purge_enabled: nextVal,
+        auto_purge_days: purgeDays
+      });
+      if (res.data) setAiConfig(res.data);
+      toast.success(nextVal ? 'Automatic nightly purge enabled (runs at 03:00).' : 'Automatic nightly purge disabled.');
+      window.dispatchEvent(new Event('aiConfigUpdated'));
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update automatic purge setting.');
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
+
+  const handleUpdateAutoPurgeDays = async (days) => {
+    setPurgeDays(days);
+    try {
+      const formattedCats = (aiConfig.categories || []).map(c => 
+        typeof c === 'object' ? { name: c.name, weight: c.weight ?? 5 } : { name: c, weight: 5 }
+      );
+      const res = await api.put('/ai/config', {
+        prio_rules: aiConfig.prio_rules || '',
+        exclude_rules: aiConfig.exclude_rules || '',
+        categories: formattedCats,
+        prio_threshold: aiConfig.prio_threshold || 75,
+        system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
+        onboarding_completed: true,
+        prio_enabled: aiConfig.prio_enabled ?? false,
+        prio_notify_only: aiConfig.prio_notify_only ?? false,
+        lm_studio_model: aiConfig.lm_studio_model || '',
+        push_include_title: aiConfig.push_include_title ?? true,
+        push_include_image: aiConfig.push_include_image ?? true,
+        push_include_summary: aiConfig.push_include_summary ?? true,
+        auto_purge_enabled: aiConfig.auto_purge_enabled !== false,
+        auto_purge_days: days
+      });
+      if (res.data) setAiConfig(res.data);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -1059,6 +1129,71 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               <div>
                 <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.notify_feeds : feeds.filter(f => f.notify_enabled).length}</strong> with notifications enabled
               </div>
+            </div>
+          </div>
+
+          {/* Automatic Nightly Purge */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.75rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem', paddingLeft: '0.25rem' }}>
+              <h4 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem' }}>
+                <Clock size={18} style={{ color: 'var(--primary)' }} /> Automatic Nightly Purge
+              </h4>
+              <span style={{ 
+                fontSize: '0.75rem', 
+                padding: '0.2rem 0.6rem', 
+                borderRadius: '12px', 
+                backgroundColor: aiConfig.auto_purge_enabled !== false ? 'rgba(34, 197, 94, 0.15)' : 'rgba(100, 116, 139, 0.15)',
+                color: aiConfig.auto_purge_enabled !== false ? '#22c55e' : 'var(--text-muted)',
+                fontWeight: 600,
+                letterSpacing: '0.04em'
+              }}>
+                {aiConfig.auto_purge_enabled !== false ? 'ACTIVE (03:00)' : 'DISABLED'}
+              </span>
+            </div>
+            
+            <p style={{ margin: '0 0 1.25rem 0', paddingLeft: '0.25rem', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+              Automatically purges historical unlocked articles every night at 03:00. Keeps your database fast and prevents storage from growing indefinitely.
+            </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', paddingLeft: '0.25rem', paddingTop: '0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={handleToggleAutoPurge}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    color: aiConfig.auto_purge_enabled !== false ? 'var(--primary)' : 'var(--text-muted)'
+                  }}
+                >
+                  {aiConfig.auto_purge_enabled !== false ? (
+                    <ToggleRight size={32} style={{ color: 'var(--primary)' }} />
+                  ) : (
+                    <ToggleLeft size={32} style={{ color: 'var(--text-muted)' }} />
+                  )}
+                </button>
+                <span style={{ color: 'var(--text-main)', fontSize: '0.9rem', fontWeight: 500 }}>
+                  {aiConfig.auto_purge_enabled !== false ? 'Nightly purge enabled' : 'Nightly purge disabled'}
+                </span>
+              </div>
+
+              {aiConfig.auto_purge_enabled !== false && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Delete unlocked articles older than</span>
+                  <input 
+                    type="number" 
+                    value={purgeDays} 
+                    onChange={e => handleUpdateAutoPurgeDays(e.target.value)} 
+                    style={{ width: '65px', padding: '0.45rem 0.5rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-app)', color: 'var(--text-main)', fontWeight: 600, textAlign: 'center' }} 
+                  />
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>days</span>
+                </div>
+              )}
             </div>
           </div>
 
