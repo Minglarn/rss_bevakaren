@@ -1721,6 +1721,105 @@ def get_system_info(db: Session = Depends(database.get_db), current_user: models
         "total_articles": total_articles
     }
 
+@app.get("/system/database-stats")
+def get_database_stats(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    from sqlalchemy import func
+    
+    db_size = 0
+    db_path = ""
+    candidates = ["/data/rss.db", "data/rss.db", "backend/rss.db", "rss.db"]
+    db_url = os.environ.get("DATABASE_URL", "")
+    if "sqlite" in db_url:
+        candidates.insert(0, db_url.replace("sqlite:////", "/").replace("sqlite:///", ""))
+    for p in candidates:
+        if os.path.exists(p) and os.path.isfile(p):
+            db_size = os.path.getsize(p)
+            db_path = p
+            break
+
+    user_feed_ids = [f.id for f in db.query(models.Feed.id).filter(models.Feed.user_id == current_user.id).all()]
+    
+    if not user_feed_ids:
+        return {
+            "database_size_bytes": db_size,
+            "database_path": db_path,
+            "total_articles": 0,
+            "read_articles": 0,
+            "unread_articles": 0,
+            "locked_articles": 0,
+            "ai_processed_articles": 0,
+            "clickbait_articles": 0,
+            "articles_with_image": 0,
+            "oldest_article": None,
+            "newest_article": None,
+            "total_feeds": 0,
+            "active_feeds": 0,
+            "notify_feeds": 0,
+            "top_categories": []
+        }
+
+    total_articles = db.query(models.Article).filter(models.Article.feed_id.in_(user_feed_ids)).count()
+    read_articles = db.query(models.Article).filter(models.Article.feed_id.in_(user_feed_ids), models.Article.is_read == 1).count()
+    unread_articles = total_articles - read_articles
+    locked_articles = db.query(models.Article).filter(models.Article.feed_id.in_(user_feed_ids), models.Article.is_locked == 1).count()
+    ai_processed_articles = db.query(models.Article).filter(models.Article.feed_id.in_(user_feed_ids), models.Article.ai_processed == 1).count()
+    clickbait_articles = db.query(models.Article).filter(models.Article.feed_id.in_(user_feed_ids), models.Article.is_clickbait == 1).count()
+    articles_with_image = db.query(models.Article).filter(models.Article.feed_id.in_(user_feed_ids), models.Article.image_url.isnot(None), models.Article.image_url != "").count()
+    
+    oldest_article = None
+    oldest = db.query(models.Article.id, models.Article.title, models.Article.received_ts, models.Article.published_ts)\
+        .filter(models.Article.feed_id.in_(user_feed_ids), models.Article.received_ts > 0)\
+        .order_by(models.Article.received_ts.asc()).first()
+    if oldest:
+        oldest_article = {
+            "id": oldest.id,
+            "title": oldest.title or "Untitled",
+            "received_ts": oldest.received_ts,
+            "published_ts": oldest.published_ts
+        }
+
+    newest_article = None
+    newest = db.query(models.Article.id, models.Article.title, models.Article.received_ts, models.Article.published_ts)\
+        .filter(models.Article.feed_id.in_(user_feed_ids), models.Article.received_ts > 0)\
+        .order_by(models.Article.received_ts.desc()).first()
+    if newest:
+        newest_article = {
+            "id": newest.id,
+            "title": newest.title or "Untitled",
+            "received_ts": newest.received_ts,
+            "published_ts": newest.published_ts
+        }
+
+    total_feeds = len(user_feed_ids)
+    active_feeds = db.query(models.Feed).filter(models.Feed.user_id == current_user.id, models.Feed.include_in_dashboard == 1).count()
+    notify_feeds = db.query(models.Feed).filter(models.Feed.user_id == current_user.id, models.Feed.notify_enabled == 1).count()
+
+    cat_counts = db.query(models.Article.category, func.count(models.Article.id))\
+        .filter(models.Article.feed_id.in_(user_feed_ids))\
+        .group_by(models.Article.category)\
+        .order_by(func.count(models.Article.id).desc())\
+        .limit(10).all()
+        
+    top_categories = [{"name": cat or "Övrigt", "count": cnt} for cat, cnt in cat_counts]
+
+    return {
+        "database_size_bytes": db_size,
+        "database_path": db_path,
+        "total_articles": total_articles,
+        "read_articles": read_articles,
+        "unread_articles": unread_articles,
+        "locked_articles": locked_articles,
+        "ai_processed_articles": ai_processed_articles,
+        "clickbait_articles": clickbait_articles,
+        "articles_with_image": articles_with_image,
+        "oldest_article": oldest_article,
+        "newest_article": newest_article,
+        "total_feeds": total_feeds,
+        "active_feeds": active_feeds,
+        "notify_feeds": notify_feeds,
+        "top_categories": top_categories
+    }
+
 @app.post("/articles/{article_id}/read")
 def mark_article_read(article_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     article = db.query(models.Article).join(models.Feed).filter(models.Article.id == article_id, models.Feed.user_id == current_user.id).first()

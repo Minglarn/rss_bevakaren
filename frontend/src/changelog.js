@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.15',
+    date: '2026-09-08',
+    title: 'Engelsk översättning av notiser & ny databasöversikt',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Översikt och hälsostatistik för databasen',
+        description: 'Fliken Database i inställningarna har fått en omfattande realtidsöversikt med KPI-kort för totalt antal artiklar (lästa/olästa), databasens filstorlek, datum och rubrik för äldsta samt nyaste artikeln, låsta artiklar, AI-analyser och detekterade klickbeten.'
+      },
+      {
+        type: 'feature',
+        title: 'Kategorifördelning och flödesstatus',
+        description: 'Visar de vanligaste nyhetskategorierna i databasen med visuella staplar samt sammanställning av aktiva flöden och flöden med aktiverade pushnotiser.'
+      },
+      {
+        type: 'improvement',
+        title: 'Engelsk översättning för notisinställningar',
+        description: 'Samtliga rubriker, förklaringar, knappar, statusbrickor, bekräftelsedialoger och toast-meddelanden under fliken Notifications är nu översatta till engelska för ett enhetligt gränssnitt.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.14',
     date: '2026-09-08',
     title: 'Anpassningsbart innehåll i Pushnotiser',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

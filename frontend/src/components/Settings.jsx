@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
@@ -15,6 +15,8 @@ const Settings = () => {
   const [isLoadingDevices, setIsLoadingDevices] = useState(false);
   const [feeds, setFeeds] = useState([]);
   const [sysInfo, setSysInfo] = useState(null);
+  const [dbStats, setDbStats] = useState(null);
+  const [isLoadingDbStats, setIsLoadingDbStats] = useState(false);
   const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
   const [theme, setTheme] = useState(() => localStorage.getItem('rss_theme') || 'system');
   const [feedMode, setFeedMode] = useState(() => localStorage.getItem('rss_feed_mode') || 'ai');
@@ -162,6 +164,18 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
   };
 
+  const fetchDbStats = async () => {
+    try {
+      setIsLoadingDbStats(true);
+      const res = await api.get('/system/database-stats');
+      setDbStats(res.data);
+    } catch (err) {
+      console.error("Could not fetch database stats:", err);
+    } finally {
+      setIsLoadingDbStats(false);
+    }
+  };
+
   const fetchData = async () => {
     try {
       const [kwRes, feedsRes, sysRes] = await Promise.all([
@@ -173,6 +187,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       setFeeds(feedsRes.data);
       setSysInfo(sysRes.data);
       fetchAiConfig();
+      fetchDbStats();
     } catch (err) {
       console.error(err);
     }
@@ -204,6 +219,9 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
     if (activeTab === 'notifications') {
       fetchPushDevices();
+    }
+    if (activeTab === 'database') {
+      fetchDbStats();
     }
   }, [activeTab]);
 
@@ -243,39 +261,39 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
     
     if (granted) {
-      toast.loading('Registrerar notiser för denna enhet...', { id: 'push-toggle' });
+      toast.loading('Registering notifications for this device...', { id: 'push-toggle' });
       const subEndpoint = await subscribeToWebPush();
       if (subEndpoint) {
         setPushEnabled(true);
         await fetchPushDevices();
-        toast.success('Push-notiser är nu aktiverade på denna enhet!', { id: 'push-toggle' });
+        toast.success('Push notifications are now enabled on this device!', { id: 'push-toggle' });
       } else {
-        toast.error('Kunde inte slutföra prenumerationen mot webbläsaren eller servern.', { id: 'push-toggle' });
+        toast.error('Could not complete subscription with browser or server.', { id: 'push-toggle' });
       }
     } else {
-      toast.error('Tillåtelse för notiser nekades i din webbläsare.');
+      toast.error('Notification permission was denied in your browser.');
     }
   };
 
   const handleTestPush = async () => {
     try {
-      toast.loading('Skickar testnotis...', { id: 'push-test' });
+      toast.loading('Sending test notification...', { id: 'push-test' });
       const res = await api.post('/push/test');
       if (res.data && res.data.sent > 0) {
-        toast.success(`Testnotis skickad till ${res.data.sent} enhet(er)!`, { id: 'push-test' });
+        toast.success(`Test notification sent to ${res.data.sent} device(s)!`, { id: 'push-test' });
       } else {
-        toast.error('Ingen aktiv prenumeration hittades för ditt konto.', { id: 'push-test' });
+        toast.error('No active subscription found for your account.', { id: 'push-test' });
       }
       await fetchPushDevices();
     } catch (e) {
       console.error("Test push failed", e);
-      const detail = e.response?.data?.detail || 'Kunde inte skicka testnotis.';
+      const detail = e.response?.data?.detail || 'Failed to send test notification.';
       toast.error(detail, { id: 'push-test' });
     }
   };
 
   const handleUnsubscribe = async () => {
-    if (!window.confirm("Är du säker på att du vill avregistrera denna enhet helt från push-notiser?")) return;
+    if (!window.confirm("Are you sure you want to completely unsubscribe this device from push notifications?")) return;
     try {
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.ready;
@@ -291,15 +309,15 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       }
       setPushEnabled(false);
       await fetchPushDevices();
-      toast.success('Enheten är nu avregistrerad från push-notiser.');
+      toast.success('This device is now unsubscribed from push notifications.');
     } catch (e) {
       console.error("Unsubscribe failed", e);
-      toast.error('Kunde inte avregistrera enheten.');
+      toast.error('Failed to unsubscribe device.');
     }
   };
 
   const handleClearAllDevices = async () => {
-    if (!window.confirm("Vill du rensa samtliga sparade enheter från push-notiser? Därefter kan du återaktivera notiser på denna enhet.")) return;
+    if (!window.confirm("Do you want to clear all saved devices for push notifications? You can then re-enable notifications on this device.")) return;
     try {
       await api.delete('/push/subscriptions/all');
       if ('serviceWorker' in navigator) {
@@ -313,10 +331,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       }
       setPushEnabled(false);
       await fetchPushDevices();
-      toast.success("Samtliga push-enheter har rensats från databasen.");
+      toast.success("All push devices have been cleared from database.");
     } catch (err) {
       console.error(err);
-      toast.error("Kunde inte rensa enheter.");
+      toast.error("Failed to clear devices.");
     }
   };
 
@@ -324,10 +342,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     try {
       await api.delete(`/push/subscriptions/${id}`);
       await fetchPushDevices();
-      toast.success("Enheten togs bort.");
+      toast.success("Device removed.");
     } catch (err) {
       console.error(err);
-      toast.error("Kunde inte ta bort enheten.");
+      toast.error("Failed to remove device.");
     }
   };
 
@@ -434,12 +452,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         setAiConfig(res.data);
       }
       toast.success(nextState 
-        ? 'Notiser begränsade till endast PRIO-flödet och bevakningsord.' 
-        : 'Notiser aktiverade för alla artiklar i dina flöden.');
+        ? 'Notifications restricted to PRIO feed and keywords only.' 
+        : 'Notifications enabled for all articles in your feeds.');
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
       console.error("Could not change PRIO notify only status:", err);
-      toast.error('Kunde inte spara inställningen.');
+      toast.error('Failed to save setting.');
     } finally {
       setIsSavingAi(false);
     }
@@ -472,11 +490,11 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       if (res.data) {
         setAiConfig(res.data);
       }
-      toast.success(`${label} är nu ${nextVal ? 'aktiverad' : 'avstängd'}.`);
+      toast.success(`${label} is now ${nextVal ? 'enabled' : 'disabled'}.`);
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
       console.error(`Could not update push setting ${key}:`, err);
-      toast.error('Kunde inte spara notisinställningen.');
+      toast.error('Failed to save notification setting.');
     } finally {
       setIsSavingAi(false);
     }
@@ -798,62 +816,300 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       )}
 
       {activeTab === 'database' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
-            <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Database size={20} /> Database Management
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem' }}>
-              Manage your database and purge old data.
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {/* Database Summary & Health Card */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.75rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem', paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Database size={20} style={{ color: 'var(--primary)' }} />
+                <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem' }}>
+                  Database Overview & Health
+                </h3>
+              </div>
+              <button
+                onClick={fetchDbStats}
+                disabled={isLoadingDbStats}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
+                  cursor: 'pointer'
+                }}
+              >
+                <RefreshCw size={14} className={isLoadingDbStats ? 'animate-spin' : ''} />
+                Refresh Statistics
+              </button>
+            </div>
+            
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.25rem', paddingLeft: '0.25rem', lineHeight: 1.45 }}>
+              Real-time metrics, article lifecycle statistics, and storage health for your database.
             </p>
-            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-              <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Database size={18} /> Purge Database
-              </h4>
-              <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                Purge old news events to save storage space. Events you have marked as "Locked" on the dashboard are not affected by the purge.
-              </p>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>Save posts for</span>
-                  <input 
-                    type="number" 
-                    value={purgeDays} 
-                    onChange={e => setPurgeDays(Math.max(1, parseInt(e.target.value) || 30))} 
-                    style={{ width: '60px', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-card)', color: 'var(--text-main)' }} 
-                  />
-                  <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>days</span>
+
+            {/* KPI Cards Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '0.85rem',
+              marginBottom: '1.5rem'
+            }}>
+              {/* Card 1: Total Articles */}
+              <div style={{
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: '10px',
+                padding: '1rem',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span>Total Articles</span>
+                  <Layers size={16} style={{ color: 'var(--primary)' }} />
                 </div>
-                
-                <button 
-                  onClick={handlePurge}
-                  disabled={isPurging}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    color: '#ef4444',
-                    border: '1px solid #ef4444',
-                    borderRadius: '6px',
-                    cursor: isPurging ? 'not-allowed' : 'pointer',
-                    fontWeight: 600,
-                    fontSize: '0.85rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
+                <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  {dbStats ? dbStats.total_articles.toLocaleString('en-US') : (sysInfo?.total_articles?.toLocaleString('en-US') || '0')}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  {dbStats ? `${dbStats.unread_articles.toLocaleString('en-US')} unread · ${dbStats.read_articles.toLocaleString('en-US')} read` : 'Articles currently indexed'}
+                </div>
+              </div>
+
+              {/* Card 2: Database Size */}
+              <div style={{
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: '10px',
+                padding: '1rem',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span>Database Size</span>
+                  <HardDrive size={16} style={{ color: '#8b5cf6' }} />
+                </div>
+                <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#8b5cf6' }}>
+                  {dbStats ? (dbStats.database_size_bytes / 1024 / 1024).toFixed(2) + ' MB' : (sysInfo ? (sysInfo.database_size_bytes / 1024 / 1024).toFixed(2) + ' MB' : '0.00 MB')}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  SQLite persistent disk storage
+                </div>
+              </div>
+
+              {/* Card 3: Oldest Article */}
+              <div style={{
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: '10px',
+                padding: '1rem',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span>Oldest Article</span>
+                  <Calendar size={16} style={{ color: '#f59e0b' }} />
+                </div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.15rem' }}>
+                  {dbStats?.oldest_article?.received_ts 
+                    ? new Date(dbStats.oldest_article.received_ts * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : 'No data'}
+                </div>
+                <div 
+                  title={dbStats?.oldest_article?.title || ''}
+                  style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                 >
-                  {isPurging ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />}
-                  {isPurging ? 'Purging...' : 'Run Purge'}
-                </button>
+                  {dbStats?.oldest_article?.title ? `"${dbStats.oldest_article.title}"` : 'No article stored yet'}
+                </div>
+              </div>
+
+              {/* Card 4: Newest Article */}
+              <div style={{
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: '10px',
+                padding: '1rem',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span>Newest Article</span>
+                  <Clock size={16} style={{ color: '#10b981' }} />
+                </div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.15rem' }}>
+                  {dbStats?.newest_article?.received_ts 
+                    ? new Date(dbStats.newest_article.received_ts * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : 'No data'}
+                </div>
+                <div 
+                  title={dbStats?.newest_article?.title || ''}
+                  style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                >
+                  {dbStats?.newest_article?.title ? `"${dbStats.newest_article.title}"` : 'Awaiting incoming RSS feeds'}
+                </div>
+              </div>
+
+              {/* Card 5: Saved & Locked */}
+              <div style={{
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: '10px',
+                padding: '1rem',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span>Locked & Images</span>
+                  <Lock size={16} style={{ color: '#ec4899' }} />
+                </div>
+                <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  {dbStats ? dbStats.locked_articles.toLocaleString('en-US') : '0'} locked
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Protected from purge · {dbStats ? dbStats.articles_with_image.toLocaleString('en-US') : '0'} with images
+                </div>
+              </div>
+
+              {/* Card 6: AI Processed */}
+              <div style={{
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: '10px',
+                padding: '1rem',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span>AI Insights</span>
+                  <Sparkles size={16} style={{ color: '#f97316' }} />
+                </div>
+                <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#f97316' }}>
+                  {dbStats ? dbStats.ai_processed_articles.toLocaleString('en-US') : '0'} analyzed
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  {dbStats ? `${dbStats.clickbait_articles.toLocaleString('en-US')} clickbaits flagged` : 'Clickbait & PRIO scoring active'}
+                </div>
+              </div>
+            </div>
+
+            {/* Top Categories Breakdown */}
+            {dbStats && dbStats.top_categories && dbStats.top_categories.length > 0 && (
+              <div style={{
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: '10px',
+                padding: '1rem',
+                border: '1px solid var(--border-color)',
+                marginBottom: '1rem'
+              }}>
+                <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', fontSize: '0.95rem', fontWeight: 600 }}>
+                  Top Categories in Database
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  {dbStats.top_categories.map((cat, idx) => {
+                    const pct = dbStats.total_articles > 0 
+                      ? Math.round((cat.count / dbStats.total_articles) * 100) 
+                      : 0;
+                    return (
+                      <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{cat.name}</span>
+                          <span style={{ color: 'var(--text-muted)' }}>{cat.count.toLocaleString('en-US')} articles ({pct}%)</span>
+                        </div>
+                        <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-card)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.max(2, pct)}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '3px' }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Feeds Health Summary */}
+            <div style={{
+              display: 'flex',
+              gap: '1rem',
+              flexWrap: 'wrap',
+              padding: '0.75rem 1rem',
+              backgroundColor: 'var(--bg-app)',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)',
+              fontSize: '0.85rem',
+              color: 'var(--text-muted)'
+            }}>
+              <div>
+                <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.total_feeds : feeds.length}</strong> total feeds
+              </div>
+              <span style={{ color: 'var(--border-color)' }}>•</span>
+              <div>
+                <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.active_feeds : feeds.filter(f => f.include_in_dashboard).length}</strong> active in dashboard
+              </div>
+              <span style={{ color: 'var(--border-color)' }}>•</span>
+              <div>
+                <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.notify_feeds : feeds.filter(f => f.notify_enabled).length}</strong> with notifications enabled
+              </div>
+            </div>
+          </div>
+
+          {/* Purge Database Action */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.75rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', paddingLeft: '0.25rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem' }}>
+              <Trash2 size={18} style={{ color: '#ef4444' }} /> Purge Old Database Records
+            </h4>
+            <p style={{ margin: '0 0 1.25rem 0', paddingLeft: '0.25rem', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+              Purge historical news events to reclaim storage space. Articles you have marked as "Locked" on the dashboard are permanently protected and will never be removed by the purge process.
+            </p>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', paddingLeft: '0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ color: 'var(--text-main)', fontWeight: 500, fontSize: '0.9rem' }}>Keep articles from the last</span>
+                <input 
+                  type="number" 
+                  value={purgeDays} 
+                  onChange={e => setPurgeDays(Math.max(1, parseInt(e.target.value) || 30))} 
+                  style={{ width: '65px', padding: '0.45rem 0.5rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-app)', color: 'var(--text-main)', fontWeight: 600, textAlign: 'center' }} 
+                />
+                <span style={{ color: 'var(--text-main)', fontWeight: 500, fontSize: '0.9rem' }}>days</span>
               </div>
               
-              {purgeMessage && (
-                <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', borderRadius: '6px', fontSize: '0.9rem' }}>
-                  {purgeMessage}
-                </div>
-              )}
+              <button 
+                onClick={handlePurge}
+                disabled={isPurging}
+                style={{
+                  padding: '0.55rem 1.15rem',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ef4444',
+                  border: '1px solid #ef4444',
+                  borderRadius: '6px',
+                  cursor: isPurging ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.88rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                {isPurging ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />}
+                {isPurging ? 'Purging...' : 'Run Purge'}
+              </button>
             </div>
+            
+            {purgeMessage && (
+              <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', borderRadius: '6px', fontSize: '0.88rem', border: '1px solid rgba(34, 197, 94, 0.25)' }}>
+                {purgeMessage}
+              </div>
+            )}
           </div>
         </motion.div>
       )}
@@ -865,7 +1121,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
               <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Bell size={20} /> Webb-pushnotiser (PWA)
+                <Bell size={20} /> Web Push Notifications (PWA)
               </h3>
               <span style={{
                 fontSize: '0.75rem',
@@ -876,12 +1132,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 color: pushEnabled ? '#22c55e' : 'var(--text-muted)',
                 border: pushEnabled ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border-color)'
               }}>
-                {pushEnabled ? 'AKTIVERAD PÅ DENNA ENHET' : 'EJ AKTIVERAD'}
+                {pushEnabled ? 'ACTIVE ON THIS DEVICE' : 'NOT ACTIVE'}
               </span>
             </div>
             
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem', paddingRight: '0.35rem', lineHeight: 1.5 }}>
-              Aktivera notiser i din webbläsare för att ta emot push-notiser direkt till mobilen eller skrivbordet när nya artiklar anländer eller bevakningsord triggas.
+              Enable notifications in your browser to receive push notifications directly to your mobile device or desktop when new articles arrive or monitored keywords trigger.
             </p>
 
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
@@ -901,7 +1157,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   gap: '0.5rem'
                 }}
               >
-                <Bell size={16} /> {pushEnabled ? 'Förnya / Återaktivera prenumeration' : 'Aktivera push-notiser'}
+                <Bell size={16} /> {pushEnabled ? 'Renew / Reactivate subscription' : 'Enable push notifications'}
               </button>
 
               <button 
@@ -920,7 +1176,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   gap: '0.5rem'
                 }}
               >
-                <Send size={16} style={{ color: 'var(--primary)' }} /> Skicka testnotis till enheten
+                <Send size={16} style={{ color: 'var(--primary)' }} /> Send test notification to device
               </button>
               
               {pushEnabled && (
@@ -940,7 +1196,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     gap: '0.5rem'
                   }}
                 >
-                  Avregistrera denna enhet
+                  Unsubscribe this device
                 </button>
               )}
             </div>
@@ -952,14 +1208,14 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Smartphone size={18} style={{ color: 'var(--primary)' }} />
                 <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 600 }}>
-                  Registrerade enheter ({pushDevices.length})
+                  Registered Devices ({pushDevices.length})
                 </h4>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <button
                   onClick={fetchPushDevices}
                   disabled={isLoadingDevices}
-                  title="Uppdatera lista"
+                  title="Refresh list"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -973,12 +1229,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     cursor: 'pointer'
                   }}
                 >
-                  <RefreshCw size={13} className={isLoadingDevices ? 'animate-spin' : ''} /> Uppdatera
+                  <RefreshCw size={13} className={isLoadingDevices ? 'animate-spin' : ''} /> Refresh
                 </button>
                 {pushDevices.length > 0 && (
                   <button
                     onClick={handleClearAllDevices}
-                    title="Rensa alla sparade enheter"
+                    title="Clear all saved devices"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -993,25 +1249,25 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       cursor: 'pointer'
                     }}
                   >
-                    <Trash2 size={13} /> Rensa alla enheter
+                    <Trash2 size={13} /> Clear all devices
                   </button>
                 )}
               </div>
             </div>
 
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem', paddingLeft: '0.35rem', paddingRight: '0.35rem', lineHeight: 1.45 }}>
-              Här visas de enheter och webbläsare som är kopplade till ditt användarkonto. Pushnotiser skickas till samtliga aktiva enheter i listan med hög prioritet. Om du bytt telefon eller har gamla sessioner kvar kan du ta bort dem här.
+              Displays connected devices and browsers for your account. Push notifications are delivered to all active devices in this list. If you replaced a phone or have stale sessions, you can manage them here.
             </p>
 
             {pushDevices.length === 0 ? (
               <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
-                Inga enheter är för närvarande registrerade för push-notiser. Klicka på "Aktivera push-notiser" ovan för att registrera denna enhet.
+                No devices are currently registered for push notifications. Click "Enable push notifications" above to register this device.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {pushDevices.map(dev => {
                   const isMobile = (dev.device_name || '').toLowerCase().includes('android') || (dev.device_name || '').toLowerCase().includes('iphone');
-                  const updatedDate = dev.updated_at ? new Date(dev.updated_at * 1000).toLocaleString('sv-SE') : (dev.created_at ? new Date(dev.created_at * 1000).toLocaleString('sv-SE') : 'Okänt datum');
+                  const updatedDate = dev.updated_at ? new Date(dev.updated_at * 1000).toLocaleString('en-US') : (dev.created_at ? new Date(dev.created_at * 1000).toLocaleString('en-US') : 'Unknown date');
                   return (
                     <div
                       key={dev.id}
@@ -1053,19 +1309,19 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                                 color: '#22c55e',
                                 border: '1px solid rgba(34, 197, 94, 0.3)'
                               }}>
-                                Denna enhet
+                                This device
                               </span>
                             )}
                           </div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            Senast aktiv: {updatedDate} | Id: ...{dev.endpoint_snippet}
+                            Last active: {updatedDate} | ID: ...{dev.endpoint_snippet}
                           </div>
                         </div>
                       </div>
 
                       <button
                         onClick={() => handleDeleteDevice(dev.id)}
-                        title="Ta bort enhet"
+                        title="Remove device"
                         style={{
                           padding: '0.4rem',
                           borderRadius: '6px',
@@ -1102,7 +1358,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               <div style={{ flex: 1, minWidth: '240px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Flame size={18} style={{ color: '#f97316' }} /> Endast notiser för PRIO-flödet
+                    <Flame size={18} style={{ color: '#f97316' }} /> Notifications for PRIO feed only
                   </h4>
                   <span style={{
                     fontSize: '0.7rem',
@@ -1113,15 +1369,15 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     color: aiConfig.prio_notify_only ? '#f97316' : 'var(--text-muted)',
                     border: aiConfig.prio_notify_only ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid var(--border-color)'
                   }}>
-                    {aiConfig.prio_notify_only ? 'AKTIVT' : 'AV'}
+                    {aiConfig.prio_notify_only ? 'ACTIVE' : 'OFF'}
                   </span>
                 </div>
                 <p style={{ margin: '0.4rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.45 }}>
-                  När detta val är aktiverat skickas notiser endast för artiklar som klassas som PRIO eller matchar dina bevakningsord. Perfekt om du bevakar stora flöden som Expressen eller Aftonbladet med hundratals artiklar om dagen och endast vill bli störd av de få som verkligen är intressanta.
+                  When enabled, notifications are only sent for articles classified as PRIO or matching your monitored keywords. Recommended if you follow high-volume feeds and only want to be alerted about what is truly important.
                 </p>
                 {!aiConfig.prio_enabled && (
                   <p style={{ margin: '0.4rem 0 0 0', color: '#eab308', fontSize: '0.8rem', fontWeight: 500 }}>
-                    Tips: Du behöver också ha personligt PRIO-flöde aktiverat under fliken AI Analys för att AI-bedömningen ska genomföras.
+                    Note: You also need personal PRIO feed enabled under the AI Analysis tab for AI prioritization to run.
                   </p>
                 )}
               </div>
@@ -1147,10 +1403,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)'
           }}>
             <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 600, paddingLeft: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Sliders size={18} style={{ color: 'var(--primary)' }} /> Innehåll i Pushnotiser
+              <Sliders size={18} style={{ color: 'var(--primary)' }} /> Push Notification Content
             </h4>
             <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.85rem', paddingLeft: '0.35rem', lineHeight: 1.45 }}>
-              Välj vilken information som ska inkluderas i dina webb-pushnotiser. Du kan anpassa titel, bilder och sammanfattningar utifrån dina personliga preferenser.
+              Customize what information is included in your web push notifications. You can toggle headlines, preview images, and AI summaries based on your personal preference.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
@@ -1167,17 +1423,17 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.92rem' }}>
-                    <Type size={16} style={{ color: 'var(--primary)' }} /> Skicka med artikelrubrik (Titel)
+                    <Type size={16} style={{ color: 'var(--primary)' }} /> Include article headline (Title)
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                    När aktiv visas artikelns fullständiga rubrik i notisens titel. Vid avstängd visas endast händelse och källa (t.ex. PRIO: Aftonbladet).
+                    When active, the full article title is shown in the notification header. When disabled, only event type and source are shown (e.g. PRIO: Aftonbladet).
                   </div>
                 </div>
                 <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
                   <input
                     type="checkbox"
                     checked={aiConfig.push_include_title !== false}
-                    onChange={() => handleTogglePushSetting('push_include_title', 'Artikelrubrik')}
+                    onChange={() => handleTogglePushSetting('push_include_title', 'Article headline')}
                     disabled={isSavingAi}
                   />
                   <span className="toggle-slider"></span>
@@ -1197,17 +1453,17 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.92rem' }}>
-                    <ImageIcon size={16} style={{ color: '#10b981' }} /> Skicka med artikelbild
+                    <ImageIcon size={16} style={{ color: '#10b981' }} /> Include article image
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                    Visar en stor och tydlig förhandsvisningsbild i notisen på mobiler och datorer när artikeln innehåller en bild.
+                    Displays a rich preview image in the notification on mobile and desktop when the article contains an image.
                   </div>
                 </div>
                 <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
                   <input
                     type="checkbox"
                     checked={aiConfig.push_include_image !== false}
-                    onChange={() => handleTogglePushSetting('push_include_image', 'Artikelbild')}
+                    onChange={() => handleTogglePushSetting('push_include_image', 'Article image')}
                     disabled={isSavingAi}
                   />
                   <span className="toggle-slider"></span>
@@ -1227,17 +1483,17 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.92rem' }}>
-                    <Sparkles size={16} style={{ color: '#f97316' }} /> Skicka med AI-sammanfattning
+                    <Sparkles size={16} style={{ color: '#f97316' }} /> Include AI summary
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                    Skickar med de 3 informativa AI-meningarna som notisens textkropp så att du direkt ser kärnhändelsen.
+                    Includes the 3-sentence informative AI analysis as the notification body so you can immediately see the core event.
                   </div>
                 </div>
                 <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
                   <input
                     type="checkbox"
                     checked={aiConfig.push_include_summary !== false}
-                    onChange={() => handleTogglePushSetting('push_include_summary', 'AI-sammanfattning')}
+                    onChange={() => handleTogglePushSetting('push_include_summary', 'AI summary')}
                     disabled={isSavingAi}
                   />
                   <span className="toggle-slider"></span>
