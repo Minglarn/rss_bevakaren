@@ -45,6 +45,7 @@ def ensure_db_migrations():
                     print("[DB] Added prio_notify_only column to user_ai_settings", flush=True)
                 conn.execute(text("UPDATE user_ai_settings SET prio_enabled = 0 WHERE prio_enabled IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET prio_notify_only = 0 WHERE prio_notify_only IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = NULL WHERE custom_system_prompt IS NOT NULL AND custom_system_prompt NOT LIKE '%SAKLIGA NYHETER%'"))
                 conn.commit()
         except Exception as e:
             print(f"[DB] Migration notice for user_ai_settings: {e}", flush=True)
@@ -58,6 +59,11 @@ def ensure_db_migrations():
                     conn.commit()
                     print("[DB] Added notify_enabled column to feeds", flush=True)
                 conn.execute(text("UPDATE feeds SET notify_enabled = 1 WHERE notify_enabled IS NULL"))
+                conn.commit()
+
+            first_user = conn.execute(text("SELECT id FROM users ORDER BY id ASC LIMIT 1")).fetchone()
+            if first_user:
+                conn.execute(text(f"UPDATE feeds SET user_id = {first_user[0]} WHERE user_id IS NULL"))
                 conn.commit()
         except Exception as e:
             print(f"[DB] Migration notice for feeds: {e}", flush=True)
@@ -594,11 +600,16 @@ async def ai_processing_loop():
 
                 for art in unprocessed:
                     cats = art.categories.split(",") if art.categories else []
-                    source = art.feed.title if art.feed else ""
-                    user_id = art.feed.user_id if art.feed else None
+                    
+                    # Hämta feed säkert och ta reda på användare och källa
+                    feed_id = art.feed_id
+                    feed_obj = db.query(models.Feed).filter(models.Feed.id == feed_id).first() if feed_id else None
+                    source = feed_obj.title if (feed_obj and feed_obj.title) else ""
+                    user_id = feed_obj.user_id if feed_obj else None
                     
                     user_prompt = None
                     user_cats = None
+                    user_ai = None
                     if user_id:
                         user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == user_id).first()
                         # Om användaren inte har aktiverat PRIO-flödet, skippa AI-analys och spara resurser
@@ -612,7 +623,7 @@ async def ai_processing_loop():
                             user_prompt = ai_service.ensure_clickbait_in_prompt(user_ai.custom_system_prompt, categories=user_cats)
 
                     user_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
-                    u_rec = db.query(models.User).filter(models.User.id == user_id).first()
+                    u_rec = db.query(models.User).filter(models.User.id == user_id).first() if user_id else None
                     u_display = u_rec.username if u_rec else f"user_{user_id}"
                     print(f"[AI] Bearbetar artikel {art.id} för användare '{u_display}' (modell: {user_model or 'auto'}): '{art.title[:50]}...'...", flush=True)
                     
@@ -653,13 +664,28 @@ async def ai_processing_loop():
                         db.commit()
                         print(f"[AI] Klar artikel {art.id} -> {art.category} | {art.priority.upper()} ({art.prio_score}p)", flush=True)
 
-                        # Skicka PRIO-pushnotis om användaren har aktiverat 'Endast PRIO-notiser' och artikeln inte redan notifierats via bevakningsord
-                        if user_id and user_ai and user_ai.prio_enabled and user_ai.prio_notify_only:
-                            feed_notify = art.feed.notify_enabled if (art.feed and art.feed.notify_enabled is not None) else 1
-                            if art.priority == "high" and not matched_kw and feed_notify == 1:
+                        # Skicka PRIO-pushnotis
+                        try:
+                            threshold = (user_ai.prio_threshold if (user_ai and user_ai.prio_threshold) else 75)
+                            is_prio = (art.priority and str(art.priority).lower() == "high") or ((art.prio_score or 0) >= threshold)
+
+                            # Om användaren har aktiverat PRIO-flödet och artikeln klassats som PRIO (och inte redan skickats som bevakningsord)
+                            should_send_prio = False
+                            if user_id and user_ai and user_ai.prio_enabled and is_prio and not matched_kw:
+                                if user_ai.prio_notify_only:
+                                    should_send_prio = True
+                                else:
+                                    # Om feeden inte hade notiser på vid råpoll, skicka ändå när artikeln visar sig vara PRIO
+                                    feed_notify_setting = feed_obj.notify_enabled if (feed_obj and feed_obj.notify_enabled is not None) else 1
+                                    if feed_notify_setting == 0:
+                                        should_send_prio = True
+
+                            print(f"[Push] Artikel {art.id} ('{art.title[:35]}...'): is_prio={is_prio} (prio={art.priority}, score={art.prio_score}/{threshold}), should_send={should_send_prio}", flush=True)
+
+                            if should_send_prio:
                                 subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == user_id).all()
                                 if subs:
-                                    prio_title = f"PRIO: {art.feed.title if art.feed else 'RSS'}"
+                                    prio_title = f"PRIO: {source or 'RSS'}"
                                     prio_body = art.title
                                     for sub in subs:
                                         try:
@@ -668,26 +694,28 @@ async def ai_processing_loop():
                                                 data=json.dumps({
                                                     "title": prio_title,
                                                     "body": prio_body,
-                                                    "url": art.link,
+                                                    "url": art.link or "/",
                                                     "article_id": art.id
                                                 }),
                                                 vapid_private_key=VAPID_KEYS["private_key"],
                                                 vapid_claims={"sub": VAPID_KEYS["sub"]}
                                             )
-                                            print(f"[Push] Skickade PRIO-pushnotis för artikel {art.id} till användare '{u_display}'", flush=True)
+                                            print(f"[Push] Skickade PRIO-pushnotis för artikel {art.id} till '{u_display}'", flush=True)
                                         except WebPushException as ex:
-                                            print(f"WebPushException för PRIO-artikel {art.id} (användare '{u_display}'): {repr(ex)}", flush=True)
+                                            print(f"[Push] WebPushException för artikel {art.id} ('{u_display}'): {repr(ex)}", flush=True)
                                             if ex.response and ex.response.status_code in [404, 410]:
                                                 db.delete(sub)
                                                 db.commit()
                                         except Exception as e:
-                                            print(f"Oväntat fel vid PRIO-webpush för användare '{u_display}': {e}", flush=True)
+                                            print(f"[Push] Oväntat fel vid PRIO-webpush för '{u_display}': {e}", flush=True)
                                 else:
-                                    print(f"[Push] PRIO-notis triggad för '{art.title[:45]}' men användare '{u_display}' har inga aktiva enheter registrerade.", flush=True)
+                                    print(f"[Push] PRIO-notis kvalificerad för '{art.title[:35]}' men användare '{u_display}' har inga aktiva enheter.", flush=True)
+                        except Exception as push_err:
+                            print(f"[Push] Fel vid utvärdering av PRIO-notis för artikel {art.id}: {push_err}", flush=True)
                         
                         # Skicka WS-signal om AI-uppdatering till användaren
-                        if art.feed and art.feed.user_id:
-                            await manager.send_personal_message(f"AI_UPDATED:{art.id}", art.feed.user_id)
+                        if user_id:
+                            await manager.send_personal_message(f"AI_UPDATED:{art.id}", user_id)
                     else:
                         # Kontrollera om LM Studio är offline eller om det var fel på just denna artikel
                         is_online = await asyncio.to_thread(ai_service.check_lm_studio_health)

@@ -75,7 +75,10 @@ const Settings = () => {
   "is_clickbait": false,
   "clickbait_reason": ""
 }
-Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överdriven eller medvetet undanhåller central information för att locka till klick (och ange då en kort motivering i "clickbait_reason"). Annars sätt false och tom sträng.`;
+Riktlinjer för is_clickbait (Var mycket restriktiv):
+- Sätt ENDAST is_clickbait till true vid uppenbara klickbeten där rubriken avsiktligt döljer själva händelsen eller ämnet med vaga formuleringar eller pronomen (t.ex. "Här slår han till", "Det här ska du aldrig göra", "Chockbeskedet", "Du anar inte vad som hände").
+- SAKLIGA NYHETER ska ALLTID ha is_clickbait: false! Rubriker som beskriver vad som faktiskt hänt (t.ex. "Knarkcontainer på väg till Sverige stoppades", "Skottlossning i Malmö", "Regeringen presenterar budgeten", "Brand i villa") är sakliga nyheter och är ALDRIG klickbete, även om de är korta eller inte nämner alla detaljer.
+- Vid minsta tveksamhet, sätt alltid is_clickbait: false.`;
   };
 
   const getWeightBadge = (weight) => {

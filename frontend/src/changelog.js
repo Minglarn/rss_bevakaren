@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.07',
+    date: '2026-09-08',
+    title: 'Fix för PRIO-notiser & räknare vid start',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'PRIO-notiser skickas nu korrekt',
+        description: 'Breddat villkoret för PRIO-notiser så att även artiklar med hög poäng från kategorier och AI-analys skickar notis omedelbart utan att blockeras av enskilda flödesinställningar.'
+      },
+      {
+        type: 'fix',
+        title: 'Omedelbar oläst-räknare för PRIO vid start',
+        description: 'Åtgärdade en bugg där PRIO-räknaren i menyn visade noll vid appstart tills man bytte vy fram och tillbaka.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.06',
     date: '2026-09-08',
     title: 'Robust Web Push & Notisfilter för PRIO-flödet',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

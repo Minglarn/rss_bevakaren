@@ -36,7 +36,10 @@ DEFAULT_SYSTEM_PROMPT = f"""Du är en neutral nyhetsanalytiker och klassificerar
   "is_clickbait": false,
   "clickbait_reason": ""
 }}
-Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överdriven eller medvetet undanhåller central information för att locka till klick (och ange då en kort motivering i "clickbait_reason"). Annars sätt false och tom sträng."""
+Riktlinjer för is_clickbait (Var mycket restriktiv):
+- Sätt ENDAST is_clickbait till true vid uppenbara klickbeten där rubriken avsiktligt döljer själva händelsen eller ämnet med vaga formuleringar eller pronomen (t.ex. "Här slår han till", "Det här ska du aldrig göra", "Chockbeskedet", "Du anar inte vad som hände").
+- SAKLIGA NYHETER ska ALLTID ha is_clickbait: false! Rubriker som beskriver vad som faktiskt hänt (t.ex. "Knarkcontainer på väg till Sverige stoppades", "Skottlossning i Malmö", "Regeringen presenterar budgeten", "Brand i villa") är sakliga nyheter och är ALDRIG klickbete, även om de är korta eller inte nämner alla detaljer.
+- Vid minsta tveksamhet, sätt alltid is_clickbait: false."""
 
 def get_prompt_config_path() -> str:
     """Hittar eller skapar sökvägen till prompt-konfigurationsfilen i delad datamapp."""
@@ -294,17 +297,20 @@ def build_user_prompt(categories: Optional[Any] = None, prio_rules: Optional[str
   "is_clickbait": false,
   "clickbait_reason": ""
 }}
-Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överdriven eller medvetet undanhåller central information för att locka till klick (och ange då en kort motivering i "clickbait_reason"). Annars sätt false och tom sträng."""
+Riktlinjer för is_clickbait (Var mycket restriktiv):
+- Sätt ENDAST is_clickbait till true vid uppenbara klickbeten där rubriken avsiktligt döljer själva händelsen eller ämnet med vaga formuleringar eller pronomen (t.ex. "Här slår han till", "Det här ska du aldrig göra", "Chockbeskedet", "Du anar inte vad som hände").
+- SAKLIGA NYHETER ska ALLTID ha is_clickbait: false! Rubriker som beskriver vad som faktiskt hänt (t.ex. "Knarkcontainer på väg till Sverige stoppades", "Skottlossning i Malmö", "Regeringen presenterar budgeten", "Brand i villa") är sakliga nyheter och är ALDRIG klickbete, även om de är korta eller inte nämner alla detaljer.
+- Vid minsta tveksamhet, sätt alltid is_clickbait: false."""
     return prompt
 
 def ensure_clickbait_in_prompt(prompt: Optional[str], categories: Optional[Any] = None) -> str:
     """
-    Säkerställer att prompten innehåller klickbete-instruktionerna.
-    Om prompten är tom eller saknar 'is_clickbait', genereras en uppdaterad prompt.
+    Säkerställer att prompten innehåller de moderna, balanserade klickbete-instruktionerna.
+    Om prompten är tom eller saknar de milda reglerna för sakliga nyheter, genereras en uppdaterad prompt.
     """
     if not prompt or not prompt.strip():
         return build_user_prompt(categories=categories)
-    if "is_clickbait" in prompt:
+    if "SAKLIGA NYHETER" in prompt:
         return prompt.strip()
     return build_user_prompt(categories=categories)
 
@@ -475,14 +481,24 @@ def analyze_article(
         is_clickbait = bool(raw_cb) if isinstance(raw_cb, bool) else (str(raw_cb).lower() in ("true", "1"))
         clickbait_reason = str(parsed.get("clickbait_reason", "")).strip()
 
-        # Om klickbete upptäcks, sänk prio så att den inte hamnar i PRIO-flödet
+        # Klickbete-hantering: För högprioriterade kategorier (som Blåljus eller vikt >= 8)
+        # ska en tillspetsad rubrik inte sänka en allvarlig händelse till low.
         if is_clickbait:
-            prio_score = min(prio_score, 25)
-            priority = "low"
-            if not prio_reason:
-                prio_reason = f"Clickbait headline: {clickbait_reason}" if clickbait_reason else "Clickbait headline"
+            is_critical = (category.lower() == "blåljus" or prio_score >= 75)
+            if is_critical:
+                priority = "high"
+                prio_score = max(75, prio_score)
+                if not prio_reason:
+                    prio_reason = f"Kategori: {category} (Klickbete-varning: {clickbait_reason})" if clickbait_reason else f"Kategori: {category}"
+                else:
+                    prio_reason += f" (Klickbete-varning: {clickbait_reason})" if clickbait_reason else ""
             else:
-                prio_reason += f" (Clickbait: {clickbait_reason})" if clickbait_reason else " (Clickbait)"
+                prio_score = min(prio_score, 25)
+                priority = "low"
+                if not prio_reason:
+                    prio_reason = f"Klickbete: {clickbait_reason}" if clickbait_reason else "Klickbete"
+                else:
+                    prio_reason += f" (Klickbete: {clickbait_reason})" if clickbait_reason else ""
 
         return {
             "category": category,

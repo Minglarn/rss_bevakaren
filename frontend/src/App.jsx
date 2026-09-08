@@ -36,10 +36,6 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
     };
 
     const fetchPrioUnread = async () => {
-      if (!prioEnabled) {
-        setPrioUnreadCount(0);
-        return;
-      }
       try {
         const res = await api.get('/prio/unread-count');
         setPrioUnreadCount(res.data.unread_count || 0);
@@ -53,9 +49,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
     
     const handleFeedsUpdated = (e) => {
       fetchMyFeeds();
-      if (prioEnabled) {
-        fetchPrioUnread();
-      }
+      fetchPrioUnread();
       if (e && e.detail && e.detail.feedId) {
         const { feedId, count } = e.detail;
         const feed = myFeedsRef.current.find(f => f.id === feedId);
@@ -104,13 +98,15 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
     };
     window.addEventListener('pollingStart', handleStart);
     window.addEventListener('pollingEnd', handleEnd);
+    window.addEventListener('aiConfigUpdated', fetchPrioUnread);
     
     return () => {
       window.removeEventListener('feedsUpdated', handleFeedsUpdated);
       window.removeEventListener('pollingStart', handleStart);
       window.removeEventListener('pollingEnd', handleEnd);
+      window.removeEventListener('aiConfigUpdated', fetchPrioUnread);
     };
-  }, [location]);
+  }, [location, prioEnabled]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -500,7 +496,7 @@ const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [username, setUsername] = useState(localStorage.getItem('username'));
 
-  const [prioEnabled, setPrioEnabled] = useState(false);
+  const [prioEnabled, setPrioEnabled] = useState(() => localStorage.getItem('rss_prio_enabled') === 'true');
 
   const handleLogin = (newToken, newUsername) => {
     localStorage.setItem('token', newToken);
@@ -512,6 +508,7 @@ const App = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
+    localStorage.removeItem('rss_prio_enabled');
     setToken(null);
     setUsername(null);
     setPrioEnabled(false);
@@ -534,7 +531,9 @@ const App = () => {
       try {
         const res = await api.get('/ai/config');
         if (res.data) {
-          setPrioEnabled(!!res.data.prio_enabled);
+          const isPrio = !!res.data.prio_enabled;
+          setPrioEnabled(isPrio);
+          localStorage.setItem('rss_prio_enabled', isPrio ? 'true' : 'false');
         }
       } catch (err) {
         console.error("Could not fetch prio status", err);
