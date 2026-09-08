@@ -1248,6 +1248,10 @@ select:focus, input:focus {
   height: 100%;
 }
 
+.feed-card.is-clickbait {
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.12);
+}
+
 .feed-card-left {
   width: 65px;
   display: flex;

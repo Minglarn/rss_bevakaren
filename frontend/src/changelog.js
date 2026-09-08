@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.13',
+    date: '2026-09-08',
+    title: 'Tydligare röd sidobord och indikering för klickbete',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Röd sidobord vid klickbete',
+        description: 'Artiklar som klassats som klickbete av AI får nu en tydlig röd färg på kortets vänstra sidobord istället för källans standardfärg, vilket gör dem omedelbart synliga i flödet.'
+      },
+      {
+        type: 'improvement',
+        title: 'Matchande röd ram och skuggeffekt',
+        description: 'Klickbete-kort förses med en diskret röd ytterkant och glöd som harmonierar med varningsbadgen och sammanfattningsrutan.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.12',
     date: '2026-09-08',
     title: 'Logisk notishierarki: Flödesklockan styr pushnotiser',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

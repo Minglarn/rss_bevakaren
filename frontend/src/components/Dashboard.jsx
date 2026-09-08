@@ -909,7 +909,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       ) : (
         <div className={`events-list cols-${desktopColumns}`} style={{ gap: '1rem' }}>
           {displayedFeeds.map((item, index) => {
-            const color = getBorderColor(item.feed_id || 1);
+            const isClickbait = Boolean(shouldShowAi && item.is_clickbait);
+            const color = isClickbait ? '#ef4444' : getBorderColor(item.feed_id || 1);
             const isLast = index === displayedFeeds.length - 1;
             
             let showDivider = false;
@@ -981,16 +982,17 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     }
                   }}
                   onClick={() => handleExpand(index, item.link, item.id)}
-                  className={`feed-card ${(!showRead && isArticleRead(item.id, item.is_read)) ? 'read' : ''}`}
+                  className={`feed-card ${(!showRead && isArticleRead(item.id, item.is_read)) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                   style={{ 
                     filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
                     userSelect: 'none', 
-                    WebkitUserSelect: 'none'
+                    WebkitUserSelect: 'none',
+                    border: isClickbait ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border-color)'
                   }}
                 >
                 {/* Left colored bar */}
                 <div 
-                  className="feed-card-left"
+                  className={`feed-card-left ${isClickbait ? 'clickbait-bar' : ''}`}
                   style={{ 
                     backgroundColor: color 
                   }}
