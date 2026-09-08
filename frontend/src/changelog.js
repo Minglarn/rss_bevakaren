@@ -1,9 +1,72 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.20',
+    date: '2026-09-08',
+    title: 'Obligatorisk geografisk plats i AI-sammanfattningar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Obligatorisk geografisk förankring',
+        description: 'Systemprompten har uppdaterats med strikt instruktion att alltid inkludera specifik geografisk plats (ort, kommun, stad eller land) i sammanfattningen om den framgår i artikeln (t.ex. Lekebergs kommun eller centrala Malmö).'
+      },
+      {
+        type: 'improvement',
+        title: 'Borttagning av onödig metainformation',
+        description: 'AI-modellen instrueras att helt undvika meta-fraser som "rapporterar Expressen" eller "enligt tidningen" för att spara utrymme och uteslutande fokusera på de faktiska händelseomständigheterna.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.08.19',
+    date: '2026-09-08',
+    title: 'Flytt av versionsinfo och ändringslogg till General',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Korrekt placering av ändringslogg och versionsruta',
+        description: 'Kortet för applikationsversion och knappen "Vad är nytt" har flyttats från fliken Notifications till fliken General där den logiskt hör hemma tillsammans med övrig systeminformation.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.08.18',
+    date: '2026-09-08',
+    title: 'Europeiska tidsstämplar i databasöversikten',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Europeiskt datum- och tidsformat',
+        description: 'Tidsstämplar under fliken Database och enhetslistan är nu anpassade efter europeisk standard med 24-timmarsklocka och dag-först (t.ex. 19 Jun 2024, 10:53 och 8 Sep 2026, 19:53) istället för amerikanskt format med AM/PM.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.08.17',
+    date: '2026-09-08',
+    title: 'Enhetligt tema på reglage och borttagning av manuell purge-ruta',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Enhetligt tema på reglage och switchar',
+        description: 'Reglaget för den automatiska schemalagda nattliga rensningen följer nu applikationens genomgående design och stilmall (toggle-switch).'
+      },
+      {
+        type: 'improvement',
+        title: 'Borttagning av överflödig manuell rensningsruta',
+        description: 'Den tidigare manuella rensningsrutan under fliken Database har tagits bort till förmån för den helautomatiska nattliga schemaläggningen.'
+      },
+      {
+        type: 'improvement',
+        title: 'Responsiv uppdateringsknapp för databasstatistik',
+        description: 'Knappen Refresh Statistics har försetts med laddningsindikator, spinner och toast-bekräftelse vid uppdatering, samt robustare felhantering mot backend.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.16',
     date: '2026-09-08',
     title: 'Automatisk schemalagd purge samt skydd mot notis-bombning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

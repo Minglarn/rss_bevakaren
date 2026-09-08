@@ -6,6 +6,20 @@ import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
 import packageJson from '../../package.json';
 
+const formatEuropeanDateTime = (timestamp) => {
+  if (!timestamp) return 'No data';
+  const d = new Date(typeof timestamp === 'number' ? timestamp * 1000 : timestamp);
+  if (isNaN(d.getTime())) return 'No data';
+  return d.toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+};
+
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('general');
   const [keywords, setKeywords] = useState([]);
@@ -21,8 +35,6 @@ const Settings = () => {
   const [theme, setTheme] = useState(() => localStorage.getItem('rss_theme') || 'system');
   const [feedMode, setFeedMode] = useState(() => localStorage.getItem('rss_feed_mode') || 'ai');
   const [purgeDays, setPurgeDays] = useState(30);
-  const [isPurging, setIsPurging] = useState(false);
-  const [purgeMessage, setPurgeMessage] = useState(null);
 
   const handleFeedModeChange = (val) => {
     setFeedMode(val);
@@ -79,7 +91,7 @@ const Settings = () => {
     return `Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {
   "category": "Välj den mest passande av följande kategorier: ${catsStr}",
-  "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. VIKTIGT: Om rubriken är klickbete eller undanhåller vem/vad händelsen rör, ska sammanfattningen omedelbart och rakt på sak avslöja svaret i första meningen.",
+  "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. OBLIGATORISKT: 1. Ange ALLTID geografisk plats (ort, kommun, stad eller land) om det framgår i artikeln (t.ex. 'i Lekebergs kommun' eller 'i centrala Malmö'). 2. Undvik helt metasnack som 'rapporterar Expressen' eller 'enligt tidningen' – fokusera enbart på själva händelsen. 3. Om rubriken är klickbete eller undanhåller vem, vad eller var, ska svaret avslöjas rakt på sak i första meningen.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
   "clickbait_reason": ""
@@ -169,13 +181,31 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
   };
 
-  const fetchDbStats = async () => {
+  const fetchDbStats = async (showToast = false) => {
     try {
       setIsLoadingDbStats(true);
-      const res = await api.get('/system/database-stats');
-      setDbStats(res.data);
+      const [statsRes, sysRes, feedsRes] = await Promise.all([
+        api.get('/system/database-stats'),
+        api.get('/system/info').catch(() => null),
+        api.get('/feeds').catch(() => null)
+      ]);
+      if (statsRes && statsRes.data) {
+        setDbStats(statsRes.data);
+      }
+      if (sysRes && sysRes.data) {
+        setSysInfo(sysRes.data);
+      }
+      if (feedsRes && feedsRes.data) {
+        setFeeds(feedsRes.data);
+      }
+      if (showToast) {
+        toast.success('Database statistics updated!', { id: 'db-stats' });
+      }
     } catch (err) {
       console.error("Could not fetch database stats:", err);
+      if (showToast) {
+        toast.error('Failed to update database statistics.', { id: 'db-stats' });
+      }
     } finally {
       setIsLoadingDbStats(false);
     }
@@ -355,23 +385,6 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
   };
 
-  const handlePurge = async () => {
-    if (!window.confirm(`Are you sure you want to delete all unlocked events older than ${purgeDays} days?`)) return;
-    setIsPurging(true);
-    setPurgeMessage(null);
-    try {
-      const res = await api.post(`/system/purge?days=${purgeDays}`);
-      setPurgeMessage(`Purge complete! ${res.data.deleted} old events were deleted.`);
-      fetchData(); // Updates database statistics
-      fetchDbStats();
-    } catch (err) {
-      console.error(err);
-      setPurgeMessage("An error occurred during purging.");
-    } finally {
-      setIsPurging(false);
-      setTimeout(() => setPurgeMessage(null), 5000);
-    }
-  };
 
   const toggleFeedNotification = async (feed) => {
     try {
@@ -805,6 +818,48 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             </div>
           </div>
 
+          {/* Application Info & Changelog */}
+          <div style={{ 
+            backgroundColor: 'var(--bg-card)', 
+            padding: '1.25rem 1rem', 
+            borderRadius: '12px', 
+            border: '1px solid var(--border-color)', 
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                RSS-Bevakaren v{packageJson.version}
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                Se alla nyheter, ändringar och förbättringar i ändringsloggen.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('openWhatsNew'))}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.55rem 1.1rem',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                color: '#3b82f6',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <Sparkles size={16} /> Vad är nytt
+            </button>
+          </div>
+
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>More general settings will arrive in future updates.</p>
         </motion.div>
       )}
@@ -898,7 +953,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 </h3>
               </div>
               <button
-                onClick={fetchDbStats}
+                type="button"
+                onClick={() => fetchDbStats(true)}
                 disabled={isLoadingDbStats}
                 style={{
                   display: 'flex',
@@ -911,11 +967,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   color: 'var(--text-main)',
                   fontSize: '0.82rem',
                   fontWeight: 500,
-                  cursor: 'pointer'
+                  cursor: isLoadingDbStats ? 'not-allowed' : 'pointer',
+                  opacity: isLoadingDbStats ? 0.7 : 1
                 }}
               >
-                <RefreshCw size={14} className={isLoadingDbStats ? 'animate-spin' : ''} />
-                Refresh Statistics
+                <RefreshCw size={14} className={isLoadingDbStats ? 'spin' : ''} />
+                {isLoadingDbStats ? 'Refreshing...' : 'Refresh Statistics'}
               </button>
             </div>
             
@@ -989,9 +1046,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   <Calendar size={16} style={{ color: '#f59e0b' }} />
                 </div>
                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.15rem' }}>
-                  {dbStats?.oldest_article?.received_ts 
-                    ? new Date(dbStats.oldest_article.received_ts * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                    : 'No data'}
+                  {formatEuropeanDateTime(dbStats?.oldest_article?.received_ts)}
                 </div>
                 <div 
                   title={dbStats?.oldest_article?.title || ''}
@@ -1016,9 +1071,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   <Clock size={16} style={{ color: '#10b981' }} />
                 </div>
                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.15rem' }}>
-                  {dbStats?.newest_article?.received_ts 
-                    ? new Date(dbStats.newest_article.received_ts * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                    : 'No data'}
+                  {formatEuropeanDateTime(dbStats?.newest_article?.received_ts)}
                 </div>
                 <div 
                   title={dbStats?.newest_article?.title || ''}
@@ -1157,26 +1210,14 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', paddingLeft: '0.25rem', paddingTop: '0.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <button
-                  type="button"
-                  onClick={handleToggleAutoPurge}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    color: aiConfig.auto_purge_enabled !== false ? 'var(--primary)' : 'var(--text-muted)'
-                  }}
-                >
-                  {aiConfig.auto_purge_enabled !== false ? (
-                    <ToggleRight size={32} style={{ color: 'var(--primary)' }} />
-                  ) : (
-                    <ToggleLeft size={32} style={{ color: 'var(--text-muted)' }} />
-                  )}
-                </button>
+                <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={aiConfig.auto_purge_enabled !== false}
+                    onChange={handleToggleAutoPurge}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
                 <span style={{ color: 'var(--text-main)', fontSize: '0.9rem', fontWeight: 500 }}>
                   {aiConfig.auto_purge_enabled !== false ? 'Nightly purge enabled' : 'Nightly purge disabled'}
                 </span>
@@ -1195,56 +1236,6 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Purge Database Action */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.75rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-            <h4 style={{ margin: '0 0 0.5rem 0', paddingLeft: '0.25rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem' }}>
-              <Trash2 size={18} style={{ color: '#ef4444' }} /> Purge Old Database Records
-            </h4>
-            <p style={{ margin: '0 0 1.25rem 0', paddingLeft: '0.25rem', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
-              Purge historical news events to reclaim storage space. Articles you have marked as "Locked" on the dashboard are permanently protected and will never be removed by the purge process.
-            </p>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', paddingLeft: '0.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ color: 'var(--text-main)', fontWeight: 500, fontSize: '0.9rem' }}>Keep articles from the last</span>
-                <input 
-                  type="number" 
-                  value={purgeDays} 
-                  onChange={e => setPurgeDays(Math.max(1, parseInt(e.target.value) || 30))} 
-                  style={{ width: '65px', padding: '0.45rem 0.5rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-app)', color: 'var(--text-main)', fontWeight: 600, textAlign: 'center' }} 
-                />
-                <span style={{ color: 'var(--text-main)', fontWeight: 500, fontSize: '0.9rem' }}>days</span>
-              </div>
-              
-              <button 
-                onClick={handlePurge}
-                disabled={isPurging}
-                style={{
-                  padding: '0.55rem 1.15rem',
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  color: '#ef4444',
-                  border: '1px solid #ef4444',
-                  borderRadius: '6px',
-                  cursor: isPurging ? 'not-allowed' : 'pointer',
-                  fontWeight: 600,
-                  fontSize: '0.88rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}
-              >
-                {isPurging ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />}
-                {isPurging ? 'Purging...' : 'Run Purge'}
-              </button>
-            </div>
-            
-            {purgeMessage && (
-              <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', borderRadius: '6px', fontSize: '0.88rem', border: '1px solid rgba(34, 197, 94, 0.25)' }}>
-                {purgeMessage}
-              </div>
-            )}
           </div>
         </motion.div>
       )}
@@ -1402,7 +1393,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {pushDevices.map(dev => {
                   const isMobile = (dev.device_name || '').toLowerCase().includes('android') || (dev.device_name || '').toLowerCase().includes('iphone');
-                  const updatedDate = dev.updated_at ? new Date(dev.updated_at * 1000).toLocaleString('en-US') : (dev.created_at ? new Date(dev.created_at * 1000).toLocaleString('en-US') : 'Unknown date');
+                  const updatedDate = dev.updated_at ? formatEuropeanDateTime(dev.updated_at) : (dev.created_at ? formatEuropeanDateTime(dev.created_at) : 'Unknown date');
                   return (
                     <div
                       key={dev.id}
@@ -1736,48 +1727,6 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Application Info & Changelog */}
-          <div style={{ 
-            backgroundColor: 'var(--bg-card)', 
-            padding: '1.25rem 1rem', 
-            borderRadius: '12px', 
-            border: '1px solid var(--border-color)', 
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1rem'
-          }}>
-            <div>
-              <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
-                RSS-Bevakaren v{packageJson.version}
-              </div>
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                Se alla nyheter, ändringar och förbättringar i ändringsloggen.
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent('openWhatsNew'))}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.55rem 1.1rem',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                color: '#3b82f6',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '8px',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              <Sparkles size={16} /> Vad är nytt
-            </button>
           </div>
         </motion.div>
       )}

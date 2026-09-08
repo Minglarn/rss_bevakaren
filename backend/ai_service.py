@@ -31,7 +31,7 @@ DEFAULT_CATEGORIES_STR = " | ".join(DEFAULT_CATEGORIES)
 DEFAULT_SYSTEM_PROMPT = f"""Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {{
   "category": "Välj den mest passande av följande kategorier: {DEFAULT_CATEGORIES_STR}",
-  "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. VIKTIGT: Om rubriken är klickbete eller undanhåller vem/vad händelsen rör, ska sammanfattningen omedelbart och rakt på sak avslöja svaret i första meningen.",
+  "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. OBLIGATORISKT: 1. Ange ALLTID geografisk plats (ort, kommun, stad eller land) om det framgår i artikeln (t.ex. 'i Lekebergs kommun' eller 'i centrala Malmö'). 2. Undvik helt metasnack som 'rapporterar Expressen' eller 'enligt tidningen' – fokusera enbart på själva händelsen. 3. Om rubriken är klickbete eller undanhåller vem, vad eller var, ska svaret avslöjas rakt på sak i första meningen.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
   "clickbait_reason": ""
@@ -295,7 +295,7 @@ def build_user_prompt(categories: Optional[Any] = None, prio_rules: Optional[str
     prompt = f"""Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {{
   "category": "Välj den mest passande av följande kategorier: {cats_str}",
-  "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. VIKTIGT: Om rubriken är klickbete eller undanhåller vem/vad händelsen rör, ska sammanfattningen omedelbart och rakt på sak avslöja svaret i första meningen.",
+  "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. OBLIGATORISKT: 1. Ange ALLTID geografisk plats (ort, kommun, stad eller land) om det framgår i artikeln (t.ex. 'i Lekebergs kommun' eller 'i centrala Malmö'). 2. Undvik helt metasnack som 'rapporterar Expressen' eller 'enligt tidningen' – fokusera enbart på själva händelsen. 3. Om rubriken är klickbete eller undanhåller vem, vad eller var, ska svaret avslöjas rakt på sak i första meningen.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
   "clickbait_reason": ""
@@ -308,14 +308,17 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 
 def ensure_clickbait_in_prompt(prompt: Optional[str], categories: Optional[Any] = None) -> str:
     """
-    Säkerställer att prompten innehåller de moderna, balanserade klickbete-instruktionerna och 3 meningars sammanfattning.
-    Om prompten är tom eller saknar de milda reglerna för sakliga nyheter, genereras en uppdaterad prompt.
+    Säkerställer att prompten innehåller de moderna, balanserade klickbete-instruktionerna,
+    krav på geografisk plats och 3 meningars sammanfattning utan käll-metasnack.
+    Om prompten är tom eller saknar de senaste reglerna, genereras en uppdaterad prompt.
     """
     if not prompt or not prompt.strip():
         return build_user_prompt(categories=categories)
     cleaned = prompt.strip()
     if "Max två korta" in cleaned:
         cleaned = cleaned.replace("Max två korta", "Max tre korta")
+    if "geografisk plats" not in cleaned.lower():
+        return build_user_prompt(categories=categories)
     if "SAKLIGA NYHETER" in cleaned:
         return cleaned
     return build_user_prompt(categories=categories)
@@ -412,9 +415,9 @@ def analyze_article(
         f"Rubrik: {title or 'Utan rubrik'}"
     ]
     if summary and summary.strip():
-        # Begränsa ingressen om den är extremt lång för snabbare svar
-        clean_summary = summary.strip()[:1000]
-        user_prompt_lines.append(f"Ingress / Sammanfattning: {clean_summary}")
+        # Begränsa texten om den är extremt lång för snabbare svar, men behåll tillräckligt för ort/detaljer
+        clean_summary = summary.strip()[:1500]
+        user_prompt_lines.append(f"Artikeltext / Ingress: {clean_summary}")
     if categories:
         cats_str = ", ".join(categories)
         if cats_str:
