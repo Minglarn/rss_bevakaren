@@ -1,0 +1,54 @@
+export const CHANGELOG_DATA = [
+  {
+    version: '2026.09.08.02',
+    date: '2026-09-08',
+    title: 'Vad är nytt-dialog och Clickbait-skydd',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Automatisk versionsinformation',
+        description: 'Applikationen informerar nu automatiskt vid varje ny version om nytillkomna funktioner och buggfixar. Du kan även när som helst öppna ändringsloggen via versionsnumret i sidomenyn.'
+      },
+      {
+        type: 'feature',
+        title: 'AI Clickbait-detektering & Anti-Clickbait',
+        description: 'Artiklar analyseras för att identifiera sensationalistiska och undanhållande rubriker. Klickbeten flaggas med varningstext, punkteras i första meningen av sammanfattningen och spärras automatiskt från PRIO-flödet.'
+      },
+      {
+        type: 'improvement',
+        title: 'Synkroniserad AI-promptmall',
+        description: 'Inställningsvyn och backend-analysen är nu fullt synkroniserade med clickbait-instruktionerna. Äldre sparade prompter migreras automatiskt.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.07.27',
+    date: '2026-09-07',
+    title: 'Engelsk dokumentation och stabilitet',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Komplett engelsk dokumentation',
+        description: 'README-dokumentationen har översatts till engelska med detaljerade guider för Docker Compose, flerfunktionsstöd och arkitektur.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.07.26',
+    date: '2026-09-07',
+    title: 'AI Shimmer-animering & Timeout-återhämtning',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Skeleton Shimmer i artikelflödet',
+        description: 'Tydlig visuell indikering visar när en artikel analyseras av AI i bakgrunden.'
+      },
+      {
+        type: 'improvement',
+        title: 'Robust felhantering',
+        description: 'Förbättrad återhämtning vid timeout eller otillgänglig lokal AI-modell utan att blockera övriga artiklar.'
+      }
+    ]
+  }
+];

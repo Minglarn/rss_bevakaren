@@ -4,7 +4,7 @@ __pycache__/
 venv/
 env/
 .env
-data/
+/data/
 rss.db
 
 # Frontend

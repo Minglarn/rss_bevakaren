@@ -4,6 +4,7 @@ import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, Toggle
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush } from '../utils/notifications';
+import packageJson from '../../package.json';
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('general');
@@ -65,18 +66,15 @@ const Settings = () => {
       : DEFAULT_CATS_WEIGHTS.map(c => c.name);
     const catsStr = list.join(' | ');
 
-    return `Du är en svensk nyhetsanalytiker och klassificerare för en personlig nyhetsbevakare.
-Din enda uppgift är att läsa artikeln och klassificera den i EXAKT EN av följande tillåtna kategorier, samt ge en kort svensk sammanfattning och 1-3 relevanta taggar.
-
-TILLÅTNA KATEGORIER:
-${catsStr}
-
-Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra kommentarer:
+    return `Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {
-  "category": "<exakt en av de tillåtna kategorierna>",
-  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen.",
-  "tags": ["tagg1", "tagg2"]
-}`;
+  "category": "Välj den mest passande av följande kategorier: ${catsStr}",
+  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen. VIKTIGT: Om rubriken är klickbete eller undanhåller vem/vad händelsen rör, ska sammanfattningen omedelbart och rakt på sak avslöja svaret i första meningen.",
+  "tags": ["tagg1", "tagg2"],
+  "is_clickbait": false,
+  "clickbait_reason": ""
+}
+Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överdriven eller medvetet undanhåller central information för att locka till klick (och ange då en kort motivering i "clickbait_reason"). Annars sätt false och tom sträng.`;
   };
 
   const getWeightBadge = (weight) => {
@@ -850,6 +848,48 @@ Svara ENDAST med ett strikt JSON-objekt utan markdown (\`\`\`json) eller extra k
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Application Info & Changelog */}
+          <div style={{ 
+            backgroundColor: 'var(--bg-card)', 
+            padding: '1.25rem 1rem', 
+            borderRadius: '12px', 
+            border: '1px solid var(--border-color)', 
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                RSS-Bevakaren v{packageJson.version}
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                Se alla nyheter, ändringar och förbättringar i ändringsloggen.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('openWhatsNew'))}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.55rem 1.1rem',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                color: '#3b82f6',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <Sparkles size={16} /> Vad är nytt
+            </button>
           </div>
         </motion.div>
       )}

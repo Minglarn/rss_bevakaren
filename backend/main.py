@@ -575,10 +575,7 @@ async def ai_processing_loop():
 
                         if user_ai:
                             user_cats = normalize_user_categories(user_ai.categories)
-                            if user_ai.custom_system_prompt and user_ai.custom_system_prompt.strip():
-                                user_prompt = user_ai.custom_system_prompt.strip()
-                            else:
-                                user_prompt = ai_service.build_user_prompt(categories=user_cats)
+                            user_prompt = ai_service.ensure_clickbait_in_prompt(user_ai.custom_system_prompt, categories=user_cats)
 
                     user_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
                     print(f"[AI] Bearbetar artikel {art.id} för user {user_id} (modell: {user_model or 'auto'}): '{art.title[:50]}...'...", flush=True)
@@ -909,7 +906,7 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     # Hämta användarens personliga AI-inställningar
     user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
     user_cats = normalize_user_categories(user_ai.categories if user_ai else None)
-    user_prompt = user_ai.custom_system_prompt.strip() if (user_ai and user_ai.custom_system_prompt and user_ai.custom_system_prompt.strip()) else ai_service.build_user_prompt(categories=user_cats)
+    user_prompt = ai_service.ensure_clickbait_in_prompt(user_ai.custom_system_prompt if user_ai else None, categories=user_cats)
 
     user_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
     analysis = await asyncio.to_thread(
@@ -1076,14 +1073,10 @@ def get_ai_config(
         
     cats = normalize_user_categories(user_ai.categories)
 
-    prompt = user_ai.custom_system_prompt
-    if not prompt or not prompt.strip():
-        prompt = ai_service.build_user_prompt(
-            categories=cats,
-            prio_rules=user_ai.prio_rules,
-            exclude_rules=user_ai.exclude_rules,
-            prio_threshold=user_ai.prio_threshold or 75
-        )
+    prompt = ai_service.ensure_clickbait_in_prompt(user_ai.custom_system_prompt, categories=cats)
+    if user_ai.custom_system_prompt != prompt:
+        user_ai.custom_system_prompt = prompt
+        db.commit()
 
     return schemas.AIConfigResponse(
         prio_rules=user_ai.prio_rules or "",

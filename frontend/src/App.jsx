@@ -7,6 +7,7 @@ import Dashboard from './components/Dashboard';
 import RssManager from './components/RssManager';
 import Settings from './components/Settings';
 import PWABadge from './components/PWABadge';
+import WhatsNewModal from './components/WhatsNewModal';
 import api from './api';
 import packageJson from '../package.json';
 import './App.css';
@@ -181,7 +182,27 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           {!isCollapsed && (
             <div>
               <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS Monitor</h2>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>v{packageJson.version}</span>
+              <button 
+                onClick={() => window.dispatchEvent(new CustomEvent('openWhatsNew'))}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  padding: 0, 
+                  fontSize: '0.7rem', 
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'color 0.15s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                title="Se vad som är nytt i denna version"
+              >
+                v{packageJson.version}
+                <Sparkles size={11} style={{ color: '#3b82f6' }} />
+              </button>
             </div>
           )}
         </div>
@@ -523,6 +544,7 @@ const App = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AppLayout>
+        <WhatsNewModal />
       </Router>
       <Toaster position="top-center" containerClassName="my-toast-container" />
     </>

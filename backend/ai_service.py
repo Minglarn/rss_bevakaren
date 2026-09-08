@@ -297,6 +297,17 @@ def build_user_prompt(categories: Optional[Any] = None, prio_rules: Optional[str
 Notera: Sätt "is_clickbait" till true om rubriken är sensationalistisk, överdriven eller medvetet undanhåller central information för att locka till klick (och ange då en kort motivering i "clickbait_reason"). Annars sätt false och tom sträng."""
     return prompt
 
+def ensure_clickbait_in_prompt(prompt: Optional[str], categories: Optional[Any] = None) -> str:
+    """
+    Säkerställer att prompten innehåller klickbete-instruktionerna.
+    Om prompten är tom eller saknar 'is_clickbait', genereras en uppdaterad prompt.
+    """
+    if not prompt or not prompt.strip():
+        return build_user_prompt(categories=categories)
+    if "is_clickbait" in prompt:
+        return prompt.strip()
+    return build_user_prompt(categories=categories)
+
 def calculate_priority(
     category: str,
     categories_config: Any,
