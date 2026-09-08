@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.08.09',
+    date: '2026-09-08',
+    title: 'AI-sammanfattning utökad till 3 meningar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: '3 korta informativa meningar som standard',
+        description: 'AI-promptens standardinstruktion har uppdaterats från max två till max tre informativa meningar för att ge en mer heltäckande sammanfattning av artiklar utan att bli för långrandig.'
+      },
+      {
+        type: 'improvement',
+        title: 'Automatisk migrering av sparade promptar',
+        description: 'Befintliga systempromptar i databasen och konfigurationsfilen uppdateras automatiskt till 3 meningar så att förändringen slår igenom omedelbart.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.08',
     date: '2026-09-08',
     title: 'Utökad Push-diagnostik, Enhetshantering & Doze-fix',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

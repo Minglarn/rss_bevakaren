@@ -46,6 +46,7 @@ def ensure_db_migrations():
                 conn.execute(text("UPDATE user_ai_settings SET prio_enabled = 0 WHERE prio_enabled IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET prio_notify_only = 0 WHERE prio_notify_only IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = NULL WHERE custom_system_prompt IS NOT NULL AND custom_system_prompt NOT LIKE '%SAKLIGA NYHETER%'"))
+                conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = REPLACE(custom_system_prompt, 'Max två korta', 'Max tre korta') WHERE custom_system_prompt LIKE '%Max två korta%'"))
                 conn.commit()
         except Exception as e:
             print(f"[DB] Migration notice for user_ai_settings: {e}", flush=True)
@@ -318,6 +319,12 @@ def run_db_migrations(db_path: str):
                 cur.execute(f"ALTER TABLE push_subscriptions ADD COLUMN {col_def[0]} {col_def[1]};")
             except sqlite3.OperationalError:
                 pass
+
+        # Migration 15: Upgrade custom_system_prompt from Max två korta to Max tre korta
+        try:
+            cur.execute("UPDATE user_ai_settings SET custom_system_prompt = REPLACE(custom_system_prompt, 'Max två korta', 'Max tre korta') WHERE custom_system_prompt LIKE '%Max två korta%';")
+        except Exception:
+            pass
 
         conn.commit()
         conn.close()

@@ -31,7 +31,7 @@ DEFAULT_CATEGORIES_STR = " | ".join(DEFAULT_CATEGORIES)
 DEFAULT_SYSTEM_PROMPT = f"""Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {{
   "category": "Välj den mest passande av följande kategorier: {DEFAULT_CATEGORIES_STR}",
-  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen. VIKTIGT: Om rubriken är klickbete eller undanhåller vem/vad händelsen rör, ska sammanfattningen omedelbart och rakt på sak avslöja svaret i första meningen.",
+  "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. VIKTIGT: Om rubriken är klickbete eller undanhåller vem/vad händelsen rör, ska sammanfattningen omedelbart och rakt på sak avslöja svaret i första meningen.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
   "clickbait_reason": ""
@@ -72,6 +72,9 @@ def load_ai_config() -> Dict[str, Any]:
             data = json.load(f)
             prompt = data.get("system_prompt", DEFAULT_SYSTEM_PROMPT)
             cats = data.get("categories", DEFAULT_CATEGORIES)
+            if "Max två korta" in prompt:
+                prompt = prompt.replace("Max två korta", "Max tre korta")
+                save_ai_config(prompt, cats)
             _cached_prompt = prompt
             _cached_categories = cats
             _cached_mtime = current_mtime
@@ -292,7 +295,7 @@ def build_user_prompt(categories: Optional[Any] = None, prio_rules: Optional[str
     prompt = f"""Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {{
   "category": "Välj den mest passande av följande kategorier: {cats_str}",
-  "summary": "Max två korta, informativa meningar på svenska som sammanfattar kärnhändelsen. VIKTIGT: Om rubriken är klickbete eller undanhåller vem/vad händelsen rör, ska sammanfattningen omedelbart och rakt på sak avslöja svaret i första meningen.",
+  "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. VIKTIGT: Om rubriken är klickbete eller undanhåller vem/vad händelsen rör, ska sammanfattningen omedelbart och rakt på sak avslöja svaret i första meningen.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
   "clickbait_reason": ""
@@ -305,13 +308,16 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 
 def ensure_clickbait_in_prompt(prompt: Optional[str], categories: Optional[Any] = None) -> str:
     """
-    Säkerställer att prompten innehåller de moderna, balanserade klickbete-instruktionerna.
+    Säkerställer att prompten innehåller de moderna, balanserade klickbete-instruktionerna och 3 meningars sammanfattning.
     Om prompten är tom eller saknar de milda reglerna för sakliga nyheter, genereras en uppdaterad prompt.
     """
     if not prompt or not prompt.strip():
         return build_user_prompt(categories=categories)
-    if "SAKLIGA NYHETER" in prompt:
-        return prompt.strip()
+    cleaned = prompt.strip()
+    if "Max två korta" in cleaned:
+        cleaned = cleaned.replace("Max två korta", "Max tre korta")
+    if "SAKLIGA NYHETER" in cleaned:
+        return cleaned
     return build_user_prompt(categories=categories)
 
 def calculate_priority(
