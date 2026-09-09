@@ -7,6 +7,7 @@ import Dashboard from './components/Dashboard';
 import RssManager from './components/RssManager';
 import Settings from './components/Settings';
 import AiChat from './components/AiChat';
+import { AiChatProvider, useAiChat } from './context/AiChatContext';
 import PWABadge from './components/PWABadge';
 import WhatsNewModal from './components/WhatsNewModal';
 import api from './api';
@@ -17,6 +18,7 @@ import './index.css';
 // Layout Component with Sidebar
 const AppLayout = ({ children, onLogout, prioEnabled }) => {
   const location = useLocation();
+  const { isLoading: isAiChatLoading } = useAiChat();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [myFeeds, setMyFeeds] = useState([]);
   const myFeedsRef = useRef([]);
@@ -282,9 +284,25 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             borderRadius: '8px', textDecoration: 'none',
             color: location.pathname === '/chat' ? 'var(--primary)' : 'var(--text-muted)',
             backgroundColor: location.pathname === '/chat' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-            fontWeight: location.pathname === '/chat' ? 600 : 400
+            fontWeight: location.pathname === '/chat' ? 600 : 400,
+            position: 'relative'
           }}>
             <MessageSquare size={19} /> {!isCollapsed && "AI Chatt"}
+            {isAiChatLoading && (
+              <span 
+                title="AI genererar svar..."
+                style={{
+                  marginLeft: isCollapsed ? 'auto' : 'auto',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--primary)',
+                  boxShadow: '0 0 8px var(--primary)',
+                  display: 'inline-block',
+                  animation: 'pulse 1.5s infinite'
+                }} 
+              />
+            )}
           </Link>
           <Link to="/manage" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
@@ -488,6 +506,21 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             onClick={() => setIsMobileSheetOpen(false)}
           >
             <MessageSquare size={20} style={{ color: 'var(--primary)' }} /> AI Chatt
+            {isAiChatLoading && (
+              <span 
+                style={{
+                  marginLeft: 'auto',
+                  fontSize: '0.75rem',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                  color: 'var(--primary)',
+                  fontWeight: 600
+                }}
+              >
+                Svarar...
+              </span>
+            )}
           </Link>
           {myFeeds.map(feed => (
             <Link 
@@ -587,18 +620,20 @@ const App = () => {
   return (
     <>
       <Router>
-        <AppLayout onLogout={handleLogout} prioEnabled={prioEnabled}>
-          <Routes>
-            <Route path="/" element={<Dashboard isPrioModeProp={false} prioEnabled={prioEnabled} />} />
-            <Route path="/prio" element={<Dashboard isPrioModeProp={true} prioEnabled={prioEnabled} />} />
-            <Route path="/chat" element={<AiChat />} />
-            <Route path="/ai" element={<Navigate to="/prio" replace />} />
-            <Route path="/manage" element={<RssManager />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AppLayout>
-        <WhatsNewModal />
+        <AiChatProvider>
+          <AppLayout onLogout={handleLogout} prioEnabled={prioEnabled}>
+            <Routes>
+              <Route path="/" element={<Dashboard isPrioModeProp={false} prioEnabled={prioEnabled} />} />
+              <Route path="/prio" element={<Dashboard isPrioModeProp={true} prioEnabled={prioEnabled} />} />
+              <Route path="/chat" element={<AiChat />} />
+              <Route path="/ai" element={<Navigate to="/prio" replace />} />
+              <Route path="/manage" element={<RssManager />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AppLayout>
+          <WhatsNewModal />
+        </AiChatProvider>
       </Router>
       <Toaster position="top-center" containerClassName="my-toast-container" />
     </>

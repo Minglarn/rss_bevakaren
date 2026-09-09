@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.09.13-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.09.14-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -79,6 +79,47 @@ Configure your preferred viewing mode under **Settings -> User Interface**:
 - **Classic RSS (Raw text without AI):** Streamlined and fast feed displaying the original RSS feed ingress text without AI manipulation.
 
 Regardless of your dashboard setting, the **Prio Feed** remains accessible in the sidebar navigation to track high-priority events.
+
+---
+
+## Interactive AI News Assistant & Semantic Hybrid RAG
+
+RSS-Bevakaren features a dedicated, fullscreen conversational AI interface (**AI Chatt**) accessible from the sidebar. You can interact directly with your monitored news articles using natural language queries powered by your local LM Studio instance or any OpenAI-compatible API endpoint.
+
+### Architecture & Key Features
+
+1. **Conversational News Q&A (RAG):**
+   - Ask complex, natural questions in Swedish or English (e.g., *"Vilka allvarliga olyckor har rapporterats senaste dygnet?"*, *"Vad rapporteras om räntan och börsen?"* eller *"Hitta alla artiklar om elbilar och sammanfatta läget"*).
+   - The assistant synthesizes clear, coherent overviews directly backed by your RSS dispatches.
+
+2. **Semantic Vector Search (Nomic Embeddings v1.5):**
+   - Incoming articles are automatically vectorized using high-performance local embedding models (such as `text-embedding-nomic-embed-text-v1.5` running concurrently in LM Studio).
+   - Captures contextual semantics, synonyms, and conceptual intent (768 dimensions), bridging phrasing gaps between user questions and publisher headlines.
+
+3. **SQLite Vector Storage & Fast Cosine Similarity:**
+   - Vector embeddings are persisted natively in SQLite as binary float32 blobs (`article_embeddings` table) with atomic UPSERT guarantees.
+   - Vector ranking leverages optimized numpy cosine similarity routines across the database archive.
+
+4. **Hybrid Retrieval Strategy:**
+   - Blends high-dimensional semantic search with SQLite keyword/FTS text matching.
+   - Guarantees precision for specific names, numbers, regional terms, and abbreviations alongside conceptual semantic matches.
+
+5. **Transparent Source Citations:**
+   - Every answer displays interactive, expandable source citations detailing the feed origin, article headline, publication date, and priority score.
+   - Includes direct external links to read the complete original story on the publisher's site.
+
+6. **Dynamic AI-Generated Follow-Up Questions:**
+   - After formulating each response, the AI automatically analyzes the retrieved facts and generates 4 sharp, contextual follow-up questions.
+   - Rendered as interactive prompt chips directly below the response for effortless one-tap deep dives.
+
+7. **Persistent Background Chat (`AiChatContext`):**
+   - Built upon a global React Context (`AiChatContext`).
+   - Query generation continues uninterrupted even when switching between Dashboard, Prio Feed, or Feed Settings.
+   - A pulsing activity indicator in the sidebar navigation signals when the AI is processing in the background.
+   - Full conversation history is retained during the browser session via `sessionStorage`.
+
+8. **Offline & Graceful Fallback:**
+   - If embedding models are not active in LM Studio, the assistant automatically switches to full-text keyword retrieval without disrupting the chat experience.
 
 ---
 

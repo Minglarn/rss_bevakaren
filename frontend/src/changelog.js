@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.14',
+    date: '2026-09-09',
+    title: 'Global AiChatContext för flikbyte och utökad dokumentation',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Global AiChatContext med oavbruten fliknavigering',
+        description: 'AI-chatten körs nu via en global React Context. Förfrågningar och svar genereras oavbrutet i bakgrunden även om du växlar till Dashboard eller hanterar flöden under tiden.'
+      },
+      {
+        type: 'improvement',
+        title: 'Aktivitetsindikator för AI i sidomenyn',
+        description: 'En diskret pulserande indikator visas på länken till AI Chatt i sidomenyn så snart assistenten arbetar med att ta fram svar i bakgrunden.'
+      },
+      {
+        type: 'documentation',
+        title: 'Komplett arkitektur och dokumentation i README.md',
+        description: 'Uppdaterat README.md med en dedikerad teknisk genomgång av AI-Chatten, semantisk hybrid-RAG med Nomic Embeddings v1.5, SQLite-vektorlagring samt dynamiska följdfrågor.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.13',
     date: '2026-09-09',
     title: 'Dynamiska AI-genererade följdfrågor i nyhetschatten',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

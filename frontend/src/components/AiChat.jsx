@@ -18,6 +18,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import api from '../api';
+import { useAiChat } from '../context/AiChatContext';
 
 const CATEGORY_PROMPTS = [
   {
@@ -89,43 +90,20 @@ const getSuggestedFollowups = (msgCount) => {
 };
 
 export default function AiChat() {
-  const [messages, setMessages] = useState(() => {
-    const saved = sessionStorage.getItem('rss_ai_chat_messages');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const {
+    messages,
+    isLoading,
+    activeModel,
+    aiHealthy,
+    sendMessage,
+    clearMessages
+  } = useAiChat();
+
   const [inputMessage, setInputMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [expandedSources, setExpandedSources] = useState({});
-  const [activeModel, setActiveModel] = useState('');
-  const [aiHealthy, setAiHealthy] = useState(true);
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
-
-  // Spara meddelanden i sessionStorage så att användaren kan navigera runt utan att tappa tråden
-  useEffect(() => {
-    try {
-      sessionStorage.setItem('rss_ai_chat_messages', JSON.stringify(messages));
-    } catch (e) {
-      // Ignorera kvotfel
-    }
-  }, [messages]);
-
-  // Hämta AI-modellstatus från konfigurationen
-  useEffect(() => {
-    const checkConfig = async () => {
-      try {
-        const res = await api.get('/ai/config');
-        if (res.data) {
-          setActiveModel(res.data.lm_studio_model || 'Standardmodell');
-          setAiHealthy(res.data.is_healthy);
-        }
-      } catch (err) {
-        setAiHealthy(false);
-      }
-    };
-    checkConfig();
-  }, []);
 
   // Automatisk scroll till senaste meddelandet
   useEffect(() => {
@@ -142,9 +120,8 @@ export default function AiChat() {
   };
 
   const handleClearChat = () => {
-    setMessages([]);
+    clearMessages();
     setExpandedSources({});
-    sessionStorage.removeItem('rss_ai_chat_messages');
   };
 
   const toggleSources = (msgIndex) => {
@@ -154,62 +131,15 @@ export default function AiChat() {
     }));
   };
 
-  const handleSendMessage = async (textToSend) => {
+  const handleSendMessage = (textToSend) => {
     const query = (textToSend || inputMessage).trim();
     if (!query || isLoading) return;
 
-    const userMessage = {
-      role: 'user',
-      content: query,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
     setInputMessage('');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-    setIsLoading(true);
-
-    try {
-      // Skicka meddelandet samt tidigare meddelandehistorik till RAG-endpointen
-      const historyPayload = messages.slice(-6).map(m => ({
-        role: m.role,
-        content: m.content
-      }));
-
-      const res = await api.post('/ai/chat', {
-        message: query,
-        history: historyPayload
-      });
-
-      const assistantMessage = {
-        role: 'assistant',
-        content: res.data.reply || 'Inget svar kunde genereras.',
-        sources: res.data.sources || [],
-        model: res.data.model || activeModel || 'Lokal AI',
-        follow_ups: res.data.follow_ups || [],
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-
-      setMessages([...newMessages, assistantMessage]);
-      if (res.data.model) {
-        setActiveModel(res.data.model);
-      }
-    } catch (err) {
-      const errorMessage = {
-        role: 'assistant',
-        content: 'Kunde inte kommunicera med AI-tjänsten. Kontrollera att LM Studio körs och är tillgänglig på det lokala nätverket.',
-        sources: [],
-        model: 'Fel',
-        isError: true,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages([...newMessages, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
+    sendMessage(query);
   };
 
   const handleKeyDown = (e) => {
