@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import StreamingResponse
 import asyncio
 import time
 from fastapi.security import OAuth2PasswordRequestForm
@@ -2127,6 +2128,30 @@ async def ai_chat_endpoint(
         sources=result.get("sources", []),
         model=result.get("model", ""),
         follow_ups=result.get("follow_ups", [])
+    )
+
+@app.post("/ai/chat/stream")
+async def ai_chat_stream_endpoint(
+    req: schemas.ChatRequest,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if not req.message or not req.message.strip():
+        raise HTTPException(status_code=400, detail="Meddelande kan inte vara tomt.")
+
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    model_override = user_ai.selected_model if user_ai and user_ai.selected_model else None
+    hist_list = [{"role": h.role, "content": h.content} for h in (req.history or [])]
+
+    return StreamingResponse(
+        ai_service.stream_chat_with_news(
+            user_id=current_user.id,
+            message=req.message,
+            history=hist_list,
+            db=db,
+            model_override=model_override
+        ),
+        media_type="text/event-stream"
     )
 
 

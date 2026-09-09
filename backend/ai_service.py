@@ -150,6 +150,20 @@ def get_embeddings_endpoint() -> str:
         return url.replace("/models", "/embeddings")
     return "http://localhost:1234/v1/embeddings"
 
+def get_native_chat_endpoint() -> str:
+    """Extraherar /api/v1/chat endpoint baserat på LM_STUDIO_URL för realtids-progress och SSE."""
+    url = LM_STUDIO_URL.strip()
+    if "/v1/" in url:
+        base = url.split("/v1/")[0]
+        return f"{base}/api/v1/chat"
+    elif url.endswith("/v1"):
+        base = url[:-3]
+        return f"{base}/api/v1/chat"
+    match = re.match(r"(https?://[^/]+)", url)
+    if match:
+        return f"{match.group(1)}/api/v1/chat"
+    return "http://localhost:1234/api/v1/chat"
+
 def get_text_embeddings(texts: List[str], is_query: bool = False, model: Optional[str] = None) -> Optional[List[List[float]]]:
     """Genererar embeddings via LM Studio med Nomic prompt-prefix."""
     if not texts:
@@ -694,16 +708,14 @@ def strip_emojis(text: str) -> str:
     )
     return emoji_pattern.sub("", text)
 
-def chat_with_news(
+def prepare_chat_context(
     user_id: int,
     message: str,
     history: Optional[List[Dict[str, str]]] = None,
-    db: Any = None,
-    model_override: Optional[str] = None
+    db: Any = None
 ) -> Dict[str, Any]:
     """
-    Interaktiv RAG AI-chatt: Hämtar relevanta artiklar ur användarens flöden och ställer
-    frågan till LM Studio med full källhänvisning.
+    Förbereder kontext, källor och prompter för RAG-chatt via semantisk sökning i SQLite.
     """
     from datetime import datetime, timedelta
     from sqlalchemy import or_, and_, desc
@@ -729,7 +741,6 @@ def chat_with_news(
     elif "vecka" in msg_lower or "veckan" in msg_lower or "7 dagar" in msg_lower:
         start_ts = int((now - timedelta(days=7)).timestamp())
     else:
-        # Standard: senaste 48 timmarna för att fånga aktuella händelser
         start_ts = int((now - timedelta(hours=72)).timestamp())
 
     # 2. Identifiera sökord (filtrera bort vanliga stoppord)
@@ -782,14 +793,13 @@ def chat_with_news(
                 candidates = base_query.order_by(desc(models.Article.published_ts), desc(models.Article.received_ts)).limit(200).all()
 
                 if candidates:
-                    # Vektoriserar eventuella kandidater som saknar embedding snabbt i bakgrunden
                     missing = [c for c in candidates[:20] if not c.embedding]
                     if missing:
                         batch_embed_articles(missing, db)
 
                     scored_articles = []
                     for art in candidates:
-                        sim_score = 0.40 # Standard-baslinje om vektor saknas
+                        sim_score = 0.40
                         if art.embedding and art.embedding.vector:
                             try:
                                 cand_vec = np.frombuffer(art.embedding.vector, dtype=np.float32)
@@ -799,7 +809,6 @@ def chat_with_news(
                             except Exception:
                                 pass
 
-                        # Hybrid: Ge bonus för direkta sökordsmatchningar i rubrik, text eller kategori
                         kw_bonus = 0.0
                         if keywords:
                             text_blob = f"{art.title or ''} {art.summary or ''} {art.ai_summary or ''} {art.category or ''}".lower()
@@ -817,7 +826,6 @@ def chat_with_news(
             except Exception as e:
                 print(f"[AI Chat] Fel vid semantisk ranking: {e}", flush=True)
 
-        # Fallback till SQL & nyckelordsfiltrering om semantisk sökning inte var aktiv
         if not semantic_success:
             if keywords:
                 kw_conditions = []
@@ -861,7 +869,7 @@ def chat_with_news(
             "is_prio": bool(art.priority == "high" or (art.prio_score or 0) >= 75)
         })
 
-    # 5. Bygg kontext för LM Studio
+    # 5. Bygg kontext för modellen
     context_lines = []
     if total_period_count > 0:
         context_lines.append(
@@ -912,14 +920,76 @@ def chat_with_news(
 
     # 6. Sätt ihop meddelandehistorik
     messages = [{"role": "system", "content": system_prompt}]
-    for h in history[-6:]: # Behåll de senaste 6 meddelandena för kontinuitet
+    for h in history[-6:]:
         r = h.get("role", "")
         c = h.get("content", "")
         if r in ("user", "assistant") and c:
             messages.append({"role": r, "content": c})
     messages.append({"role": "user", "content": user_query_content})
 
-    # 7. Anropa LM Studio
+    return {
+        "sources": sources,
+        "total_period_count": total_period_count,
+        "system_prompt": system_prompt,
+        "user_query_content": user_query_content,
+        "messages": messages,
+        "clean_msg": clean_msg,
+        "context_str": context_str
+    }
+
+def clean_ai_response_and_extract_followups(raw_reply: str, sources: List[Dict[str, Any]], model: str) -> Dict[str, Any]:
+    """Extraherar följdfrågor, rensar taggar och emojis ur AI-svaret."""
+    clean_reply = strip_emojis(raw_reply or "").strip()
+
+    follow_ups = []
+    followup_match = re.search(r"<foljdfragor>(.*?)</foljdfragor>", clean_reply, re.DOTALL | re.IGNORECASE)
+    if not followup_match:
+        followup_match = re.search(r"<följdfrågor>(.*?)</följdfrågor>", clean_reply, re.DOTALL | re.IGNORECASE)
+
+    if followup_match:
+        raw_block = followup_match.group(1).strip()
+        clean_reply = re.sub(r"<(?:foljdfragor|följdfrågor)>.*?</(?:foljdfragor|följdfrågor)>", "", clean_reply, flags=re.DOTALL | re.IGNORECASE).strip()
+        for line in raw_block.split("\n"):
+            cleaned_line = re.sub(r"^[\s*\-•\d\.\)]+", "", line).strip().strip('"\'')
+            if len(cleaned_line) > 5 and cleaned_line not in follow_ups:
+                if not cleaned_line.endswith("?"):
+                    cleaned_line = f"{cleaned_line}?"
+                follow_ups.append(cleaned_line)
+
+    follow_ups = follow_ups[:4]
+
+    if len(follow_ups) < 2 and sources:
+        for s in sources[:4]:
+            t = s.get("title", "")
+            if t and len(t) > 5:
+                q_cand = f"Vad mer rapporteras om {t.lower()}?"
+                if q_cand not in follow_ups:
+                    follow_ups.append(q_cand)
+            if len(follow_ups) >= 4:
+                break
+
+    return {
+        "reply": clean_reply or "Inget svar kunde formuleras.",
+        "sources": sources,
+        "model": model or "Lokal AI",
+        "follow_ups": follow_ups
+    }
+
+def chat_with_news(
+    user_id: int,
+    message: str,
+    history: Optional[List[Dict[str, str]]] = None,
+    db: Any = None,
+    model_override: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Standard synkron RAG AI-chatt (JSON-svar).
+    """
+    history = history or []
+    ctx = prepare_chat_context(user_id=user_id, message=message, history=history, db=db)
+    sources = ctx["sources"]
+    messages = ctx["messages"]
+
     model = model_override or LM_STUDIO_MODEL or ""
     payload = {
         "model": model,
@@ -952,47 +1022,8 @@ def chat_with_news(
             }
 
         raw_reply = choices[0].get("message", {}).get("content", "")
-        clean_reply = strip_emojis(raw_reply).strip()
-
-        # Extrahera de 4 följdfrågorna ur <foljdfragor>...</foljdfragor>
-        follow_ups = []
-        followup_match = re.search(r"<foljdfragor>(.*?)</foljdfragor>", clean_reply, re.DOTALL | re.IGNORECASE)
-        if not followup_match:
-            followup_match = re.search(r"<följdfrågor>(.*?)</följdfrågor>", clean_reply, re.DOTALL | re.IGNORECASE)
-
-        if followup_match:
-            raw_block = followup_match.group(1).strip()
-            # Ta bort taggblocket från den synliga svarstexten
-            clean_reply = re.sub(r"<(?:foljdfragor|följdfrågor)>.*?</(?:foljdfragor|följdfrågor)>", "", clean_reply, flags=re.DOTALL | re.IGNORECASE).strip()
-            for line in raw_block.split("\n"):
-                cleaned_line = re.sub(r"^[\s*\-•\d\.\)]+", "", line).strip().strip('"\'')
-                if len(cleaned_line) > 5 and cleaned_line not in follow_ups:
-                    if not cleaned_line.endswith("?"):
-                        cleaned_line = f"{cleaned_line}?"
-                    follow_ups.append(cleaned_line)
-
-        # Begränsa till max 4 följdfrågor
-        follow_ups = follow_ups[:4]
-
-        # Om modellen mot förmodan inte genererade taggarna, skapa intelligenta följdfrågor från källorna
-        if len(follow_ups) < 2 and sources:
-            for s in sources[:4]:
-                t = s.get("title", "")
-                if t and len(t) > 5:
-                    q_cand = f"Vad mer rapporteras om {t.lower()}?"
-                    if q_cand not in follow_ups:
-                        follow_ups.append(q_cand)
-                if len(follow_ups) >= 4:
-                    break
-
         used_model = data.get("model", model or "Lokal AI")
-
-        return {
-            "reply": clean_reply or "Inget svar kunde formuleras.",
-            "sources": sources,
-            "model": used_model,
-            "follow_ups": follow_ups
-        }
+        return clean_ai_response_and_extract_followups(raw_reply, sources, used_model)
     except requests.exceptions.ConnectTimeout:
         return {
             "reply": f"Kunde inte upprätta anslutning till LM Studio på {LM_STUDIO_URL}. Kontrollera att LM Studio är startat och att servern körs.",
@@ -1021,4 +1052,146 @@ def chat_with_news(
             "model": model or "Fel",
             "follow_ups": []
         }
+
+def stream_chat_with_news(
+    user_id: int,
+    message: str,
+    history: Optional[List[Dict[str, str]]] = None,
+    db: Any = None,
+    model_override: Optional[str] = None
+):
+    """
+    Strömmande RAG-assistent som skickar SSE-events:
+    1. {"type": "sources", "sources": sources, "total_count": total_count}
+    2. {"type": "progress", "percent": 0..100, "stage": "prompt"}
+    3. {"type": "token", "content": chunk}
+    4. {"type": "done", "reply": reply, "sources": sources, "follow_ups": follow_ups, "model": model}
+    """
+    history = history or []
+    ctx = prepare_chat_context(user_id=user_id, message=message, history=history, db=db)
+    sources = ctx["sources"]
+    total_period_count = ctx["total_period_count"]
+    system_prompt = ctx["system_prompt"]
+    messages = ctx["messages"]
+    clean_msg = ctx["clean_msg"]
+    context_str = ctx["context_str"]
+
+    # 1. Skicka direkt källorna och totalantalet händelser till frontend
+    yield f"data: {json.dumps({'type': 'sources', 'sources': sources, 'total_count': total_period_count})}\n\n"
+
+    model = model_override or LM_STUDIO_MODEL or ""
+    native_url = get_native_chat_endpoint()
+
+    # Formatera input för LM Studios nativa /api/v1/chat endpoint
+    input_parts = []
+    if history:
+        input_parts.append("Tidigare konversation i samtalet:")
+        for h in history[-4:]:
+            r = h.get("role", "")
+            c = h.get("content", "")
+            if r and c:
+                input_parts.append(f"- {r}: {c[:250]}")
+        input_parts.append("")
+    input_parts.append(f"Artiklar från användarens flöden:\n{context_str}")
+    input_parts.append(f"Användarens fråga: {clean_msg}")
+    full_input = "\n\n".join(input_parts)
+
+    native_payload = {
+        "model": model,
+        "system_prompt": system_prompt,
+        "input": full_input,
+        "stream": True,
+        "temperature": 0.3
+    }
+
+    accumulated = []
+    used_model = model or "Lokal AI"
+    stream_successful = False
+
+    try:
+        resp = requests.post(native_url, json=native_payload, stream=True, timeout=LM_STUDIO_TIMEOUT)
+        if resp.status_code == 200:
+            current_event = None
+            for line in resp.iter_lines():
+                if not line:
+                    continue
+                decoded = line.decode('utf-8', errors='ignore')
+                if decoded.startswith("event: "):
+                    current_event = decoded[7:].strip()
+                    continue
+                if decoded.startswith("data: "):
+                    data_str = decoded[6:].strip()
+                    if not data_str:
+                        continue
+                    try:
+                        obj = json.loads(data_str)
+                        ev_type = obj.get("type") or current_event
+                        if ev_type == "prompt_processing.progress":
+                            pct = int(round(obj.get("progress", 0.0) * 100))
+                            yield f"data: {json.dumps({'type': 'progress', 'percent': pct, 'stage': 'prompt'})}\n\n"
+                        elif ev_type == "prompt_processing.end":
+                            yield f"data: {json.dumps({'type': 'progress', 'percent': 100, 'stage': 'prompt'})}\n\n"
+                        elif ev_type == "message.delta":
+                            token = obj.get("content", "")
+                            if token:
+                                accumulated.append(token)
+                                yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
+                        elif ev_type == "chat.start":
+                            if obj.get("model_instance_id"):
+                                used_model = obj.get("model_instance_id")
+                    except Exception:
+                        pass
+            if accumulated:
+                stream_successful = True
+    except Exception as e:
+        print(f"[AI Chat Stream] Nativa /api/v1/chat gav fel ({e}), testar standard OpenAI /v1/chat/completions fallback...", flush=True)
+
+    # Fallback: Om inte nativ endpoint fungerade, använd OpenAI-kompatibla LM_STUDIO_URL
+    if not stream_successful or not accumulated:
+        try:
+            openai_payload = {
+                "model": model,
+                "temperature": 0.3,
+                "max_tokens": LM_STUDIO_MAX_TOKENS,
+                "messages": messages,
+                "stream": True
+            }
+            yield f"data: {json.dumps({'type': 'progress', 'percent': 100, 'stage': 'prompt'})}\n\n"
+
+            fb_resp = requests.post(LM_STUDIO_URL, json=openai_payload, stream=True, timeout=LM_STUDIO_TIMEOUT)
+            if fb_resp.status_code == 200:
+                for line in fb_resp.iter_lines():
+                    if not line:
+                        continue
+                    decoded = line.decode('utf-8', errors='ignore')
+                    if decoded.startswith("data: "):
+                        data_str = decoded[6:].strip()
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            obj = json.loads(data_str)
+                            if obj.get("model"):
+                                used_model = obj.get("model")
+                            choices = obj.get("choices", [])
+                            if choices:
+                                delta = choices[0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    accumulated.append(content)
+                                    yield f"data: {json.dumps({'type': 'token', 'content': content})}\n\n"
+                        except Exception:
+                            pass
+        except requests.exceptions.ConnectTimeout:
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Kunde inte ansluta till LM Studio på {LM_STUDIO_URL}. Kontrollera att servern är igång.'})}\n\n"
+            return
+        except requests.exceptions.ReadTimeout:
+            yield f"data: {json.dumps({'type': 'error', 'message': f'LM Studio svarade inte inom tidsgränsen ({LM_STUDIO_TIMEOUT}s).'})}\n\n"
+            return
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Ett fel uppstod: {e}'})}\n\n"
+            return
+
+    raw_reply = "".join(accumulated)
+    res_obj = clean_ai_response_and_extract_followups(raw_reply, sources, used_model)
+    yield f"data: {json.dumps({'type': 'done', 'reply': res_obj['reply'], 'sources': sources, 'follow_ups': res_obj['follow_ups'], 'model': res_obj['model']})}\n\n"
 

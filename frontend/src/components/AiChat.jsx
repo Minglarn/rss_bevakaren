@@ -389,16 +389,67 @@ export default function AiChat() {
                     </div>
                   )}
 
-                  {/* Meddelandetext */}
-                  <div style={{ fontSize: '0.92rem' }}>
-                    {isUser ? (
-                      <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
-                        {msg.content}
+                  {/* Progressbar under GPU prompt processing */}
+                  {!isUser && msg.isStreaming && !msg.content && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', minWidth: '260px', maxWidth: '420px', padding: '0.2rem 0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <Loader2 size={14} className="spin" style={{ color: 'var(--primary)' }} />
+                          {msg.progress !== null && msg.progress > 0 
+                            ? "Bearbetar artikelunderlag i LM Studio..." 
+                            : "Hämtar och matchar relevanta artiklar..."}
+                        </span>
+                        <span style={{ fontWeight: 600, color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
+                          {msg.progress || 0}%
+                        </span>
                       </div>
-                    ) : (
-                      renderFormattedText(msg.content)
-                    )}
-                  </div>
+                      <div style={{
+                        width: '100%',
+                        height: '6px',
+                        backgroundColor: 'rgba(0,0,0,0.08)',
+                        borderRadius: '4px',
+                        overflow: 'hidden',
+                        position: 'relative'
+                      }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${Math.max(msg.progress || 0, 4)}%`,
+                          backgroundColor: 'var(--primary)',
+                          borderRadius: '4px',
+                          transition: 'width 0.25s ease-out',
+                          boxShadow: '0 0 8px rgba(37, 99, 235, 0.4)'
+                        }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Meddelandetext */}
+                  {(!msg.isStreaming || msg.content) && (
+                    <div style={{ fontSize: '0.92rem' }}>
+                      {isUser ? (
+                        <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+                          {msg.content}
+                        </div>
+                      ) : (
+                        <div>
+                          {renderFormattedText(msg.content)}
+                          {msg.isStreaming && (
+                            <span 
+                              style={{ 
+                                display: 'inline-block', 
+                                width: '7px', 
+                                height: '14px', 
+                                marginLeft: '4px', 
+                                backgroundColor: 'var(--primary)', 
+                                verticalAlign: 'middle',
+                                animation: 'pulse 1s infinite'
+                              }} 
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Källor / Citations */}
                   {!isUser && msg.sources && msg.sources.length > 0 && (
@@ -599,8 +650,8 @@ export default function AiChat() {
           </motion.div>
         )}
 
-        {/* Laddningsindikator */}
-        {isLoading && (
+        {/* Fallback laddningsindikator om assistentbubbla inte skapats */}
+        {isLoading && (!messages.length || messages[messages.length - 1].role !== 'assistant') && (
           <div style={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
             <div style={{
               backgroundColor: 'var(--bg-card)',
@@ -614,7 +665,7 @@ export default function AiChat() {
               fontSize: '0.85rem'
             }}>
               <Loader2 size={16} className="spin" style={{ color: 'var(--primary)' }} />
-              <span>Söker igenom artiklar och formulerar svar...</span>
+              <span>Initierar sökning och formulerar svar...</span>
             </div>
           </div>
         )}

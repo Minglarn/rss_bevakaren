@@ -58,46 +58,176 @@ export const AiChatProvider = ({ children }) => {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+    const initialAssistantMessage = {
+      role: 'assistant',
+      content: '',
+      sources: [],
+      follow_ups: [],
+      progress: 0,
+      isStreaming: true,
+      model: activeModel || 'Lokal AI',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    const updatedWithUserAndBot = [...messages, userMessage, initialAssistantMessage];
+    setMessages(updatedWithUserAndBot);
     setIsLoading(true);
 
-    try {
-      const historyPayload = newMessages.map(m => ({
-        role: m.role,
-        content: m.content
-      }));
+    const historyPayload = messages.map(m => ({
+      role: m.role,
+      content: m.content
+    }));
 
-      const res = await api.post('/ai/chat', {
-        message: textToSend,
-        history: historyPayload
+    try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+
+      const response = await fetch('/api/ai/chat/stream', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          message: textToSend,
+          history: historyPayload
+        })
       });
 
-      const assistantMessage = {
-        role: 'assistant',
-        content: res.data.reply || 'Inget svar kunde genereras.',
-        sources: res.data.sources || [],
-        model: res.data.model || activeModel || 'Lokal AI',
-        follow_ups: res.data.follow_ups || [],
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
+      if (!response.ok || !response.body) {
+        throw new Error(`HTTP ${response.status}`);
+      }
 
-      setMessages([...newMessages, assistantMessage]);
-      if (res.data.model) {
-        setActiveModel(res.data.model);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      let currentContent = '';
+      let currentSources = [];
+      let currentModel = activeModel || 'Lokal AI';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // Spara ofullständig rad
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data: ')) continue;
+          const jsonStr = trimmed.slice(6).trim();
+          if (!jsonStr) continue;
+
+          try {
+            const ev = JSON.parse(jsonStr);
+            if (ev.type === 'sources') {
+              currentSources = ev.sources || [];
+              setMessages(prev => {
+                const list = [...prev];
+                const last = list[list.length - 1];
+                if (last && last.role === 'assistant') {
+                  list[list.length - 1] = { ...last, sources: currentSources };
+                }
+                return list;
+              });
+            } else if (ev.type === 'progress') {
+              const pct = typeof ev.percent === 'number' ? ev.percent : 0;
+              setMessages(prev => {
+                const list = [...prev];
+                const last = list[list.length - 1];
+                if (last && last.role === 'assistant') {
+                  list[list.length - 1] = { ...last, progress: pct };
+                }
+                return list;
+              });
+            } else if (ev.type === 'token') {
+              currentContent += ev.content;
+              setMessages(prev => {
+                const list = [...prev];
+                const last = list[list.length - 1];
+                if (last && last.role === 'assistant') {
+                  list[list.length - 1] = { 
+                    ...last, 
+                    content: currentContent,
+                    progress: 100
+                  };
+                }
+                return list;
+              });
+            } else if (ev.type === 'done') {
+              currentContent = ev.reply || currentContent;
+              if (ev.model) currentModel = ev.model;
+              setMessages(prev => {
+                const list = [...prev];
+                const last = list[list.length - 1];
+                if (last && last.role === 'assistant') {
+                  list[list.length - 1] = {
+                    ...last,
+                    content: currentContent,
+                    sources: ev.sources || currentSources,
+                    follow_ups: ev.follow_ups || [],
+                    model: currentModel,
+                    progress: null,
+                    isStreaming: false
+                  };
+                }
+                return list;
+              });
+              if (ev.model) setActiveModel(ev.model);
+            } else if (ev.type === 'error') {
+              throw new Error(ev.message || 'Ett fel uppstod');
+            }
+          } catch (parseErr) {
+            console.warn('Could not parse SSE chunk', parseErr);
+          }
+        }
       }
     } catch (err) {
-      console.error("AI Chat error:", err);
-      const errorMessage = {
-        role: 'assistant',
-        content: 'Kunde inte kommunicera med AI-tjänsten. Kontrollera att LM Studio körs och är tillgänglig på det lokala nätverket.',
-        sources: [],
-        model: 'Fel',
-        isError: true,
-        follow_ups: [],
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages([...newMessages, errorMessage]);
+      console.warn("SSE Stream misslyckades, provar fallback till standard POST /ai/chat:", err);
+      try {
+        const res = await api.post('/ai/chat', {
+          message: textToSend,
+          history: historyPayload
+        });
+
+        setMessages(prev => {
+          const list = [...prev];
+          const last = list[list.length - 1];
+          if (last && last.role === 'assistant') {
+            list[list.length - 1] = {
+              ...last,
+              content: res.data.reply || 'Inget svar kunde genereras.',
+              sources: res.data.sources || [],
+              model: res.data.model || activeModel || 'Lokal AI',
+              follow_ups: res.data.follow_ups || [],
+              progress: null,
+              isStreaming: false
+            };
+          }
+          return list;
+        });
+        if (res.data.model) setActiveModel(res.data.model);
+      } catch (fallbackErr) {
+        console.error("AI Chat fallback error:", fallbackErr);
+        setMessages(prev => {
+          const list = [...prev];
+          const last = list[list.length - 1];
+          if (last && last.role === 'assistant') {
+            list[list.length - 1] = {
+              ...last,
+              content: 'Kunde inte kommunicera med AI-tjänsten. Kontrollera att LM Studio körs och är tillgänglig på det lokala nätverket.',
+              sources: [],
+              model: 'Fel',
+              isError: true,
+              follow_ups: [],
+              progress: null,
+              isStreaming: false
+            };
+          }
+          return list;
+        });
+      }
     } finally {
       setIsLoading(false);
     }

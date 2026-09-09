@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.15',
+    date: '2026-09-09',
+    title: 'Realtids-progressbar och strömmande AI-svar från LM Studio',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Realtids-progressbar för GPU prompt processing',
+        description: 'AI-chatten visar nu en direkt progressbar (0 till 100 procent) i takt med att LM Studio läser in och bearbetar artikelunderlaget i grafikkortets minne, hämtat direkt via LM Studios nativa händelseström.'
+      },
+      {
+        type: 'feature',
+        title: 'Ord-för-ord token-strömning (SSE)',
+        description: 'Svaret strömmas nu fram i realtid direkt när första ordet beräknas, vilket eliminerar all väntetid och ger en omedelbar och dynamisk chattupplevelse.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.14',
     date: '2026-09-09',
     title: 'Global AiChatContext för flikbyte och utökad dokumentation',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',
