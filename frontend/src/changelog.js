@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.07',
+    date: '2026-09-09',
+    title: 'Omfattande dokumentation av MQTT och versionsuppdatering',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Komplett MQTT-dokumentation och nyttolastspecifikation',
+        description: 'Uppdaterat README.md med en detaljerad specifikation över samtliga JSON-fält som publiceras över MQTT, ämneshierarki, subskriptionsmönster samt färdiga automationsmallar för Home Assistant.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.06',
     date: '2026-09-09',
     title: 'Separering av klickbetestext och kategoriinformation i händelsekort',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
