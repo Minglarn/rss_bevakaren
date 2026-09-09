@@ -11,3 +11,4 @@ beautifulsoup4
 requests
 wsproto
 paho-mqtt
+numpy

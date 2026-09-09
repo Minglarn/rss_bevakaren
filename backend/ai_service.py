@@ -3,10 +3,12 @@ import json
 import re
 import time
 import requests
+import numpy as np
 from typing import Optional, Dict, Any, List
 
 LM_STUDIO_URL = os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1/chat/completions")
 LM_STUDIO_MODEL = os.environ.get("LM_STUDIO_MODEL", "")
+LM_STUDIO_EMBEDDING_MODEL = os.environ.get("LM_STUDIO_EMBEDDING_MODEL", "text-embedding-nomic-embed-text-v1.5")
 LM_STUDIO_TIMEOUT = int(os.environ.get("LM_STUDIO_TIMEOUT", "120"))
 LM_STUDIO_MAX_TOKENS = int(os.environ.get("LM_STUDIO_MAX_TOKENS", "8192"))
 
@@ -138,6 +140,125 @@ def get_models_endpoint() -> str:
     if "/chat/completions" in url:
         return url.replace("/chat/completions", "/models")
     return "http://localhost:1234/v1/models"
+
+def get_embeddings_endpoint() -> str:
+    """Extraherar /v1/embeddings endpoint baserat på LM_STUDIO_URL."""
+    url = LM_STUDIO_URL.strip()
+    if "/chat/completions" in url:
+        return url.replace("/chat/completions", "/embeddings")
+    if "/models" in url:
+        return url.replace("/models", "/embeddings")
+    return "http://localhost:1234/v1/embeddings"
+
+def get_text_embeddings(texts: List[str], is_query: bool = False, model: Optional[str] = None) -> Optional[List[List[float]]]:
+    """Genererar embeddings via LM Studio med Nomic prompt-prefix."""
+    if not texts:
+        return []
+    
+    endpoint = get_embeddings_endpoint()
+    model_name = model or LM_STUDIO_EMBEDDING_MODEL
+    
+    # Nomic rekommenderar 'search_query: ' för frågor och 'search_document: ' för artiklar
+    prefix = "search_query: " if is_query else "search_document: "
+    formatted_texts = [f"{prefix}{t.strip()}" if not t.startswith(prefix) else t for t in texts]
+    
+    payload = {
+        "model": model_name,
+        "input": formatted_texts
+    }
+    
+    try:
+        res = requests.post(endpoint, json=payload, headers={"Content-Type": "application/json"}, timeout=25)
+        if res.status_code == 200:
+            data = res.json()
+            items = data.get("data", [])
+            items.sort(key=lambda x: x.get("index", 0))
+            return [item["embedding"] for item in items if "embedding" in item]
+        else:
+            print(f"[AI Embeddings] LM Studio HTTP {res.status_code}: {res.text[:150]}", flush=True)
+    except Exception as e:
+        print(f"[AI Embeddings] Fel vid anrop till {endpoint}: {e}", flush=True)
+    
+    return None
+
+def save_article_embedding(article_id: int, title: str, text: str, db: Any, model: Optional[str] = None) -> bool:
+    """Skapar och sparar vektor-embedding för en artikel i SQLite."""
+    if not db or not article_id:
+        return False
+    try:
+        import models
+        existing = db.query(models.ArticleEmbedding).filter(models.ArticleEmbedding.article_id == article_id).first()
+        if existing:
+            return True
+        
+        content = f"{title or ''}. {text or ''}".strip()
+        if not content or len(content) < 5:
+            return False
+            
+        embs = get_text_embeddings([content[:1200]], is_query=False, model=model)
+        if embs and len(embs) > 0 and len(embs[0]) > 0:
+            vec_bytes = np.array(embs[0], dtype=np.float32).tobytes()
+            rec = models.ArticleEmbedding(
+                article_id=article_id,
+                model=model or LM_STUDIO_EMBEDDING_MODEL,
+                vector=vec_bytes,
+                created_at=int(time.time())
+            )
+            db.merge(rec)
+            db.commit()
+            return True
+    except Exception as e:
+        print(f"[AI Embeddings] Kunde inte spara embedding för artikel {article_id}: {e}", flush=True)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+    return False
+
+def batch_embed_articles(articles: List[Any], db: Any, model: Optional[str] = None) -> int:
+    """Vektoriserar en lista av artiklar i batchar och sparar till SQLite."""
+    if not articles or not db:
+        return 0
+        
+    import models
+    model_name = model or LM_STUDIO_EMBEDDING_MODEL
+    saved_count = 0
+    batch_size = 15
+    
+    for i in range(0, len(articles), batch_size):
+        chunk = articles[i:i + batch_size]
+        items_to_embed = []
+        for art in chunk:
+            summary = art.ai_summary or art.summary or ""
+            content = f"{art.title or ''}. {summary}".strip()[:1200]
+            items_to_embed.append((art.id, content))
+            
+        texts = [item[1] for item in items_to_embed]
+        embs = get_text_embeddings(texts, is_query=False, model=model_name)
+        if embs and len(embs) == len(chunk):
+            try:
+                for idx, (art_id, _) in enumerate(items_to_embed):
+                    vec_bytes = np.array(embs[idx], dtype=np.float32).tobytes()
+                    rec = models.ArticleEmbedding(
+                        article_id=art_id,
+                        model=model_name,
+                        vector=vec_bytes,
+                        created_at=int(time.time())
+                    )
+                    db.merge(rec)
+                db.commit()
+                saved_count += len(chunk)
+            except Exception as e:
+                print(f"[AI Embeddings] Databasfel vid batch-sparning: {e}", flush=True)
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+        else:
+            # Om LM Studio inte svarade, avbryt loopen för att inte dröja
+            break
+            
+    return saved_count
 
 def check_lm_studio_health() -> bool:
     """Kontrollerar snabbt om LM Studio svarar."""
@@ -605,8 +726,9 @@ def chat_with_news(
     raw_words = re.findall(r'\b[a-zåäöA-ZÅÄÖ0-9_-]+\b', msg_lower)
     keywords = [w for w in raw_words if len(w) > 2 and w not in stopwords]
 
-    # 3. Databasfråga mot användarens flöden
+    # 3. Databasfråga mot användarens flöden med semantisk Hybrid RAG
     articles = []
+    total_period_count = 0
     if db:
         base_query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == user_id)
         
@@ -625,40 +747,92 @@ def chat_with_news(
         if time_filters:
             base_query = base_query.filter(and_(*time_filters))
 
-        # Applicera nyckelordsfiltrering om sökord identifierats
-        if keywords:
-            kw_conditions = []
-            for kw in keywords[:5]: # Begränsa till max 5 nyckelord för prestanda
-                kw_conditions.extend([
-                    models.Article.title.ilike(f"%{kw}%"),
-                    models.Article.summary.ilike(f"%{kw}%"),
-                    models.Article.ai_summary.ilike(f"%{kw}%"),
-                    models.Article.tags.ilike(f"%{kw}%"),
-                    models.Article.category.ilike(f"%{kw}%")
-                ])
-            kw_query = base_query.filter(or_(*kw_conditions)).order_by(desc(models.Article.published_ts), desc(models.Article.received_ts))
-            articles = kw_query.limit(80).all()
+        try:
+            total_period_count = base_query.count()
+        except Exception:
+            total_period_count = 0
 
-        # Om sökord inte gav tillräckligt många träffar (eller vid breda frågor), hämta de senaste artiklarna
-        if len(articles) < 20:
-            existing_ids = {a.id for a in articles}
-            fallback_query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == user_id)
-            if time_filters:
-                fallback_query = fallback_query.filter(and_(*time_filters))
-            fallback_articles = fallback_query.order_by(desc(models.Article.published_ts), desc(models.Article.received_ts)).limit(80).all()
-            for fa in fallback_articles:
-                if fa.id not in existing_ids:
-                    articles.append(fa)
-                    existing_ids.add(fa.id)
-                if len(articles) >= 80:
-                    break
+        # Försök semantisk vektorsökning via LM Studio Nomic Embeddings
+        q_embs = get_text_embeddings([clean_msg], is_query=True)
+        semantic_success = False
 
-        # Sortera i kronologisk fallande ordning
-        articles.sort(key=lambda x: (x.published_ts or 0, x.received_ts or 0), reverse=True)
+        if q_embs and len(q_embs) > 0 and len(q_embs[0]) > 0:
+            try:
+                q_vec = np.array(q_embs[0], dtype=np.float32)
+                q_norm = float(np.linalg.norm(q_vec))
 
-    # 4. Skapa käll-lista för frontend (upp till 75 artiklar)
+                # Hämta kandidatartiklar för tidsperioden (upp till 200 artiklar)
+                candidates = base_query.order_by(desc(models.Article.published_ts), desc(models.Article.received_ts)).limit(200).all()
+
+                if candidates:
+                    # Vektoriserar eventuella kandidater som saknar embedding snabbt i bakgrunden
+                    missing = [c for c in candidates[:20] if not c.embedding]
+                    if missing:
+                        batch_embed_articles(missing, db)
+
+                    scored_articles = []
+                    for art in candidates:
+                        sim_score = 0.40 # Standard-baslinje om vektor saknas
+                        if art.embedding and art.embedding.vector:
+                            try:
+                                cand_vec = np.frombuffer(art.embedding.vector, dtype=np.float32)
+                                cand_norm = float(np.linalg.norm(cand_vec))
+                                if q_norm > 0 and cand_norm > 0:
+                                    sim_score = float(np.dot(q_vec, cand_vec) / (q_norm * cand_norm))
+                            except Exception:
+                                pass
+
+                        # Hybrid: Ge bonus för direkta sökordsmatchningar i rubrik, text eller kategori
+                        kw_bonus = 0.0
+                        if keywords:
+                            text_blob = f"{art.title or ''} {art.summary or ''} {art.ai_summary or ''} {art.category or ''}".lower()
+                            for kw in keywords[:5]:
+                                if kw in text_blob:
+                                    kw_bonus += 0.08
+
+                        prio_bonus = 0.04 if (art.priority == "high" or (art.prio_score or 0) >= 75) else 0.0
+                        total_score = sim_score + kw_bonus + prio_bonus
+                        scored_articles.append((total_score, art))
+
+                    scored_articles.sort(key=lambda x: x[0], reverse=True)
+                    articles = [item[1] for item in scored_articles[:60]]
+                    semantic_success = True
+            except Exception as e:
+                print(f"[AI Chat] Fel vid semantisk ranking: {e}", flush=True)
+
+        # Fallback till SQL & nyckelordsfiltrering om semantisk sökning inte var aktiv
+        if not semantic_success:
+            if keywords:
+                kw_conditions = []
+                for kw in keywords[:5]:
+                    kw_conditions.extend([
+                        models.Article.title.ilike(f"%{kw}%"),
+                        models.Article.summary.ilike(f"%{kw}%"),
+                        models.Article.ai_summary.ilike(f"%{kw}%"),
+                        models.Article.tags.ilike(f"%{kw}%"),
+                        models.Article.category.ilike(f"%{kw}%")
+                    ])
+                kw_query = base_query.filter(or_(*kw_conditions)).order_by(desc(models.Article.published_ts), desc(models.Article.received_ts))
+                articles = kw_query.limit(80).all()
+
+            if len(articles) < 20:
+                existing_ids = {a.id for a in articles}
+                fallback_query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == user_id)
+                if time_filters:
+                    fallback_query = fallback_query.filter(and_(*time_filters))
+                fallback_articles = fallback_query.order_by(desc(models.Article.published_ts), desc(models.Article.received_ts)).limit(80).all()
+                for fa in fallback_articles:
+                    if fa.id not in existing_ids:
+                        articles.append(fa)
+                        existing_ids.add(fa.id)
+                    if len(articles) >= 80:
+                        break
+
+            articles.sort(key=lambda x: (x.published_ts or 0, x.received_ts or 0), reverse=True)
+
+    # 4. Skapa käll-lista för frontend (upp till 60 artiklar)
     sources = []
-    for art in articles[:75]:
+    for art in articles[:60]:
         sources.append({
             "id": art.id,
             "title": art.title or "Utan rubrik",
@@ -670,9 +844,15 @@ def chat_with_news(
             "is_prio": bool(art.priority == "high" or (art.prio_score or 0) >= 75)
         })
 
-    # 5. Bygg kontext för LM Studio (upp till 75 artiklar)
+    # 5. Bygg kontext för LM Studio
     context_lines = []
-    for i, art in enumerate(articles[:75], 1):
+    if total_period_count > 0:
+        context_lines.append(
+            f"[Systemstatistik: Det finns totalt {total_period_count} händelser i databasen för det valda tidsintervallet. "
+            f"Nedan listas de {len(sources)} mest relevanta händelserna för användarens fråga sorterade efter semantisk relevans.]\n"
+        )
+
+    for i, art in enumerate(articles[:60], 1):
         source_title = art.feed.title if art.feed else "RSS"
         pub_date = art.published or "Okänt datum"
         cat = art.category or "Övrigt"
@@ -688,13 +868,14 @@ def chat_with_news(
 
     system_prompt = (
         "Du är en skarp, saklig och hjälpsam svenskspråkig nyhetsassistent för RSS-Bevakaren.\n"
-        "Din uppgift är att svara på användarens frågor uteslutande baserat på artiklarna som listas i kontexten.\n\n"
+        "Din uppgift är att svara på användarens frågor uteslutande baserat på artiklarna och systemstatistiken i kontexten.\n\n"
         "Riktlinjer:\n"
         "1. Svara ALLTID på god, tydlig och naturlig svenska.\n"
         "2. Det är STRIKT FÖRBJUDET att använda emojis i svaret.\n"
         "3. Basera dina påståenden och siffror på de bifogade artiklarna. Hitta inte på information som saknas.\n"
-        "4. Om användaren frågar hur många händelser eller artiklar som inträffat (t.ex. 'hur många olyckor'), "
-        "räkna noggrant och lista kortfattat vilka händelser det rör sig om med ort/plats och källa.\n"
+        f"4. Om användaren frågar om totalt antal händelser för tidsperioden (t.ex. 'vad har hänt idag', 'hur många olyckor', 'alla händelser'), "
+        f"ange alltid den exakta totalsiffran från systemstatistiken ({total_period_count} st sparade händelser i flödena för tidsintervallet) "
+        "och sammanfatta sedan de mest relevanta händelserna med ort/plats och källa.\n"
         "5. Om artiklarna inte innehåller svar på frågan, förklara sakligt och artigt att informationen inte finns bland de sparade artiklarna.\n"
         "6. Använd god styckeindelning och punktlistor vid behov för maximal läsbarhet."
     )

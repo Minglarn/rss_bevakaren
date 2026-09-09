@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, LargeBinary
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -82,6 +82,17 @@ class Article(Base):
     allow_push = Column(Integer, default=1) # 1 = tillåt pushnotis, 0 = tyst/initial/gammal artikel
 
     feed = relationship("Feed", back_populates="articles")
+    embedding = relationship("ArticleEmbedding", uselist=False, back_populates="article", cascade="all, delete-orphan")
+
+class ArticleEmbedding(Base):
+    __tablename__ = "article_embeddings"
+
+    article_id = Column(Integer, ForeignKey("articles.id", ondelete="CASCADE"), primary_key=True, index=True)
+    model = Column(String, default="text-embedding-nomic-embed-text-v1.5")
+    vector = Column(LargeBinary) # 768 float32 values (3 072 bytes)
+    created_at = Column(Integer, default=0)
+
+    article = relationship("Article", back_populates="embedding")
  
 class UserAISettings(Base):
     __tablename__ = "user_ai_settings"

@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.11',
+    date: '2026-09-09',
+    title: 'Semantisk vektorsökning (Hybrid RAG) med Nomic Embeddings och LM Studio',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Semantisk vektorsökning med Nomic Embeddings',
+        description: 'Integrerat stöd för text-embedding-nomic-embed-text-v1.5 via LM Studio. Alla artiklar vektoriseras med 768 dimensioner i SQLite vilket ger djup förståelse för synonymer, ämnen och geografiska sammanhang.'
+      },
+      {
+        type: 'feature',
+        title: 'Hybrid RAG med Cosinus-likhet och exakt databasräkning',
+        description: 'Sökningar i AI-chatten kombinerar nu semantisk cosinus-likhet med SQL-tidsfilter och nyckelordsbonus. Systemet skickar dessutom med exakt SQL COUNT-statistik så att modellen aldrig missar eller felräknar totalantalet händelser under ett dygn.'
+      },
+      {
+        type: 'improvement',
+        title: 'Automatisk bakgrundsvektorisering och mjuk fallback',
+        description: 'Nya artiklar vektoriseras automatiskt i bakgrunden utan att fördröja gränssnittet. Om embeddingmodellen i LM Studio är offline faller systemet mjukt tillbaka på fulltextsökning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.10',
     date: '2026-09-09',
     title: 'Snabbprompter per kategori, följdfrågor i chatten och 75 artiklar i AI-kontext',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

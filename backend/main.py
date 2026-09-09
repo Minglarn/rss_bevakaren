@@ -3,7 +3,7 @@ import asyncio
 import time
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, text
+from sqlalchemy import or_, text, desc, and_
 from typing import List, Optional, Dict, Any
 from datetime import timedelta
 import os
@@ -992,6 +992,19 @@ async def ai_processing_loop():
 
                         db.commit()
 
+                        # Generera semantisk embedding via LM Studio i bakgrunden
+                        try:
+                            summary_text = art.ai_summary or art.summary or ""
+                            asyncio.create_task(asyncio.to_thread(
+                                ai_service.save_article_embedding,
+                                art.id,
+                                art.title,
+                                summary_text,
+                                database.SessionLocal()
+                            ))
+                        except Exception:
+                            pass
+
                         # Avgör om pushnotis ska skickas för PRIO, bevakningsord eller flöde
                         should_send_push = False
                         push_title = ""
@@ -1122,6 +1135,17 @@ async def ai_processing_loop():
                             art.tags = "[]"
                             db.commit()
                         
+                # 3. Bakgrundsvektorisering: Vektorisera färska artiklar som saknar embedding
+                try:
+                    missing_embs = db.query(models.Article).outerjoin(models.ArticleEmbedding).filter(
+                        models.ArticleEmbedding.article_id == None,
+                        models.Article.received_ts >= cutoff_ts
+                    ).order_by(desc(models.Article.received_ts)).limit(15).all()
+                    if missing_embs:
+                        await asyncio.to_thread(ai_service.batch_embed_articles, missing_embs, db)
+                except Exception as emb_err:
+                    print(f"[AI Embeddings] Fel vid bakgrundsvektorisering: {emb_err}", flush=True)
+
             finally:
                 db.close()
                 
@@ -1436,6 +1460,20 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
         art.prio_reason = f"Träff på bevakningsord: {kw_str}"
 
     db.commit()
+
+    # Uppdatera även semantisk embedding via LM Studio
+    try:
+        summary_text = art.ai_summary or art.summary or ""
+        asyncio.create_task(asyncio.to_thread(
+            ai_service.save_article_embedding,
+            art.id,
+            art.title,
+            summary_text,
+            database.SessionLocal()
+        ))
+    except Exception:
+        pass
+
     return {"status": "ok", "article_id": art.id, "analysis": analysis}
 
 @app.post("/articles/{article_id}/prioritize")
