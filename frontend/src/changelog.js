@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.08',
+    date: '2026-09-09',
+    title: 'Avlägsnad Reason-rad, slimmad klickbetesnotis och kategori i taggraden',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Borttagning av intern Reason-rad',
+        description: 'Tog bort den interna poäng- och prioriteringsraden Reason: ... från händelsekorten för ett renare och mindre rörigt gränssnitt.'
+      },
+      {
+        type: 'improvement',
+        title: 'Slimmad och diskret klickbetesnotis',
+        description: 'Ersatte den bastanta röda klickbetesboxen med en stilren och diskret förklaringsrad placerad direkt under sammanfattningen, vilket ger ett naturligt textflöde.'
+      },
+      {
+        type: 'feature',
+        title: 'Kategorin integrerad i taggraden',
+        description: 'Huvudkategorin visas nu som första tagg i taggraden med distinkt orange stil, vilket samlar alla ämnesetiketter på ett och samma ställe.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.07',
     date: '2026-09-09',
     title: 'Omfattande dokumentation av MQTT och versionsuppdatering',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.09.07-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.09.08-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -261,5 +261,5 @@ Navigate to `http://your-server-ip:8093` in your browser and sign in.
 
 ## Versioning
 
-This project strictly adheres to Calendar Versioning (CalVer), for example `2026.09.09.07`.
+This project strictly adheres to Calendar Versioning (CalVer), for example `2026.09.09.08`.
 Version numbers are updated on every release, ensuring complete traceability across source code, container tags, and release notes.

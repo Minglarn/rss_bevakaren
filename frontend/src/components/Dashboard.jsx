@@ -1282,36 +1282,22 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           </div>
                           {Boolean(item.is_clickbait) && (
                             <div style={{
-                              fontSize: '0.8rem',
-                              color: '#ef4444',
-                              lineHeight: '1.4',
-                              marginTop: '0.5rem',
-                              padding: '0.35rem 0.65rem',
-                              backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                              borderRadius: '6px',
-                              borderLeft: '3px solid #ef4444',
                               display: 'flex',
                               alignItems: 'flex-start',
-                              gap: '0.4rem'
+                              gap: '0.4rem',
+                              marginTop: '0.65rem',
+                              fontSize: '0.8rem',
+                              color: 'var(--text-muted)',
+                              lineHeight: '1.4',
+                              fontStyle: 'italic'
                             }}>
-                              <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444' }} />
+                              <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444', fontStyle: 'normal' }} />
                               <span>
-                                <strong>Clickbait notice:</strong> {item.clickbait_reason || "Headline withholds key facts or exaggerates to force clicks."}
+                                <strong style={{ color: '#ef4444', fontStyle: 'normal' }}>Klickbete:</strong>{' '}
+                                {item.clickbait_reason || "Rubriken undanhåller centrala fakta eller överdriver för att locka klick. Fakta har lyfts fram i sammanfattningen ovan."}
                               </span>
                             </div>
                           )}
-                          {(() => {
-                            const cleanReason = formatCategoryPrioReason(item.prio_reason, item.category);
-                            if (!cleanReason) return null;
-                            return (
-                              <>
-                                <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.5rem 0 0.4rem 0', opacity: 0.6 }}></div>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: '1.4' }}>
-                                  Reason: {cleanReason}
-                                </div>
-                              </>
-                            );
-                          })()}
                         </motion.div>
                       );
                     }
@@ -1342,35 +1328,59 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     return null;
                   })()}
 
-                  {/* Taggar från AI-analys */}
-                  {shouldShowAi && item.tags && item.tags.length > 0 && (
+                  {/* Taggar från AI-analys inklusive kategori */}
+                  {shouldShowAi && (item.category || (item.tags && item.tags.length > 0)) && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem' }}>
-                      {item.tags.map((tag, tIdx) => {
-                        const isTagActive = selectedTag.toLowerCase() === tag.toLowerCase();
-                        return (
-                          <button
-                            key={tIdx}
-                            onClick={(e) => { e.stopPropagation(); handleSelectTag(tag); }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem',
-                              padding: '0.2rem 0.55rem',
-                              borderRadius: '12px',
-                              fontSize: '0.75rem',
-                              fontWeight: isTagActive ? 600 : 500,
-                              backgroundColor: isTagActive ? 'var(--primary)' : 'var(--bg-app)',
-                              color: isTagActive ? '#ffffff' : 'var(--text-muted)',
-                              border: isTagActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s'
-                            }}
-                            title={`Filter by tag: #${tag}`}
-                          >
-                            <Tag size={11} /> {tag}
-                          </button>
-                        );
-                      })}
+                      {item.category && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            padding: '0.2rem 0.55rem',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: selectedCategory.toLowerCase() === item.category.toLowerCase() ? 600 : 500,
+                            backgroundColor: selectedCategory.toLowerCase() === item.category.toLowerCase() ? '#f97316' : 'rgba(249, 115, 22, 0.1)',
+                            color: selectedCategory.toLowerCase() === item.category.toLowerCase() ? '#ffffff' : '#f97316',
+                            border: selectedCategory.toLowerCase() === item.category.toLowerCase() ? '1px solid #f97316' : '1px solid rgba(249, 115, 22, 0.25)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                          }}
+                          title={`Filtrera efter kategori: ${item.category}`}
+                        >
+                          <Tag size={11} /> {decodeHtmlEntities(item.category)}
+                        </button>
+                      )}
+                      {item.tags && item.tags
+                        .filter(tag => !item.category || tag.toLowerCase() !== item.category.toLowerCase())
+                        .map((tag, tIdx) => {
+                          const isTagActive = selectedTag.toLowerCase() === tag.toLowerCase();
+                          return (
+                            <button
+                              key={tIdx}
+                              onClick={(e) => { e.stopPropagation(); handleSelectTag(tag); }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                padding: '0.2rem 0.55rem',
+                                borderRadius: '12px',
+                                fontSize: '0.75rem',
+                                fontWeight: isTagActive ? 600 : 500,
+                                backgroundColor: isTagActive ? 'var(--primary)' : 'var(--bg-app)',
+                                color: isTagActive ? '#ffffff' : 'var(--text-muted)',
+                                border: isTagActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s'
+                              }}
+                              title={`Filter by tag: #${tag}`}
+                            >
+                              <Tag size={11} /> {tag}
+                            </button>
+                          );
+                        })}
                     </div>
                   )}
                   
