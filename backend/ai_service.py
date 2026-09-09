@@ -494,22 +494,16 @@ def analyze_article(
 
         # Klickbete-hantering: För högprioriterade kategorier (som Blåljus eller vikt >= 8)
         # ska en tillspetsad rubrik inte sänka en allvarlig händelse till low.
+        # prio_reason behåller ren kategori-information och duplicerar inte klickbetes-motiveringen
+        # eftersom clickbait_reason visas separat i klickbetesrutan.
         if is_clickbait:
             is_critical = (category.lower() == "blåljus" or prio_score >= 75)
             if is_critical:
                 priority = "high"
                 prio_score = max(75, prio_score)
-                if not prio_reason:
-                    prio_reason = f"Kategori: {category} (Klickbete-varning: {clickbait_reason})" if clickbait_reason else f"Kategori: {category}"
-                else:
-                    prio_reason += f" (Klickbete-varning: {clickbait_reason})" if clickbait_reason else ""
             else:
                 prio_score = min(prio_score, 25)
                 priority = "low"
-                if not prio_reason:
-                    prio_reason = f"Klickbete: {clickbait_reason}" if clickbait_reason else "Klickbete"
-                else:
-                    prio_reason += f" (Klickbete: {clickbait_reason})" if clickbait_reason else ""
 
         return {
             "category": category,

@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.06',
+    date: '2026-09-09',
+    title: 'Separering av klickbetestext och kategoriinformation i händelsekort',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Borttagning av duplicerad klickbetesmotivering',
+        description: 'Reason-raden i händelsekorten visar nu uteslutande kategoriinformation (t.ex. Normalprioriterad kategori: Ekonomi 5/10) istället för att duplicera klickbetesförklaringen som redan presenteras i den dedikerade klickbetesrutan.'
+      },
+      {
+        type: 'improvement',
+        title: 'Rensning av befintlig data och framtida analys',
+        description: 'AI-tjänsten och gränssnittet rensar automatiskt bort klickbetestext från prio_reason, och en databasmigrering städar befintliga sparade artiklar så att vyn hålls ren och konsekvent.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.05',
     date: '2026-09-09',
     title: 'MQTT-stöd med separata flödestopics och prio-kanal',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

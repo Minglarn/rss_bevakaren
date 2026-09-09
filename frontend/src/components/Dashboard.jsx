@@ -10,6 +10,17 @@ import { decodeHtmlEntities } from '../utils/textUtils';
 
 const DEFAULT_CATEGORIES = ['All', 'Technology', 'Politics', 'Emergency', 'Local', 'Economy', 'Entertainment', 'Other'];
 
+const formatCategoryPrioReason = (reason, category) => {
+  if (!reason) return '';
+  // Ta bort klickbetes-tillägg som t.ex. "(Klickbete: ...)" eller "(Klickbete-varning: ...)"
+  let cleaned = reason.replace(/\s*\((Klickbete|Klickbete-varning):.*?\)\s*$/i, '').trim();
+  // Om texten enbart bestod av klickbete-info, visa istället kategori-info om det finns
+  if (/^Klickbete(:|$)/i.test(cleaned)) {
+    return category ? `Kategori: ${category}` : '';
+  }
+  return cleaned;
+};
+
 const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const location = useLocation();
@@ -1081,7 +1092,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           fontSize: '0.75rem',
                           fontWeight: 700,
                           letterSpacing: '0.5px'
-                        }} title={item.prio_reason || "High priority by AI"}>
+                        }} title={formatCategoryPrioReason(item.prio_reason, item.category) || "High priority by AI"}>
                           <Flame size={13} /> PRIO {item.prio_score ? `${item.prio_score}p` : ''}
                         </span>
                       )}
@@ -1289,14 +1300,18 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                               </span>
                             </div>
                           )}
-                          {item.prio_reason && (
-                            <>
-                              <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.5rem 0 0.4rem 0', opacity: 0.6 }}></div>
-                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: '1.4' }}>
-                                Reason: {item.prio_reason}
-                              </div>
-                            </>
-                          )}
+                          {(() => {
+                            const cleanReason = formatCategoryPrioReason(item.prio_reason, item.category);
+                            if (!cleanReason) return null;
+                            return (
+                              <>
+                                <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.5rem 0 0.4rem 0', opacity: 0.6 }}></div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: '1.4' }}>
+                                  Reason: {cleanReason}
+                                </div>
+                              </>
+                            );
+                          })()}
                         </motion.div>
                       );
                     }

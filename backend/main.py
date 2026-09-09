@@ -364,6 +364,24 @@ def run_db_migrations(db_path: str):
         except Exception:
             pass
 
+        # Migration 16: Clean prio_reason to only retain category information (strip duplicated clickbait reason)
+        try:
+            cur.execute("""
+                UPDATE articles 
+                SET prio_reason = RTRIM(SUBSTR(prio_reason, 1, INSTR(prio_reason, ' (Klickbete') - 1))
+                WHERE prio_reason LIKE '% (Klickbete%';
+            """)
+            cur.execute("""
+                UPDATE articles
+                SET prio_reason = CASE 
+                    WHEN category IS NOT NULL AND category != '' THEN 'Kategori: ' || category 
+                    ELSE '' 
+                END
+                WHERE prio_reason LIKE 'Klickbete:%' OR prio_reason = 'Klickbete';
+            """)
+        except Exception as e:
+            print(f"Migration 16 error: {e}")
+
         conn.commit()
         conn.close()
         size_kb = os.path.getsize(db_path) / 1024
