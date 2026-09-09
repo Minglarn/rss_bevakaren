@@ -9,5 +9,5 @@ python-multipart
 pywebpush
 beautifulsoup4
 requests
-wsproto  
- 
+wsproto
+paho-mqtt

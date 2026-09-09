@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.05',
+    date: '2026-09-09',
+    title: 'MQTT-stöd med separata flödestopics och prio-kanal',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Pub/Sub-integration mot MQTT-broker',
+        description: 'Möjlighet att skicka inkommande artiklar direkt till valfri MQTT-broker (t.ex. Home Assistant eller Node-RED). Konfigureras smidigt via miljövariabler i docker-compose.yml.'
+      },
+      {
+        type: 'improvement',
+        title: 'Separata ämnen per flöde och dedikerad prio-topic',
+        description: 'Alla artiklar publiceras till sitt specifika källflöde under rss_bevakaren/feeds/{flöde_namn}. Om en artikel dessutom klassificeras som högprioriterad eller matchar prio-nyckelord skickas den parallellt till rss_bevakaren/prio.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.04',
     date: '2026-09-09',
     title: 'Faktaförtydligande i klickbetesnotiser och uppdaterad default-prompt',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

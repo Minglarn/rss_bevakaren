@@ -19,6 +19,13 @@ services:
       - LM_STUDIO_MODEL=   # Lämna tomt för att använda aktiv modell i LM Studio, eller ange t.ex. gemma4-e4b
       - LM_STUDIO_TIMEOUT=120  # Timeout i sekunder (rekommenderat 120s för lokala modeller)
       - AI_MAX_ARTICLE_AGE_HOURS=24  # Bearbeta endast artiklar från de senaste 24 timmarna (hoppar över gammal historik)
+      # MQTT-stöd (valfritt, avaktiverat som standard)
+      - MQTT_ENABLED=false
+      - MQTT_BROKER=192.168.1.50
+      - MQTT_PORT=1883
+      - MQTT_USERNAME=
+      - MQTT_PASSWORD=
+      - MQTT_TOPIC_PREFIX=rss_bevakaren
     restart: unless-stopped
 
   frontend:

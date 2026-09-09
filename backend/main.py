@@ -9,7 +9,7 @@ from datetime import timedelta
 import os
 import json
 
-import models, schemas, database, auth, ai_service, rss_parser
+import models, schemas, database, auth, ai_service, rss_parser, mqtt_service
 from pydantic import BaseModel
 import logging
 import builtins
@@ -418,6 +418,13 @@ async def startup_event():
     asyncio.create_task(polling_loop())
     asyncio.create_task(ai_processing_loop())
     asyncio.create_task(scheduled_purge_loop())
+
+    # Starta MQTT-tjänsten om den är aktiverad via miljövariabler
+    mqtt_service.start_mqtt()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    mqtt_service.stop_mqtt()
 
 class ConnectionManager:
     def __init__(self):
@@ -829,6 +836,18 @@ async def polling_loop():
                                             image_url=art.image_url,
                                             context="Rå-Push"
                                         )
+
+                                    # Publicera till MQTT om AI inte är aktiverat
+                                    try:
+                                        raw_is_prio = bool(matched_kws) if 'matched_kws' in locals() else False
+                                        mqtt_service.publish_article(
+                                            article=art,
+                                            feed=feed,
+                                            is_prio=raw_is_prio,
+                                            matched_keywords=matched_kws if ('matched_kws' in locals() and matched_kws) else []
+                                        )
+                                    except Exception as mqtt_err:
+                                        print(f"[MQTT] Fel vid publicering av rå artikel {art.id}: {mqtt_err}", flush=True)
                     
                     # Update last polled time
                     feed.last_polled = int(time.time())
@@ -1014,6 +1033,17 @@ async def ai_processing_loop():
                                 )
                         except Exception as push_err:
                             print(f"[Push] Fel vid hantering av push-notis för artikel {art.id}: {push_err}", flush=True)
+
+                        # Publicera till MQTT (alltid till flödets topic och vid prio även till prio-topic)
+                        try:
+                            mqtt_service.publish_article(
+                                article=art,
+                                feed=feed_obj,
+                                is_prio=is_prio,
+                                matched_keywords=matched_kw
+                            )
+                        except Exception as mqtt_err:
+                            print(f"[MQTT] Fel vid publicering av artikel {art.id}: {mqtt_err}", flush=True)
 
                         # LOGGNING ENLIGT FÖRSLAG B (Adaptivt format)
                         if should_send_push:
