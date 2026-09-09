@@ -2125,7 +2125,8 @@ async def ai_chat_endpoint(
     return schemas.ChatResponse(
         reply=result.get("reply", ""),
         sources=result.get("sources", []),
-        model=result.get("model", "")
+        model=result.get("model", ""),
+        follow_ups=result.get("follow_ups", [])
     )
 
 

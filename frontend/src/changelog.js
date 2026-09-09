@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.13',
+    date: '2026-09-09',
+    title: 'Dynamiska AI-genererade följdfrågor i nyhetschatten',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: '4 kontextuella följdfrågor genererade av AI',
+        description: 'AI-assistenten formulerar nu automatiskt 4 skarpa och naturliga följdfrågor baserade på de specifika händelser och detaljer som den just rapporterat om.'
+      },
+      {
+        type: 'improvement',
+        title: 'Interaktiva klickbara frågechips',
+        description: 'Följdfrågorna visas som eleganta klickbara knappar direkt under varje svar, vilket gör det enkelt att direkt klicka sig vidare och fördjupa dialogen kring aktuella nyheter.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.12',
     date: '2026-09-09',
     title: 'Atomisk SQLite UPSERT för vektorer och eliminerad kollision vid parallell bearbetning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

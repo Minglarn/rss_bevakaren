@@ -14,7 +14,8 @@ import {
   Flame, 
   AlertCircle,
   MessageSquare,
-  Tag
+  Tag,
+  ArrowRight
 } from 'lucide-react';
 import api from '../api';
 
@@ -188,6 +189,7 @@ export default function AiChat() {
         content: res.data.reply || 'Inget svar kunde genereras.',
         sources: res.data.sources || [],
         model: res.data.model || activeModel || 'Lokal AI',
+        follow_ups: res.data.follow_ups || [],
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
@@ -595,39 +597,74 @@ export default function AiChat() {
               <span>Förslag på följdfrågor:</span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              {getSuggestedFollowups(messages.length).map((item, fIdx) => (
-                <button
-                  key={fIdx}
-                  onClick={() => handleSendMessage(item.prompt)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '16px',
-                    backgroundColor: 'var(--bg-card)',
-                    border: '1px solid var(--border-color)',
-                    color: 'var(--text-main)',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--primary)';
-                    e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.05)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--border-color)';
-                    e.currentTarget.style.backgroundColor = 'var(--bg-card)';
-                  }}
-                >
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--primary)' }}>
-                    [{item.category}]
-                  </span>
-                  <span>{item.title}</span>
-                </button>
-              ))}
+              {messages[messages.length - 1].follow_ups && messages[messages.length - 1].follow_ups.length > 0 ? (
+                messages[messages.length - 1].follow_ups.map((qText, fIdx) => (
+                  <button
+                    key={fIdx}
+                    onClick={() => handleSendMessage(qText)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      padding: '0.38rem 0.85rem',
+                      borderRadius: '16px',
+                      backgroundColor: 'var(--bg-card)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--primary)';
+                      e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border-color)';
+                      e.currentTarget.style.backgroundColor = 'var(--bg-card)';
+                    }}
+                  >
+                    <ArrowRight size={12} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                    <span>{qText}</span>
+                  </button>
+                ))
+              ) : (
+                getSuggestedFollowups(messages.length).map((item, fIdx) => (
+                  <button
+                    key={fIdx}
+                    onClick={() => handleSendMessage(item.prompt)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '16px',
+                      backgroundColor: 'var(--bg-card)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--primary)';
+                      e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border-color)';
+                      e.currentTarget.style.backgroundColor = 'var(--bg-card)';
+                    }}
+                  >
+                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--primary)' }}>
+                      [{item.category}]
+                    </span>
+                    <span>{item.title}</span>
+                  </button>
+                ))
+              )}
             </div>
           </motion.div>
         )}

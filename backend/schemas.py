@@ -173,4 +173,5 @@ class ChatResponse(BaseModel):
     reply: str
     sources: List[ChatSource] = []
     model: str = ""
+    follow_ups: List[str] = []
 

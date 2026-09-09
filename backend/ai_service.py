@@ -894,7 +894,15 @@ def chat_with_news(
         f"ange alltid den exakta totalsiffran från systemstatistiken ({total_period_count} st sparade händelser i flödena för tidsintervallet) "
         "och sammanfatta sedan de mest relevanta händelserna med ort/plats och källa.\n"
         "5. Om artiklarna inte innehåller svar på frågan, förklara sakligt och artigt att informationen inte finns bland de sparade artiklarna.\n"
-        "6. Använd god styckeindelning och punktlistor vid behov för maximal läsbarhet."
+        "6. Använd god styckeindelning och punktlistor vid behov för maximal läsbarhet.\n"
+        "7. OBLIGATORISKT - 4 FÖLJDKÖ: Avsluta ALLTID ditt svar med exakt 4 skarpa, naturliga och relevanta följdfrågor baserade på de specifika händelser och detaljer du just redovisat, så att användaren enkelt kan fördjupa sig.\n"
+        "Formatera dessa 4 frågor allra sist i svaret inneslutna i taggarna <foljdfragor> på följande format:\n"
+        "<foljdfragor>\n"
+        "- [Konkret följdfråga 1]\n"
+        "- [Konkret följdfråga 2]\n"
+        "- [Konkret följdfråga 3]\n"
+        "- [Konkret följdfråga 4]\n"
+        "</foljdfragor>"
     )
 
     user_query_content = (
@@ -929,7 +937,8 @@ def chat_with_news(
             return {
                 "reply": "Kunde inte generera ett svar från den lokala AI-modellen (LM Studio svarade med felkod). Kontrollera att LM Studio är igång.",
                 "sources": sources,
-                "model": model or "Okänd"
+                "model": model or "Okänd",
+                "follow_ups": []
             }
 
         data = response.json()
@@ -938,40 +947,78 @@ def chat_with_news(
             return {
                 "reply": "Inget svar returnerades från den lokala AI-modellen.",
                 "sources": sources,
-                "model": model or "Okänd"
+                "model": model or "Okänd",
+                "follow_ups": []
             }
 
         raw_reply = choices[0].get("message", {}).get("content", "")
         clean_reply = strip_emojis(raw_reply).strip()
+
+        # Extrahera de 4 följdfrågorna ur <foljdfragor>...</foljdfragor>
+        follow_ups = []
+        followup_match = re.search(r"<foljdfragor>(.*?)</foljdfragor>", clean_reply, re.DOTALL | re.IGNORECASE)
+        if not followup_match:
+            followup_match = re.search(r"<följdfrågor>(.*?)</följdfrågor>", clean_reply, re.DOTALL | re.IGNORECASE)
+
+        if followup_match:
+            raw_block = followup_match.group(1).strip()
+            # Ta bort taggblocket från den synliga svarstexten
+            clean_reply = re.sub(r"<(?:foljdfragor|följdfrågor)>.*?</(?:foljdfragor|följdfrågor)>", "", clean_reply, flags=re.DOTALL | re.IGNORECASE).strip()
+            for line in raw_block.split("\n"):
+                cleaned_line = re.sub(r"^[\s*\-•\d\.\)]+", "", line).strip().strip('"\'')
+                if len(cleaned_line) > 5 and cleaned_line not in follow_ups:
+                    if not cleaned_line.endswith("?"):
+                        cleaned_line = f"{cleaned_line}?"
+                    follow_ups.append(cleaned_line)
+
+        # Begränsa till max 4 följdfrågor
+        follow_ups = follow_ups[:4]
+
+        # Om modellen mot förmodan inte genererade taggarna, skapa intelligenta följdfrågor från källorna
+        if len(follow_ups) < 2 and sources:
+            for s in sources[:4]:
+                t = s.get("title", "")
+                if t and len(t) > 5:
+                    q_cand = f"Vad mer rapporteras om {t.lower()}?"
+                    if q_cand not in follow_ups:
+                        follow_ups.append(q_cand)
+                if len(follow_ups) >= 4:
+                    break
+
         used_model = data.get("model", model or "Lokal AI")
 
         return {
             "reply": clean_reply or "Inget svar kunde formuleras.",
             "sources": sources,
-            "model": used_model
+            "model": used_model,
+            "follow_ups": follow_ups
         }
     except requests.exceptions.ConnectTimeout:
         return {
             "reply": f"Kunde inte upprätta anslutning till LM Studio på {LM_STUDIO_URL}. Kontrollera att LM Studio är startat och att servern körs.",
             "sources": sources,
-            "model": model or "Offline"
+            "model": model or "Offline",
+            "follow_ups": []
         }
     except requests.exceptions.ReadTimeout:
         return {
             "reply": f"LM Studio svarade inte inom tidsgränsen ({LM_STUDIO_TIMEOUT}s). Modellen kan vara överbelastad eller genererar ett för långt svar.",
             "sources": sources,
-            "model": model or "Timeout"
+            "model": model or "Timeout",
+            "follow_ups": []
         }
     except requests.exceptions.ConnectionError:
         return {
             "reply": f"LM Studio är offline eller onåbar på {LM_STUDIO_URL}.",
             "sources": sources,
-            "model": model or "Offline"
+            "model": model or "Offline",
+            "follow_ups": []
         }
     except Exception as e:
         return {
             "reply": f"Ett oväntat fel inträffade vid anslutning till AI-motorn: {e}",
             "sources": sources,
-            "model": model or "Fel"
+            "model": model or "Fel",
+            "follow_ups": []
         }
 
