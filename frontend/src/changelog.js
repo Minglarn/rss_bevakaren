@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.02',
+    date: '2026-09-09',
+    title: 'Transparent bakgrund för applikationsikonen',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Borttagning av vit kvadrat runt appikonen',
+        description: 'Applikationsikonerna (favicon, pwa-ikoner och hemmaskärmsikoner för Android och iOS) har uppdaterats till äkta 32-bitars RGBA med 100% transparenta hörn runt den blå rundade kvadraten. Detta tar bort den oönskade vita bakgrundsramen på mobilens hemskärm och i webbläsaren.'
+      },
+      {
+        type: 'improvement',
+        title: 'Uppdaterat webbmanifest och Apple Touch-ikon',
+        description: 'manifest.json och index.html har kompletterats med länkar och stöd för ändamålen any och maskable samt dedikerad apple-touch-icon för optimal presentation på både Android och iOS.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.01',
     date: '2026-09-09',
     title: 'Transparent badge-ikon för Android-statusbaren',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
