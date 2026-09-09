@@ -637,28 +637,28 @@ def chat_with_news(
                     models.Article.category.ilike(f"%{kw}%")
                 ])
             kw_query = base_query.filter(or_(*kw_conditions)).order_by(desc(models.Article.published_ts), desc(models.Article.received_ts))
-            articles = kw_query.limit(35).all()
+            articles = kw_query.limit(80).all()
 
         # Om sökord inte gav tillräckligt många träffar (eller vid breda frågor), hämta de senaste artiklarna
-        if len(articles) < 10:
+        if len(articles) < 20:
             existing_ids = {a.id for a in articles}
             fallback_query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == user_id)
             if time_filters:
                 fallback_query = fallback_query.filter(and_(*time_filters))
-            fallback_articles = fallback_query.order_by(desc(models.Article.published_ts), desc(models.Article.received_ts)).limit(35).all()
+            fallback_articles = fallback_query.order_by(desc(models.Article.published_ts), desc(models.Article.received_ts)).limit(80).all()
             for fa in fallback_articles:
                 if fa.id not in existing_ids:
                     articles.append(fa)
                     existing_ids.add(fa.id)
-                if len(articles) >= 40:
+                if len(articles) >= 80:
                     break
 
         # Sortera i kronologisk fallande ordning
         articles.sort(key=lambda x: (x.published_ts or 0, x.received_ts or 0), reverse=True)
 
-    # 4. Skapa käll-lista för frontend
+    # 4. Skapa käll-lista för frontend (upp till 75 artiklar)
     sources = []
-    for art in articles[:25]:
+    for art in articles[:75]:
         sources.append({
             "id": art.id,
             "title": art.title or "Utan rubrik",
@@ -670,20 +670,18 @@ def chat_with_news(
             "is_prio": bool(art.priority == "high" or (art.prio_score or 0) >= 75)
         })
 
-    # 5. Bygg kontext för LM Studio
+    # 5. Bygg kontext för LM Studio (upp till 75 artiklar)
     context_lines = []
-    for i, art in enumerate(articles[:25], 1):
+    for i, art in enumerate(articles[:75], 1):
         source_title = art.feed.title if art.feed else "RSS"
         pub_date = art.published or "Okänt datum"
         cat = art.category or "Övrigt"
-        summary_text = art.ai_summary or art.summary or ""
+        summary_text = (art.ai_summary or art.summary or "").strip()
         context_lines.append(
             f"[Artikel {i}] (ID: {art.id})\n"
-            f"Källa: {source_title}\n"
-            f"Publicerad: {pub_date}\n"
+            f"Källa: {source_title} | Datum: {pub_date} | Kategori: {cat}\n"
             f"Rubrik: {art.title}\n"
-            f"Kategori: {cat}\n"
-            f"Sammanfattning: {summary_text[:350]}\n"
+            f"Sammanfattning: {summary_text[:280]}\n"
         )
 
     context_str = "\n".join(context_lines) if context_lines else "Inga sparade artiklar matchade det angivna tidsintervallet."

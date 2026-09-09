@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.10',
+    date: '2026-09-09',
+    title: 'Snabbprompter per kategori, följdfrågor i chatten och 75 artiklar i AI-kontext',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Snabbprompter för alla kategorier',
+        description: 'Lagt till 12 skräddarsydda snabbfrågor som täcker alla huvudkategorier (Blåljus, Ekonomi, Teknik, Politik, PRIO, Lokalt, Motor, Utrikes, Inrikes, Vetenskap med flera).'
+      },
+      {
+        type: 'feature',
+        title: 'Följdfrågor efter varje svar och rullbar kategorirad',
+        description: 'Under varje svar från AI visas nu dynamiska förslag på relevanta följdfrågor, och ovanför inmatningsfältet finns en smidig horisontellt rullbar rad med alla kategorifrågor.'
+      },
+      {
+        type: 'improvement',
+        title: 'Utökat artikelkontext till 75 artiklar',
+        description: 'Ökat antalet analyserade artiklar från 25 till 75 i AI-kontexten. Detta möjliggör heltäckande frågor och korrekta sammanräkningar över dygn eller kategorier utan att händelser klipps bort.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.09',
     date: '2026-09-09',
     title: 'Dedikerad AI Nyhetschatt kopplad till LM Studio',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

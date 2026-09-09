@@ -13,28 +13,79 @@ import {
   Calendar, 
   Flame, 
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  Tag
 } from 'lucide-react';
 import api from '../api';
 
-const PROMPT_SUGGESTIONS = [
+const CATEGORY_PROMPTS = [
   {
-    title: "Senaste dygnet",
-    prompt: "Sammanfatta det viktigaste som har hänt det senaste dygnet."
+    category: "Senaste 24h",
+    title: "Topp 5 nyheter",
+    prompt: "Ge mig en sammanfattning och topplista över de viktigaste händelserna senaste dygnet."
   },
   {
-    title: "Olyckor & trafik",
-    prompt: "Vilka olyckor eller trafikstörningar har rapporterats igår och var inträffade de?"
+    category: "Blåljus",
+    title: "Olyckor & Larm",
+    prompt: "Vilka blåljushändelser, olyckor eller utryckningar har rapporterats senaste dygnet?"
   },
   {
-    title: "Vapenbrott & skottlossning",
-    prompt: "Hitta alla händelser kopplade till skottlossning eller vapenbrott bland de sparade artiklarna."
+    category: "Brott",
+    title: "Vapen & Skottlossning",
+    prompt: "Hitta alla händelser kopplade till skottlossning, vapenbrott eller grova incidenter bland artiklarna."
   },
   {
-    title: "Ekonomi & ränta",
+    category: "Ekonomi",
+    title: "Ekonomi & Börs",
     prompt: "Vad är den senaste utvecklingen kring ekonomi, räntan och företagsnyheter?"
+  },
+  {
+    category: "Teknik",
+    title: "Teknik & AI",
+    prompt: "Vilka är de viktigaste nyheterna inom teknik, AI och hårdvara bland mina flöden?"
+  },
+  {
+    category: "Politik",
+    title: "Politik & Beslut",
+    prompt: "Sammanfatta de senaste politiska utspelen, regeringsbesluten och samhällsdebatten."
+  },
+  {
+    category: "PRIO",
+    title: "Dagens PRIO-larm",
+    prompt: "Vilka artiklar har klassificerats som högprioriterade (PRIO) händelser idag?"
+  },
+  {
+    category: "Lokalt",
+    title: "Lokala nyheter",
+    prompt: "Vilka lokala händelser, kommunala beslut eller vägavstängningar finns rapporterade?"
+  },
+  {
+    category: "Motor",
+    title: "Motor & Elbilar",
+    prompt: "Vad rapporteras om bilar, fordonsregler, skatter eller elbilar i flödena?"
+  },
+  {
+    category: "Utrikes",
+    title: "Världsnyheter",
+    prompt: "Ge en överblick av de största utrikeshändelserna och internationella nyheterna just nu."
+  },
+  {
+    category: "Inrikes",
+    title: "Inrikes i Sverige",
+    prompt: "Vilka är de mest uppmärksammade inrikesnyheterna i Sverige idag?"
+  },
+  {
+    category: "Vetenskap",
+    title: "Forskning & Hälsa",
+    prompt: "Finns det några nyheter eller framsteg inom vetenskap, hälsa eller medicin?"
   }
 ];
+
+// Funktion för att välja relevanta följdfrågor efter varje AI-svar
+const getSuggestedFollowups = (msgCount) => {
+  const startIndex = (msgCount * 3) % (CATEGORY_PROMPTS.length - 3);
+  return CATEGORY_PROMPTS.slice(startIndex, startIndex + 3);
+};
 
 export default function AiChat() {
   const [messages, setMessages] = useState(() => {
@@ -325,7 +376,7 @@ export default function AiChat() {
               margin: '0 auto',
               textAlign: 'left'
             }}>
-              {PROMPT_SUGGESTIONS.map((item, idx) => (
+              {CATEGORY_PROMPTS.slice(0, 6).map((item, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleSendMessage(item.prompt)}
@@ -348,8 +399,13 @@ export default function AiChat() {
                     e.currentTarget.style.backgroundColor = 'var(--bg-card)';
                   }}
                 >
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--primary)', marginBottom: '0.25rem' }}>
-                    {item.title}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--primary)' }}>
+                      {item.title}
+                    </div>
+                    <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.4rem', borderRadius: '4px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                      {item.category}
+                    </span>
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
                     {item.prompt}
@@ -515,6 +571,67 @@ export default function AiChat() {
           })
         )}
 
+        {/* Förslag på följdfrågor efter varje svar */}
+        {messages.length > 0 && !isLoading && messages[messages.length - 1].role === 'assistant' && (
+          <motion.div
+            initial={{ opacity: 0, y: 3 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{
+              padding: '0.4rem 0.2rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.45rem'
+            }}
+          >
+            <div style={{
+              fontSize: '0.74rem',
+              fontWeight: 600,
+              color: 'var(--text-muted)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}>
+              <Sparkles size={12} style={{ color: 'var(--primary)' }} />
+              <span>Förslag på följdfrågor:</span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {getSuggestedFollowups(messages.length).map((item, fIdx) => (
+                <button
+                  key={fIdx}
+                  onClick={() => handleSendMessage(item.prompt)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '16px',
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--primary)';
+                    e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                    e.currentTarget.style.backgroundColor = 'var(--bg-card)';
+                  }}
+                >
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--primary)' }}>
+                    [{item.category}]
+                  </span>
+                  <span>{item.title}</span>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* Laddningsindikator */}
         {isLoading && (
           <div style={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
@@ -538,12 +655,65 @@ export default function AiChat() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Inmatningsfält längst ner */}
+      {/* Inmatningsfält längst ner med rullbar kategori-rad */}
       <div style={{
-        paddingTop: '0.85rem',
+        paddingTop: '0.65rem',
         borderTop: '1px solid var(--border-color)',
-        marginTop: '0.75rem'
+        marginTop: '0.5rem'
       }}>
+        {/* Horisontell rullbar rad med kategorier för snabbfrågor */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          overflowX: 'auto',
+          paddingBottom: '0.55rem',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0, paddingRight: '0.2rem' }}>
+            Kategorier:
+          </span>
+          {CATEGORY_PROMPTS.map((item, cIdx) => (
+            <button
+              key={cIdx}
+              onClick={() => handleSendMessage(item.prompt)}
+              disabled={isLoading}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                padding: '0.25rem 0.65rem',
+                borderRadius: '14px',
+                backgroundColor: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-muted)',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.15s',
+                flexShrink: 0
+              }}
+              onMouseEnter={(e) => {
+                if (!isLoading) {
+                  e.currentTarget.style.borderColor = 'var(--primary)';
+                  e.currentTarget.style.color = 'var(--primary)';
+                  e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.04)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-color)';
+                e.currentTarget.style.color = 'var(--text-muted)';
+                e.currentTarget.style.backgroundColor = 'var(--bg-card)';
+              }}
+              title={item.prompt}
+            >
+              <Tag size={11} style={{ color: 'var(--primary)' }} />
+              <span>{item.category}: {item.title}</span>
+            </button>
+          ))}
+        </div>
         <div style={{
           display: 'flex',
           alignItems: 'flex-end',
