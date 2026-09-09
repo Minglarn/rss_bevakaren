@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.03',
+    date: '2026-09-09',
+    title: 'Full-bleed maskable ikon och cache-busting för notiser',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Android maskable-ikon utan vit bakgrund',
+        description: 'Genererat en full-bleed maskable-ikon (maskable-icon-512x512.png) med 100% färgfylld blå bakgrund (#2563eb) och RSS-symbolen centrerad i Androids säkra zon. Detta eliminerar den vita bakgrunden som Androids adaptiva system annars applicerar på hemskärmen.'
+      },
+      {
+        type: 'improvement',
+        title: 'Versionering och cache-busting för badge och push-ikoner',
+        description: 'Lagt till versionsparametrar på badge.png och pwa-192x192.png i serviceworkern, push-payloaden och Nginx så att telefonen omedelbart hämtar de nya transparenta ikonerna istället för gamla cachade filer.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.02',
     date: '2026-09-09',
     title: 'Transparent bakgrund för applikationsikonen',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

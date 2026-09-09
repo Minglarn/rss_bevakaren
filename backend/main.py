@@ -602,8 +602,8 @@ def send_push_notification_to_user(
                 "body": body,
                 "url": url or "/",
                 "article_id": article_id,
-                "icon": "/pwa-192x192.png",
-                "badge": "/badge.png"
+                "icon": "/pwa-192x192.png?v=2026.09.09.03",
+                "badge": "/badge.png?v=2026.09.09.03"
             }
             if image_url:
                 payload["image"] = image_url
