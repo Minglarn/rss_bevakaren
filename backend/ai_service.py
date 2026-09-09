@@ -182,29 +182,36 @@ def get_text_embeddings(texts: List[str], is_query: bool = False, model: Optiona
     return None
 
 def save_article_embedding(article_id: int, title: str, text: str, db: Any, model: Optional[str] = None) -> bool:
-    """Skapar och sparar vektor-embedding för en artikel i SQLite."""
+    """Skapar och sparar vektor-embedding för en artikel i SQLite med säker upsert."""
     if not db or not article_id:
         return False
     try:
         import models
-        existing = db.query(models.ArticleEmbedding).filter(models.ArticleEmbedding.article_id == article_id).first()
-        if existing:
-            return True
-        
+        from sqlalchemy.dialects.sqlite import insert as sqlite_upsert
+
         content = f"{title or ''}. {text or ''}".strip()
         if not content or len(content) < 5:
             return False
             
-        embs = get_text_embeddings([content[:1200]], is_query=False, model=model)
+        model_name = model or LM_STUDIO_EMBEDDING_MODEL
+        embs = get_text_embeddings([content[:1200]], is_query=False, model=model_name)
         if embs and len(embs) > 0 and len(embs[0]) > 0:
+            now_ts = int(time.time())
             vec_bytes = np.array(embs[0], dtype=np.float32).tobytes()
-            rec = models.ArticleEmbedding(
+            stmt = sqlite_upsert(models.ArticleEmbedding).values(
                 article_id=article_id,
-                model=model or LM_STUDIO_EMBEDDING_MODEL,
+                model=model_name,
                 vector=vec_bytes,
-                created_at=int(time.time())
+                created_at=now_ts
+            ).on_conflict_do_update(
+                index_elements=['article_id'],
+                set_={
+                    'model': model_name,
+                    'vector': vec_bytes,
+                    'created_at': now_ts
+                }
             )
-            db.merge(rec)
+            db.execute(stmt)
             db.commit()
             return True
     except Exception as e:
@@ -216,11 +223,13 @@ def save_article_embedding(article_id: int, title: str, text: str, db: Any, mode
     return False
 
 def batch_embed_articles(articles: List[Any], db: Any, model: Optional[str] = None) -> int:
-    """Vektoriserar en lista av artiklar i batchar och sparar till SQLite."""
+    """Vektoriserar en lista av artiklar i batchar och sparar till SQLite med säker upsert."""
     if not articles or not db:
         return 0
         
     import models
+    from sqlalchemy.dialects.sqlite import insert as sqlite_upsert
+
     model_name = model or LM_STUDIO_EMBEDDING_MODEL
     saved_count = 0
     batch_size = 15
@@ -237,15 +246,23 @@ def batch_embed_articles(articles: List[Any], db: Any, model: Optional[str] = No
         embs = get_text_embeddings(texts, is_query=False, model=model_name)
         if embs and len(embs) == len(chunk):
             try:
+                now_ts = int(time.time())
                 for idx, (art_id, _) in enumerate(items_to_embed):
                     vec_bytes = np.array(embs[idx], dtype=np.float32).tobytes()
-                    rec = models.ArticleEmbedding(
+                    stmt = sqlite_upsert(models.ArticleEmbedding).values(
                         article_id=art_id,
                         model=model_name,
                         vector=vec_bytes,
-                        created_at=int(time.time())
+                        created_at=now_ts
+                    ).on_conflict_do_update(
+                        index_elements=['article_id'],
+                        set_={
+                            'model': model_name,
+                            'vector': vec_bytes,
+                            'created_at': now_ts
+                        }
                     )
-                    db.merge(rec)
+                    db.execute(stmt)
                 db.commit()
                 saved_count += len(chunk)
             except Exception as e:

@@ -883,6 +883,14 @@ async def polling_loop():
         
         await asyncio.sleep(30) # Check every 30 seconds
 
+def safe_bg_save_embedding(art_id: int, title: str, summary: str):
+    """Säker bakgrundssparning av embedding med garanterad sessionsstängning."""
+    sess = database.SessionLocal()
+    try:
+        ai_service.save_article_embedding(art_id, title, summary, sess)
+    finally:
+        sess.close()
+
 async def ai_processing_loop():
     print("Background AI enrichment loop started", flush=True)
     # Vänta lite i början så appen och LM Studio hinner initialiseras
@@ -996,11 +1004,10 @@ async def ai_processing_loop():
                         try:
                             summary_text = art.ai_summary or art.summary or ""
                             asyncio.create_task(asyncio.to_thread(
-                                ai_service.save_article_embedding,
+                                safe_bg_save_embedding,
                                 art.id,
                                 art.title,
-                                summary_text,
-                                database.SessionLocal()
+                                summary_text
                             ))
                         except Exception:
                             pass
@@ -1465,11 +1472,10 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     try:
         summary_text = art.ai_summary or art.summary or ""
         asyncio.create_task(asyncio.to_thread(
-            ai_service.save_article_embedding,
+            safe_bg_save_embedding,
             art.id,
             art.title,
-            summary_text,
-            database.SessionLocal()
+            summary_text
         ))
     except Exception:
         pass

@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.12',
+    date: '2026-09-09',
+    title: 'Atomisk SQLite UPSERT för vektorer och eliminerad kollision vid parallell bearbetning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Atomisk SQLite UPSERT med on_conflict_do_update',
+        description: 'Ersatte standard ORM-inlägg med atomisk sqlite_upsert i både save_article_embedding och batch_embed_articles, vilket eliminerar UNIQUE constraint race conditions vid batch-sparning.'
+      },
+      {
+        type: 'improvement',
+        title: 'Säker sessionshantering vid bakgrundsvektorisering',
+        description: 'Implementerade safe_bg_save_embedding som garanterar ren och säker stängning av databassessioner vid asynkron artikelanalys.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.11',
     date: '2026-09-09',
     title: 'Semantisk vektorsökning (Hybrid RAG) med Nomic Embeddings och LM Studio',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',
