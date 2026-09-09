@@ -2057,3 +2057,31 @@ def purge_system(days: int = 30, db: Session = Depends(database.get_db), current
         db.commit()
     return {"status": "ok", "deleted": count}
 
+@app.post("/ai/chat", response_model=schemas.ChatResponse)
+async def ai_chat_endpoint(
+    req: schemas.ChatRequest,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    if not req.message or not req.message.strip():
+        raise HTTPException(status_code=400, detail="Meddelande kan inte vara tomt.")
+    
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    model_override = user_ai.selected_model if user_ai and user_ai.selected_model else None
+
+    hist_list = [{"role": h.role, "content": h.content} for h in (req.history or [])]
+
+    result = ai_service.chat_with_news(
+        user_id=current_user.id,
+        message=req.message,
+        history=hist_list,
+        db=db,
+        model_override=model_override
+    )
+    return schemas.ChatResponse(
+        reply=result.get("reply", ""),
+        sources=result.get("sources", []),
+        model=result.get("model", "")
+    )
+
+

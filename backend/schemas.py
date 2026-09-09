@@ -150,3 +150,27 @@ class AIConfigResponse(BaseModel):
 class ArticlePrioritizeRequest(BaseModel):
     topic: Optional[str] = None
     add_as_keyword: bool = True
+
+class ChatMessage(BaseModel):
+    role: str  # 'user', 'assistant', 'system'
+    content: str
+
+class ChatRequest(BaseModel):
+    message: str
+    history: Optional[List[ChatMessage]] = []
+
+class ChatSource(BaseModel):
+    id: int
+    title: str
+    source_name: str
+    published_at: Optional[str] = None
+    link: Optional[str] = None
+    summary: Optional[str] = None
+    category: Optional[str] = None
+    is_prio: Optional[bool] = False
+
+class ChatResponse(BaseModel):
+    reply: str
+    sources: List[ChatSource] = []
+    model: str = ""
+

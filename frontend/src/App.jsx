@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
-import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash, Filter, Home, Menu, RefreshCw, Flame, Sparkles } from 'lucide-react';
+import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash, Filter, Home, Menu, RefreshCw, Flame, Sparkles, MessageSquare } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import Login from './Login';
 import Dashboard from './components/Dashboard';
 import RssManager from './components/RssManager';
 import Settings from './components/Settings';
+import AiChat from './components/AiChat';
 import PWABadge from './components/PWABadge';
 import WhatsNewModal from './components/WhatsNewModal';
 import api from './api';
@@ -276,6 +277,15 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               )}
             </Link>
           )}
+          <Link to="/chat" style={{
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
+            borderRadius: '8px', textDecoration: 'none',
+            color: location.pathname === '/chat' ? 'var(--primary)' : 'var(--text-muted)',
+            backgroundColor: location.pathname === '/chat' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+            fontWeight: location.pathname === '/chat' ? 600 : 400
+          }}>
+            <MessageSquare size={19} /> {!isCollapsed && "AI Chatt"}
+          </Link>
           <Link to="/manage" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
             borderRadius: '8px', textDecoration: 'none',
@@ -390,6 +400,12 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             <span style={{ color: location.pathname === '/prio' ? '#f97316' : undefined }}>Prio</span>
           </Link>
         )}
+        <Link to="/chat" className={`bottom-bar-item ${location.pathname === '/chat' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+          <div className="icon-wrapper">
+            <MessageSquare size={22} style={{ color: location.pathname === '/chat' ? 'var(--primary)' : 'inherit' }} />
+          </div>
+          <span style={{ color: location.pathname === '/chat' ? 'var(--primary)' : undefined }}>Chatt</span>
+        </Link>
         <button 
           className="bottom-bar-item" 
           onClick={() => setIsMobileSheetOpen(true)}
@@ -461,6 +477,18 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               )}
             </Link>
           )}
+          <Link 
+            to="/chat" 
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem',
+              color: location.pathname === '/chat' ? 'var(--primary)' : 'var(--text-main)', 
+              backgroundColor: location.pathname === '/chat' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+              borderRadius: '12px', textDecoration: 'none', fontWeight: 600
+            }}
+            onClick={() => setIsMobileSheetOpen(false)}
+          >
+            <MessageSquare size={20} style={{ color: 'var(--primary)' }} /> AI Chatt
+          </Link>
           {myFeeds.map(feed => (
             <Link 
               to={`/?feedId=${feed.id}`} 
@@ -563,6 +591,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Dashboard isPrioModeProp={false} prioEnabled={prioEnabled} />} />
             <Route path="/prio" element={<Dashboard isPrioModeProp={true} prioEnabled={prioEnabled} />} />
+            <Route path="/chat" element={<AiChat />} />
             <Route path="/ai" element={<Navigate to="/prio" replace />} />
             <Route path="/manage" element={<RssManager />} />
             <Route path="/settings" element={<Settings />} />

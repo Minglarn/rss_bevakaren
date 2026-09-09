@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.09.08-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.09.09-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -13,6 +13,7 @@ RSS-Bevakaren is a modern, self-hosted system for monitoring, filtering, priorit
 
 ## Key Features
 
+- **Interactive AI News Chat:** Fullscreen conversational chat interface powered by your local LM Studio instance. Ask natural language questions ("How many accidents occurred yesterday?", "Summarize breaking news in politics") and receive answers with expandable citations and links to original articles.
 - **Multi-User Architecture:** Secure authentication with JWT tokens where each user has their own feeds, filters, and personal AI preferences.
 - **Feed Management:** Add, organize, and remove RSS and Atom feeds. Built-in support for nearly all standard RSS/Atom specifications and WordPress feeds.
 - **Two Display Modes (AI Feed & Classic RSS):** Choose between an AI-enriched feed with concise summaries or a fast, minimalist raw RSS view.
@@ -261,5 +262,5 @@ Navigate to `http://your-server-ip:8093` in your browser and sign in.
 
 ## Versioning
 
-This project strictly adheres to Calendar Versioning (CalVer), for example `2026.09.09.08`.
+This project strictly adheres to Calendar Versioning (CalVer), for example `2026.09.09.09`.
 Version numbers are updated on every release, ensuring complete traceability across source code, container tags, and release notes.

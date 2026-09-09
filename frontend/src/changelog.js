@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.09',
+    date: '2026-09-09',
+    title: 'Dedikerad AI Nyhetschatt kopplad till LM Studio',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Interaktiv AI-chatt för nyhetsflödet',
+        description: 'Lagt till en helt ny vy (/chat) där du kan föra dialog och ställa analytiska frågor på naturlig svenska direkt till dina sparade RSS-artiklar (t.ex. "Hur många olyckor inträffade igår?" eller "Sammanfatta händelser kring räntan").'
+      },
+      {
+        type: 'feature',
+        title: 'Källhänvisningar och klickbara källkort',
+        description: 'Under varje AI-svar listas de specifika artiklarna som svaret baserats på med källa, datum, sammanfattning och direktlänk till originalhändelsen.'
+      },
+      {
+        type: 'improvement',
+        title: 'Startsida med färdiga prompt-förslag',
+        description: 'En välkomnande hero-sektion med klickbara promptkort för att snabbt starta analyser över senaste dygnet, trafik, ekonomi eller blåljushändelser.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.08',
     date: '2026-09-09',
     title: 'Avlägsnad Reason-rad, slimmad klickbetesnotis och kategori i taggraden',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

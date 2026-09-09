@@ -536,3 +536,246 @@ def analyze_article(
         dur = round(time.time() - t0, 2)
         print(f"[AI Service] Oväntat fel vid analys efter {dur}s: {e}", flush=True)
         return None
+
+def strip_emojis(text: str) -> str:
+    """Tar bort eventuella emojis för att garantera att strikta användarregler följs."""
+    if not text:
+        return ""
+    # Unicode emoji-intervall
+    emoji_pattern = re.compile(
+        "["
+        "\U0001F000-\U0001FAFF"  # Emoticons, symboler, piktogram
+        "\U00002700-\U000027BF"  # Dingbats
+        "\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
+        "\U0001F600-\U0001F64F"  # Emoticons
+        "\U0001F300-\U0001F5FF"  # Misc Symbols and Pictographs
+        "\U0001F680-\U0001F6FF"  # Transport and Map
+        "\U00002600-\U000026FF"  # Misc symbols
+        "]+", 
+        flags=re.UNICODE
+    )
+    return emoji_pattern.sub("", text)
+
+def chat_with_news(
+    user_id: int,
+    message: str,
+    history: Optional[List[Dict[str, str]]] = None,
+    db: Any = None,
+    model_override: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Interaktiv RAG AI-chatt: Hämtar relevanta artiklar ur användarens flöden och ställer
+    frågan till LM Studio med full källhänvisning.
+    """
+    from datetime import datetime, timedelta
+    from sqlalchemy import or_, and_, desc
+    import models
+
+    history = history or []
+    clean_msg = message.strip()
+    msg_lower = clean_msg.lower()
+
+    # 1. Identifiera tidsintervall
+    now = datetime.now()
+    start_ts = None
+    end_ts = None
+
+    if "igår" in msg_lower:
+        yesterday = now - timedelta(days=1)
+        start_ts = int(datetime(yesterday.year, yesterday.month, yesterday.day, 0, 0, 0).timestamp())
+        end_ts = int(datetime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59).timestamp())
+    elif "idag" in msg_lower:
+        start_ts = int(datetime(now.year, now.month, now.day, 0, 0, 0).timestamp())
+    elif "dygn" in msg_lower or "24 timmar" in msg_lower or "24h" in msg_lower:
+        start_ts = int((now - timedelta(hours=24)).timestamp())
+    elif "vecka" in msg_lower or "veckan" in msg_lower or "7 dagar" in msg_lower:
+        start_ts = int((now - timedelta(days=7)).timestamp())
+    else:
+        # Standard: senaste 48 timmarna för att fånga aktuella händelser
+        start_ts = int((now - timedelta(hours=72)).timestamp())
+
+    # 2. Identifiera sökord (filtrera bort vanliga stoppord)
+    stopwords = {
+        "hur", "många", "vad", "vilka", "vem", "när", "var", "varför", "är", "var", 
+        "skedde", "hände", "det", "den", "som", "att", "och", "eller", "i", "på", 
+        "av", "med", "om", "till", "från", "för", "ett", "en", "artiklar", "artikel", 
+        "nyheter", "händelse", "händelser", "finns", "rapporterats", "senaste", "igår", 
+        "idag", "ge", "mig", "alla", "några", "berätta", "visa", "lista", "sammanfatta"
+    }
+    raw_words = re.findall(r'\b[a-zåäöA-ZÅÄÖ0-9_-]+\b', msg_lower)
+    keywords = [w for w in raw_words if len(w) > 2 and w not in stopwords]
+
+    # 3. Databasfråga mot användarens flöden
+    articles = []
+    if db:
+        base_query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == user_id)
+        
+        # Applicera tidsintervall
+        time_filters = []
+        if start_ts:
+            time_filters.append(or_(
+                models.Article.published_ts >= start_ts,
+                models.Article.received_ts >= start_ts
+            ))
+        if end_ts:
+            time_filters.append(or_(
+                models.Article.published_ts <= end_ts,
+                models.Article.received_ts <= end_ts
+            ))
+        if time_filters:
+            base_query = base_query.filter(and_(*time_filters))
+
+        # Applicera nyckelordsfiltrering om sökord identifierats
+        if keywords:
+            kw_conditions = []
+            for kw in keywords[:5]: # Begränsa till max 5 nyckelord för prestanda
+                kw_conditions.extend([
+                    models.Article.title.ilike(f"%{kw}%"),
+                    models.Article.summary.ilike(f"%{kw}%"),
+                    models.Article.ai_summary.ilike(f"%{kw}%"),
+                    models.Article.tags.ilike(f"%{kw}%"),
+                    models.Article.category.ilike(f"%{kw}%")
+                ])
+            kw_query = base_query.filter(or_(*kw_conditions)).order_by(desc(models.Article.published_ts), desc(models.Article.received_ts))
+            articles = kw_query.limit(35).all()
+
+        # Om sökord inte gav tillräckligt många träffar (eller vid breda frågor), hämta de senaste artiklarna
+        if len(articles) < 10:
+            existing_ids = {a.id for a in articles}
+            fallback_query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == user_id)
+            if time_filters:
+                fallback_query = fallback_query.filter(and_(*time_filters))
+            fallback_articles = fallback_query.order_by(desc(models.Article.published_ts), desc(models.Article.received_ts)).limit(35).all()
+            for fa in fallback_articles:
+                if fa.id not in existing_ids:
+                    articles.append(fa)
+                    existing_ids.add(fa.id)
+                if len(articles) >= 40:
+                    break
+
+        # Sortera i kronologisk fallande ordning
+        articles.sort(key=lambda x: (x.published_ts or 0, x.received_ts or 0), reverse=True)
+
+    # 4. Skapa käll-lista för frontend
+    sources = []
+    for art in articles[:25]:
+        sources.append({
+            "id": art.id,
+            "title": art.title or "Utan rubrik",
+            "source_name": art.feed.title if art.feed else "RSS",
+            "published_at": art.published or "",
+            "link": art.link or "",
+            "summary": art.ai_summary or art.summary or "",
+            "category": art.category or "Övrigt",
+            "is_prio": bool(art.priority == "high" or (art.prio_score or 0) >= 75)
+        })
+
+    # 5. Bygg kontext för LM Studio
+    context_lines = []
+    for i, art in enumerate(articles[:25], 1):
+        source_title = art.feed.title if art.feed else "RSS"
+        pub_date = art.published or "Okänt datum"
+        cat = art.category or "Övrigt"
+        summary_text = art.ai_summary or art.summary or ""
+        context_lines.append(
+            f"[Artikel {i}] (ID: {art.id})\n"
+            f"Källa: {source_title}\n"
+            f"Publicerad: {pub_date}\n"
+            f"Rubrik: {art.title}\n"
+            f"Kategori: {cat}\n"
+            f"Sammanfattning: {summary_text[:350]}\n"
+        )
+
+    context_str = "\n".join(context_lines) if context_lines else "Inga sparade artiklar matchade det angivna tidsintervallet."
+
+    system_prompt = (
+        "Du är en skarp, saklig och hjälpsam svenskspråkig nyhetsassistent för RSS-Bevakaren.\n"
+        "Din uppgift är att svara på användarens frågor uteslutande baserat på artiklarna som listas i kontexten.\n\n"
+        "Riktlinjer:\n"
+        "1. Svara ALLTID på god, tydlig och naturlig svenska.\n"
+        "2. Det är STRIKT FÖRBJUDET att använda emojis i svaret.\n"
+        "3. Basera dina påståenden och siffror på de bifogade artiklarna. Hitta inte på information som saknas.\n"
+        "4. Om användaren frågar hur många händelser eller artiklar som inträffat (t.ex. 'hur många olyckor'), "
+        "räkna noggrant och lista kortfattat vilka händelser det rör sig om med ort/plats och källa.\n"
+        "5. Om artiklarna inte innehåller svar på frågan, förklara sakligt och artigt att informationen inte finns bland de sparade artiklarna.\n"
+        "6. Använd god styckeindelning och punktlistor vid behov för maximal läsbarhet."
+    )
+
+    user_query_content = (
+        f"Artiklar från användarens flöden:\n{context_str}\n\n"
+        f"Användarens fråga: {clean_msg}"
+    )
+
+    # 6. Sätt ihop meddelandehistorik
+    messages = [{"role": "system", "content": system_prompt}]
+    for h in history[-6:]: # Behåll de senaste 6 meddelandena för kontinuitet
+        r = h.get("role", "")
+        c = h.get("content", "")
+        if r in ("user", "assistant") and c:
+            messages.append({"role": r, "content": c})
+    messages.append({"role": "user", "content": user_query_content})
+
+    # 7. Anropa LM Studio
+    model = model_override or LM_STUDIO_MODEL or ""
+    payload = {
+        "model": model,
+        "temperature": 0.3,
+        "max_tokens": LM_STUDIO_MAX_TOKENS,
+        "messages": messages
+    }
+
+    t0 = time.time()
+    try:
+        response = requests.post(LM_STUDIO_URL, json=payload, headers={"Content-Type": "application/json"}, timeout=LM_STUDIO_TIMEOUT)
+        dur = round(time.time() - t0, 2)
+        if response.status_code != 200:
+            print(f"[AI Chat] LM Studio HTTP {response.status_code} efter {dur}s: {response.text[:200]}", flush=True)
+            return {
+                "reply": "Kunde inte generera ett svar från den lokala AI-modellen (LM Studio svarade med felkod). Kontrollera att LM Studio är igång.",
+                "sources": sources,
+                "model": model or "Okänd"
+            }
+
+        data = response.json()
+        choices = data.get("choices", [])
+        if not choices:
+            return {
+                "reply": "Inget svar returnerades från den lokala AI-modellen.",
+                "sources": sources,
+                "model": model or "Okänd"
+            }
+
+        raw_reply = choices[0].get("message", {}).get("content", "")
+        clean_reply = strip_emojis(raw_reply).strip()
+        used_model = data.get("model", model or "Lokal AI")
+
+        return {
+            "reply": clean_reply or "Inget svar kunde formuleras.",
+            "sources": sources,
+            "model": used_model
+        }
+    except requests.exceptions.ConnectTimeout:
+        return {
+            "reply": f"Kunde inte upprätta anslutning till LM Studio på {LM_STUDIO_URL}. Kontrollera att LM Studio är startat och att servern körs.",
+            "sources": sources,
+            "model": model or "Offline"
+        }
+    except requests.exceptions.ReadTimeout:
+        return {
+            "reply": f"LM Studio svarade inte inom tidsgränsen ({LM_STUDIO_TIMEOUT}s). Modellen kan vara överbelastad eller genererar ett för långt svar.",
+            "sources": sources,
+            "model": model or "Timeout"
+        }
+    except requests.exceptions.ConnectionError:
+        return {
+            "reply": f"LM Studio är offline eller onåbar på {LM_STUDIO_URL}.",
+            "sources": sources,
+            "model": model or "Offline"
+        }
+    except Exception as e:
+        return {
+            "reply": f"Ett oväntat fel inträffade vid anslutning till AI-motorn: {e}",
+            "sources": sources,
+            "model": model or "Fel"
+        }
+
