@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.01',
+    date: '2026-09-09',
+    title: 'Transparent badge-ikon för Android-statusbaren',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Fixat vit fyrkant i telefonens toppmeny',
+        description: 'Ersatt den solida bakgrunden i badge.png med en ren vit RSS-silhuett på 100% transparent bakgrund (96x96 px) enligt Androids specifikation för statusfältsikoner. Nu visas RSS-vågikonen skarpt i mobilens toppbar istället för en vit ruta.'
+      },
+      {
+        type: 'improvement',
+        title: 'Tydligare ikonhantering i web-push och serviceworker',
+        description: 'Serviceworkern och backend har uppdaterats för att explicit ange appens färgikon som notification-icon och den transparenta silhuetten som statusfälts-badge.'
+      }
+    ]
+  },
+  {
     version: '2026.09.08.20',
     date: '2026-09-08',
     title: 'Obligatorisk geografisk plats i AI-sammanfattningar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
