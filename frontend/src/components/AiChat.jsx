@@ -362,6 +362,8 @@ export default function AiChat() {
               >
                 <div style={{
                   maxWidth: isUser ? '75%' : '88%',
+                  minWidth: (!isUser && msg.isStreaming && !msg.content) ? 'min(58%, 560px)' : undefined,
+                  width: (!isUser && msg.isStreaming && !msg.content) ? 'min(62%, 600px)' : undefined,
                   backgroundColor: isUser ? 'var(--primary)' : 'var(--bg-card)',
                   color: isUser ? '#ffffff' : 'var(--text-main)',
                   border: isUser ? 'none' : '1px solid var(--border-color)',
@@ -391,21 +393,21 @@ export default function AiChat() {
 
                   {/* Progressbar under GPU prompt processing */}
                   {!isUser && msg.isStreaming && !msg.content && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', minWidth: '260px', maxWidth: '420px', padding: '0.2rem 0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <Loader2 size={14} className="spin" style={{ color: 'var(--primary)' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', width: '100%', minWidth: 'min(100%, 280px)', padding: '0.2rem 0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <Loader2 size={15} className="spin" style={{ color: 'var(--primary)', flexShrink: 0 }} />
                           {msg.progress !== null && msg.progress > 0 
                             ? "Bearbetar artikelunderlag i LM Studio..." 
                             : "Hämtar och matchar relevanta artiklar..."}
                         </span>
-                        <span style={{ fontWeight: 600, color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--primary)', fontVariantNumeric: 'tabular-nums', flexShrink: 0, fontSize: '0.85rem' }}>
                           {msg.progress || 0}%
                         </span>
                       </div>
                       <div style={{
                         width: '100%',
-                        height: '6px',
+                        height: '7px',
                         backgroundColor: 'rgba(0,0,0,0.08)',
                         borderRadius: '4px',
                         overflow: 'hidden',
@@ -417,7 +419,7 @@ export default function AiChat() {
                           backgroundColor: 'var(--primary)',
                           borderRadius: '4px',
                           transition: 'width 0.25s ease-out',
-                          boxShadow: '0 0 8px rgba(37, 99, 235, 0.4)'
+                          boxShadow: '0 0 10px rgba(37, 99, 235, 0.45)'
                         }} />
                       </div>
                     </div>

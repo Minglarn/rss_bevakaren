@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.16',
+    date: '2026-09-09',
+    title: 'Bredare layout och förbättrad marginal för GPU-progressbar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Minst 55-65% bredd för laddningsbubblan',
+        description: 'Assistentbubblan och progressbaren täcker nu minst 55-65% av chattfönstrets bredd, vilket ger en luftig och tydlig vy där text och procentangivelse separeras snyggt.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.15',
     date: '2026-09-09',
     title: 'Realtids-progressbar och strömmande AI-svar från LM Studio',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',
