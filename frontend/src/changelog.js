@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.09.04',
+    date: '2026-09-09',
+    title: 'Faktaförtydligande i klickbetesnotiser och uppdaterad default-prompt',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Tydlig koppling mellan klickbete och fakta i sammanfattningen',
+        description: 'Systemprompten har uppdaterats som standard så att AI:n i clickbait_reason alltid specificerar exakt vad rubriken undanhöll och bekräftar att fakta har lyfts fram i sammanfattningen ovan, så att användaren slipper klicka sig vidare.'
+      },
+      {
+        type: 'improvement',
+        title: 'Uppdatering av standardprompt och automatisk migrering',
+        description: 'Sparat den nya prompten i data/ai_prompt.json och backend/ai_service.py samt uppdaterat ensure_clickbait_in_prompt så att den nya klickbetesstrukturen appliceras automatiskt.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.03',
     date: '2026-09-09',
     title: 'Full-bleed maskable ikon och cache-busting för notiser',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
