@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.10.01',
+    date: '2026-09-10',
+    title: 'Optimerade marginaler och bredare layout i AI-chatten',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Minskade marginaler mot skärmkant och rullist',
+        description: 'Justerade yttre padding och behållarens marginaler i AI-chatten så att frågekort och konversationsbubblor utnyttjar skärmytan maximalt utan onödigt tomrum mot skärmkanterna.'
+      }
+    ]
+  },
+  {
     version: '2026.09.09.16',
     date: '2026-09-09',
     title: 'Bredare layout och förbättrad marginal för GPU-progressbar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

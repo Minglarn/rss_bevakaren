@@ -390,7 +390,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       </div>
 
       {/* Main Content */}
-      <div className="app-main-content">
+      <div className={`app-main-content ${location.pathname === '/chat' ? 'chat-view' : ''}`}>
         {children}
       </div>
 

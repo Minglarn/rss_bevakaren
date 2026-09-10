@@ -970,6 +970,10 @@ select:focus, input:focus {
   box-sizing: border-box;
 }
 
+.app-main-content.chat-view {
+  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+}
+
 .toppbar {
   display: flex;
   align-items: center;
@@ -1030,6 +1034,10 @@ select:focus, input:focus {
   
   .app-main-content {
     padding: 0.5rem 0.5rem 70px 0.5rem; /* Space for bottom bar and smaller side padding */
+  }
+
+  .app-main-content.chat-view {
+    padding: 0.25rem 0.25rem 68px 0.25rem;
   }
   
   .toppbar {

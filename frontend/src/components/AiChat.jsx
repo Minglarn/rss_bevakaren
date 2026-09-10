@@ -193,20 +193,21 @@ export default function AiChat() {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: 'calc(100vh - 60px)',
-      maxWidth: '1000px',
+      height: 'calc(100vh - 65px)',
+      maxWidth: '1080px',
       margin: '0 auto',
-      padding: '1rem',
-      boxSizing: 'border-box'
+      padding: '0.25rem 0.25rem',
+      boxSizing: 'border-box',
+      width: '100%'
     }}>
       {/* Toppsektion / Header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingBottom: '0.85rem',
+        paddingBottom: '0.75rem',
         borderBottom: '1px solid var(--border-color)',
-        marginBottom: '1rem',
+        marginBottom: '0.75rem',
         flexWrap: 'wrap',
         gap: '0.5rem'
       }}>
@@ -267,7 +268,7 @@ export default function AiChat() {
       <div style={{
         flex: 1,
         overflowY: 'auto',
-        paddingRight: '0.4rem',
+        paddingRight: '0.15rem',
         display: 'flex',
         flexDirection: 'column',
         gap: '1.25rem'
@@ -277,7 +278,8 @@ export default function AiChat() {
           <div style={{
             margin: 'auto 0',
             textAlign: 'center',
-            padding: '2rem 1rem'
+            padding: '1.25rem 0.15rem',
+            width: '100%'
           }}>
             <div style={{
               display: 'inline-flex',
@@ -295,16 +297,17 @@ export default function AiChat() {
             <h2 style={{ fontSize: '1.35rem', margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>
               Vad vill du veta om dina nyheter?
             </h2>
-            <p style={{ maxWidth: '540px', margin: '0 auto 2rem auto', fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+            <p style={{ maxWidth: '540px', margin: '0 auto 1.75rem auto', fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
               Ställ frågor på vanlig svenska till dina sparade RSS-artiklar. Modellen sammanställer händelser, räknar incidenter och källhänvisar direkt till artiklarna.
             </p>
 
             {/* Förslags-chips */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '0.75rem',
-              maxWidth: '750px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: '0.65rem',
+              width: '100%',
+              maxWidth: '880px',
               margin: '0 auto',
               textAlign: 'left'
             }}>
@@ -361,9 +364,9 @@ export default function AiChat() {
                 }}
               >
                 <div style={{
-                  maxWidth: isUser ? '75%' : '88%',
-                  minWidth: (!isUser && msg.isStreaming && !msg.content) ? 'min(58%, 560px)' : undefined,
-                  width: (!isUser && msg.isStreaming && !msg.content) ? 'min(62%, 600px)' : undefined,
+                  maxWidth: isUser ? '85%' : '95%',
+                  minWidth: (!isUser && msg.isStreaming && !msg.content) ? 'min(65%, 580px)' : undefined,
+                  width: (!isUser && msg.isStreaming && !msg.content) ? 'min(70%, 620px)' : undefined,
                   backgroundColor: isUser ? 'var(--primary)' : 'var(--bg-card)',
                   color: isUser ? '#ffffff' : 'var(--text-main)',
                   border: isUser ? 'none' : '1px solid var(--border-color)',
