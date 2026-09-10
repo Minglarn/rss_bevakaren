@@ -66,6 +66,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [prioritizeItem, setPrioritizeItem] = useState(null);
   const [revealedOriginals, setRevealedOriginals] = useState(new Set());
+  const [aiProgress, setAiProgress] = useState({});
   const [nowTs, setNowTs] = useState(Math.floor(Date.now() / 1000));
 
   useEffect(() => {
@@ -255,7 +256,23 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             window.dispatchEvent(new Event('feedsUpdated')); // Fallback for old clients
           }
           console.log("New articles received via WebSocket! Updating UI...");
+        } else if (event.data.startsWith("AI_PROGRESS:")) {
+          const parts = event.data.split(":");
+          if (parts.length >= 3) {
+            const articleId = parseInt(parts[1]);
+            const pct = parseInt(parts[2]);
+            setAiProgress(prev => ({ ...prev, [articleId]: pct }));
+          }
         } else if (event.data.startsWith("AI_UPDATED:")) {
+          const parts = event.data.split(":");
+          const articleId = parts.length > 1 ? parseInt(parts[1]) : null;
+          if (articleId) {
+            setAiProgress(prev => {
+              const next = { ...prev };
+              delete next[articleId];
+              return next;
+            });
+          }
           // Update dashboard silently in background when AI enrichment happens
           fetchFeeds(true);
         } else if (event.data.startsWith("POLLING_START:")) {
@@ -1224,40 +1241,85 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     const showSkeleton = isWaitingForAi && !isTimedOut && !revealedOriginals.has(item.id);
 
                     if (showSkeleton) {
+                      const currentProgress = aiProgress[item.id];
+                      const isStarted = currentProgress !== undefined;
+                      const pct = isStarted ? Math.min(100, Math.max(0, currentProgress)) : null;
+
                       return (
                         <div style={{
                           marginBottom: '0.85rem',
-                          padding: '0.75rem 0.9rem',
+                          padding: '0.85rem 1rem',
                           backgroundColor: 'rgba(249, 115, 22, 0.05)',
                           border: '1px dashed rgba(249, 115, 22, 0.3)',
                           borderRadius: '8px'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600 }}>
-                              <Loader2 size={13} className="spin" /> Analyzing with AI...
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#f97316', fontSize: '0.78rem', fontWeight: 600 }}>
+                              <Loader2 size={13} className="spin" />
+                              <span>
+                                {pct === null
+                                  ? 'I kö för AI-analys...'
+                                  : pct < 100
+                                  ? `Bearbetar prompt (${pct}%)`
+                                  : 'Genererar sammanfattning...'}
+                              </span>
                             </div>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setRevealedOriginals(prev => new Set(prev).add(item.id));
-                              }}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: 'var(--text-muted)',
-                                fontSize: '0.72rem',
-                                cursor: 'pointer',
-                                textDecoration: 'underline',
-                                padding: '0.1rem 0.3rem'
-                              }}
-                              title="Click to view original RSS text immediately"
-                            >
-                              Show original text
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                              {pct !== null && (
+                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f97316', fontFamily: 'monospace' }}>
+                                  {pct}%
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRevealedOriginals(prev => new Set(prev).add(item.id));
+                                }}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'var(--text-muted)',
+                                  fontSize: '0.72rem',
+                                  cursor: 'pointer',
+                                  textDecoration: 'underline',
+                                  padding: '0.1rem 0.3rem'
+                                }}
+                                title="Klicka för att visa RSS-originaltexten omedelbart"
+                              >
+                                Visa originaltext
+                              </button>
+                            </div>
                           </div>
-                          <div className="skeleton-shimmer" style={{ height: '9px', width: '92%', borderRadius: '4px', backgroundColor: 'var(--border-color)', marginBottom: '0.45rem' }} />
-                          <div className="skeleton-shimmer" style={{ height: '9px', width: '68%', borderRadius: '4px', backgroundColor: 'var(--border-color)' }} />
+
+                          {/* Progressbar */}
+                          <div style={{
+                            position: 'relative',
+                            height: '6px',
+                            width: '100%',
+                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                            borderRadius: '3px',
+                            overflow: 'hidden',
+                            marginBottom: '0.6rem'
+                          }}>
+                            <div
+                              style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: pct !== null ? `${Math.max(4, pct)}%` : '25%',
+                                background: 'linear-gradient(90deg, #f97316 0%, #fb923c 100%)',
+                                borderRadius: '3px',
+                                transition: pct !== null ? 'width 0.25s ease-out' : 'none',
+                                boxShadow: '0 0 8px rgba(249, 115, 22, 0.5)'
+                              }}
+                              className={pct === null ? 'skeleton-indeterminate-bar' : ''}
+                            />
+                          </div>
+
+                          <div className="skeleton-shimmer" style={{ height: '8px', width: '92%', borderRadius: '4px', backgroundColor: 'var(--border-color)', marginBottom: '0.4rem', opacity: 0.6 }} />
+                          <div className="skeleton-shimmer" style={{ height: '8px', width: '65%', borderRadius: '4px', backgroundColor: 'var(--border-color)', opacity: 0.4 }} />
                         </div>
                       );
                     }
@@ -1271,7 +1333,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           style={{ marginBottom: '1rem' }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                            <Sparkles size={13} /> AI Summary
+                            <Sparkles size={13} /> AI-sammanfattning
                           </div>
                           <div style={{ 
                             color: 'var(--text-main)', 

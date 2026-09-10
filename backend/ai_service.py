@@ -4,7 +4,7 @@ import re
 import time
 import requests
 import numpy as np
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Callable
 
 LM_STUDIO_URL = os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1/chat/completions")
 LM_STUDIO_MODEL = os.environ.get("LM_STUDIO_MODEL", "")
@@ -555,10 +555,12 @@ def analyze_article(
     categories: Optional[List[str]] = None,
     custom_prompt: Optional[str] = None,
     user_categories: Optional[List[str]] = None,
-    model_override: Optional[str] = None
+    model_override: Optional[str] = None,
+    on_progress: Optional[Callable[[int], None]] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Anropar LM Studio och returnerar ett berikat artikelobjekt.
+    Stödjer realtids-progress för prompt-bearbetning i GPU.
     Kastar inga ohanterade undantag så anroparen skyddas mot krascher.
     """
     system_prompt = custom_prompt.strip() if (custom_prompt and custom_prompt.strip()) else load_system_prompt()
@@ -581,39 +583,98 @@ def analyze_article(
             
     user_prompt = "\n".join(user_prompt_lines)
     
-    payload = {
-        "model": model,
-        "temperature": 0.1,
-        "max_tokens": LM_STUDIO_MAX_TOKENS,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-    }
-    
-    headers = {"Content-Type": "application/json"}
-    
     t0 = time.time()
     try:
-        response = requests.post(LM_STUDIO_URL, json=payload, headers=headers, timeout=LM_STUDIO_TIMEOUT)
-        dur = round(time.time() - t0, 2)
-        if response.status_code != 200:
-            print(f"[AI Service] LM Studio HTTP {response.status_code} efter {dur}s: {response.text[:200]}", flush=True)
-            return None
-            
-        data = response.json()
-        choices = data.get("choices", [])
-        if not choices:
-            print(f"[AI Service] Inga val returnerades från LM Studio efter {dur}s: {data}", flush=True)
-            return None
-            
-        raw_message = choices[0].get("message", {}).get("content", "")
-        parsed = extract_json_from_text(raw_message)
-        
+        parsed = None
+        dur = 0.0
+        raw_message = ""
+
+        # 1. Försök först med nativ strömning för realtids-progress av GPU prompt-bearbetning
+        native_url = get_native_chat_endpoint()
+        native_payload = {
+            "model": model,
+            "system_prompt": system_prompt,
+            "input": user_prompt,
+            "stream": True,
+            "temperature": 0.1
+        }
+
+        try:
+            resp = requests.post(native_url, json=native_payload, stream=True, timeout=LM_STUDIO_TIMEOUT)
+            if resp.status_code == 200:
+                accumulated = []
+                last_reported = -1
+                for line in resp.iter_lines():
+                    if not line:
+                        continue
+                    decoded = line.decode('utf-8', errors='ignore')
+                    if decoded.startswith("data: "):
+                        data_str = decoded[6:].strip()
+                        if not data_str:
+                            continue
+                        try:
+                            obj = json.loads(data_str)
+                            ev_type = obj.get("type")
+                            if ev_type == "prompt_processing.progress":
+                                pct = int(round(obj.get("progress", 0.0) * 100))
+                                if on_progress and pct != last_reported:
+                                    last_reported = pct
+                                    on_progress(pct)
+                            elif ev_type == "prompt_processing.end":
+                                if on_progress and last_reported != 100:
+                                    last_reported = 100
+                                    on_progress(100)
+                            elif ev_type == "message.delta":
+                                token = obj.get("content", "")
+                                if token:
+                                    accumulated.append(token)
+                                    if on_progress and last_reported < 100:
+                                        last_reported = 100
+                                        on_progress(100)
+                        except Exception:
+                            pass
+                if accumulated:
+                    raw_message = "".join(accumulated)
+                    parsed = extract_json_from_text(raw_message)
+                    dur = round(time.time() - t0, 2)
+        except Exception as e:
+            print(f"[AI Service] Nativ /api/v1/chat gav fel ({e}), testar standard OpenAI fallback...", flush=True)
+
+        # 2. Fallback till standard OpenAI /v1/chat/completions om nativ endpoint misslyckades eller inte gav giltig JSON
+        if not parsed:
+            payload = {
+                "model": model,
+                "temperature": 0.1,
+                "max_tokens": LM_STUDIO_MAX_TOKENS,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ]
+            }
+            headers = {"Content-Type": "application/json"}
+            try:
+                response = requests.post(LM_STUDIO_URL, json=payload, headers=headers, timeout=LM_STUDIO_TIMEOUT)
+                dur = round(time.time() - t0, 2)
+                if response.status_code != 200:
+                    print(f"[AI Service] LM Studio HTTP {response.status_code} efter {dur}s: {response.text[:200]}", flush=True)
+                    return None
+                    
+                data = response.json()
+                choices = data.get("choices", [])
+                if not choices:
+                    print(f"[AI Service] Inga val returnerades från LM Studio efter {dur}s: {data}", flush=True)
+                    return None
+                    
+                raw_message = choices[0].get("message", {}).get("content", "")
+                parsed = extract_json_from_text(raw_message)
+            except Exception as fb_err:
+                print(f"[AI Service] Fallback-anrop gav fel efter {round(time.time() - t0, 2)}s: {fb_err}", flush=True)
+                return None
+
         if not parsed:
             print(f"[AI Service] Kunde inte parsa JSON från svaret ({len(raw_message)} tecken): {raw_message[:500]}", flush=True)
             return None
-            
+                
         # Normalisera kategori och matcha mot användarens definierade kategorier
         raw_cat = str(parsed.get("category", "Övrigt")).strip()
         category = "Övrigt"
@@ -644,10 +705,6 @@ def analyze_article(
         is_clickbait = bool(raw_cb) if isinstance(raw_cb, bool) else (str(raw_cb).lower() in ("true", "1"))
         clickbait_reason = str(parsed.get("clickbait_reason", "")).strip()
 
-        # Klickbete-hantering: För högprioriterade kategorier (som Blåljus eller vikt >= 8)
-        # ska en tillspetsad rubrik inte sänka en allvarlig händelse till low.
-        # prio_reason behåller ren kategori-information och duplicerar inte klickbetes-motiveringen
-        # eftersom clickbait_reason visas separat i klickbetesrutan.
         if is_clickbait:
             is_critical = (category.lower() == "blåljus" or prio_score >= 75)
             if is_critical:

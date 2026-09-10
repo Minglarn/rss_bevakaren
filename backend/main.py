@@ -805,6 +805,7 @@ async def polling_loop():
 
                         print(f"[POLL] {feed_title}: {len(new_articles)} nya artiklar sparade ({id_range})", flush=True)
                         db.commit()
+                        ai_wake_event.set()
                         
                         if is_initial_poll:
                             print(f"[POLL] {feed_title}: Initial inläsning slutförd, artiklar sparade tyst utan push-notiser.", flush=True)
@@ -892,6 +893,8 @@ def safe_bg_save_embedding(art_id: int, title: str, summary: str):
     finally:
         sess.close()
 
+ai_wake_event = asyncio.Event()
+
 async def ai_processing_loop():
     print("Background AI enrichment loop started", flush=True)
     # Vänta lite i början så appen och LM Studio hinner initialiseras
@@ -933,7 +936,12 @@ async def ai_processing_loop():
                 
                 if not unprocessed:
                     db.close()
-                    await asyncio.sleep(10)
+                    try:
+                        await asyncio.wait_for(ai_wake_event.wait(), timeout=10.0)
+                    except asyncio.TimeoutError:
+                        pass
+                    finally:
+                        ai_wake_event.clear()
                     continue
 
                 for art in unprocessed:
@@ -964,6 +972,23 @@ async def ai_processing_loop():
                     u_rec = db.query(models.User).filter(models.User.id == user_id).first() if user_id else None
                     u_display = u_rec.username if u_rec else f"user_{user_id}"
                     
+                    loop = asyncio.get_running_loop()
+                    last_reported_pct = -1
+
+                    def on_progress_sync(pct: int):
+                        nonlocal last_reported_pct
+                        if pct != last_reported_pct:
+                            last_reported_pct = pct
+                            if user_id:
+                                asyncio.run_coroutine_threadsafe(
+                                    manager.send_personal_message(f"AI_PROGRESS:{art.id}:{pct}", user_id),
+                                    loop
+                                )
+
+                    # Skicka start-progress (0%) direkt så UI visar aktiv progress
+                    if user_id:
+                        await manager.send_personal_message(f"AI_PROGRESS:{art.id}:0", user_id)
+
                     analysis = await asyncio.to_thread(
                         ai_service.analyze_article,
                         title=art.title,
@@ -972,7 +997,8 @@ async def ai_processing_loop():
                         categories=cats,
                         custom_prompt=user_prompt,
                         user_categories=user_cats,
-                        model_override=user_model
+                        model_override=user_model,
+                        on_progress=on_progress_sync
                     )
                     
                     if analysis:
@@ -1434,6 +1460,21 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     user_prompt = ai_service.ensure_clickbait_in_prompt(user_ai.custom_system_prompt if user_ai else None, categories=user_cats)
 
     user_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
+    
+    loop = asyncio.get_running_loop()
+    last_reported_pct = -1
+
+    def on_progress_sync(pct: int):
+        nonlocal last_reported_pct
+        if pct != last_reported_pct:
+            last_reported_pct = pct
+            asyncio.run_coroutine_threadsafe(
+                manager.send_personal_message(f"AI_PROGRESS:{art.id}:{pct}", current_user.id),
+                loop
+            )
+
+    await manager.send_personal_message(f"AI_PROGRESS:{art.id}:0", current_user.id)
+
     analysis = await asyncio.to_thread(
         ai_service.analyze_article,
         title=art.title,
@@ -1442,7 +1483,8 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
         categories=cats,
         custom_prompt=user_prompt,
         user_categories=user_cats,
-        model_override=user_model
+        model_override=user_model,
+        on_progress=on_progress_sync
     )
     if not analysis:
         raise HTTPException(status_code=502, detail="LM Studio svarade inte eller kunde inte analysera artikeln.")

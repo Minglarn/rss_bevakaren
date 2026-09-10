@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.10.02',
+    date: '2026-09-10',
+    title: 'Realtids-progressbar i händelsekort och noll fördröjning till AI-analys',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Realtids-progressbar i varje händelsekort',
+        description: 'Nya artiklar i flödet visar nu en dynamisk progressbar (0 till 100 procent) under AI-berikningen. Den återspeglar prompt-bearbetningen och förberedelsen i LM Studio i realtid med fasindikator och procenttal.'
+      },
+      {
+        type: 'improvement',
+        title: 'Eliminerad fördröjning för inkommande artiklar',
+        description: 'Bakgrundsmotorn har uppgraderats med en händelsedriven signal (asyncio.Event). När nya artiklar sparas från RSS väcks AI-analysen omedelbart utan att vänta ut sovcykler.'
+      },
+      {
+        type: 'ui',
+        title: 'Svenska texter och mjuk laddningsanimering',
+        description: 'Laddningsytan på artiklarna har försvenskats helt och fått en mjuk glidande animationslinje medan artikeln väntar i analyskön.'
+      }
+    ]
+  },
+  {
     version: '2026.09.10.01',
     date: '2026-09-10',
     title: 'Optimerade marginaler och bredare layout i AI-chatten',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

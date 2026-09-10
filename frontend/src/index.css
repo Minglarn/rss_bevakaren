@@ -1485,3 +1485,22 @@ input:checked + .toggle-slider:before {
   animation: skeletonPulse 1.8s ease-in-out infinite;
 }
 
+@keyframes skeletonIndeterminate {
+  0% {
+    left: -25%;
+    width: 25%;
+  }
+  50% {
+    left: 35%;
+    width: 45%;
+  }
+  100% {
+    left: 100%;
+    width: 25%;
+  }
+}
+
+.skeleton-indeterminate-bar {
+  animation: skeletonIndeterminate 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+}
+
