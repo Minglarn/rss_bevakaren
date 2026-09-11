@@ -1,9 +1,36 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.11.04',
+    date: '2026-09-11',
+    title: 'Automatisk schemaläggning (kl 07:00 & 18:00) och ny Briefing-flik med Historik',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Automatisk schemalagd generering i bakgrunden',
+        description: 'Backend kör nu en kontinuerlig schemaläggningsloop som automatiskt genererar en färsk morgonrapport kl 07:00 och en kvällsrapport kl 18:00 via lokal AI (LM Studio), så att rapporten alltid ligger klar när du öppnar appen.'
+      },
+      {
+        type: 'ui',
+        title: 'Dedikerad flik för Briefing på desktop',
+        description: 'Skapat en egen flik i sidomenyn på desktop för Dagens Briefing, vilket ger en ren och ostörd läsupplevelse och håller det ordinarie Dashboard-flödet fritt från onödiga element.'
+      },
+      {
+        type: 'feature',
+        title: 'Historik & Arkiv över tidigare rapporter',
+        description: 'I den nya Briefing-fliken kan du bläddra bland alla tidigare genererade morgon- och kvällsrapporter och se vad som hände under tidigare dagar med fullständiga källhänvisningar.'
+      },
+      {
+        type: 'ui',
+        title: 'Bibehållet mobilkort med direktlänk till historik',
+        description: 'På mobila enheter ligger det slimmade, ultrakompakta toppkortet kvar i flödet med en smidig länk för att öppna den fullständiga historikvyn vid behov.'
+      }
+    ]
+  },
+  {
     version: '2026.09.11.03',
     date: '2026-09-11',
     title: 'Ultrakompakt mobilvy och fullt Markdown-stöd i Dagens Briefing',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',

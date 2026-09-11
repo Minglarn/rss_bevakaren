@@ -49,12 +49,21 @@ const Settings = ({ onLogout }) => {
   const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
   const [theme, setTheme] = useState(() => localStorage.getItem('rss_theme') || 'system');
   const [feedMode, setFeedMode] = useState(() => localStorage.getItem('rss_feed_mode') || 'ai');
+  const [clusterMode, setClusterMode] = useState(() => localStorage.getItem('rss_cluster_mode') !== 'false');
   const [purgeDays, setPurgeDays] = useState(30);
 
   const handleFeedModeChange = (val) => {
     setFeedMode(val);
     localStorage.setItem('rss_feed_mode', val);
     window.dispatchEvent(new Event('feedModeChanged'));
+  };
+
+  const toggleClusterMode = () => {
+    const nextVal = !clusterMode;
+    setClusterMode(nextVal);
+    localStorage.setItem('rss_cluster_mode', nextVal ? 'true' : 'false');
+    window.dispatchEvent(new Event('clusterModeChanged'));
+    toast.success(nextVal ? 'Nyhetsklustring är nu aktiverad.' : 'Nyhetsklustring är nu inaktiverad.');
   };
 
   // AI Inställningar state (Personliga per användare)
@@ -998,15 +1007,35 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               </div>
             </div>
 
+            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Layers size={18} style={{ color: 'var(--primary)' }} /> Nyhetsklustring (Topic Clustering)
+              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Gruppera artiklar som handlar om samma händelse</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Minskar brus genom att sammanföra rapporter från olika nyhetskällor till en samlad händelse.</div>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={clusterMode}
+                    onChange={toggleClusterMode}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
             <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
               <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sparkles size={18} style={{ color: '#f97316' }} /> Feed Display Mode (Dashboard)
+                <Sparkles size={18} style={{ color: '#f97316' }} /> Flödesvisning i Dashboard
               </h4>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ maxWidth: '500px' }}>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Choose Feed Mode for Dashboard</div>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Välj läge för nyhetsflödet</div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                    Choose whether your regular news feed should be enriched with automatic AI summaries, tags, and categories or displayed in classic minimalist RSS mode.
+                    Välj om ditt ordinarie nyhetsflöde ska berikas med AI-sammanfattningar, taggar och kategorier eller visas i klassiskt minimalistiskt RSS-läge.
                   </div>
                 </div>
                 <select 
@@ -1014,8 +1043,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   onChange={(e) => handleFeedModeChange(e.target.value)}
                   style={{ flex: 'none', width: 'auto', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: 600 }}
                 >
-                  <option value="ai">AI Feed (Summaries & Tags)</option>
-                  <option value="classic">Classic RSS (Raw text without AI)</option>
+                  <option value="ai">AI-flöde (Sammanfattningar & Taggar)</option>
+                  <option value="classic">Klassiskt RSS-flöde (Råtext utan AI)</option>
                 </select>
               </div>
             </div>

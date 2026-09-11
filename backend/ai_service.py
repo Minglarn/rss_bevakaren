@@ -1614,3 +1614,51 @@ def get_latest_daily_digest(db: Any, user_id: int, max_age_hours: int = 18) -> O
         print(f"[Daily Digest] Fel vid hämtning av senaste digest: {e}", flush=True)
         return None
 
+def get_daily_digests_history(db: Any, user_id: int, limit: int = 30) -> List[Dict[str, Any]]:
+    """Hämtar historik över tidigare sparade briefings för användaren."""
+    if not db or not user_id:
+        return []
+    try:
+        import models
+        digests = db.query(models.DailyDigest).filter(
+            models.DailyDigest.user_id == user_id
+        ).order_by(models.DailyDigest.created_at.desc()).limit(limit).all()
+
+        results = []
+        for d in digests:
+            art_ids = []
+            try:
+                art_ids = json.loads(d.article_ids or "[]")
+            except Exception:
+                art_ids = []
+
+            articles_summary = []
+            if art_ids:
+                arts = db.query(models.Article).filter(models.Article.id.in_(art_ids)).all()
+                articles_summary = [
+                    {
+                        "id": a.id,
+                        "title": a.title,
+                        "source_title": a.feed.title if a.feed else "",
+                        "link": a.link,
+                        "category": a.category or "Övrigt",
+                        "published": a.published
+                    }
+                    for a in arts
+                ]
+
+            results.append({
+                "id": d.id,
+                "title": d.title,
+                "content": d.content,
+                "digest_type": d.digest_type,
+                "article_ids": art_ids,
+                "articles": articles_summary,
+                "created_at": d.created_at
+            })
+        return results
+    except Exception as e:
+        print(f"[Daily Digest] Fel vid hämtning av digest-historik: {e}", flush=True)
+        return []
+
+

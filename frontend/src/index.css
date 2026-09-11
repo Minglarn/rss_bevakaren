@@ -1528,3 +1528,18 @@ input:checked + .toggle-slider:before {
   background: linear-gradient(90deg, var(--primary) 0%, rgba(59, 130, 246, 0.2) 100%);
 }
 
+/* Dagens Briefing i Dashboard visas i flödet på mobilen men är dold på desktop då desktop har egen sidomeny-flik */
+@media (min-width: 769px) {
+  .dashboard-mobile-only-briefing {
+    display: none !important;
+  }
+}
+
+/* Responsiv layout för den dedikerade Briefing-sidan */
+@media (max-width: 860px) {
+  .briefing-view-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+

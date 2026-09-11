@@ -459,10 +459,11 @@ async def startup_event():
     db.commit()
     db.close()
     
-    # Start background polling, AI enrichment and scheduled nightly purge
+    # Start background polling, AI enrichment, scheduled nightly purge and scheduled daily digests
     asyncio.create_task(polling_loop())
     asyncio.create_task(ai_processing_loop())
     asyncio.create_task(scheduled_purge_loop())
+    asyncio.create_task(scheduled_digest_loop())
 
     # Starta MQTT-tjänsten om den är aktiverad via miljövariabler
     mqtt_service.start_mqtt()
@@ -749,6 +750,56 @@ async def scheduled_purge_loop():
         except Exception as e:
             print(f"[PURGE] Fel i schemalagd rensningsloop: {e}", flush=True)
             await asyncio.sleep(3600)
+
+async def scheduled_digest_loop():
+    print("[DIGEST] Schemalagd briefing-loop startad (körs kl 07:00 och 18:00 varje dag)", flush=True)
+    while True:
+        try:
+            now = datetime.now()
+            target_07 = now.replace(hour=7, minute=0, second=0, microsecond=0)
+            target_18 = now.replace(hour=18, minute=0, second=0, microsecond=0)
+            
+            candidates = []
+            if target_07 > now:
+                candidates.append(target_07)
+            if target_18 > now:
+                candidates.append(target_18)
+            if not candidates:
+                candidates.append(target_07 + timedelta(days=1))
+                
+            next_target = min(candidates)
+            wait_seconds = (next_target - now).total_seconds()
+            print(f"[DIGEST] Nästa schemalagda briefing körs kl {next_target.strftime('%Y-%m-%d %H:%M:%S')} (om {int(wait_seconds)} sekunder)", flush=True)
+            
+            await asyncio.sleep(wait_seconds)
+            
+            print(f"[DIGEST] Startar schemalagd briefing-generering ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})...", flush=True)
+            db = database.SessionLocal()
+            try:
+                users = db.query(models.User).all()
+                for u in users:
+                    try:
+                        user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == u.id).first()
+                        target_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
+                        await asyncio.to_thread(
+                            ai_service.generate_daily_digest,
+                            db=db,
+                            user_id=u.id,
+                            model=target_model,
+                            force_rule_based=False
+                        )
+                        print(f"[DIGEST] Genererade schemalagd briefing för användare '{u.username}' (id={u.id})", flush=True)
+                        await manager.send_personal_message("DIGEST_UPDATED", u.id)
+                    except Exception as u_err:
+                        print(f"[DIGEST] Fel vid briefing för användare {u.id}: {u_err}", flush=True)
+            finally:
+                db.close()
+                
+            # Sov 60 sekunder så vi inte triggas igen under samma minut
+            await asyncio.sleep(60)
+        except Exception as e:
+            print(f"[DIGEST] Fel i schemalagd briefing-loop: {e}", flush=True)
+            await asyncio.sleep(60)
 
 async def polling_loop():
     print("Background polling loop started", flush=True)
@@ -1544,6 +1595,15 @@ def get_daily_digest(
 ):
     """Hämtar den senaste sparade dagliga briefingen."""
     return ai_service.get_latest_daily_digest(db, current_user.id)
+
+@app.get("/ai/digests", response_model=List[schemas.DailyDigestResponse])
+def get_daily_digests_history_endpoint(
+    limit: int = 30,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Hämtar historik över tidigare sparade briefings."""
+    return ai_service.get_daily_digests_history(db, current_user.id, limit=limit)
 
 @app.post("/ai/digest/generate", response_model=schemas.DailyDigestResponse)
 async def generate_daily_digest_endpoint(

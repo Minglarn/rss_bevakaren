@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
-import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash, Filter, Home, Menu, RefreshCw, Flame, Sparkles, MessageSquare } from 'lucide-react';
+import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash, Filter, Home, Menu, RefreshCw, Flame, Sparkles, MessageSquare, FileText } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import Login from './Login';
 import Dashboard from './components/Dashboard';
 import RssManager from './components/RssManager';
 import Settings from './components/Settings';
 import AiChat from './components/AiChat';
+import BriefingView from './components/BriefingView';
 import { AiChatProvider, useAiChat } from './context/AiChatContext';
 import PWABadge from './components/PWABadge';
 import WhatsNewModal from './components/WhatsNewModal';
@@ -279,6 +280,15 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               )}
             </Link>
           )}
+          <Link to="/briefing" style={{
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
+            borderRadius: '8px', textDecoration: 'none',
+            color: location.pathname === '/briefing' ? 'var(--primary)' : 'var(--text-muted)',
+            backgroundColor: location.pathname === '/briefing' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+            fontWeight: location.pathname === '/briefing' ? 600 : 400
+          }}>
+            <FileText size={19} /> {!isCollapsed && "Briefing"}
+          </Link>
           <Link to="/chat" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
             borderRadius: '8px', textDecoration: 'none',
@@ -620,6 +630,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Dashboard isPrioModeProp={false} prioEnabled={prioEnabled} />} />
               <Route path="/prio" element={<Dashboard isPrioModeProp={true} prioEnabled={prioEnabled} />} />
+              <Route path="/briefing" element={<BriefingView />} />
               <Route path="/chat" element={<AiChat />} />
               <Route path="/ai" element={<Navigate to="/prio" replace />} />
               <Route path="/manage" element={<Navigate to="/settings?tab=manage" replace />} />

@@ -228,6 +228,14 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     localStorage.setItem('rss_cluster_mode', clusterMode);
   }, [clusterMode]);
 
+  useEffect(() => {
+    const handleClusterModeChange = () => {
+      setClusterMode(localStorage.getItem('rss_cluster_mode') !== 'false');
+    };
+    window.addEventListener('clusterModeChanged', handleClusterModeChange);
+    return () => window.removeEventListener('clusterModeChanged', handleClusterModeChange);
+  }, []);
+
   const [expandedClusters, setExpandedClusters] = useState({});
   const toggleClusterExpand = (clusterId) => {
     setExpandedClusters(prev => ({ ...prev, [clusterId]: !prev[clusterId] }));
@@ -449,6 +457,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('pollingEnd', { detail: feedId }));
           }, 2000);
+        } else if (event.data === "DIGEST_UPDATED") {
+          fetchLatestDigest();
+          window.dispatchEvent(new Event('digestUpdated'));
         }
       };
       
@@ -823,28 +834,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             <CheckCheck size={16} />
             <span className="desktop-only">Mark all as read</span>
           </button>
-          <button
-            onClick={() => setClusterMode(!clusterMode)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '6px 12px',
-              border: `1px solid ${clusterMode ? 'var(--primary)' : 'var(--border-color)'}`,
-              backgroundColor: clusterMode ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-card)',
-              color: clusterMode ? 'var(--primary)' : 'var(--text-muted)',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              transition: 'all 0.2s',
-              height: '36px'
-            }}
-            title={clusterMode ? "Klustring aktiv (dubbletter grupperas)" : "Klassiskt flöde (alla källor visas separat)"}
-          >
-            <Layers size={16} />
-            <span className="desktop-only">{clusterMode ? "Klustrat" : "Alla källor"}</span>
-          </button>
           
           {/* Layout controls (desktop only) */}
           <div className="layout-controls desktop-only" style={{ gap: '4px', backgroundColor: 'var(--bg-app)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-color)', marginLeft: 'auto', height: '36px', display: 'flex', alignItems: 'center' }}>
@@ -1068,9 +1057,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         </div>
       )}
 
-      {/* Dagens Briefing - Expanderbart toppkort (Visas alltid i huvudvyn oavsett om det finns olästa artiklar) */}
+      {/* Dagens Briefing - Expanderbart toppkort (Visas i mobilflödet) */}
       {!feedId && !articleId && (!isPrioMode || prioEnabled) && (
-        <div className={`daily-briefing-card ${isDigestExpanded ? 'expanded' : 'collapsed'}`} style={{
+        <div className={`daily-briefing-card dashboard-mobile-only-briefing ${isDigestExpanded ? 'expanded' : 'collapsed'}`} style={{
           backgroundColor: 'var(--bg-card)',
           border: `1px solid ${isDigestExpanded ? 'rgba(59, 130, 246, 0.35)' : 'var(--border-color)'}`,
           borderRadius: '8px',
@@ -1219,6 +1208,23 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   </div>
                 </div>
               )}
+
+              <div style={{ marginTop: '0.65rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', textAlign: 'right' }}>
+                <Link
+                  to="/briefing"
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: 'var(--primary)',
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
+                  }}
+                >
+                  Öppna Briefing och historik &rarr;
+                </Link>
+              </div>
             </div>
           )}
         </div>
