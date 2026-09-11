@@ -321,39 +321,41 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
     
     if (granted) {
-      toast.loading('Registering notifications for this device...', { id: 'push-toggle' });
+      toast.loading('Registrerar notiser for denna enhet...', { id: 'push-toggle' });
       const subEndpoint = await subscribeToWebPush();
       if (subEndpoint) {
         setPushEnabled(true);
+        localStorage.removeItem('rss_push_unsubscribed');
+        localStorage.setItem('rss_push_enabled', 'true');
         await fetchPushDevices();
-        toast.success('Push notifications are now enabled on this device!', { id: 'push-toggle' });
+        toast.success('Pushnotiser ar nu aktiverade pa denna enhet!', { id: 'push-toggle' });
       } else {
-        toast.error('Could not complete subscription with browser or server.', { id: 'push-toggle' });
+        toast.error('Kunde inte slutfora prenumerationen med webblasaren eller servern.', { id: 'push-toggle' });
       }
     } else {
-      toast.error('Notification permission was denied in your browser.');
+      toast.error('Behorighet for notiser nekades i webblasaren.');
     }
   };
 
   const handleTestPush = async () => {
     try {
-      toast.loading('Sending test notification...', { id: 'push-test' });
+      toast.loading('Skickar testnotis...', { id: 'push-test' });
       const res = await api.post('/push/test');
       if (res.data && res.data.sent > 0) {
-        toast.success(`Test notification sent to ${res.data.sent} device(s)!`, { id: 'push-test' });
+        toast.success(`Testnotis skickades till ${res.data.sent} enhet(er)!`, { id: 'push-test' });
       } else {
-        toast.error('No active subscription found for your account.', { id: 'push-test' });
+        toast.error('Ingen aktiv prenumeration hittades for ditt konto.', { id: 'push-test' });
       }
       await fetchPushDevices();
     } catch (e) {
       console.error("Test push failed", e);
-      const detail = e.response?.data?.detail || 'Failed to send test notification.';
+      const detail = e.response?.data?.detail || 'Kunde inte skicka testnotis.';
       toast.error(detail, { id: 'push-test' });
     }
   };
 
   const handleUnsubscribe = async () => {
-    if (!window.confirm("Are you sure you want to completely unsubscribe this device from push notifications?")) return;
+    if (!window.confirm("Ar du saker pa att du helt vill avsluta pushnotiser pa denna enhet?")) return;
     try {
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.ready;
@@ -367,17 +369,19 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           await subscription.unsubscribe();
         }
       }
+      localStorage.setItem('rss_push_unsubscribed', 'true');
+      localStorage.removeItem('rss_push_enabled');
       setPushEnabled(false);
       await fetchPushDevices();
-      toast.success('This device is now unsubscribed from push notifications.');
+      toast.success('Denna enhet ar nu avregistrerad fran pushnotiser.');
     } catch (e) {
       console.error("Unsubscribe failed", e);
-      toast.error('Failed to unsubscribe device.');
+      toast.error('Kunde inte avregistrera enhet.');
     }
   };
 
   const handleClearAllDevices = async () => {
-    if (!window.confirm("Do you want to clear all saved devices for push notifications? You can then re-enable notifications on this device.")) return;
+    if (!window.confirm("Vill du rensa alla sparade enheter for pushnotiser? Du kan darefter aktivera notiser pa nytt pa denna enhet.")) return;
     try {
       await api.delete('/push/subscriptions/all');
       if ('serviceWorker' in navigator) {
@@ -389,12 +393,14 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           console.warn(swErr);
         }
       }
+      localStorage.setItem('rss_push_unsubscribed', 'true');
+      localStorage.removeItem('rss_push_enabled');
       setPushEnabled(false);
       await fetchPushDevices();
-      toast.success("All push devices have been cleared from database.");
+      toast.success("Alla pushenheter har rensats fran databasen.");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to clear devices.");
+      toast.error("Kunde inte rensa enheter.");
     }
   };
 
@@ -402,10 +408,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     try {
       await api.delete(`/push/subscriptions/${id}`);
       await fetchPushDevices();
-      toast.success("Device removed.");
+      toast.success("Enheten har tagits bort.");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to remove device.");
+      toast.error("Kunde inte ta bort enheten.");
     }
   };
 
@@ -1359,7 +1365,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
               <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Bell size={20} /> Web Push Notifications (PWA)
+                <Bell size={20} /> Pushnotiser i webblasare (PWA)
               </h3>
               <span style={{
                 fontSize: '0.75rem',
@@ -1370,33 +1376,72 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 color: pushEnabled ? '#22c55e' : 'var(--text-muted)',
                 border: pushEnabled ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border-color)'
               }}>
-                {pushEnabled ? 'ACTIVE ON THIS DEVICE' : 'NOT ACTIVE'}
+                {pushEnabled ? 'AKTIV PA DENNA ENHET' : 'EJ AKTIV'}
               </span>
             </div>
             
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem', paddingRight: '0.35rem', lineHeight: 1.5 }}>
-              Enable notifications in your browser to receive push notifications directly to your mobile device or desktop when new articles arrive or monitored keywords trigger.
+              Aktivera pushnotiser i din webblasare for att ta emot handelser direkt i mobilen eller pa datorn nar nya artiklar anlander eller bevakade nyckelord traffar. Notiserna halls nu automatiskt synkroniserade vid appuppdateringar.
             </p>
 
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
-              <button 
-                onClick={togglePush}
-                style={{
-                  padding: '0.65rem 1.25rem',
-                  borderRadius: '8px',
-                  border: pushEnabled ? '1px solid var(--border-color)' : 'none',
-                  backgroundColor: pushEnabled ? 'var(--bg-app)' : 'var(--primary)',
-                  color: pushEnabled ? 'var(--text-main)' : 'white',
-                  fontWeight: 600,
-                  fontSize: '0.88rem',
-                  cursor: 'pointer',
+              {!pushEnabled ? (
+                <button 
+                  onClick={togglePush}
+                  style={{
+                    padding: '0.65rem 1.25rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: 'var(--primary)',
+                    color: 'white',
+                    fontWeight: 600,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <Bell size={16} /> Aktivera pushnotiser
+                </button>
+              ) : (
+                <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem'
-                }}
-              >
-                <Bell size={16} /> {pushEnabled ? 'Renew / Reactivate subscription' : 'Enable push notifications'}
-              </button>
+                  gap: '0.5rem',
+                  padding: '0.65rem 1rem',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                  color: '#16a34a',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  fontWeight: 600,
+                  fontSize: '0.88rem'
+                }}>
+                  <Check size={16} /> Aktiv och synkroniserad
+                </div>
+              )}
+
+              {pushEnabled && (
+                <button 
+                  onClick={togglePush}
+                  title="Fornya registreringen mot push-servern manuellt om notiser inte nar fram"
+                  style={{
+                    padding: '0.65rem 1.15rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-app)',
+                    color: 'var(--text-main)',
+                    fontWeight: 500,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <RefreshCw size={15} /> Fornya prenumeration
+                </button>
+              )}
 
               <button 
                 onClick={handleTestPush}
@@ -1414,7 +1459,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   gap: '0.5rem'
                 }}
               >
-                <Send size={16} style={{ color: 'var(--primary)' }} /> Send test notification to device
+                <Send size={16} style={{ color: 'var(--primary)' }} /> Skicka testnotis till enhet
               </button>
               
               {pushEnabled && (
@@ -1434,26 +1479,26 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     gap: '0.5rem'
                   }}
                 >
-                  Unsubscribe this device
+                  Avsluta prenumeration pa denna enhet
                 </button>
               )}
             </div>
           </div>
 
-          {/* Registrerade enheter för push-notiser */}
+          {/* Registrerade enheter for push-notiser */}
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Smartphone size={18} style={{ color: 'var(--primary)' }} />
                 <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 600 }}>
-                  Registered Devices ({pushDevices.length})
+                  Registrerade enheter ({pushDevices.length})
                 </h4>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <button
                   onClick={fetchPushDevices}
                   disabled={isLoadingDevices}
-                  title="Refresh list"
+                  title="Uppdatera lista"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1467,12 +1512,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     cursor: 'pointer'
                   }}
                 >
-                  <RefreshCw size={13} className={isLoadingDevices ? 'animate-spin' : ''} /> Refresh
+                  <RefreshCw size={13} className={isLoadingDevices ? 'animate-spin' : ''} /> Uppdatera
                 </button>
                 {pushDevices.length > 0 && (
                   <button
                     onClick={handleClearAllDevices}
-                    title="Clear all saved devices"
+                    title="Rensa alla sparade enheter"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -1487,25 +1532,25 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       cursor: 'pointer'
                     }}
                   >
-                    <Trash2 size={13} /> Clear all devices
+                    <Trash2 size={13} /> Rensa alla enheter
                   </button>
                 )}
               </div>
             </div>
 
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem', paddingLeft: '0.35rem', paddingRight: '0.35rem', lineHeight: 1.45 }}>
-              Displays connected devices and browsers for your account. Push notifications are delivered to all active devices in this list. If you replaced a phone or have stale sessions, you can manage them here.
+              Visar anslutna enheter och webblasare for ditt konto. Pushnotiser levereras till alla aktiva enheter i denna lista. Byter du telefon eller har inaktuella sessioner kan du rensa dem har.
             </p>
 
             {pushDevices.length === 0 ? (
               <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
-                No devices are currently registered for push notifications. Click "Enable push notifications" above to register this device.
+                Inga enheter ar for narvarande registrerade for pushnotiser. Klicka pa "Aktivera pushnotiser" ovan for att registrera denna enhet.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {pushDevices.map(dev => {
                   const isMobile = (dev.device_name || '').toLowerCase().includes('android') || (dev.device_name || '').toLowerCase().includes('iphone');
-                  const updatedDate = dev.updated_at ? formatEuropeanDateTime(dev.updated_at) : (dev.created_at ? formatEuropeanDateTime(dev.created_at) : 'Unknown date');
+                  const updatedDate = dev.updated_at ? formatEuropeanDateTime(dev.updated_at) : (dev.created_at ? formatEuropeanDateTime(dev.created_at) : 'Okant datum');
                   return (
                     <div
                       key={dev.id}
@@ -1547,19 +1592,19 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                                 color: '#22c55e',
                                 border: '1px solid rgba(34, 197, 94, 0.3)'
                               }}>
-                                This device
+                                Denna enhet
                               </span>
                             )}
                           </div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            Last active: {updatedDate} | ID: ...{dev.endpoint_snippet}
+                            Senast aktiv: {updatedDate} | ID: ...{dev.endpoint_snippet}
                           </div>
                         </div>
                       </div>
 
                       <button
                         onClick={() => handleDeleteDevice(dev.id)}
-                        title="Remove device"
+                        title="Ta bort enhet"
                         style={{
                           padding: '0.4rem',
                           borderRadius: '6px',

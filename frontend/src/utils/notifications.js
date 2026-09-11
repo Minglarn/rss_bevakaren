@@ -57,7 +57,7 @@ export const subscribeToWebPush = async () => {
 
     const registration = await navigator.serviceWorker.ready;
     
-    // Rensa eventuell äldre prenumerationstoken så att nyckeln garanterat matchar servern
+    // Rensa eventuell aldre prenumerationstoken sa att nyckeln garanterat matchar servern
     const existingSub = await registration.pushManager.getSubscription();
     if (existingSub) {
       try {
@@ -79,11 +79,89 @@ export const subscribeToWebPush = async () => {
       auth: subJSON.keys.auth
     });
     
+    localStorage.removeItem('rss_push_unsubscribed');
+    localStorage.setItem('rss_push_enabled', 'true');
     return subJSON.endpoint;
   } catch (error) {
     console.error('Could not subscribe to push:', error);
     return null;
   }
+};
+
+export const autoSyncPushSubscription = async () => {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+    return false;
+  }
+  if (Notification.permission !== 'granted') {
+    return false;
+  }
+  if (localStorage.getItem('rss_push_unsubscribed') === 'true') {
+    return false;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+
+    // Om ingen prenumeration finns och anvandaren aldrig haft det aktiverat, avbryt
+    if (!subscription && localStorage.getItem('rss_push_enabled') !== 'true') {
+      return false;
+    }
+
+    const vapidRes = await api.get('/push/vapid-public-key');
+    const publicVapidKey = vapidRes?.data?.public_key;
+    if (!publicVapidKey) return false;
+
+    const serverKeyArray = urlBase64ToUint8Array(publicVapidKey);
+
+    let needsResubscribe = false;
+    if (!subscription) {
+      needsResubscribe = true;
+    } else if (subscription.options && subscription.options.applicationServerKey) {
+      const subKey = new Uint8Array(subscription.options.applicationServerKey);
+      if (subKey.length !== serverKeyArray.length) {
+        needsResubscribe = true;
+      } else {
+        for (let i = 0; i < subKey.length; i++) {
+          if (subKey[i] !== serverKeyArray[i]) {
+            needsResubscribe = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (needsResubscribe) {
+      if (subscription) {
+        try {
+          await subscription.unsubscribe();
+        } catch (e) {
+          console.warn('AutoSync: Unsubscribe old token failed:', e);
+        }
+      }
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: serverKeyArray
+      });
+    }
+
+    if (subscription) {
+      const subJSON = subscription.toJSON();
+      if (subJSON && subJSON.endpoint && subJSON.keys) {
+        await api.post('/push/subscribe', {
+          endpoint: subJSON.endpoint,
+          p256dh: subJSON.keys.p256dh,
+          auth: subJSON.keys.auth
+        });
+      }
+      localStorage.removeItem('rss_push_unsubscribed');
+      localStorage.setItem('rss_push_enabled', 'true');
+      return true;
+    }
+  } catch (err) {
+    console.warn('Silent autoSyncPushSubscription error:', err);
+  }
+  return false;
 };
 
 export const sendNotification = (title, options = {}) => {

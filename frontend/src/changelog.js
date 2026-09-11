@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.11.06',
+    date: '2026-09-11',
+    title: 'Automatisk tyst synkronisering av pushnotiser och förtydligad status',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Automatisk tyst återsynkronisering',
+        description: 'Webbläsaren kontrollerar nu automatiskt vid appstart och Service Worker-uppdateringar att pushprenumerationen matchar serverns VAPID-nyckel och återregistrerar tyst vid behov, så att du aldrig behöver förnya manuellt efter en appuppdatering.'
+      },
+      {
+        type: 'ui',
+        title: 'Tydlig statusindikator i inställningar',
+        description: 'När pushnotiser är aktiva visas en grön statusindikator "Aktiv och synkroniserad" istället för en missvisande förnyelseknapp. En manuell knapp för att förnya prenumerationen finns kvar diskret vid eventuell felsökning.'
+      },
+      {
+        type: 'ui',
+        title: 'Svenska texter i hela notishanteraren',
+        description: 'Alla texter, knappar, bekräftelsedialoger och listor över anslutna enheter i notisfliken är nu helt på svenska.'
+      }
+    ]
+  },
+  {
     version: '2026.09.11.05',
     date: '2026-09-11',
     title: 'Fullständig svensk dokumentation i README.md och versionsspårbarhet',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'docs',
