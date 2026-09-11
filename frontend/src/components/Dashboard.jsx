@@ -708,6 +708,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     // If expanding and content not scraped yet
     if (!expandedItems[index] && !scrapedContents[link]) {
       const feedItems = allFeeds.filter(f => f.link === link);
+      const preloadedContent = feedItems.find(f => f.content)?.content;
+      if (preloadedContent) {
+        setScrapedContents(prev => ({ ...prev, [link]: preloadedContent }));
+        return;
+      }
+
       const isScrapeEnabled = feedItems.length > 0 && feedItems[0].scrape_enabled !== false;
       const feedName = feedItems[0]?.source_title || '';
       

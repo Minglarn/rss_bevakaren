@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.11.07',
+    date: '2026-09-11',
+    title: 'Automatisk artikel-skrapning före AI-analys och svensk Utseende-flik',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Automatisk artikel-skrapning före AI-analys',
+        description: 'Systemet hämtar nu automatiskt webbsidans faktiska brödtext innan AI-sammanfattningen genereras. Detta gör att AI-modellen har tillgång till hela händelsen och kan avslöja vad klickbeten döljer (t.ex. orsaker eller namn) direkt i första meningen.'
+      },
+      {
+        type: 'performance',
+        title: 'Blixtsnabb artikelöppning via sparad brödtext',
+        description: 'Den skrapade texten sparas nu direkt i databasen, vilket innebär att artiklar öppnas omedelbart vid klick i flödet utan att behöva skrapas på nytt.'
+      },
+      {
+        type: 'ui',
+        title: 'Fullständig svensk Utseende-flik med ny switch',
+        description: 'Fliken Utseende är nu helt på svenska, och du kan enkelt slå av eller på automatisk artikel-skrapning för AI direkt i gränssnittet.'
+      }
+    ]
+  },
+  {
     version: '2026.09.11.06',
     date: '2026-09-11',
     title: 'Automatisk tyst synkronisering av pushnotiser och förtydligad status',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

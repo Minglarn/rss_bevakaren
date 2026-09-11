@@ -9,6 +9,8 @@ from typing import List, Optional, Dict, Any
 from datetime import timedelta
 import os
 import json
+import requests
+from bs4 import BeautifulSoup
 
 import models, schemas, database, auth, ai_service, rss_parser, mqtt_service
 from pydantic import BaseModel
@@ -27,6 +29,38 @@ class WsLogFilter(logging.Filter):
 
 logging.getLogger("uvicorn.access").addFilter(WsLogFilter())
 logging.getLogger("uvicorn.error").addFilter(WsLogFilter())
+
+def extract_clean_article_text(url: str, timeout: int = 8) -> Optional[str]:
+    """Hämtar och extraherar ren brödtext från en webbartikel."""
+    if not url or not url.startswith("http"):
+        return None
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "sv,en;q=0.9"
+        }
+        res = requests.get(url, headers=headers, timeout=timeout)
+        res.raise_for_status()
+        
+        soup = BeautifulSoup(res.text, "html.parser")
+        for unwanted in soup(["script", "style", "nav", "footer", "aside", "header", "noscript", "svg"]):
+            unwanted.decompose()
+            
+        article_body = soup.find("article") or soup.find("main") or soup.find("body")
+        if article_body:
+            paragraphs = article_body.find_all("p")
+        else:
+            paragraphs = soup.find_all("p")
+            
+        texts = [p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 20]
+        text_content = "\n\n".join(texts)
+        if len(text_content.strip()) > 40:
+            return text_content.strip()
+        return None
+    except Exception as e:
+        print(f"[SCRAPER] Kunde inte hämta artikeltext ({url}): {e}", flush=True)
+        return None
 
 models.Base.metadata.create_all(bind=database.engine)
 
@@ -64,6 +98,10 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN auto_purge_days INTEGER DEFAULT 30"))
                     conn.commit()
                     print("[DB] Added auto_purge_days column to user_ai_settings", flush=True)
+                if "auto_scrape_article_text" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN auto_scrape_article_text INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added auto_scrape_article_text column to user_ai_settings", flush=True)
                 conn.execute(text("UPDATE user_ai_settings SET prio_enabled = 0 WHERE prio_enabled IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET prio_notify_only = 0 WHERE prio_notify_only IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET push_include_title = 1 WHERE push_include_title IS NULL"))
@@ -71,6 +109,7 @@ def ensure_db_migrations():
                 conn.execute(text("UPDATE user_ai_settings SET push_include_summary = 1 WHERE push_include_summary IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET auto_purge_enabled = 1 WHERE auto_purge_enabled IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET auto_purge_days = 30 WHERE auto_purge_days IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET auto_scrape_article_text = 1 WHERE auto_scrape_article_text IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = NULL WHERE custom_system_prompt IS NOT NULL AND custom_system_prompt NOT LIKE '%SAKLIGA NYHETER%'"))
                 conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = REPLACE(custom_system_prompt, 'Max två korta', 'Max tre korta') WHERE custom_system_prompt LIKE '%Max två korta%'"))
                 conn.commit()
@@ -94,6 +133,10 @@ def ensure_db_migrations():
                     except Exception:
                         pass
                     print("[DB] Added cluster_id column to articles", flush=True)
+                if "content" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN content TEXT"))
+                    conn.commit()
+                    print("[DB] Added content column to articles", flush=True)
                 conn.execute(text("UPDATE articles SET allow_push = 1 WHERE allow_push IS NULL"))
                 conn.commit()
         except Exception as e:
@@ -408,6 +451,16 @@ def run_db_migrations(db_path: str):
             """)
         except Exception as e:
             print(f"Migration 16 error: {e}")
+
+        # Migration 17: Add content to articles and auto_scrape_article_text to user_ai_settings
+        try:
+            cur.execute("ALTER TABLE articles ADD COLUMN content TEXT;")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            cur.execute("ALTER TABLE user_ai_settings ADD COLUMN auto_scrape_article_text INTEGER DEFAULT 1;")
+        except sqlite3.OperationalError:
+            pass
 
         conn.commit()
         conn.close()
@@ -1069,10 +1122,26 @@ async def ai_processing_loop():
                     if user_id:
                         await manager.send_personal_message(f"AI_PROGRESS:{art.id}:0", user_id)
 
+                    # Avgör om vi ska hämta och använda skrapad brödtext för djup AI-analys
+                    article_text_for_ai = art.summary or ""
+                    auto_scrape_active = (user_ai.auto_scrape_article_text != 0) if (user_ai and user_ai.auto_scrape_article_text is not None) else True
+                    feed_allows_scrape = (feed_obj.scrape_enabled != 0) if (feed_obj and feed_obj.scrape_enabled is not None) else True
+
+                    if auto_scrape_active and feed_allows_scrape and art.link:
+                        scraped_text = art.content
+                        if not scraped_text or len(scraped_text.strip()) < 30:
+                            scraped_text = await asyncio.to_thread(extract_clean_article_text, art.link, 8)
+                            if scraped_text and len(scraped_text.strip()) > 30:
+                                art.content = scraped_text
+                                db.commit()
+                        if scraped_text and len(scraped_text.strip()) > 30:
+                            # Använd de första 2500 tecknen så AI får hela händelsekontexten och fakta
+                            article_text_for_ai = scraped_text[:2500]
+
                     analysis = await asyncio.to_thread(
                         ai_service.analyze_article,
                         title=art.title,
-                        summary=art.summary,
+                        summary=article_text_for_ai,
                         source_title=source,
                         categories=cats,
                         custom_prompt=user_prompt,
@@ -1523,7 +1592,8 @@ def get_dashboard_feeds(
             "clickbait_reason": art.clickbait_reason or "" if include_ai else "",
             "cluster_id": art.cluster_id,
             "cluster_size": 1,
-            "similar_articles": []
+            "similar_articles": [],
+            "content": art.content
         }
         response_items.append(art_dict)
         
@@ -1844,7 +1914,8 @@ def get_ai_config(
             push_include_image=True,
             push_include_summary=True,
             auto_purge_enabled=True,
-            auto_purge_days=30
+            auto_purge_days=30,
+            auto_scrape_article_text=True
         )
         
     cats = normalize_user_categories(user_ai.categories)
@@ -1871,7 +1942,8 @@ def get_ai_config(
         push_include_image=bool(user_ai.push_include_image if user_ai.push_include_image is not None else 1),
         push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1),
         auto_purge_enabled=bool(user_ai.auto_purge_enabled if user_ai.auto_purge_enabled is not None else 1),
-        auto_purge_days=int(user_ai.auto_purge_days or 30)
+        auto_purge_days=int(user_ai.auto_purge_days or 30),
+        auto_scrape_article_text=bool(user_ai.auto_scrape_article_text if user_ai.auto_scrape_article_text is not None else 1)
     )
 
 @app.get("/ai/models")
@@ -1922,6 +1994,8 @@ def update_ai_config(
         user_ai.auto_purge_enabled = 1 if config.auto_purge_enabled else 0
     if config.auto_purge_days is not None:
         user_ai.auto_purge_days = max(1, min(365, config.auto_purge_days))
+    if config.auto_scrape_article_text is not None:
+        user_ai.auto_scrape_article_text = 1 if config.auto_scrape_article_text else 0
 
     cats = normalize_user_categories(user_ai.categories)
 
@@ -1955,11 +2029,11 @@ def update_ai_config(
         is_healthy=ai_service.check_lm_studio_health(),
         push_include_title=bool(user_ai.push_include_title if user_ai.push_include_title is not None else 1),
         push_include_image=bool(user_ai.push_include_image if user_ai.push_include_image is not None else 1),
-        push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1)
+        push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1),
+        auto_purge_enabled=bool(user_ai.auto_purge_enabled if user_ai.auto_purge_enabled is not None else 1),
+        auto_purge_days=int(user_ai.auto_purge_days or 30),
+        auto_scrape_article_text=bool(user_ai.auto_scrape_article_text if user_ai.auto_scrape_article_text is not None else 1)
     )
-
-import requests
-from bs4 import BeautifulSoup
 
 @app.get("/scrape")
 def scrape_article(
@@ -1968,40 +2042,29 @@ def scrape_article(
     db: Session = Depends(database.get_db), 
     current_username: str = Depends(auth.get_current_username)
 ):
+    art = db.query(models.Article).filter(models.Article.link == url).first()
+    # Om artikeln redan har sparad brödtext i databasen, returnera den direkt utan nätverksanrop
+    if art and art.content and len(art.content.strip()) > 30:
+        return {"content": art.content}
+
     display_name = feed_name.strip() if (feed_name and feed_name.strip()) else None
-    if not display_name:
-        art = db.query(models.Article).filter(models.Article.link == url).first()
-        if art and art.feed:
-            display_name = art.feed.title or art.feed.url
+    if not display_name and art and art.feed:
+        display_name = art.feed.title or art.feed.url
             
     name_str = display_name if display_name else "Okänt flöde"
-    print(f"Scraping started for feed: {name_str}")
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-        res = requests.get(url, headers=headers, timeout=10)
-        res.raise_for_status()
-        
-        soup = BeautifulSoup(res.text, "html.parser")
-        
-        # Simple extraction: find all paragraphs inside main or article tags, 
-        # fallback to all paragraphs if not found
-        article_body = soup.find("article") or soup.find("main") or soup.find("body")
-        if article_body:
-            paragraphs = article_body.find_all("p")
-        else:
-            paragraphs = soup.find_all("p")
-            
-        text_content = "\n\n".join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
-        
-        if not text_content:
-            text_content = "Could not extract article text from this page."
-            
-        return {"content": text_content}
-    except Exception as e:
-        print(f"Scrape error for feed '{name_str}': {e}")
-        return {"content": "Could not load article automatically."}
+    print(f"Scraping started for feed: {name_str}", flush=True)
+    
+    extracted = extract_clean_article_text(url, timeout=10)
+    if extracted:
+        if art:
+            try:
+                art.content = extracted
+                db.commit()
+            except Exception:
+                pass
+        return {"content": extracted}
+
+    return {"content": "Could not extract article text from this page."}
 
 from pywebpush import webpush, WebPushException
 @app.get("/push/vapid-public-key")

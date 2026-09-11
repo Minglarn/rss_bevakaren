@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 
 class UserCreate(BaseModel):
     username: str
@@ -107,6 +107,7 @@ class ArticleResponse(BaseModel):
     cluster_id: Optional[int] = None
     cluster_size: Optional[int] = 1
     similar_articles: Optional[List[Dict[str, Any]]] = []
+    content: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -118,7 +119,7 @@ class CategoryItem(BaseModel):
 class AIConfigUpdate(BaseModel):
     prio_rules: Optional[str] = ""
     exclude_rules: Optional[str] = ""
-    categories: Optional[List[Any]] = []
+    categories: Optional[List[Union[str, CategoryItem]]] = None
     prio_threshold: Optional[int] = 75
     system_prompt: Optional[str] = ""
     onboarding_completed: Optional[bool] = None
@@ -130,6 +131,7 @@ class AIConfigUpdate(BaseModel):
     push_include_summary: Optional[bool] = None
     auto_purge_enabled: Optional[bool] = None
     auto_purge_days: Optional[int] = None
+    auto_scrape_article_text: Optional[bool] = None
 
 class AIConfigResponse(BaseModel):
     prio_rules: str = ""
@@ -149,6 +151,7 @@ class AIConfigResponse(BaseModel):
     push_include_summary: bool = True
     auto_purge_enabled: bool = True
     auto_purge_days: int = 30
+    auto_scrape_article_text: bool = True
 
 class ArticlePrioritizeRequest(BaseModel):
     topic: Optional[str] = None

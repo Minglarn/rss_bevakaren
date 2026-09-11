@@ -82,6 +82,7 @@ class Article(Base):
     clickbait_reason = Column(String, default="")
     allow_push = Column(Integer, default=1) # 1 = tillåt pushnotis, 0 = tyst/initial/gammal artikel
     cluster_id = Column(Integer, nullable=True, index=True)
+    content = Column(String, nullable=True) # Fullständig skrapad brödtext för djup AI-analys och snabb visning
 
     feed = relationship("Feed", back_populates="articles")
     embedding = relationship("ArticleEmbedding", uselist=False, back_populates="article", cascade="all, delete-orphan")
@@ -115,6 +116,7 @@ class UserAISettings(Base):
     push_include_summary = Column(Integer, default=1) # 1 = skicka AI-sammanfattning som text, 0 = använd ingress/standard
     auto_purge_enabled = Column(Integer, default=1) # 1 = automatisk nattlig rensning aktiv, 0 = avstängd
     auto_purge_days = Column(Integer, default=30) # Antal dagar att spara olåsta artiklar innan rensning
+    auto_scrape_article_text = Column(Integer, default=1) # 1 = skrapa brödtext före AI-analys, 0 = enbart RSS-ingress
 
     owner = relationship("User", back_populates="ai_settings")
 

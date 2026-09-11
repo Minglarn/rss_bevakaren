@@ -572,7 +572,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         push_include_image: aiConfig.push_include_image ?? true,
         push_include_summary: aiConfig.push_include_summary ?? true,
         auto_purge_enabled: nextVal,
-        auto_purge_days: purgeDays
+        auto_purge_days: purgeDays,
+        auto_scrape_article_text: aiConfig.auto_scrape_article_text !== false
       });
       if (res.data) setAiConfig(res.data);
       toast.success(nextVal ? 'Automatic nightly purge enabled (runs at 03:00).' : 'Automatic nightly purge disabled.');
@@ -580,6 +581,42 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     } catch (err) {
       console.error(err);
       toast.error('Failed to update automatic purge setting.');
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
+
+  const handleToggleAutoScrape = async () => {
+    const currentVal = aiConfig.auto_scrape_article_text !== false;
+    const nextVal = !currentVal;
+    try {
+      setIsSavingAi(true);
+      const formattedCats = (aiConfig.categories || []).map(c => 
+        typeof c === 'object' ? { name: c.name, weight: c.weight ?? 5 } : { name: c, weight: 5 }
+      );
+      const res = await api.put('/ai/config', {
+        prio_rules: aiConfig.prio_rules || '',
+        exclude_rules: aiConfig.exclude_rules || '',
+        categories: formattedCats,
+        prio_threshold: aiConfig.prio_threshold || 75,
+        system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
+        onboarding_completed: true,
+        prio_enabled: aiConfig.prio_enabled ?? false,
+        prio_notify_only: aiConfig.prio_notify_only ?? false,
+        lm_studio_model: aiConfig.lm_studio_model || '',
+        push_include_title: aiConfig.push_include_title ?? true,
+        push_include_image: aiConfig.push_include_image ?? true,
+        push_include_summary: aiConfig.push_include_summary ?? true,
+        auto_purge_enabled: aiConfig.auto_purge_enabled !== false,
+        auto_purge_days: purgeDays,
+        auto_scrape_article_text: nextVal
+      });
+      if (res.data) setAiConfig(res.data);
+      toast.success(nextVal ? 'Automatisk artikel-skrapning for AI ar nu aktiverad.' : 'Automatisk artikel-skrapning for AI ar nu inaktiverad.');
+      window.dispatchEvent(new Event('aiConfigUpdated'));
+    } catch (err) {
+      console.error(err);
+      toast.error('Kunde inte spara installningen.');
     } finally {
       setIsSavingAi(false);
     }
@@ -966,41 +1003,41 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ImageIcon size={20} /> UI Settings
+              <ImageIcon size={20} /> Utseende och visning
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem' }}>
-              Customize how the app looks and works.
+              Anpassa hur applikationen ser ut, hur nyheter presenteras och hur djupt innehållet analyseras.
             </p>
 
             <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
               <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ImageIcon size={18} /> Theme
+                <ImageIcon size={18} /> Färgtema
               </h4>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Appearance</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Choose between system default, light, or dark theme.</div>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Tema</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Välj mellan systemstandard, ljust eller mörkt tema.</div>
                 </div>
                 <select 
                   value={theme}
                   onChange={toggleTheme}
                   style={{ flex: 'none', width: 'auto', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
                 >
-                  <option value="system">Auto (System)</option>
-                  <option value="light">Light Theme</option>
-                  <option value="dark">Dark Theme</option>
+                  <option value="system">Automatiskt (System)</option>
+                  <option value="light">Ljust tema</option>
+                  <option value="dark">Mörkt tema</option>
                 </select>
               </div>
             </div>
 
             <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
               <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ImageIcon size={18} /> Display
+                <ImageIcon size={18} /> Bilder i flödet
               </h4>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Include images in event cards</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Choose whether news articles should display accompanying images or just text.</div>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Visa artikelbilder i händelsekorten</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Välj om nyhetsartiklar ska visa tillhörande bild eller enbart ren text.</div>
                 </div>
                 <label className="toggle-switch">
                   <input
@@ -1027,6 +1064,29 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     type="checkbox"
                     checked={clusterMode}
                     onChange={toggleClusterMode}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            {/* Ny inställning: Automatisk artikel-skrapning före AI-analys */}
+            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FileText size={18} style={{ color: 'var(--primary)' }} /> Automatisk artikel-skrapning för AI
+              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                <div>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Hämta fullständig artikeltext före AI-analys</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.45, marginTop: '0.2rem' }}>
+                    Hämtar automatiskt artikelns brödtext från webbkällan innan AI-analysen genereras. Detta gör att AI-modellen kan avslöja vad klickbeten döljer (t.ex. orsaker, namn eller summor) och ger mer informativa sammanfattningar för korta RSS-ingresser.
+                  </div>
+                </div>
+                <label className="toggle-switch" style={{ flexShrink: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={aiConfig.auto_scrape_article_text !== false}
+                    onChange={handleToggleAutoScrape}
                   />
                   <span className="toggle-slider"></span>
                 </label>
