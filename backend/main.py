@@ -85,10 +85,36 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE articles ADD COLUMN allow_push INTEGER DEFAULT 1"))
                     conn.commit()
                     print("[DB] Added allow_push column to articles", flush=True)
+                if "cluster_id" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN cluster_id INTEGER DEFAULT NULL"))
+                    conn.commit()
+                    try:
+                        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_articles_cluster_id ON articles(cluster_id)"))
+                        conn.commit()
+                    except Exception:
+                        pass
+                    print("[DB] Added cluster_id column to articles", flush=True)
                 conn.execute(text("UPDATE articles SET allow_push = 1 WHERE allow_push IS NULL"))
                 conn.commit()
         except Exception as e:
             print(f"[DB] Migration notice for articles: {e}", flush=True)
+
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS daily_digests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    title TEXT DEFAULT '',
+                    content TEXT DEFAULT '',
+                    digest_type TEXT DEFAULT 'morning',
+                    article_ids TEXT DEFAULT '[]',
+                    created_at INTEGER DEFAULT 0,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
+                )
+            """))
+            conn.commit()
+        except Exception as e:
+            print(f"[DB] Migration notice for daily_digests: {e}", flush=True)
 
         try:
             res_feeds = conn.execute(text("PRAGMA table_info(feeds)"))
@@ -886,10 +912,13 @@ async def polling_loop():
         await asyncio.sleep(30) # Check every 30 seconds
 
 def safe_bg_save_embedding(art_id: int, title: str, summary: str):
-    """Säker bakgrundssparning av embedding med garanterad sessionsstängning."""
+    """Säker bakgrundssparning av embedding samt topic-klustring med garanterad sessionsstängning."""
     sess = database.SessionLocal()
     try:
         ai_service.save_article_embedding(art_id, title, summary, sess)
+        ai_service.find_or_create_article_cluster(art_id, sess)
+    except Exception as e:
+        print(f"[Topic Clustering] Bakgrundsfel för artikel {art_id}: {e}", flush=True)
     finally:
         sess.close()
 
@@ -1352,6 +1381,7 @@ def get_dashboard_feeds(
     prio_only: Optional[bool] = False,
     category: Optional[str] = None,
     tag: Optional[str] = None,
+    cluster_mode: Optional[bool] = True,
     db: Session = Depends(database.get_db), 
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -1402,7 +1432,7 @@ def get_dashboard_feeds(
         
     articles = query.order_by(models.Article.received_ts.desc()).limit(150).all()
     
-    # Enhance articles with feed info for the UI
+    # Bygg respons-artiklar
     response_items = []
     for art in articles:
         cats = art.categories.split(",") if art.categories else []
@@ -1439,11 +1469,111 @@ def get_dashboard_feeds(
             "ai_summary": art.ai_summary if include_ai else None,
             "tags": parsed_tags if include_ai else [],
             "is_clickbait": art.is_clickbait or 0 if include_ai else 0,
-            "clickbait_reason": art.clickbait_reason or "" if include_ai else ""
+            "clickbait_reason": art.clickbait_reason or "" if include_ai else "",
+            "cluster_id": art.cluster_id,
+            "cluster_size": 1,
+            "similar_articles": []
         }
         response_items.append(art_dict)
         
-    return response_items
+    if not cluster_mode:
+        return response_items
+
+    # Gruppera artiklar som ingår i samma kluster
+    clusters: Dict[int, List[Dict[str, Any]]] = {}
+    unclustered: List[Dict[str, Any]] = []
+
+    for item in response_items:
+        cid = item.get("cluster_id")
+        if cid:
+            if cid not in clusters:
+                clusters[cid] = []
+            clusters[cid].append(item)
+        else:
+            unclustered.append(item)
+
+    final_items = []
+    for cid, c_items in clusters.items():
+        # Sortera i klustret: högst prio först, sedan nyast mottagen
+        c_items.sort(key=lambda x: (x.get("prio_score", 0), x.get("received_ts", 0)), reverse=True)
+        head = c_items[0]
+        head["cluster_size"] = len(c_items)
+        similar = []
+        for other in c_items[1:]:
+            similar.append({
+                "id": other["id"],
+                "feed_id": other["feed_id"],
+                "title": other["title"],
+                "source_title": other["source_title"],
+                "link": other["link"],
+                "published": other["published"],
+                "published_ts": other["published_ts"],
+                "is_read": other["is_read"]
+            })
+        head["similar_articles"] = similar
+        final_items.append(head)
+
+    final_items.extend(unclustered)
+    final_items.sort(key=lambda x: x.get("received_ts", 0), reverse=True)
+    return final_items
+
+@app.post("/articles/cluster/{cluster_id}/read")
+def mark_cluster_read(
+    cluster_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Markerar samtliga artiklar som ingår i ett kluster som lästa."""
+    arts = db.query(models.Article).join(models.Feed).filter(
+        models.Feed.user_id == current_user.id,
+        models.Article.cluster_id == cluster_id
+    ).all()
+    
+    updated_ids = []
+    for a in arts:
+        a.is_read = 1
+        updated_ids.append(a.id)
+    
+    db.commit()
+    return {"status": "ok", "cluster_id": cluster_id, "updated_count": len(updated_ids), "article_ids": updated_ids}
+
+@app.get("/ai/digest", response_model=Optional[schemas.DailyDigestResponse])
+def get_daily_digest(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Hämtar den senaste sparade dagliga briefingen."""
+    return ai_service.get_latest_daily_digest(db, current_user.id)
+
+@app.post("/ai/digest/generate", response_model=schemas.DailyDigestResponse)
+async def generate_daily_digest_endpoint(
+    req: Optional[schemas.DigestGenerateRequest] = None,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Genererar en färsk daglig briefing via LM Studio eller regelbaserad sammanställning."""
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    target_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
+    force_rule_based = bool(req and req.force_rule_based)
+    
+    digest = await asyncio.to_thread(
+        ai_service.generate_daily_digest,
+        db=db,
+        user_id=current_user.id,
+        model=target_model,
+        force_rule_based=force_rule_based
+    )
+    return digest
+
+@app.post("/articles/cluster/run")
+async def trigger_batch_clustering(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Kör topic-klustring på oklustrade artiklar från de senaste 36 timmarna."""
+    count = await asyncio.to_thread(ai_service.cluster_recent_unclustered_articles, db)
+    return {"status": "ok", "clustered_count": count}
+
 
 @app.post("/articles/{article_id}/analyze")
 async def trigger_article_analysis(article_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):

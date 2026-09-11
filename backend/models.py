@@ -13,6 +13,7 @@ class User(Base):
     keywords = relationship("Keyword", back_populates="owner")
     push_subscriptions = relationship("PushSubscription", back_populates="owner")
     ai_settings = relationship("UserAISettings", back_populates="owner", uselist=False, cascade="all, delete-orphan")
+    digests = relationship("DailyDigest", back_populates="owner", cascade="all, delete-orphan")
 
 class Feed(Base):
     __tablename__ = "feeds"
@@ -80,6 +81,7 @@ class Article(Base):
     is_clickbait = Column(Integer, default=0)
     clickbait_reason = Column(String, default="")
     allow_push = Column(Integer, default=1) # 1 = tillåt pushnotis, 0 = tyst/initial/gammal artikel
+    cluster_id = Column(Integer, nullable=True, index=True)
 
     feed = relationship("Feed", back_populates="articles")
     embedding = relationship("ArticleEmbedding", uselist=False, back_populates="article", cascade="all, delete-orphan")
@@ -115,3 +117,16 @@ class UserAISettings(Base):
     auto_purge_days = Column(Integer, default=30) # Antal dagar att spara olåsta artiklar innan rensning
 
     owner = relationship("User", back_populates="ai_settings")
+
+class DailyDigest(Base):
+    __tablename__ = "daily_digests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    title = Column(String, default="")
+    content = Column(String, default="")
+    digest_type = Column(String, default="morning") # morning, evening, on_demand, rule_based
+    article_ids = Column(String, default="[]") # JSON list of IDs
+    created_at = Column(Integer, default=0)
+
+    owner = relationship("User", back_populates="digests")

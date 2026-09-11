@@ -1252,3 +1252,365 @@ def stream_chat_with_news(
     res_obj = clean_ai_response_and_extract_followups(raw_reply, sources, used_model)
     yield f"data: {json.dumps({'type': 'done', 'reply': res_obj['reply'], 'sources': sources, 'follow_ups': res_obj['follow_ups'], 'model': res_obj['model']})}\n\n"
 
+# ==========================================
+# NYHETSKLUSTRING OCH DUBLETTHANTERING
+# ==========================================
+
+SWEDISH_STOPWORDS = {
+    "och", "i", "på", "att", "av", "en", "ett", "det", "som", "är", "för", "med", "till", 
+    "den", "har", "om", "inte", "nu", "efter", "mot", "under", "flera", "ska", "de", "vi", 
+    "ni", "så", "kan", "men", "denna", "dessa", "där", "då", "bli", "blir", "blev", "vid"
+}
+
+def clean_title_tokens(text: str) -> set:
+    if not text:
+        return set()
+    cleaned = re.sub(r'[^\w\s]', ' ', text.lower())
+    words = {w for w in cleaned.split() if len(w) > 2 and w not in SWEDISH_STOPWORDS}
+    return words
+
+def compute_text_similarity(title1: str, title2: str) -> float:
+    """Heuristisk ordöverlappning och Jaccard-likhet mellan två rubriker."""
+    set1 = clean_title_tokens(title1)
+    set2 = clean_title_tokens(title2)
+    if not set1 or not set2:
+        return 0.0
+    intersection = set1.intersection(set2)
+    union = set1.union(set2)
+    jaccard = len(intersection) / len(union) if union else 0.0
+    if len(intersection) >= 4:
+        return max(jaccard, 0.88)
+    if len(intersection) >= 3 and jaccard >= 0.40:
+        return max(jaccard, 0.85)
+    return jaccard
+
+def find_or_create_article_cluster(article_id: int, db: Any, similarity_threshold: float = 0.84) -> Optional[int]:
+    """
+    Söker efter liknande artiklar inom 36 timmar och kopplar artikeln till ett kluster.
+    Använder semantisk Nomic-embedding om tillgängligt, annars heuristisk textlikhet.
+    """
+    if not db or not article_id:
+        return None
+    try:
+        import models
+        art = db.query(models.Article).filter(models.Article.id == article_id).first()
+        if not art:
+            return None
+
+        if art.cluster_id:
+            return art.cluster_id
+
+        now_ts = int(time.time())
+        cutoff_ts = now_ts - (36 * 3600)
+        art_ts = art.received_ts or art.published_ts or now_ts
+        min_ts = min(cutoff_ts, art_ts - (36 * 3600))
+        max_ts = art_ts + (36 * 3600)
+
+        candidates = db.query(models.Article).filter(
+            models.Article.id != article_id,
+            models.Article.received_ts >= min_ts,
+            models.Article.received_ts <= max_ts
+        ).order_by(models.Article.received_ts.desc()).limit(150).all()
+
+        if not candidates:
+            return None
+
+        art_vec = None
+        art_norm = 0.0
+        if art.embedding and art.embedding.vector:
+            try:
+                art_vec = np.frombuffer(art.embedding.vector, dtype=np.float32)
+                art_norm = float(np.linalg.norm(art_vec))
+            except Exception:
+                art_vec = None
+
+        best_match = None
+        best_sim = 0.0
+
+        for cand in candidates:
+            sim = 0.0
+            if art_vec is not None and cand.embedding and cand.embedding.vector:
+                try:
+                    cand_vec = np.frombuffer(cand.embedding.vector, dtype=np.float32)
+                    cand_norm = float(np.linalg.norm(cand_vec))
+                    if art_norm > 0 and cand_norm > 0:
+                        sim = float(np.dot(art_vec, cand_vec) / (art_norm * cand_norm))
+                except Exception:
+                    sim = 0.0
+
+            # Heuristisk fallback om vektorjämförelse inte räckte eller saknades
+            if sim < similarity_threshold:
+                text_sim = compute_text_similarity(art.title or "", cand.title or "")
+                if text_sim > sim:
+                    sim = text_sim
+
+            if sim >= similarity_threshold and sim > best_sim:
+                best_sim = sim
+                best_match = cand
+
+        if best_match:
+            cluster_id = best_match.cluster_id
+            if not cluster_id:
+                cluster_id = best_match.id
+                best_match.cluster_id = cluster_id
+            
+            art.cluster_id = cluster_id
+            db.commit()
+            print(f"[Topic Clustering] Artikel {art.id} ('{art.title[:35]}...') kopplad till kluster {cluster_id} (likhet: {best_sim:.2f})", flush=True)
+            return cluster_id
+
+    except Exception as e:
+        print(f"[Topic Clustering] Fel vid klustring av artikel {article_id}: {e}", flush=True)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+    return None
+
+def cluster_recent_unclustered_articles(db: Any, hours: int = 36, limit: int = 150) -> int:
+    """Kör klustring på nyligen inkomna artiklar som saknar cluster_id."""
+    if not db:
+        return 0
+    try:
+        import models
+        cutoff_ts = int(time.time()) - (hours * 3600)
+        articles = db.query(models.Article).filter(
+            models.Article.received_ts >= cutoff_ts,
+            models.Article.cluster_id == None
+        ).order_by(models.Article.received_ts.desc()).limit(limit).all()
+
+        clustered_count = 0
+        for art in articles:
+            cid = find_or_create_article_cluster(art.id, db)
+            if cid:
+                clustered_count += 1
+        return clustered_count
+    except Exception as e:
+        print(f"[Topic Clustering] Fel vid massklustring: {e}", flush=True)
+        return 0
+
+# ==========================================
+# DAGENS BRIEFING (AI DIGEST)
+# ==========================================
+
+def generate_daily_digest(db: Any, user_id: int, model: Optional[str] = None, force_rule_based: bool = False) -> Dict[str, Any]:
+    """
+    Genererar en strukturerad daglig briefing (Morgon/Kvällsrapport) baserat på
+    de viktigaste händelserna från de senaste 24 timmarna.
+    Använder LM Studio om tillgängligt, annars regelbaserad sammanställning.
+    Strikt förbud mot emojis i hela texten.
+    """
+    if not db or not user_id:
+        return {"error": "Ogiltiga parametrar"}
+
+    import models
+    now_ts = int(time.time())
+    cutoff_24h = now_ts - (24 * 3600)
+
+    # 1. Hämta användarens aktiva flöden och artiklar från senaste 24h
+    user_articles = db.query(models.Article).join(models.Feed).filter(
+        models.Feed.user_id == user_id,
+        models.Feed.include_in_dashboard == 1,
+        models.Article.received_ts >= cutoff_24h
+    ).order_by(models.Article.prio_score.desc(), models.Article.received_ts.desc()).all()
+
+    if not user_articles:
+        cutoff_48h = now_ts - (48 * 3600)
+        user_articles = db.query(models.Article).join(models.Feed).filter(
+            models.Feed.user_id == user_id,
+            models.Feed.include_in_dashboard == 1,
+            models.Article.received_ts >= cutoff_48h
+        ).order_by(models.Article.prio_score.desc(), models.Article.received_ts.desc()).limit(30).all()
+
+    if not user_articles:
+        return {
+            "title": "Dagens Briefing",
+            "content": "Inga aktuella nyhetshändelser finns tillgängliga för sammanställning just nu. Lägg till eller uppdatera RSS-flöden för att generera en briefing.",
+            "digest_type": "empty",
+            "article_ids": [],
+            "articles": [],
+            "created_at": now_ts
+        }
+
+    # Gruppera så vi tar max en artikel per kluster för bredd i urvalet
+    seen_clusters = set()
+    top_candidates = []
+    for art in user_articles:
+        if art.cluster_id:
+            if art.cluster_id in seen_clusters:
+                continue
+            seen_clusters.add(art.cluster_id)
+        top_candidates.append(art)
+        if len(top_candidates) >= 8:
+            break
+
+    covered_ids = [a.id for a in top_candidates]
+    covered_articles_summary = [
+        {
+            "id": a.id,
+            "title": a.title,
+            "source_title": a.feed.title if a.feed else "",
+            "link": a.link,
+            "category": a.category or "Övrigt",
+            "published": a.published
+        }
+        for a in top_candidates
+    ]
+
+    local_hour = time.localtime(now_ts).tm_hour
+    period_name = "Morgonrapport" if 5 <= local_hour < 12 else ("Eftermiddagsrapport" if 12 <= local_hour < 18 else "Kvällsrapport")
+    today_str = time.strftime("%Y-%m-%d", time.localtime(now_ts))
+    digest_title = f"Dagens Briefing - {period_name} ({today_str})"
+
+    lm_online = False
+    if not force_rule_based:
+        lm_online = check_lm_studio_health()
+
+    digest_text = ""
+    digest_type = "ai_generated" if lm_online else "rule_based"
+
+    if lm_online:
+        items_text = []
+        for i, art in enumerate(top_candidates, 1):
+            src = art.feed.title if art.feed else "Nyhetskälla"
+            summary_part = art.ai_summary or art.summary or ""
+            items_text.append(f"{i}. Källa: {src}\nRubrik: {art.title}\nDetaljer: {summary_part[:300]}")
+
+        prompt_input = "\n\n".join(items_text)
+        system_msg = (
+            "Du är en professionell svensk nyhetsredaktör och analytiker för RSS-bevakaren.\n"
+            "Din uppgift är att sammanställa 'Dagens Briefing' baserat på följande aktuella nyhetshändelser.\n"
+            "Instruktioner:\n"
+            "1. Börja med en inledande övergripande mening som fångar det samlade nyhetsläget.\n"
+            "2. Välj ut de 3 till 5 viktigaste händelserna och formulera en koncis punktlista.\n"
+            "3. Varje punkt i listan SKA inledas med en fetstilt rubrik följt av 1-2 informativa, sakliga meningar.\n"
+            "4. Skriv uteslutande på ren, korrekt svenska.\n"
+            "5. STRIKT FÖRBUD MOT EMOJIS: Det är absolut förbjudet att använda några som helst emojis eller symbol-ikoner i svaret."
+        )
+
+        try:
+            target_model = model or get_active_model()
+            payload = {
+                "model": target_model,
+                "messages": [
+                    {"role": "system", "content": system_msg},
+                    {"role": "user", "content": f"Här är dagens viktigaste händelser:\n\n{prompt_input}\n\nSkapa en professionell sammanfattning enligt instruktionerna utan några emojis."}
+                ],
+                "temperature": 0.3,
+                "max_tokens": 1200,
+                "stream": False
+            }
+            res = requests.post(LM_STUDIO_URL, json=payload, timeout=60)
+            if res.status_code == 200:
+                data = res.json()
+                choices = data.get("choices", [])
+                if choices:
+                    digest_text = choices[0].get("message", {}).get("content", "").strip()
+        except Exception as e:
+            print(f"[Daily Digest] Fel vid anrop till LM Studio: {e}", flush=True)
+
+    if not digest_text:
+        digest_type = "rule_based"
+        bullet_points = []
+        for art in top_candidates[:5]:
+            src = art.feed.title if art.feed else "Källa"
+            lead = art.title or "Viktig händelse"
+            desc = art.ai_summary or (art.summary[:150] + "..." if art.summary else "Se källan för mer information.")
+            bullet_points.append(f"- **{lead}** ({src}): {desc}")
+
+        digest_text = (
+            f"Sammanställning av dagens centrala nyhetshändelser från dina bevakade källor.\n\n"
+            + "\n\n".join(bullet_points)
+        )
+
+    # Rensa eventuella emojis ur digest_text
+    clean_text = re.sub(r'[\U00010000-\U0010ffff]', '', digest_text)
+
+    try:
+        new_digest = models.DailyDigest(
+            user_id=user_id,
+            title=digest_title,
+            content=clean_text,
+            digest_type=digest_type,
+            article_ids=json.dumps(covered_ids),
+            created_at=now_ts
+        )
+        db.add(new_digest)
+        db.commit()
+        db.refresh(new_digest)
+
+        return {
+            "id": new_digest.id,
+            "title": new_digest.title,
+            "content": new_digest.content,
+            "digest_type": new_digest.digest_type,
+            "article_ids": covered_ids,
+            "articles": covered_articles_summary,
+            "created_at": new_digest.created_at
+        }
+    except Exception as e:
+        print(f"[Daily Digest] Kunde inte spara i databas: {e}", flush=True)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+    return {
+        "id": 0,
+        "title": digest_title,
+        "content": clean_text,
+        "digest_type": digest_type,
+        "article_ids": covered_ids,
+        "articles": covered_articles_summary,
+        "created_at": now_ts
+    }
+
+def get_latest_daily_digest(db: Any, user_id: int, max_age_hours: int = 18) -> Optional[Dict[str, Any]]:
+    """Hämtar den senaste sparade briefingen om den är nyare än max_age_hours."""
+    if not db or not user_id:
+        return None
+    try:
+        import models
+        cutoff = int(time.time()) - (max_age_hours * 3600)
+        digest = db.query(models.DailyDigest).filter(
+            models.DailyDigest.user_id == user_id,
+            models.DailyDigest.created_at >= cutoff
+        ).order_by(models.DailyDigest.created_at.desc()).first()
+
+        if not digest:
+            return None
+
+        art_ids = []
+        try:
+            art_ids = json.loads(digest.article_ids or "[]")
+        except Exception:
+            art_ids = []
+
+        articles_summary = []
+        if art_ids:
+            arts = db.query(models.Article).filter(models.Article.id.in_(art_ids)).all()
+            articles_summary = [
+                {
+                    "id": a.id,
+                    "title": a.title,
+                    "source_title": a.feed.title if a.feed else "",
+                    "link": a.link,
+                    "category": a.category or "Övrigt",
+                    "published": a.published
+                }
+                for a in arts
+            ]
+
+        return {
+            "id": digest.id,
+            "title": digest.title,
+            "content": digest.content,
+            "digest_type": digest.digest_type,
+            "article_ids": art_ids,
+            "articles": articles_summary,
+            "created_at": digest.created_at
+        }
+    except Exception as e:
+        print(f"[Daily Digest] Fel vid hämtning av senaste digest: {e}", flush=True)
+        return None
+

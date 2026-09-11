@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.11.02',
+    date: '2026-09-11',
+    title: 'Nyhetsklustring och Dagens Briefing (AI Digest toppkort)',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Nyhetsklustring och dubletthantering (Topic Clustering)',
+        description: 'Artiklar från olika källor som rapporterar om samma nyhetshändelse grupperas nu automatiskt ihop via semantiska vektorer eller text-heuristik. Flödet blir rent och överskådligt med källbrickor som visar vilka andra redaktioner som rapporterar om händelsen.'
+      },
+      {
+        type: 'feature',
+        title: 'Dagens Briefing som expanderbart toppkort',
+        description: 'Ett stilrent expanderbart toppkort överst i nyhetsflödet som ger en snabb morgon- eller kvällsrapport av dagens viktigaste händelser. Kan expanderas för att läsa punkterna och klicka sig direkt till berörda artiklar.'
+      },
+      {
+        type: 'improvement',
+        title: 'Full funktionalitet även utan lokal AI',
+        description: 'Klustringen har inbyggd heuristisk textmatchning som fångar liknande rubriker och händelser även om LM Studio är avstängt, och briefingkortet erbjuder regelbaserad sammanställning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.11.01',
     date: '2026-09-11',
     title: 'Strömlinjeformad mobil bottombar och centraliserad administration',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',

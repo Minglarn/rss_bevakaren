@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle } from 'lucide-react';
+import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText } from 'lucide-react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import ShareModal from './ShareModal';
@@ -134,6 +134,83 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [shareItem, setShareItem] = useState(null);
 
+  // Topic Clustering & Dubletthantering
+  const [clusterMode, setClusterMode] = useState(() => {
+    return localStorage.getItem('rss_cluster_mode') !== 'false';
+  });
+  useEffect(() => {
+    localStorage.setItem('rss_cluster_mode', clusterMode);
+  }, [clusterMode]);
+
+  const [expandedClusters, setExpandedClusters] = useState({});
+  const toggleClusterExpand = (clusterId) => {
+    setExpandedClusters(prev => ({ ...prev, [clusterId]: !prev[clusterId] }));
+  };
+
+  // Dagens Briefing (AI Digest)
+  const [digest, setDigest] = useState(null);
+  const [digestLoading, setDigestLoading] = useState(false);
+  const [isDigestExpanded, setIsDigestExpanded] = useState(() => {
+    return localStorage.getItem('rss_digest_expanded') === 'true';
+  });
+  useEffect(() => {
+    localStorage.setItem('rss_digest_expanded', isDigestExpanded);
+  }, [isDigestExpanded]);
+
+  const fetchLatestDigest = useCallback(async () => {
+    try {
+      const res = await api.get('/ai/digest');
+      if (res.data && res.data.content) {
+        setDigest(res.data);
+      }
+    } catch (e) {
+      console.error("Kunde inte hämta briefing:", e);
+    }
+  }, []);
+
+  const generateDigest = async (forceRuleBased = false) => {
+    setDigestLoading(true);
+    try {
+      const res = await api.post('/ai/digest/generate', { force_rule_based: forceRuleBased });
+      if (res.data) {
+        setDigest(res.data);
+        setIsDigestExpanded(true);
+      }
+    } catch (e) {
+      console.error("Kunde inte generera briefing:", e);
+    } finally {
+      setDigestLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLatestDigest();
+  }, [fetchLatestDigest]);
+
+  const handleMarkClusterRead = async (clusterId, e) => {
+    if (e) e.stopPropagation();
+    if (!clusterId) return;
+    try {
+      await api.post(`/articles/cluster/${clusterId}/read`);
+      setAllFeeds(prev => prev.map(item => {
+        if (item.cluster_id === clusterId) {
+          const updatedSimilar = (item.similar_articles || []).map(s => ({ ...s, is_read: 1 }));
+          return { ...item, is_read: 1, similar_articles: updatedSimilar };
+        }
+        return item;
+      }));
+      setDisplayedFeeds(prev => prev.map(item => {
+        if (item.cluster_id === clusterId) {
+          const updatedSimilar = (item.similar_articles || []).map(s => ({ ...s, is_read: 1 }));
+          return { ...item, is_read: 1, similar_articles: updatedSimilar };
+        }
+        return item;
+      }));
+    } catch (err) {
+      console.error("Kunde inte markera kluster som läst:", err);
+    }
+  };
+
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 400) {
@@ -164,7 +241,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     showRead,
     debouncedSearch,
     selectedCategory,
-    selectedTag
+    selectedTag,
+    clusterMode
   };
 
   const fetchFeeds = useCallback(async (isBackground = false) => {
@@ -176,7 +254,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       showRead: sRead,
       debouncedSearch: dSearch,
       selectedCategory: sCat,
-      selectedTag: sTag
+      selectedTag: sTag,
+      clusterMode: cMode
     } = paramsRef.current;
 
     if (!isBackground) {
@@ -196,6 +275,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       }
       if (sCat && sCat !== 'All') queryParts.push(`category=${encodeURIComponent(sCat)}`);
       if (sTag && sTag.trim()) queryParts.push(`tag=${encodeURIComponent(sTag.trim())}`);
+      if (cMode !== undefined) queryParts.push(`cluster_mode=${cMode ? 'true' : 'false'}`);
 
       const url = '/dashboard-feeds' + (queryParts.length > 0 ? '?' + queryParts.join('&') : '');
       const res = await api.get(url);
@@ -343,7 +423,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
       }
     };
-  }, [feedId, articleId, showRead, debouncedSearch, isPrioMode, selectedCategory, selectedTag]);
+  }, [feedId, articleId, showRead, debouncedSearch, isPrioMode, selectedCategory, selectedTag, clusterMode]);
 
   const handleSelectCategory = (cat) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -657,6 +737,28 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             <CheckCheck size={16} />
             <span className="desktop-only">Mark all as read</span>
           </button>
+          <button
+            onClick={() => setClusterMode(!clusterMode)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '6px 12px',
+              border: `1px solid ${clusterMode ? 'var(--primary)' : 'var(--border-color)'}`,
+              backgroundColor: clusterMode ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-card)',
+              color: clusterMode ? 'var(--primary)' : 'var(--text-muted)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+              height: '36px'
+            }}
+            title={clusterMode ? "Klustring aktiv (dubbletter grupperas)" : "Klassiskt flöde (alla källor visas separat)"}
+          >
+            <Layers size={16} />
+            <span className="desktop-only">{clusterMode ? "Klustrat" : "Alla källor"}</span>
+          </button>
           
           {/* Layout controls (desktop only) */}
           <div className="layout-controls desktop-only" style={{ gap: '4px', backgroundColor: 'var(--bg-app)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-color)', marginLeft: 'auto', height: '36px', display: 'flex', alignItems: 'center' }}>
@@ -935,7 +1037,179 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           <p style={{ color: 'var(--text-muted)' }}>No news found. Maybe you need to add feeds in the RSS manager?</p>
         </div>
       ) : (
-        <div className={`events-list cols-${desktopColumns}`} style={{ gap: '1rem' }}>
+        <>
+          {/* Dagens Briefing - Expanderbart toppkort */}
+          {!feedId && !articleId && (
+            <div className="daily-briefing-card" style={{
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '12px',
+              padding: '1rem 1.25rem',
+              marginBottom: '1.25rem',
+              boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+              transition: 'all 0.25s ease'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div 
+                  onClick={() => setIsDigestExpanded(prev => !prev)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', flex: 1, minWidth: '240px' }}
+                >
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <FileText size={18} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                        {digest?.title || 'Dagens Briefing'}
+                      </h2>
+                      {digest?.digest_type === 'ai_generated' && (
+                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.45rem', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+                          AI-genererad
+                        </span>
+                      )}
+                      {digest?.digest_type === 'rule_based' && (
+                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.1rem 0.45rem', borderRadius: '4px', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
+                          Regelbaserad
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {digest?.created_at ? `Uppdaterad ${new Date(digest.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${new Date(digest.created_at * 1000).toLocaleDateString()})` : 'Sammanfattning av det aktuella nyhetsläget'}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => generateDigest(false)}
+                    disabled={digestLoading}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.4rem 0.75rem',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-main)',
+                      cursor: digestLoading ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                    title="Generera ny rapport via LM Studio"
+                  >
+                    <RefreshCw size={14} className={digestLoading ? 'spin' : ''} />
+                    <span>{digestLoading ? 'Analyserar...' : 'Uppdatera'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setIsDigestExpanded(prev => !prev)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                    title={isDigestExpanded ? "Fäll ihop briefing" : "Expandera briefing"}
+                  >
+                    <ChevronDown size={16} style={{ transform: isDigestExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Sammanfattning i hopfällt läge */}
+              {!isDigestExpanded && digest?.content && (
+                <div 
+                  onClick={() => setIsDigestExpanded(true)}
+                  style={{ marginTop: '0.65rem', paddingTop: '0.65rem', borderTop: '1px solid var(--border-color)', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: 1.5, cursor: 'pointer' }}
+                >
+                  <p style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebKitLineClamp: 2, WebKitBoxOrient: 'vertical' }}>
+                    {digest.content.split('\n\n')[0].replace(/^-\s*\*\*/, '').replace(/\*\*/g, '')}
+                  </p>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 600, marginTop: '0.25rem', display: 'inline-block' }}>
+                    Läs hela briefingen...
+                  </span>
+                </div>
+              )}
+
+              {/* Ingen briefing genererad än */}
+              {!digest && !digestLoading && (
+                <div style={{ marginTop: '0.65rem', paddingTop: '0.65rem', borderTop: '1px solid var(--border-color)', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  <p style={{ margin: '0 0 0.5rem 0' }}>
+                    Ingen briefing har genererats för idag än. Klicka på 'Uppdatera' för att skapa en sammanfattande lägesrapport över de viktigaste händelserna.
+                  </p>
+                </div>
+              )}
+
+              {/* Utfällt läge */}
+              {isDigestExpanded && digest?.content && (
+                <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.9rem', lineHeight: 1.65, color: 'var(--text-main)', whiteSpace: 'pre-line' }}>
+                    {digest.content}
+                  </div>
+
+                  {/* Länkar till berörda artiklar */}
+                  {digest.articles && digest.articles.length > 0 && (
+                    <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px dashed var(--border-color)' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '0.5rem' }}>
+                        Berörda händelser i rapporten:
+                      </span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                        {digest.articles.map((art) => (
+                          <a
+                            key={art.id}
+                            href={art.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '0.25rem 0.6rem',
+                              borderRadius: '6px',
+                              fontSize: '0.78rem',
+                              backgroundColor: 'var(--bg-app)',
+                              border: '1px solid var(--border-color)',
+                              color: 'var(--text-main)',
+                              textDecoration: 'none',
+                              transition: 'all 0.15s'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.color = 'var(--text-main)'; }}
+                            title={`${art.source_title}: ${art.title}`}
+                          >
+                            <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{art.source_title}:</span>
+                            <span style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{decodeHtmlEntities(art.title)}</span>
+                            <ExternalLink size={11} style={{ opacity: 0.7, flexShrink: 0 }} />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className={`events-list cols-${desktopColumns}`} style={{ gap: '1rem' }}>
           {displayedFeeds.map((item, index) => {
             const isClickbait = Boolean(shouldShowAi && item.is_clickbait);
             const color = isClickbait ? '#ef4444' : getBorderColor(item.feed_id || 1);
@@ -1503,6 +1777,90 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     </motion.div>
                   )}
 
+                  {/* Klustrade källor & dubletthantering */}
+                  {item.similar_articles && item.similar_articles.length > 0 && (
+                    <div style={{
+                      margin: '0.85rem 0',
+                      padding: '0.65rem 0.85rem',
+                      backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)',
+                      borderRadius: '8px'
+                    }}>
+                      <div 
+                        onClick={(e) => { e.stopPropagation(); toggleClusterExpand(item.cluster_id || item.id); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600 }}>
+                          <Layers size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                          <span>
+                            Rapporteras även av:{' '}
+                            <span style={{ color: 'var(--primary)' }}>
+                              {[...new Set(item.similar_articles.map(s => s.source_title))].slice(0, 3).join(', ')}
+                              {item.similar_articles.length > 3 ? ` (+${item.similar_articles.length - 3} källor)` : ''}
+                            </span>
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)' }}>
+                          <span style={{ fontSize: '0.75rem' }}>{expandedClusters[item.cluster_id || item.id] ? 'Dölj' : 'Visa'}</span>
+                          <ChevronDown size={14} style={{ transform: expandedClusters[item.cluster_id || item.id] ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                        </div>
+                      </div>
+
+                      {expandedClusters[item.cluster_id || item.id] && (
+                        <div style={{ marginTop: '0.65rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '0.65rem' }}>
+                            {item.similar_articles.map((sim) => (
+                              <div key={sim.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', fontSize: '0.78rem' }}>
+                                <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontWeight: 600, color: 'var(--text-main)', marginRight: '0.35rem' }}>{sim.source_title}:</span>
+                                  <span style={{ color: 'var(--text-muted)' }}>{decodeHtmlEntities(sim.title)}</span>
+                                </div>
+                                <a
+                                  href={sim.link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '2px', flexShrink: 0, textDecoration: 'none' }}
+                                  title="Läs hos källan"
+                                >
+                                  <ExternalLink size={12} />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            onClick={(e) => handleMarkClusterRead(item.cluster_id, e)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '0.3rem 0.65rem',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              backgroundColor: 'var(--bg-card)',
+                              color: 'var(--text-muted)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '5px',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.borderColor = 'var(--primary)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
+                          >
+                            <CheckCheck size={13} />
+                            Markera hela händelsen som läst
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Footer */}
                   <div 
                     style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600 }}
@@ -1525,7 +1883,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             </div>
           )}
         </div>
-      )}
+      </>
+    )}
 
       {/* Gå till Toppen knapp */}
       {showScrollTop && (

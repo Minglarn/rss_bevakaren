@@ -1504,3 +1504,27 @@ input:checked + .toggle-slider:before {
   animation: skeletonIndeterminate 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
 }
 
+/* DAGENS BRIEFING TOP CARD */
+.daily-briefing-card {
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.daily-briefing-card:hover {
+  border-color: rgba(59, 130, 246, 0.35) !important;
+  box-shadow: 0 6px 24px -4px rgba(0, 0, 0, 0.08) !important;
+}
+
+.daily-briefing-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary) 0%, rgba(59, 130, 246, 0.2) 100%);
+}
+

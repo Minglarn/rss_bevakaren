@@ -104,6 +104,9 @@ class ArticleResponse(BaseModel):
     is_clickbait: Optional[int] = 0
     clickbait_reason: Optional[str] = ""
     allow_push: Optional[int] = 1
+    cluster_id: Optional[int] = None
+    cluster_size: Optional[int] = 1
+    similar_articles: Optional[List[Dict[str, Any]]] = []
 
     class Config:
         from_attributes = True
@@ -174,4 +177,30 @@ class ChatResponse(BaseModel):
     sources: List[ChatSource] = []
     model: str = ""
     follow_ups: List[str] = []
+
+class ClusteredArticleSummary(BaseModel):
+    id: int
+    feed_id: Optional[int] = None
+    title: Optional[str] = ""
+    source_title: Optional[str] = ""
+    link: Optional[str] = ""
+    published: Optional[str] = ""
+    published_ts: Optional[int] = 0
+    is_read: Optional[int] = 0
+
+class DailyDigestResponse(BaseModel):
+    id: Optional[int] = None
+    title: Optional[str] = ""
+    content: Optional[str] = ""
+    digest_type: Optional[str] = "morning"
+    article_ids: Optional[List[int]] = []
+    articles: Optional[List[Dict[str, Any]]] = []
+    created_at: Optional[int] = 0
+
+class DigestGenerateRequest(BaseModel):
+    force_refresh: Optional[bool] = False
+    force_rule_based: Optional[bool] = False
+
+class ClusterBulkReadRequest(BaseModel):
+    cluster_id: int
 

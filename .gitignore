@@ -6,6 +6,8 @@ env/
 .env
 /data/
 rss.db
+vapid_keys.json
+backend/vapid_keys.json
 
 # Frontend
 node_modules/

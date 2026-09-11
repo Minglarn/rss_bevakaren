@@ -13,9 +13,8 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
   const [newCatInput, setNewCatInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  if (!isOpen) return null;
-
   React.useEffect(() => {
+    if (!isOpen) return;
     const loadExisting = async () => {
       try {
         const res = await api.get('/ai/config');
@@ -30,6 +29,8 @@ const PrioOnboardingModal = ({ isOpen, onClose, onSaved }) => {
     };
     loadExisting();
   }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const toggleCategory = (cat) => {
     if (selectedCategories.includes(cat)) {

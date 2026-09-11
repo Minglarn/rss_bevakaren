@@ -84,7 +84,7 @@ self.addEventListener('push', function(event) {
       if (data.image) {
         options.image = data.image;
       }
-    } catch(e) {
+    } catch (_e) {
       options.body = event.data.text();
     }
 

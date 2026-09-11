@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.11.01-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.11.02-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -13,6 +13,8 @@ RSS-Bevakaren is a modern, self-hosted system for monitoring, filtering, priorit
 
 ## Key Features
 
+- **Topic Clustering & Deduplication:** Intelligent semantic and heuristic grouping of articles covering the same event from different news outlets (e.g. SVT, DN, Aftonbladet). Displays linked source badges and allows marking entire stories as read in one click.
+- **Daily Briefing Top Card (AI Digest):** Expandable executive summary at the top of the dashboard providing morning and evening roundups of key stories, with direct links to covered articles.
 - **Interactive AI News Chat:** Fullscreen conversational chat interface powered by your local LM Studio instance. Ask natural language questions ("How many accidents occurred yesterday?", "Summarize breaking news in politics") and receive answers with expandable citations and links to original articles.
 - **Multi-User Architecture:** Secure authentication with JWT tokens where each user has their own feeds, filters, and personal AI preferences.
 - **Feed Management:** Add, organize, and remove RSS and Atom feeds. Built-in support for nearly all standard RSS/Atom specifications and WordPress feeds.
