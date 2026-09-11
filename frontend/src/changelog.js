@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.11.03',
+    date: '2026-09-11',
+    title: 'Ultrakompakt mobilvy och fullt Markdown-stöd i Dagens Briefing',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Ultrakompakt och slimmad mobilvy',
+        description: 'Dagens Briefing har bantats ned till en extremt slimmad och diskret list i hopfällt läge som inte stjäl vertikal yta från nyhetsflödet på mobiler. Teasertext har tagits bort i hopfällt läge för maximal skärmeffektivitet.'
+      },
+      {
+        type: 'feature',
+        title: 'Fullständigt Markdown-stöd vid expandering',
+        description: 'Briefingen tolkar och renderar nu fetstil, rubriker, numrerade listor och snygga punktlistor strukturerat istället för rå text, vilket ger ett luftigt och lättläst format.'
+      },
+      {
+        type: 'fix',
+        title: 'Permanent synlighet i huvudflödet',
+        description: 'Dagens Briefing ligger nu placerad ovanför artikellistan och förblir alltid tillgänglig även när alla artiklar är markerade som lästa.'
+      }
+    ]
+  },
+  {
     version: '2026.09.11.02',
     date: '2026-09-11',
     title: 'Nyhetsklustring och Dagens Briefing (AI Digest toppkort)',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

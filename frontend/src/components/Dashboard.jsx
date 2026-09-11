@@ -21,6 +21,92 @@ const formatCategoryPrioReason = (reason, category) => {
   return cleaned;
 };
 
+const renderBriefingInline = (text) => {
+  if (!text) return '';
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      return <strong key={i} style={{ color: 'var(--text-main)', fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+};
+
+const renderBriefingMarkdown = (content) => {
+  if (!content) return null;
+  const lines = content.split('\n');
+  const elements = [];
+  let currentList = [];
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      elements.push(
+        <div key={`list-${elements.length}`} style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', margin: '0.45rem 0' }}>
+          {currentList.map((item, lIdx) => (
+            <div key={lIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', lineHeight: 1.55 }}>
+              <span style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '0.95rem', lineHeight: '1.2rem' }}>•</span>
+              <div style={{ flex: 1 }}>{renderBriefingInline(item)}</div>
+            </div>
+          ))}
+        </div>
+      );
+      currentList = [];
+    }
+  };
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushList();
+      return;
+    }
+
+    if (trimmed.startsWith('#')) {
+      flushList();
+      const headerText = trimmed.replace(/^#+\s*/, '');
+      elements.push(
+        <h4 key={idx} style={{ margin: '0.75rem 0 0.25rem 0', fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)' }}>
+          {renderBriefingInline(headerText)}
+        </h4>
+      );
+      return;
+    }
+
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ')) {
+      const itemText = trimmed.replace(/^[-*•]\s*/, '');
+      currentList.push(itemText);
+      return;
+    }
+
+    if (/^\d+\.\s/.test(trimmed)) {
+      flushList();
+      const numMatch = trimmed.match(/^(\d+\.)\s*(.*)/);
+      if (numMatch) {
+        elements.push(
+          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', margin: '0.35rem 0', lineHeight: 1.55 }}>
+            <span style={{ color: 'var(--primary)', fontWeight: 700, minWidth: '1.2rem' }}>{numMatch[1]}</span>
+            <div style={{ flex: 1 }}>{renderBriefingInline(numMatch[2])}</div>
+          </div>
+        );
+        return;
+      }
+    }
+
+    flushList();
+    elements.push(
+      <p key={idx} style={{ margin: '0 0 0.5rem 0', lineHeight: 1.6, color: 'var(--text-main)' }}>
+        {renderBriefingInline(trimmed)}
+      </p>
+    );
+  });
+
+  flushList();
+  return elements;
+};
+
 const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const location = useLocation();
@@ -977,8 +1063,164 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             }}
           >
             <ArrowLeft size={18} />
-            View all events
+            Visa alla händelser
           </Link>
+        </div>
+      )}
+
+      {/* Dagens Briefing - Expanderbart toppkort (Visas alltid i huvudvyn oavsett om det finns olästa artiklar) */}
+      {!feedId && !articleId && (!isPrioMode || prioEnabled) && (
+        <div className={`daily-briefing-card ${isDigestExpanded ? 'expanded' : 'collapsed'}`} style={{
+          backgroundColor: 'var(--bg-card)',
+          border: `1px solid ${isDigestExpanded ? 'rgba(59, 130, 246, 0.35)' : 'var(--border-color)'}`,
+          borderRadius: '8px',
+          padding: isDigestExpanded ? '0.75rem 0.95rem' : '0.35rem 0.65rem',
+          marginBottom: isDigestExpanded ? '0.9rem' : '0.55rem',
+          boxShadow: isDigestExpanded ? '0 4px 16px -2px rgba(0, 0, 0, 0.08)' : '0 1px 3px rgba(0, 0, 0, 0.03)',
+          transition: 'all 0.2s ease',
+          cursor: isDigestExpanded ? 'default' : 'pointer'
+        }}
+        onClick={!isDigestExpanded ? () => setIsDigestExpanded(true) : undefined}
+        >
+          {/* Kompakt Header Rad */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', minHeight: '28px' }}>
+            <div 
+              onClick={(e) => { e.stopPropagation(); setIsDigestExpanded(prev => !prev); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer', flex: 1, minWidth: 0 }}
+            >
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '5px',
+                backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                color: 'var(--primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <FileText size={13} />
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, overflow: 'hidden' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
+                  {digest?.title || 'Dagens Briefing'}
+                </span>
+                
+                {digest?.digest_type === 'ai_generated' && (
+                  <span className="desktop-only" style={{ fontSize: '0.65rem', fontWeight: 600, color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>
+                    AI
+                  </span>
+                )}
+
+                {digest?.created_at ? (
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    {new Date(digest.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
+              <button
+                onClick={(e) => { e.stopPropagation(); generateDigest(false); }}
+                disabled={digestLoading}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  padding: '0.2rem 0.5rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  borderRadius: '5px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-main)',
+                  cursor: digestLoading ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s',
+                  height: '26px'
+                }}
+                title="Generera ny rapport via LM Studio"
+              >
+                <RefreshCw size={11} className={digestLoading ? 'spin' : ''} />
+                <span className="desktop-only">{digestLoading ? 'Analyserar...' : 'Uppdatera'}</span>
+              </button>
+
+              <button
+                onClick={(e) => { e.stopPropagation(); setIsDigestExpanded(prev => !prev); }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '5px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+                title={isDigestExpanded ? "Fäll ihop briefing" : "Expandera briefing"}
+              >
+                <ChevronDown size={13} style={{ transform: isDigestExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+              </button>
+            </div>
+          </div>
+
+          {/* Utfällt läge med Markdown-stöd */}
+          {isDigestExpanded && (
+            <div style={{ marginTop: '0.65rem', paddingTop: '0.65rem', borderTop: '1px solid var(--border-color)' }}>
+              {digest?.content ? (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                  {renderBriefingMarkdown(digest.content)}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '0.5rem 0' }}>
+                  Ingen briefing har genererats än. Klicka på &apos;Uppdatera&apos; för att skapa en sammanställning av dagens viktigaste händelser.
+                </div>
+              )}
+
+              {/* Länkar till berörda artiklar */}
+              {digest?.articles && digest.articles.length > 0 && (
+                <div style={{ marginTop: '0.85rem', paddingTop: '0.6rem', borderTop: '1px dashed var(--border-color)' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: '0.4rem' }}>
+                    Berörda händelser i rapporten:
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                    {digest.articles.map((art) => (
+                      <a
+                        key={art.id}
+                        href={art.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '5px',
+                          fontSize: '0.75rem',
+                          backgroundColor: 'var(--bg-app)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-main)',
+                          textDecoration: 'none',
+                          transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.color = 'var(--text-main)'; }}
+                        title={`${art.source_title}: ${art.title}`}
+                      >
+                        <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{art.source_title}:</span>
+                        <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{decodeHtmlEntities(art.title)}</span>
+                        <ExternalLink size={10} style={{ opacity: 0.7, flexShrink: 0 }} />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1007,10 +1249,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             <Sparkles size={32} />
           </div>
           <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.35rem', fontWeight: 700 }}>
-            Enable your AI Feed
+            Aktivera ditt AI-flöde
           </h2>
           <p style={{ margin: '0 0 1.5rem 0', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5 }}>
-            The AI feed is currently disabled. When you enable the feature in settings, incoming articles are automatically summarized and you can prioritize events based on your categories and keywords.
+            AI-flödet är för närvarande inaktiverat. När du aktiverar funktionen i inställningarna sammanfattas inkommande artiklar automatiskt och du kan prioritera händelser baserat på dina kategorier och nyckelord.
           </p>
           <Link
             to="/settings"
@@ -1027,189 +1269,17 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               fontSize: '0.9rem'
             }}
           >
-            Enable in Settings
+            Aktivera i Inställningar
           </Link>
         </div>
       ) : loading && allFeeds.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)' }}>Loading news...</p>
+        <p style={{ color: 'var(--text-muted)' }}>Laddar nyheter...</p>
       ) : allFeeds.length === 0 ? (
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)' }}>No news found. Maybe you need to add feeds in the RSS manager?</p>
+          <p style={{ color: 'var(--text-muted)' }}>Inga olästa nyheter just nu. Byt till &apos;Visa lästa&apos; eller uppdatera flödena.</p>
         </div>
       ) : (
-        <>
-          {/* Dagens Briefing - Expanderbart toppkort */}
-          {!feedId && !articleId && (
-            <div className="daily-briefing-card" style={{
-              backgroundColor: 'var(--bg-card)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '12px',
-              padding: '1rem 1.25rem',
-              marginBottom: '1.25rem',
-              boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
-              transition: 'all 0.25s ease'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <div 
-                  onClick={() => setIsDigestExpanded(prev => !prev)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', flex: 1, minWidth: '240px' }}
-                >
-                  <div style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                    color: 'var(--primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    <FileText size={18} />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                        {digest?.title || 'Dagens Briefing'}
-                      </h2>
-                      {digest?.digest_type === 'ai_generated' && (
-                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.45rem', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
-                          AI-genererad
-                        </span>
-                      )}
-                      {digest?.digest_type === 'rule_based' && (
-                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.1rem 0.45rem', borderRadius: '4px', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
-                          Regelbaserad
-                        </span>
-                      )}
-                    </div>
-                    <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {digest?.created_at ? `Uppdaterad ${new Date(digest.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${new Date(digest.created_at * 1000).toLocaleDateString()})` : 'Sammanfattning av det aktuella nyhetsläget'}
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <button
-                    onClick={() => generateDigest(false)}
-                    disabled={digestLoading}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      padding: '0.4rem 0.75rem',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      borderRadius: '6px',
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--bg-app)',
-                      color: 'var(--text-main)',
-                      cursor: digestLoading ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.15s'
-                    }}
-                    title="Generera ny rapport via LM Studio"
-                  >
-                    <RefreshCw size={14} className={digestLoading ? 'spin' : ''} />
-                    <span>{digestLoading ? 'Analyserar...' : 'Uppdatera'}</span>
-                  </button>
-
-                  <button
-                    onClick={() => setIsDigestExpanded(prev => !prev)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '6px',
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--bg-app)',
-                      color: 'var(--text-muted)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}
-                    title={isDigestExpanded ? "Fäll ihop briefing" : "Expandera briefing"}
-                  >
-                    <ChevronDown size={16} style={{ transform: isDigestExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Sammanfattning i hopfällt läge */}
-              {!isDigestExpanded && digest?.content && (
-                <div 
-                  onClick={() => setIsDigestExpanded(true)}
-                  style={{ marginTop: '0.65rem', paddingTop: '0.65rem', borderTop: '1px solid var(--border-color)', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: 1.5, cursor: 'pointer' }}
-                >
-                  <p style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebKitLineClamp: 2, WebKitBoxOrient: 'vertical' }}>
-                    {digest.content.split('\n\n')[0].replace(/^-\s*\*\*/, '').replace(/\*\*/g, '')}
-                  </p>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 600, marginTop: '0.25rem', display: 'inline-block' }}>
-                    Läs hela briefingen...
-                  </span>
-                </div>
-              )}
-
-              {/* Ingen briefing genererad än */}
-              {!digest && !digestLoading && (
-                <div style={{ marginTop: '0.65rem', paddingTop: '0.65rem', borderTop: '1px solid var(--border-color)', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  <p style={{ margin: '0 0 0.5rem 0' }}>
-                    Ingen briefing har genererats för idag än. Klicka på 'Uppdatera' för att skapa en sammanfattande lägesrapport över de viktigaste händelserna.
-                  </p>
-                </div>
-              )}
-
-              {/* Utfällt läge */}
-              {isDigestExpanded && digest?.content && (
-                <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.9rem', lineHeight: 1.65, color: 'var(--text-main)', whiteSpace: 'pre-line' }}>
-                    {digest.content}
-                  </div>
-
-                  {/* Länkar till berörda artiklar */}
-                  {digest.articles && digest.articles.length > 0 && (
-                    <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px dashed var(--border-color)' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '0.5rem' }}>
-                        Berörda händelser i rapporten:
-                      </span>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-                        {digest.articles.map((art) => (
-                          <a
-                            key={art.id}
-                            href={art.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              padding: '0.25rem 0.6rem',
-                              borderRadius: '6px',
-                              fontSize: '0.78rem',
-                              backgroundColor: 'var(--bg-app)',
-                              border: '1px solid var(--border-color)',
-                              color: 'var(--text-main)',
-                              textDecoration: 'none',
-                              transition: 'all 0.15s'
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.color = 'var(--text-main)'; }}
-                            title={`${art.source_title}: ${art.title}`}
-                          >
-                            <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{art.source_title}:</span>
-                            <span style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{decodeHtmlEntities(art.title)}</span>
-                            <ExternalLink size={11} style={{ opacity: 0.7, flexShrink: 0 }} />
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className={`events-list cols-${desktopColumns}`} style={{ gap: '1rem' }}>
+        <div className={`events-list cols-${desktopColumns}`} style={{ gap: '1rem' }}>
           {displayedFeeds.map((item, index) => {
             const isClickbait = Boolean(shouldShowAi && item.is_clickbait);
             const color = isClickbait ? '#ef4444' : getBorderColor(item.feed_id || 1);
@@ -1883,8 +1953,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             </div>
           )}
         </div>
-      </>
-    )}
+      )}
 
       {/* Gå till Toppen knapp */}
       {showScrollTop && (
