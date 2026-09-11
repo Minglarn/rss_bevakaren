@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.11.05',
+    date: '2026-09-11',
+    title: 'Fullständig svensk dokumentation i README.md och versionsspårbarhet',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'docs',
+        title: 'Fullständig svensk README.md',
+        description: 'Hela projektets dokumentation, arkitektur, funktioner, MQTT-specifikation och driftsinstruktioner har översatts till ren och tydlig svenska.'
+      }
+    ]
+  },
+  {
     version: '2026.09.11.04',
     date: '2026-09-11',
     title: 'Automatisk schemaläggning (kl 07:00 & 18:00) och ny Briefing-flik med Historik',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',
