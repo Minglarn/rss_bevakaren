@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
 import packageJson from '../../package.json';
+import RssManager from './RssManager';
 
 const formatEuropeanDateTime = (timestamp) => {
   if (!timestamp) return 'No data';
@@ -20,8 +22,21 @@ const formatEuropeanDateTime = (timestamp) => {
   });
 };
 
-const Settings = () => {
-  const [activeTab, setActiveTab] = useState('general');
+const Settings = ({ onLogout }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'general');
+
+  useEffect(() => {
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
   const [keywords, setKeywords] = useState([]);
   const [newKeyword, setNewKeyword] = useState('');
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -689,39 +704,56 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
   };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <div style={{ maxWidth: activeTab === 'manage' ? '1000px' : '800px', margin: '0 auto' }}>
       <h1 style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        <SettingsIcon /> Settings
+        <SettingsIcon /> Inställningar
       </h1>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '2rem', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
         <button 
-          onClick={() => setActiveTab('general')}
+          onClick={() => handleTabChange('general')}
           style={{ background: 'none', border: 'none', color: activeTab === 'general' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'general' ? 600 : 400, cursor: 'pointer', fontSize: '1rem', padding: '0.5rem 1rem' }}
         >
-          General
+          Allmänt
         </button>
         <button 
-          onClick={() => setActiveTab('ui')}
+          onClick={() => handleTabChange('manage')}
+          style={{ 
+            background: 'none', 
+            border: 'none', 
+            color: activeTab === 'manage' ? 'var(--primary)' : 'var(--text-muted)', 
+            fontWeight: activeTab === 'manage' ? 600 : 400, 
+            cursor: 'pointer', 
+            fontSize: '1rem', 
+            padding: '0.5rem 1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}
+        >
+          <List size={16} /> Hantera flöden
+        </button>
+        <button 
+          onClick={() => handleTabChange('ui')}
           style={{ background: 'none', border: 'none', color: activeTab === 'ui' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'ui' ? 600 : 400, cursor: 'pointer', fontSize: '1rem', padding: '0.5rem 1rem' }}
         >
-          UI
+          Utseende
         </button>
         <button 
-          onClick={() => setActiveTab('database')}
+          onClick={() => handleTabChange('database')}
           style={{ background: 'none', border: 'none', color: activeTab === 'database' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'database' ? 600 : 400, cursor: 'pointer', fontSize: '1rem', padding: '0.5rem 1rem' }}
         >
-          Database
+          Databas
         </button>
         <button 
-          onClick={() => setActiveTab('notifications')}
+          onClick={() => handleTabChange('notifications')}
           style={{ background: 'none', border: 'none', color: activeTab === 'notifications' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'notifications' ? 600 : 400, cursor: 'pointer', fontSize: '1rem', padding: '0.5rem 1rem' }}
         >
-          Notifications
+          Notiser
         </button>
         <button 
-          onClick={() => setActiveTab('ai')}
+          onClick={() => handleTabChange('ai')}
           style={{ 
             background: 'none', 
             border: 'none', 
@@ -735,7 +767,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             gap: '0.4rem'
           }}
         >
-          <Sparkles size={16} style={{ color: activeTab === 'ai' ? '#f97316' : 'inherit' }} /> AI Analysis & Prompt
+          <Sparkles size={16} style={{ color: activeTab === 'ai' ? '#f97316' : 'inherit' }} /> AI-analys & Prompt
         </button>
       </div>
 
@@ -860,7 +892,58 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             </button>
           </div>
 
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>More general settings will arrive in future updates.</p>
+          {/* Konto & Utloggning */}
+          <div style={{ 
+            backgroundColor: 'var(--bg-card)', 
+            padding: '1.25rem 1rem', 
+            borderRadius: '12px', 
+            border: '1px solid var(--border-color)', 
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <LogOut size={18} style={{ color: '#ef4444' }} /> Konto & Utloggning
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                Inloggad som <strong style={{ color: 'var(--text-main)' }}>{localStorage.getItem('username') || 'Användare'}</strong>
+              </div>
+            </div>
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.55rem 1.1rem',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <LogOut size={16} /> Logga ut
+              </button>
+            )}
+          </div>
+
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Fler allmänna inställningar kommer i framtida uppdateringar.</p>
+        </motion.div>
+      )}
+
+      {activeTab === 'manage' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <RssManager embedded={true} />
         </motion.div>
       )}
 

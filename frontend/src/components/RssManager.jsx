@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, List, Edit2, Check, X, Link as LinkIcon, Activity, Globe, Search, Library } from 'lucide-react';
 import api from '../api';
 
-const RssManager = () => {
+const RssManager = ({ embedded = false }) => {
   const [feeds, setFeeds] = useState([]);
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
@@ -102,11 +102,11 @@ const RssManager = () => {
     .sort((a, b) => (a.title || a.url || '').localeCompare(b.title || b.url || ''));
 
   return (
-    <div className="dashboard-container" style={{ maxWidth: '1000px' }}>
+    <div className={embedded ? "" : "dashboard-container"} style={{ maxWidth: '1000px', margin: embedded ? '0' : '0 auto' }}>
       <div className="dashboard-header" style={{ marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <h1 style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.75rem', margin: 0, fontSize: '1.8rem' }}>
-          <List size={28} style={{ color: 'var(--primary)' }} /> Manage RSS Feeds
-        </h1>
+        <h2 style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.75rem', margin: 0, fontSize: embedded ? '1.4rem' : '1.8rem' }}>
+          <List size={embedded ? 22 : 28} style={{ color: 'var(--primary)' }} /> Hantera flöden
+        </h2>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <button 
             onClick={() => { setShowExplore(!showExplore); setShowAddForm(false); }}

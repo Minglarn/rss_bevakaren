@@ -304,23 +304,23 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               />
             )}
           </Link>
-          <Link to="/manage" style={{
+          <Link to="/settings?tab=manage" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
             borderRadius: '8px', textDecoration: 'none',
-            color: location.pathname === '/manage' ? 'var(--primary)' : 'var(--text-muted)',
-            backgroundColor: location.pathname === '/manage' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-            fontWeight: location.pathname === '/manage' ? 600 : 400
+            color: (location.pathname === '/settings' && location.search.includes('tab=manage')) ? 'var(--primary)' : 'var(--text-muted)',
+            backgroundColor: (location.pathname === '/settings' && location.search.includes('tab=manage')) ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+            fontWeight: (location.pathname === '/settings' && location.search.includes('tab=manage')) ? 600 : 400
           }}>
-            <List size={19} /> {!isCollapsed && "Manage RSS"}
+            <List size={19} /> {!isCollapsed && "Hantera flöden"}
           </Link>
           <Link to="/settings" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
             borderRadius: '8px', textDecoration: 'none',
-            color: location.pathname === '/settings' ? 'var(--primary)' : 'var(--text-muted)',
-            backgroundColor: location.pathname === '/settings' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-            fontWeight: location.pathname === '/settings' ? 600 : 400
+            color: (location.pathname === '/settings' && !location.search.includes('tab=manage')) ? 'var(--primary)' : 'var(--text-muted)',
+            backgroundColor: (location.pathname === '/settings' && !location.search.includes('tab=manage')) ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+            fontWeight: (location.pathname === '/settings' && !location.search.includes('tab=manage')) ? 600 : 400
           }}>
-            <SettingsIcon size={19} /> {!isCollapsed && "Settings"}
+            <SettingsIcon size={19} /> {!isCollapsed && "Inställningar"}
           </Link>
 
           {/* Feeds List */}
@@ -396,66 +396,48 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
 
       </div>
 
-      {/* Mobile Bottom Bar */}
+      {/* Mobile Bottom Bar: HOME, PRIO, CHATT, FEEDS, SETTINGS */}
       <div className="mobile-bottom-bar">
-        <Link to="/" className={`bottom-bar-item ${location.pathname === '/' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+        <Link to="/" className={`bottom-bar-item ${location.pathname === '/' && !location.search.includes('feedId') ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <Home size={22} />
             {myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
               <span className="bottom-bar-badge">{myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}</span>
             )}
           </div>
-          <span>Home</span>
+          <span>HOME</span>
         </Link>
-        {prioEnabled && (
-          <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
-            <div className="icon-wrapper">
-              <Flame size={22} style={{ color: location.pathname === '/prio' ? '#f97316' : 'inherit' }} />
-              {prioUnreadCount > 0 && (
-                <span className="bottom-bar-badge" style={{ backgroundColor: '#f97316' }}>{prioUnreadCount}</span>
-              )}
-            </div>
-            <span style={{ color: location.pathname === '/prio' ? '#f97316' : undefined }}>Prio</span>
-          </Link>
-        )}
+        <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+          <div className="icon-wrapper">
+            <Flame size={22} style={{ color: location.pathname === '/prio' ? '#f97316' : 'inherit' }} />
+            {prioUnreadCount > 0 && (
+              <span className="bottom-bar-badge" style={{ backgroundColor: '#f97316' }}>{prioUnreadCount}</span>
+            )}
+          </div>
+          <span style={{ color: location.pathname === '/prio' ? '#f97316' : undefined }}>PRIO</span>
+        </Link>
         <Link to="/chat" className={`bottom-bar-item ${location.pathname === '/chat' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <MessageSquare size={22} style={{ color: location.pathname === '/chat' ? 'var(--primary)' : 'inherit' }} />
           </div>
-          <span style={{ color: location.pathname === '/chat' ? 'var(--primary)' : undefined }}>Chatt</span>
+          <span style={{ color: location.pathname === '/chat' ? 'var(--primary)' : undefined }}>CHATT</span>
         </Link>
         <button 
-          className="bottom-bar-item" 
+          className={`bottom-bar-item ${isMobileSheetOpen || location.search.includes('feedId') ? 'active' : ''}`}
           onClick={() => setIsMobileSheetOpen(true)}
           style={{ background: 'transparent', border: 'none', fontFamily: 'inherit' }}
         >
           <div className="icon-wrapper">
             <Filter size={22} />
           </div>
-          <span>Feeds</span>
+          <span>FEEDS</span>
         </button>
-        <Link to="/manage" className={`bottom-bar-item ${location.pathname === '/manage' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
-          <div className="icon-wrapper">
-            <List size={22} />
-          </div>
-          <span>Manage</span>
-        </Link>
         <Link to="/settings" className={`bottom-bar-item ${location.pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <SettingsIcon size={22} />
           </div>
-          <span>Settings</span>
+          <span>SETTINGS</span>
         </Link>
-        <button 
-          className="bottom-bar-item" 
-          onClick={onLogout}
-          style={{ background: 'transparent', border: 'none', fontFamily: 'inherit', color: '#ef4444' }}
-        >
-          <div className="icon-wrapper">
-            <LogOut size={22} />
-          </div>
-          <span>Logout</span>
-        </button>
       </div>
 
       {/* Mobile Feeds Bottom Sheet */}
@@ -546,6 +528,19 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               )}
             </Link>
           ))}
+          <Link 
+            to="/settings?tab=manage" 
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.9rem 1rem',
+              color: 'var(--primary)', 
+              backgroundColor: 'rgba(37, 99, 235, 0.08)',
+              borderRadius: '12px', textDecoration: 'none', fontWeight: 600,
+              marginTop: '0.5rem'
+            }}
+            onClick={() => setIsMobileSheetOpen(false)}
+          >
+            <List size={18} /> Hantera flöden...
+          </Link>
         </div>
       </div>
       <PWABadge />
@@ -627,8 +622,8 @@ const App = () => {
               <Route path="/prio" element={<Dashboard isPrioModeProp={true} prioEnabled={prioEnabled} />} />
               <Route path="/chat" element={<AiChat />} />
               <Route path="/ai" element={<Navigate to="/prio" replace />} />
-              <Route path="/manage" element={<RssManager />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/manage" element={<Navigate to="/settings?tab=manage" replace />} />
+              <Route path="/settings" element={<Settings onLogout={handleLogout} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AppLayout>

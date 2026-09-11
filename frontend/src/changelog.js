@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.11.01',
+    date: '2026-09-11',
+    title: 'Strömlinjeformad mobil bottombar och centraliserad administration',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Ny mobil bottombar med 5 dedikerade knappar',
+        description: 'Mobilmenyn har förenklats till exakt 5 knappar: HOME, PRIO, CHATT, FEEDS och SETTINGS. Detta ger generösare touch-ytor och en ren layout utan trängsel på smala skärmar.'
+      },
+      {
+        type: 'improvement',
+        title: 'Flödeshantering integrerad som flik i Inställningar',
+        description: 'Hantera RSS-flöden har flyttats in som en egen underflik i Inställningar (Settings -> Hantera flöden) med direktlänkning och bibehållen full funktionalitet.'
+      },
+      {
+        type: 'improvement',
+        title: 'Utloggning flyttad till Allmänt i Inställningar',
+        description: 'Utloggningsknappen har flyttats från menyraden till Inställningar -> Allmänt under ett eget användarkort som visar inloggad profil.'
+      }
+    ]
+  },
+  {
     version: '2026.09.10.02',
     date: '2026-09-10',
     title: 'Realtids-progressbar i händelsekort och noll fördröjning till AI-analys',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',
