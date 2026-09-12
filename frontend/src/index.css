@@ -1594,12 +1594,49 @@ input:checked + .toggle-slider:before {
   .desktop-only { display: flex !important; }
 }
 
-@media (max-width: 600px) {
-  .my-toast-container > div {
-    top: 16px !important;
-    bottom: auto !important;
-    justify-content: flex-start !important;
+/* Toast-placering i botten (ovanfor mobilens bottombar), mork bakgrund, max 2 rader */
+.my-toast-container {
+  bottom: 24px !important;
+  z-index: 9999 !important;
+}
+
+.my-toast-container > div {
+  bottom: 24px !important;
+  top: auto !important;
+  justify-content: center !important;
+}
+
+@media (max-width: 1024px) {
+  .my-toast-container {
+    bottom: calc(65px + 14px + env(safe-area-inset-bottom, 0px)) !important;
   }
+  .my-toast-container > div {
+    bottom: calc(65px + 14px + env(safe-area-inset-bottom, 0px)) !important;
+    top: auto !important;
+    justify-content: center !important;
+  }
+}
+
+.my-toast-container [role="status"],
+.my-toast-container > div > div {
+  border-radius: 8px !important;
+  background: #18181b !important;
+  color: #f4f4f5 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+  font-size: 0.88rem !important;
+  line-height: 1.4 !important;
+  max-width: min(92vw, 420px) !important;
+  padding: 10px 16px !important;
+}
+
+.my-toast-container [role="status"] > div:last-child {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  word-break: break-word !important;
 }
 
 /* Share feature styles */

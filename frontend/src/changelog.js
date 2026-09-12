@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.25',
+    date: '2026-09-12',
+    title: 'UI-förbättring: Ny toast-design i botten av skärmen',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Placering i botten ovanför navigeringen',
+        description: 'Flyttade toasts till skärmens nederkant (ovanför bottenmenyn på mobilen och centrerat i botten på datorn) för att inte skymma toppinnehåll.'
+      },
+      {
+        type: 'ui',
+        title: 'Mörk fyrkantig stil med hög synlighet',
+        description: 'Bytte ut den runda pillerformen mot en distinkt mörk rektangulär design med subtil ram, större typsnitt, hög kontrast och automatisk begränsning till max 2 rader text.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.24',
     date: '2026-09-12',
     title: 'Frikoppling av push-synk vid flödesuppdatering och pull-to-refresh',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

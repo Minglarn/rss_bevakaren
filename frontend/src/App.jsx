@@ -84,19 +84,23 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       const title = feed ? feed.title : `flöde ${feedId}`;
       toast(`Söker nya händelser: ${title}...`, {
         id: `poll-${feedId}`,
-        duration: 2000,
+        duration: 2500,
         style: {
-          borderRadius: '20px',
-          background: 'var(--bg-card)',
-          color: 'var(--text-muted)',
-          border: '1px solid var(--border-color)',
-          fontSize: '0.76rem',
-          padding: '4px 12px',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-          maxWidth: '300px',
-          whiteSpace: 'nowrap',
+          borderRadius: '8px',
+          background: '#18181b',
+          color: '#f4f4f5',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          fontSize: '0.88rem',
+          fontWeight: 500,
+          padding: '10px 16px',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3)',
+          maxWidth: 'min(92vw, 420px)',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
-          textOverflow: 'ellipsis'
+          textOverflow: 'ellipsis',
+          lineHeight: '1.4'
         }
       });
     };
@@ -653,7 +657,37 @@ const App = () => {
           <WhatsNewModal />
         </AiChatProvider>
       </Router>
-      <Toaster position="top-center" containerClassName="my-toast-container" />
+      <Toaster 
+        position="bottom-center" 
+        containerClassName="my-toast-container" 
+        toastOptions={{
+          duration: 3000,
+          style: {
+            borderRadius: '8px',
+            background: '#18181b',
+            color: '#f4f4f5',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3)',
+            fontSize: '0.88rem',
+            fontWeight: 500,
+            padding: '10px 16px',
+            maxWidth: 'min(92vw, 420px)',
+            lineHeight: '1.4'
+          },
+          success: {
+            iconTheme: {
+              primary: '#22c55e',
+              secondary: '#18181b'
+            }
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#18181b'
+            }
+          }
+        }}
+      />
     </>
   );
 };
