@@ -6,8 +6,6 @@ import html
 
 def fetch_feed_items(url: str, title: str = None):
     """Fetches and parses an RSS feed, returning a list of items."""
-    display_name = title.strip() if (title and str(title).strip()) else url
-    print(f"Loading and parsing RSS feed: {display_name}")
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"

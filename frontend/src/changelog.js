@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.13',
+    date: '2026-09-12',
+    title: 'Sanering av överflödig logginformation i backend',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Borttagen redundant RSS-loggning',
+        description: 'Tog bort den överflödiga "Loading and parsing RSS feed"-loggen från rss_parser.py som dubblerade "Polling feed"-informationen i containerns loggström.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.12',
     date: '2026-09-12',
     title: 'Statisk toppbar och borttagen text "Dagens Nyheter"',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',
