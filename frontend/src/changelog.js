@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.05',
+    date: '2026-09-12',
+    title: 'Touch-vänlig bottenrad för händelsekort med namngivna knappar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Dedikerad bottenrad i källans temafärg',
+        description: 'Åtgärdsikonerna har flyttats från den trånga toppbaren till en rymlig bottenrad (bottombar) som matchar toppbaren i källans temafärg.'
+      },
+      {
+        type: 'ui',
+        title: 'Tydliga och namngivna knappar för mobil',
+        description: 'Ersatt svårtryckta miniatyrikoner med rymliga touch-knappar med textetiketter ("Läst/Oläst", "Lås/Lås upp", "Dela", "Läs hela"), optimerade för enhandsanvändning på mobil.'
+      },
+      {
+        type: 'ui',
+        title: 'Renare och luftigare toppbar',
+        description: 'Toppbaren fokuserar nu enbart på tidsbricka, källnamn och kategoritaggar utan trängsel.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.04',
     date: '2026-09-12',
     title: 'Modernt händelsekort, färgad toppbar och stilväljare',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

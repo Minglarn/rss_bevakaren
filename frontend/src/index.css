@@ -1215,6 +1215,17 @@ select:focus, input:focus {
     padding: 0.35rem 0.45rem !important;
   }
   
+  .feed-card.card-modern .feed-card-bottombar.bottombar-modern {
+    padding: 0.35rem 0.4rem !important;
+    gap: 0.25rem !important;
+  }
+
+  .feed-card.card-modern .modern-bottombar-btn {
+    padding: 0.45rem 0.35rem !important;
+    font-size: 0.73rem !important;
+    min-height: 38px !important;
+  }
+  
   .dashboard-header {
     margin-bottom: 0.35rem !important;
   }
@@ -1305,6 +1316,52 @@ select:focus, input:focus {
 .modern-topbar-action-btn:hover {
   background: rgba(0, 0, 0, 0.32);
   border-color: rgba(255, 255, 255, 0.4);
+}
+
+.feed-card-bottombar.bottombar-modern {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  color: #ffffff;
+  border-top: none;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 11px;
+}
+
+.modern-bottombar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  min-height: 36px;
+  transition: all 0.15s ease;
+  line-height: 1;
+  flex: 1;
+  white-space: nowrap;
+}
+
+.modern-bottombar-btn:hover {
+  background: rgba(0, 0, 0, 0.38);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.modern-bottombar-btn:active {
+  transform: scale(0.97);
+}
+
+.modern-bottombar-btn.active {
+  background: rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 .feed-card.is-clickbait {

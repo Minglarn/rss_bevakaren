@@ -1364,64 +1364,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           </button>
                         )}
                       </div>
-
-                      {/* Åtgärdsknappar i modern toppbar */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
-                        {isArticleRead(item.id, item.is_read) ? (
-                          <button
-                            className="modern-topbar-action-btn"
-                            onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
-                            title="Markera som oläst"
-                          >
-                            <EyeOff size={15} />
-                          </button>
-                        ) : (
-                          <button
-                            className="modern-topbar-action-btn"
-                            onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
-                            title="Markera som läst"
-                          >
-                            <CheckCheck size={15} />
-                          </button>
-                        )}
-
-                        {isArticleLocked(item.id, item.is_locked) ? (
-                          <button
-                            className="modern-topbar-action-btn"
-                            onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
-                            title="Lås upp händelse"
-                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.38)' }}
-                          >
-                            <Lock size={14} />
-                          </button>
-                        ) : (
-                          <button
-                            className="modern-topbar-action-btn"
-                            onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
-                            title="Lås händelse"
-                          >
-                            <Unlock size={14} />
-                          </button>
-                        )}
-
-                        {prioEnabled && (
-                          <button
-                            className="modern-topbar-action-btn"
-                            onClick={(e) => { e.stopPropagation(); setPrioritizeItem(item); }}
-                            title="Prioritera händelse / bevaka ämne"
-                          >
-                            <Flame size={14} />
-                          </button>
-                        )}
-
-                        <button
-                          className="modern-topbar-action-btn"
-                          onClick={(e) => { e.stopPropagation(); setShareItem(item); }}
-                          title="Dela händelse"
-                        >
-                          <Share2 size={14} />
-                        </button>
-                      </div>
                     </div>
                   ) : (
                     /* Klassisk Toppbar */
@@ -1924,16 +1866,106 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     </div>
                   )}
 
-                  {/* Footer */}
-                  <div 
-                    style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600 }}
-                  >
-                    <span style={{ backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : color, color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                      {formatTime(item.published)}
-                    </span>
-                    {expandedItems[index] ? 'Dölj' : 'Läs hela händelsen'} <ChevronRight size={16} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+                  {/* Footer för klassiskt läge */}
+                  {cardStyle === 'classic' && (
+                    <div 
+                      style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600 }}
+                    >
+                      <span style={{ backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : color, color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                        {formatTime(item.published)}
+                      </span>
+                      {expandedItems[index] ? 'Dölj' : 'Läs hela händelsen'} <ChevronRight size={16} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+                    </div>
+                  )}
                   </div>
-                  </div>
+
+                  {/* Modern bottenrad i samma temafärg som toppbaren med namngivna knappar */}
+                  {cardStyle === 'modern' && (
+                    <div 
+                      className="feed-card-bottombar bottombar-modern"
+                      style={{ 
+                        backgroundColor: color,
+                        borderBottomRightRadius: '11px',
+                        borderBottomLeftRadius: '8px'
+                      }}
+                    >
+                      {/* Läst / Oläst */}
+                      {isArticleRead(item.id, item.is_read) ? (
+                        <button
+                          className="modern-bottombar-btn active"
+                          onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
+                          title="Markera som oläst"
+                        >
+                          <EyeOff size={15} />
+                          <span>Oläst</span>
+                        </button>
+                      ) : (
+                        <button
+                          className="modern-bottombar-btn"
+                          onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
+                          title="Markera som läst"
+                        >
+                          <CheckCheck size={15} />
+                          <span>Läst</span>
+                        </button>
+                      )}
+
+                      {/* Lås / Spara */}
+                      {isArticleLocked(item.id, item.is_locked) ? (
+                        <button
+                          className="modern-bottombar-btn active"
+                          onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
+                          title="Lås upp händelse"
+                          style={{ backgroundColor: 'rgba(0, 0, 0, 0.38)' }}
+                        >
+                          <Lock size={15} />
+                          <span>Låst</span>
+                        </button>
+                      ) : (
+                        <button
+                          className="modern-bottombar-btn"
+                          onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
+                          title="Lås händelse"
+                        >
+                          <Unlock size={15} />
+                          <span>Lås</span>
+                        </button>
+                      )}
+
+                      {/* Prio */}
+                      {prioEnabled && (
+                        <button
+                          className="modern-bottombar-btn"
+                          onClick={(e) => { e.stopPropagation(); setPrioritizeItem(item); }}
+                          title="Prioritera händelse / bevaka ämne"
+                        >
+                          <Flame size={15} />
+                          <span>Prio</span>
+                        </button>
+                      )}
+
+                      {/* Dela */}
+                      <button
+                        className="modern-bottombar-btn"
+                        onClick={(e) => { e.stopPropagation(); setShareItem(item); }}
+                        title="Dela händelse"
+                      >
+                        <Share2 size={15} />
+                        <span>Dela</span>
+                      </button>
+
+                      {/* Läs hela / Dölj */}
+                      <button
+                        className="modern-bottombar-btn"
+                        onClick={(e) => { e.stopPropagation(); handleExpand(index, item.link, item.id); }}
+                        title={expandedItems[index] ? "Dölj händelsedetaljer" : "Läs hela händelsen"}
+                        style={{ flex: 1.2 }}
+                      >
+                        <span>{expandedItems[index] ? 'Dölj' : 'Läs hela'}</span>
+                        <ChevronRight size={15} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </motion.div>
               </React.Fragment>
