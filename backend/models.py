@@ -27,6 +27,7 @@ class Feed(Base):
     last_viewed_ts = Column(Integer, default=0) # timestamp
     include_in_dashboard = Column(Integer, default=1) # 1 = true, 0 = false
     notify_enabled = Column(Integer, default=1) # 1 = true, 0 = false
+    icon_url = Column(String, default="")
     user_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="feeds")

@@ -370,7 +370,16 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
                       fontWeight: isActive ? 600 : 400
                     }}
                   >
-                    <Hash size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} /> 
+                    {feed.icon_url ? (
+                      <img 
+                        src={feed.icon_url} 
+                        alt="" 
+                        style={{ width: 14, height: 14, borderRadius: '3px', objectFit: 'contain', flexShrink: 0 }} 
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <Hash size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} /> 
+                    )}
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       {feed.title}
                       {pollingFeeds.has(feed.id) && <RefreshCw size={11} className="spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />}
@@ -430,7 +439,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           </div>
           <span>HEM</span>
         </Link>
-        <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+        <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active prio-active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <Flame size={22} style={{ color: location.pathname === '/prio' ? '#f97316' : 'inherit' }} />
             {prioUnreadCount > 0 && (
@@ -448,7 +457,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
         <button 
           className={`bottom-bar-item ${isMobileSheetOpen || location.search.includes('feedId') ? 'active' : ''}`}
           onClick={() => setIsMobileSheetOpen(true)}
-          style={{ background: 'transparent', border: 'none', fontFamily: 'inherit' }}
+          style={{ border: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
         >
           <div className="icon-wrapper">
             <Filter size={22} />
@@ -539,7 +548,16 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               }}
               onClick={() => setIsMobileSheetOpen(false)}
             >
-              <Hash size={18} style={{ color: 'var(--primary)' }} /> 
+              {feed.icon_url ? (
+                <img 
+                  src={feed.icon_url} 
+                  alt="" 
+                  style={{ width: 18, height: 18, borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }} 
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              ) : (
+                <Hash size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} /> 
+              )} 
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {feed.title}
                 {pollingFeeds.has(feed.id) && <RefreshCw size={14} className="spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />}

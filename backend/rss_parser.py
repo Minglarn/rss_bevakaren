@@ -3,6 +3,32 @@ import time
 import calendar
 import requests
 import html
+from urllib.parse import urlparse
+
+def extract_feed_icon(parsed_feed, feed_url: str) -> str:
+    """Extraherar ikon eller logotyp ur flödesmetadata med automatisk favicon-fallback."""
+    icon_url = ""
+    if parsed_feed and hasattr(parsed_feed, 'feed'):
+        meta = parsed_feed.feed
+        if hasattr(meta, 'get'):
+            icon_url = meta.get('icon') or meta.get('logo') or ""
+            if not icon_url and 'image' in meta:
+                img = meta['image']
+                if isinstance(img, dict):
+                    icon_url = img.get('href') or img.get('url') or ""
+                elif isinstance(img, str):
+                    icon_url = img
+
+    # Fallback till domänens favicon
+    if not icon_url and feed_url:
+        try:
+            domain = urlparse(feed_url).netloc
+            if domain:
+                icon_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=64"
+        except Exception:
+            pass
+
+    return icon_url or ""
 
 def fetch_feed_items(url: str, title: str = None):
     """Fetches and parses an RSS feed, returning a list of items."""
@@ -13,6 +39,7 @@ def fetch_feed_items(url: str, title: str = None):
         }
         res = requests.get(url, headers=headers, timeout=15)
         parsed = feedparser.parse(res.content)
+        feed_icon = extract_feed_icon(parsed, url)
         items = []
         for entry in parsed.entries:
             categories = [html.unescape(tag.get('term', '')).strip() for tag in entry.get('tags', []) if tag.get('term')]
@@ -57,6 +84,7 @@ def fetch_feed_items(url: str, title: str = None):
                 "summary": html.unescape(clean_summary),
                 "image_url": image_url,
                 "categories": categories,
+                "feed_icon": feed_icon,
             })
         return items
     except Exception as e:
@@ -66,7 +94,7 @@ def fetch_feed_items(url: str, title: str = None):
 def filter_items_by_keywords(items, keywords):
     """Returns items that contain at least one of the keywords in title or summary."""
     if not keywords:
-        return items # or return [] depending on if we want all news when no keywords
+        return items
 
     filtered = []
     kw_lower = [k.keyword.lower() for k in keywords]

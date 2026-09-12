@@ -1485,9 +1485,18 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           {formatTime(item.received_ts ? new Date(item.received_ts * 1000) : item.published)} {formatDateLabel(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
                         </span>
 
-                        {/* Källnamn */}
+                        {/* Källnamn med flödesikon */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#ffffff', fontWeight: 700, fontSize: '0.82rem', minWidth: 0 }}>
-                          <Rss size={13} style={{ color: '#ffffff', flexShrink: 0 }} />
+                          {item.feed_icon ? (
+                            <img 
+                              src={item.feed_icon} 
+                              alt="" 
+                              style={{ width: 14, height: 14, borderRadius: '3px', objectFit: 'contain', flexShrink: 0, backgroundColor: 'rgba(255, 255, 255, 0.2)' }} 
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <Rss size={13} style={{ color: '#ffffff', flexShrink: 0 }} />
+                          )}
                           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {decodeHtmlEntities(item.source_title)}
                           </span>
@@ -1533,7 +1542,17 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0, gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
-                          <Rss size={14} /> {decodeHtmlEntities(item.source_title)}
+                          {item.feed_icon ? (
+                            <img 
+                              src={item.feed_icon} 
+                              alt="" 
+                              style={{ width: 14, height: 14, borderRadius: '3px', objectFit: 'contain', flexShrink: 0 }} 
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <Rss size={14} style={{ flexShrink: 0 }} />
+                          )}
+                          {decodeHtmlEntities(item.source_title)}
                           {item.published && (
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.35rem' }} title="Ursprunglig publiceringstid">
                               • {formatDateLabel(item.published)} {formatTime(item.published)}
@@ -1988,9 +2007,19 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '0.65rem' }}>
                             {item.similar_articles.map((sim) => (
                               <div key={sim.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', fontSize: '0.78rem' }}>
-                                <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ fontWeight: 600, color: 'var(--text-main)', marginRight: '0.35rem' }}>{sim.source_title}:</span>
-                                  <span style={{ color: 'var(--text-muted)' }}>{decodeHtmlEntities(sim.title)}</span>
+                                <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                  {sim.feed_icon ? (
+                                    <img 
+                                      src={sim.feed_icon} 
+                                      alt="" 
+                                      style={{ width: 13, height: 13, borderRadius: '2px', objectFit: 'contain', flexShrink: 0 }} 
+                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                  ) : (
+                                    <Rss size={11} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                                  )}
+                                  <span style={{ fontWeight: 600, color: 'var(--text-main)', flexShrink: 0 }}>{sim.source_title}:</span>
+                                  <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{decodeHtmlEntities(sim.title)}</span>
                                 </div>
                                 <a
                                   href={sim.link}

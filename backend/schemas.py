@@ -26,6 +26,7 @@ class FeedBase(BaseModel):
     scrape_enabled: bool = True
     include_in_dashboard: bool = True
     notify_enabled: bool = True
+    icon_url: Optional[str] = ""
 
 class FeedCreate(FeedBase):
     pass
@@ -93,6 +94,7 @@ class ArticleResponse(BaseModel):
     image_url: Optional[str] = None
     categories: Optional[List[str]] = []
     source_title: Optional[str] = None
+    feed_icon: Optional[str] = ""
     scrape_enabled: Optional[bool] = True
     received_ts: Optional[int] = 0
     is_read: Optional[int] = 0

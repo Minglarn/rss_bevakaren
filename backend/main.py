@@ -167,6 +167,10 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE feeds ADD COLUMN notify_enabled INTEGER DEFAULT 1"))
                     conn.commit()
                     print("[DB] Added notify_enabled column to feeds", flush=True)
+                if "icon_url" not in f_cols:
+                    conn.execute(text("ALTER TABLE feeds ADD COLUMN icon_url TEXT DEFAULT ''"))
+                    conn.commit()
+                    print("[DB] Added icon_url column to feeds", flush=True)
                 conn.execute(text("UPDATE feeds SET notify_enabled = 1 WHERE notify_enabled IS NULL"))
                 conn.commit()
 
@@ -467,6 +471,12 @@ def run_db_migrations(db_path: str):
         except sqlite3.OperationalError:
             pass
 
+        # Migration 18: Add icon_url to feeds
+        try:
+            cur.execute("ALTER TABLE feeds ADD COLUMN icon_url TEXT DEFAULT '';")
+        except sqlite3.OperationalError:
+            pass
+
         conn.commit()
         conn.close()
         size_kb = os.path.getsize(db_path) / 1024
@@ -670,6 +680,21 @@ def parse_device_name(ua: Optional[str]) -> str:
         browser_name = "Opera"
 
     return f"{os_name} ({browser_name})"
+
+def get_feed_icon_url(feed: Optional[models.Feed], link: Optional[str] = None) -> str:
+    """Returnerar flödets sparade ikon eller genererar en automatisk favicon via Google service."""
+    if feed and getattr(feed, "icon_url", None) and feed.icon_url.strip():
+        return feed.icon_url.strip()
+    target_url = (feed.url if feed and feed.url else "") or (link or "")
+    if target_url:
+        try:
+            from urllib.parse import urlparse
+            domain = urlparse(target_url).netloc
+            if domain:
+                return f"https://www.google.com/s2/favicons?domain={domain}&sz=64"
+        except Exception:
+            pass
+    return ""
 
 def send_push_notification_to_user(
     db: Session,
@@ -883,6 +908,12 @@ async def polling_loop():
                     
                     is_initial_poll = (feed.last_polled == 0 or feed.last_polled is None)
                     new_articles = []
+                    
+                    if items and (not feed.icon_url or not feed.icon_url.strip()):
+                        first_icon = items[0].get("feed_icon")
+                        if first_icon:
+                            feed.icon_url = first_icon
+                            db.commit()
                     
                     for item in items:
                         # Use link or title as GUID if GUID is missing
@@ -1398,6 +1429,7 @@ def get_feeds(db: Session = Depends(database.get_db), current_user: models.User 
             "scrape_enabled": bool(feed.scrape_enabled),
             "include_in_dashboard": bool(feed.include_in_dashboard),
             "notify_enabled": bool(feed.notify_enabled),
+            "icon_url": get_feed_icon_url(feed),
             "unread_count": unread_count
         }
         feed_responses.append(feed_dict)
@@ -1413,15 +1445,31 @@ def view_feed(feed_id: int, db: Session = Depends(database.get_db), current_user
 
 @app.post("/feeds", response_model=schemas.FeedResponse)
 def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    if not feed.title or not feed.title.strip():
+    icon_url = (feed.icon_url or "").strip()
+    if not feed.title or not feed.title.strip() or not icon_url:
         import feedparser
         parsed = feedparser.parse(feed.url)
-        if parsed.feed and "title" in parsed.feed:
-            feed.title = parsed.feed.title
-        else:
-            feed.title = feed.url
+        if not feed.title or not feed.title.strip():
+            if parsed.feed and "title" in parsed.feed:
+                feed.title = parsed.feed.title
+            else:
+                feed.title = feed.url
+        if not icon_url:
+            icon_url = rss_parser.extract_feed_icon(parsed, feed.url)
+            
+    if not icon_url:
+        icon_url = get_feed_icon_url(None, feed.url)
 
-    db_feed = models.Feed(url=feed.url, title=feed.title, polling_interval=feed.polling_interval, scrape_enabled=int(feed.scrape_enabled), include_in_dashboard=int(feed.include_in_dashboard), notify_enabled=int(feed.notify_enabled), user_id=current_user.id)
+    db_feed = models.Feed(
+        url=feed.url, 
+        title=feed.title, 
+        polling_interval=feed.polling_interval, 
+        scrape_enabled=int(feed.scrape_enabled), 
+        include_in_dashboard=int(feed.include_in_dashboard), 
+        notify_enabled=int(feed.notify_enabled), 
+        icon_url=icon_url,
+        user_id=current_user.id
+    )
     db.add(db_feed)
     db.commit()
     db.refresh(db_feed)
@@ -1597,6 +1645,7 @@ def get_dashboard_feeds(
             "image_url": art.image_url,
             "categories": cats,
             "source_title": art.feed.title or art.feed.url,
+            "feed_icon": get_feed_icon_url(art.feed, art.link),
             "scrape_enabled": bool(art.feed.scrape_enabled),
             "received_ts": art.received_ts,
             "is_read": art.is_read or 0,
@@ -1661,6 +1710,7 @@ def get_dashboard_feeds(
                 "feed_id": other["feed_id"],
                 "title": other["title"],
                 "source_title": other["source_title"],
+                "feed_icon": other.get("feed_icon", ""),
                 "link": other["link"],
                 "published": other["published"],
                 "published_ts": other["published_ts"],

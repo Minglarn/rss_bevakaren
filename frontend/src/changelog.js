@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.26',
+    date: '2026-09-12',
+    title: 'Flödesikoner i artikelkort och tydligare aktiv flik i bottenmenyn',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Flödesikoner och logotyper i artikelkorten',
+        description: 'Implementerade stöd för källspecifika ikoner/logotyper (ur RSS <image>, Atom <icon>/<logo> samt automatisk favicon-fallback) i både moderna och klassiska kort samt i klusterkällor och sidomeny.'
+      },
+      {
+        type: 'ui',
+        title: 'Tydlig aktiv flik i mobilens bottenmeny',
+        description: 'Förstärkte aktivt flikläge i mobilmenyn med en mjuk bakgrundskapsel, topp-indikatorlinje, fet text och uppskalad ikon så att den aktiva vyn syns tydligt.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.25',
     date: '2026-09-12',
     title: 'UI-förbättring: Ny toast-design i botten av skärmen',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',

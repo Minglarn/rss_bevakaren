@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.12.25-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.12.26-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
