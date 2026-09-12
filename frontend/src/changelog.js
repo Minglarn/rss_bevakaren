@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.07',
+    date: '2026-09-12',
+    title: 'UI-optimering: Proportioner och yta för kortets topp- och bottenrad',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Ökad höjd och luftighet i kortets toppbar (+30%)',
+        description: 'Justerade padding och min-height i moderna händelsekortens toppbar så att tidsblock, källnamn och ikoner får en balanserad och stabil presentation.'
+      },
+      {
+        type: 'ui',
+        title: 'Kompaktare bottenrad (-30%)',
+        description: 'Minskade bottenbarens höjd och knapparnas vertikala utrymme med 30 procent för att spara skärmyta och ge fokus åt nyhetsinnehållet.'
+      },
+      {
+        type: 'fix',
+        title: 'Rensat källnamn och borttagen dubblettkategori',
+        description: 'Tog bort kategoriknappen ur kortets toppbar eftersom den redan visas bland taggarna, vilket ger källans namn fullt utrymme utan avklippning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.06',
     date: '2026-09-12',
     title: 'Åtgärd för horisontell scrollbar och breddpassning på mobil',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

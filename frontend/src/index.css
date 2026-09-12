@@ -1226,20 +1226,23 @@ select:focus, input:focus {
   }
   
   .feed-card.card-modern .feed-card-topbar.topbar-modern {
-    padding: 0.35rem 0.45rem !important;
+    padding: 0.55rem 0.6rem !important; /* +30% höjd och luftighet */
+    min-height: 38px !important;
+    box-sizing: border-box !important;
   }
   
   .feed-card.card-modern .feed-card-bottombar.bottombar-modern {
-    padding: 0.35rem 0.4rem !important;
+    padding: 0.22rem 0.35rem !important; /* -30% höjd */
     gap: 0.25rem !important;
     width: 100% !important;
+    min-height: 32px !important;
     box-sizing: border-box !important;
   }
 
   .feed-card.card-modern .modern-bottombar-btn {
-    padding: 0.45rem 0.35rem !important;
-    font-size: 0.73rem !important;
-    min-height: 38px !important;
+    padding: 0.22rem 0.3rem !important; /* -30% höjd */
+    font-size: 0.72rem !important;
+    min-height: 26px !important; /* -30% från 38px */
     min-width: 0 !important;
     box-sizing: border-box !important;
   }
@@ -1301,17 +1304,19 @@ select:focus, input:focus {
 
 .feed-card.card-modern .feed-card-topbar.topbar-modern {
   border-bottom: none;
-  font-size: 0.8rem;
-  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+  padding: 0.6rem 0.85rem; /* +30% höjd */
+  min-height: 42px;
+  box-sizing: border-box;
   color: #ffffff;
 }
 
 .modern-time-pill {
   background: rgba(0, 0, 0, 0.22);
   color: #ffffff;
-  padding: 0.15rem 0.45rem;
+  padding: 0.18rem 0.48rem;
   border-radius: 4px;
-  font-size: 0.72rem;
+  font-size: 0.73rem;
   font-weight: 700;
   letter-spacing: 0.3px;
   white-space: nowrap;
@@ -1340,8 +1345,10 @@ select:focus, input:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.4rem;
-  padding: 0.45rem 0.85rem;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem; /* -30% höjd */
+  min-height: 34px;
+  box-sizing: border-box;
   color: #ffffff;
   border-top: none;
   border-bottom-left-radius: 8px;
@@ -1352,16 +1359,16 @@ select:focus, input:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   background: rgba(0, 0, 0, 0.22);
   border: 1px solid rgba(255, 255, 255, 0.22);
   color: #ffffff;
   cursor: pointer;
-  padding: 0.4rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.78rem;
+  padding: 0.25rem 0.6rem; /* -30% höjd */
+  border-radius: 5px;
+  font-size: 0.74rem;
   font-weight: 600;
-  min-height: 36px;
+  min-height: 26px; /* -30% från 36px */
   transition: all 0.15s ease;
   line-height: 1;
   flex: 1;

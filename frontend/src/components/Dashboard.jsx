@@ -1303,9 +1303,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         </span>
 
                         {/* Källnamn */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#ffffff', fontWeight: 700, fontSize: '0.82rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#ffffff', fontWeight: 700, fontSize: '0.82rem', minWidth: 0 }}>
                           <Rss size={13} style={{ color: '#ffffff', flexShrink: 0 }} />
-                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
+                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {decodeHtmlEntities(item.source_title)}
                           </span>
                         </div>
@@ -1342,26 +1342,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           }} title={item.clickbait_reason || "Klickbetesvarning"}>
                             <AlertTriangle size={12} /> Klickbete
                           </span>
-                        )}
-
-                        {/* Kategori */}
-                        {shouldShowAi && item.category && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
-                            style={{
-                              color: '#ffffff',
-                              padding: '0.12rem 0.45rem',
-                              backgroundColor: 'rgba(0, 0, 0, 0.22)',
-                              border: '1px solid rgba(255, 255, 255, 0.3)',
-                              borderRadius: '4px',
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              cursor: 'pointer'
-                            }}
-                            title={`Filtrera på kategori: ${item.category}`}
-                          >
-                            {decodeHtmlEntities(item.category)}
-                          </button>
                         )}
                       </div>
                     </div>
@@ -1896,7 +1876,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
                           title="Markera som oläst"
                         >
-                          <EyeOff size={15} />
+                          <EyeOff size={13} />
                           <span>Oläst</span>
                         </button>
                       ) : (
@@ -1905,7 +1885,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
                           title="Markera som läst"
                         >
-                          <CheckCheck size={15} />
+                          <CheckCheck size={13} />
                           <span>Läst</span>
                         </button>
                       )}
@@ -1918,7 +1898,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           title="Lås upp händelse"
                           style={{ backgroundColor: 'rgba(0, 0, 0, 0.38)' }}
                         >
-                          <Lock size={15} />
+                          <Lock size={13} />
                           <span>Låst</span>
                         </button>
                       ) : (
@@ -1927,7 +1907,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
                           title="Lås händelse"
                         >
-                          <Unlock size={15} />
+                          <Unlock size={13} />
                           <span>Lås</span>
                         </button>
                       )}
@@ -1939,7 +1919,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           onClick={(e) => { e.stopPropagation(); setPrioritizeItem(item); }}
                           title="Prioritera händelse / bevaka ämne"
                         >
-                          <Flame size={15} />
+                          <Flame size={13} />
                           <span>Prio</span>
                         </button>
                       )}
@@ -1950,7 +1930,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         onClick={(e) => { e.stopPropagation(); setShareItem(item); }}
                         title="Dela händelse"
                       >
-                        <Share2 size={15} />
+                        <Share2 size={13} />
                         <span>Dela</span>
                       </button>
 
@@ -1962,7 +1942,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         style={{ flex: 1.2 }}
                       >
                         <span>{expandedItems[index] ? 'Dölj' : 'Läs hela'}</span>
-                        <ChevronRight size={15} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+                        <ChevronRight size={13} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
                       </button>
                     </div>
                   )}
