@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.14',
+    date: '2026-09-12',
+    title: 'Renodlad och koncis RSS-flödesloggning i Docker',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Renare format för flödesinläsning',
+        description: 'Tog bort det tekniska "Polling feed"-meddelandet och behöll det rena formatet "Loading and parsing RSS feed: [Källa]" i containerns loggström.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.13',
     date: '2026-09-12',
     title: 'Sanering av överflödig logginformation i backend',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

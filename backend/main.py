@@ -868,9 +868,6 @@ async def polling_loop():
                 
                 # Check if it's time to poll
                 if current_time - feed.last_polled >= interval_sec:
-                    short_url = (feed.url[:40] + '...') if len(feed.url) > 40 else feed.url
-                    print(f"Polling feed {feed.id} ({feed.title}) [{short_url}]...", flush=True)
-                    
                     await manager.send_personal_message(f"POLLING_START:{feed.id}", feed.user_id)
                     try:
                         # Kör nätverksanropet i en egen tråd för att inte blockera event-loopen
