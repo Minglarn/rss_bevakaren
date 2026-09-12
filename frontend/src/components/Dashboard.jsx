@@ -575,6 +575,16 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     setSearchParams(newParams);
   };
 
+  const handleSelectFeed = (fId) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (feedId === String(fId)) {
+      newParams.delete('feedId');
+    } else if (fId) {
+      newParams.set('feedId', fId);
+    }
+    setSearchParams(newParams);
+  };
+
   const triggerAnalysis = async (e, id) => {
     e.stopPropagation();
     if (analyzingIds.has(id)) return;
@@ -1486,16 +1496,25 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         </span>
 
                         {/* Källnamn med flödesikon */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#ffffff', fontWeight: 700, fontSize: '0.82rem', minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#ffffff', fontWeight: 700, fontSize: '0.84rem', minWidth: 0 }}>
                           {item.feed_icon ? (
                             <img 
                               src={item.feed_icon} 
                               alt="" 
-                              style={{ width: 14, height: 14, borderRadius: '3px', objectFit: 'contain', flexShrink: 0, backgroundColor: 'rgba(255, 255, 255, 0.2)' }} 
+                              style={{ 
+                                width: 22, 
+                                height: 22, 
+                                borderRadius: '4px', 
+                                objectFit: 'contain', 
+                                flexShrink: 0, 
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                                padding: '1px',
+                                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)' 
+                              }} 
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                           ) : (
-                            <Rss size={13} style={{ color: '#ffffff', flexShrink: 0 }} />
+                            <Rss size={16} style={{ color: '#ffffff', flexShrink: 0 }} />
                           )}
                           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {decodeHtmlEntities(item.source_title)}
@@ -1541,16 +1560,24 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     /* Klassisk Toppbar */
                     <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0, gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--primary)', fontWeight: 600 }}>
                           {item.feed_icon ? (
                             <img 
                               src={item.feed_icon} 
                               alt="" 
-                              style={{ width: 14, height: 14, borderRadius: '3px', objectFit: 'contain', flexShrink: 0 }} 
+                              style={{ 
+                                width: 20, 
+                                height: 20, 
+                                borderRadius: '4px', 
+                                objectFit: 'contain', 
+                                flexShrink: 0,
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                padding: '1px'
+                              }} 
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                           ) : (
-                            <Rss size={14} style={{ flexShrink: 0 }} />
+                            <Rss size={16} style={{ flexShrink: 0 }} />
                           )}
                           {decodeHtmlEntities(item.source_title)}
                           {item.published && (
@@ -1851,64 +1878,100 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     return null;
                   })()}
 
-                  {/* Taggar från AI-analys inklusive kategori */}
-                  {shouldShowAi && (item.category || (item.tags && item.tags.length > 0)) && (
-                    <div className="card-tags-section">
-                      <div className="card-tags-divider" />
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem' }}>
-                      {item.category && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            padding: '0.2rem 0.55rem',
-                            borderRadius: '12px',
-                            fontSize: '0.75rem',
-                            fontWeight: selectedCategory.toLowerCase() === item.category.toLowerCase() ? 600 : 500,
-                            backgroundColor: selectedCategory.toLowerCase() === item.category.toLowerCase() ? '#f97316' : 'rgba(249, 115, 22, 0.1)',
-                            color: selectedCategory.toLowerCase() === item.category.toLowerCase() ? '#ffffff' : '#f97316',
-                            border: selectedCategory.toLowerCase() === item.category.toLowerCase() ? '1px solid #f97316' : '1px solid rgba(249, 115, 22, 0.25)',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s'
-                          }}
-                          title={`Filtrera efter kategori: ${item.category}`}
+                  {/* Taggar från AI-analys och prominent källbricka till höger (grön ruta) */}
+                  <div className="card-tags-section" style={{ marginTop: 'auto' }}>
+                    <div className="card-tags-divider" />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.65rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
+                      {/* Vänster: Kategori- och nyckelordstaggar */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', flex: 1, minWidth: 0, alignItems: 'center' }}>
+                        {shouldShowAi && item.category && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: selectedCategory.toLowerCase() === item.category.toLowerCase() ? 600 : 500,
+                              backgroundColor: selectedCategory.toLowerCase() === item.category.toLowerCase() ? '#f97316' : 'rgba(249, 115, 22, 0.1)',
+                              color: selectedCategory.toLowerCase() === item.category.toLowerCase() ? '#ffffff' : '#f97316',
+                              border: selectedCategory.toLowerCase() === item.category.toLowerCase() ? '1px solid #f97316' : '1px solid rgba(249, 115, 22, 0.25)',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s'
+                            }}
+                            title={`Filtrera efter kategori: ${item.category}`}
+                          >
+                            <Tag size={11} /> {decodeHtmlEntities(item.category)}
+                          </button>
+                        )}
+                        {shouldShowAi && item.tags && item.tags
+                          .filter(tag => !item.category || tag.toLowerCase() !== item.category.toLowerCase())
+                          .map((tag, tIdx) => {
+                            const isTagActive = selectedTag.toLowerCase() === tag.toLowerCase();
+                            return (
+                              <button
+                                key={tIdx}
+                                onClick={(e) => { e.stopPropagation(); handleSelectTag(tag); }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  padding: '0.2rem 0.55rem',
+                                  borderRadius: '12px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: isTagActive ? 600 : 500,
+                                  backgroundColor: isTagActive ? 'var(--primary)' : 'var(--bg-app)',
+                                  color: isTagActive ? '#ffffff' : 'var(--text-muted)',
+                                  border: isTagActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s'
+                                }}
+                                title={`Filtrera efter tagg: #${tag}`}
+                              >
+                                <Tag size={11} /> {tag}
+                              </button>
+                            );
+                          })}
+                      </div>
+
+                      {/* Höger (grön ruta): Stor och tydlig källindikator */}
+                      <div
+                        className="card-source-badge"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (item.feed_id) handleSelectFeed(item.feed_id);
+                        }}
+                        title={`Källa: ${decodeHtmlEntities(item.source_title || '')} (Klicka för att filtrera på flödet)`}
+                      >
+                        {item.feed_icon ? (
+                          <img
+                            src={item.feed_icon}
+                            alt=""
+                            className="card-source-badge-icon"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const fb = e.currentTarget.parentElement?.querySelector('.card-source-badge-fallback');
+                              if (fb) fb.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="card-source-badge-fallback"
+                          style={{ display: item.feed_icon ? 'none' : 'flex' }}
                         >
-                          <Tag size={11} /> {decodeHtmlEntities(item.category)}
-                        </button>
-                      )}
-                      {item.tags && item.tags
-                        .filter(tag => !item.category || tag.toLowerCase() !== item.category.toLowerCase())
-                        .map((tag, tIdx) => {
-                          const isTagActive = selectedTag.toLowerCase() === tag.toLowerCase();
-                          return (
-                            <button
-                              key={tIdx}
-                              onClick={(e) => { e.stopPropagation(); handleSelectTag(tag); }}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                padding: '0.2rem 0.55rem',
-                                borderRadius: '12px',
-                                fontSize: '0.75rem',
-                                fontWeight: isTagActive ? 600 : 500,
-                                backgroundColor: isTagActive ? 'var(--primary)' : 'var(--bg-app)',
-                                color: isTagActive ? '#ffffff' : 'var(--text-muted)',
-                                border: isTagActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s'
-                              }}
-                              title={`Filter by tag: #${tag}`}
-                            >
-                              <Tag size={11} /> {tag}
-                            </button>
-                          );
-                        })}
+                          <Rss size={18} />
+                        </div>
+                        <div className="card-source-badge-info">
+                          <span className="card-source-badge-label">Källa</span>
+                          <span className="card-source-badge-name">
+                            {decodeHtmlEntities(item.source_title || '')}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  )}
+                  </div>
                   
                   {/* Expanded Content (Full scraped text) */}
                   {expandedItems[index] && (
@@ -2012,11 +2075,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                                     <img 
                                       src={sim.feed_icon} 
                                       alt="" 
-                                      style={{ width: 13, height: 13, borderRadius: '2px', objectFit: 'contain', flexShrink: 0 }} 
+                                      style={{ width: 16, height: 16, borderRadius: '3px', objectFit: 'contain', flexShrink: 0, backgroundColor: '#ffffff', padding: '1px' }} 
                                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                     />
                                   ) : (
-                                    <Rss size={11} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                                    <Rss size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} />
                                   )}
                                   <span style={{ fontWeight: 600, color: 'var(--text-main)', flexShrink: 0 }}>{sim.source_title}:</span>
                                   <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{decodeHtmlEntities(sim.title)}</span>

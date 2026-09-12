@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.27',
+    date: '2026-09-12',
+    title: 'Större källogotyper och kompaktare inställningsikon i bottenmenyn',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Framträdande källogo och källbricka i artikelkort',
+        description: 'Ökade källikonens höjd i toppbaren till 22px för att fylla ut raden, samt introducerade en distinkt 34x34px källbricka med källnamn och snabbfiltrering på taggraden längst ner till höger.'
+      },
+      {
+        type: 'ui',
+        title: 'Endast ikon för Inställningar i mobilens bottenmeny',
+        description: 'Tog bort texten INSTÄLLNINGAR under kugghjulet i bottenmenyn på mobilen för ett renare uttryck och mer utrymme för övriga flikar.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.26',
     date: '2026-09-12',
     title: 'Flödesikoner i artikelkort och tydligare aktiv flik i bottenmenyn',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

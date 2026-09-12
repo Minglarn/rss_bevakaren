@@ -464,11 +464,16 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           </div>
           <span>FLÖDEN</span>
         </button>
-        <Link to="/settings" className={`bottom-bar-item ${location.pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+        <Link 
+          to="/settings" 
+          className={`bottom-bar-item ${location.pathname === '/settings' ? 'active' : ''}`} 
+          onClick={() => setIsMobileSheetOpen(false)}
+          title="Inställningar"
+          aria-label="Inställningar"
+        >
           <div className="icon-wrapper">
             <SettingsIcon size={22} />
           </div>
-          <span>INSTÄLLNINGAR</span>
         </Link>
       </div>
 

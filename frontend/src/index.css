@@ -1527,6 +1527,78 @@ select:focus, input:focus {
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.22) 70%, transparent 100%);
 }
 
+/* Källbricka i taggraden / artikelkortet (grön ruta) */
+.card-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 3px 8px 3px 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+.card-source-badge:hover {
+  border-color: var(--primary);
+  background-color: rgba(37, 99, 235, 0.08);
+  transform: translateY(-1px);
+}
+
+.card-source-badge-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  object-fit: contain;
+  background-color: #ffffff;
+  padding: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
+  flex-shrink: 0;
+}
+
+.card-source-badge-fallback {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.card-source-badge-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  text-align: left;
+}
+
+.card-source-badge-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.card-source-badge-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+  line-height: 1.2;
+}
+
 /* --- RSS MANAGER CLASSES --- */
 .rss-list-container {
   background: var(--bg-card);
