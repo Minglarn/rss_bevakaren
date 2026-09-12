@@ -50,9 +50,18 @@ export const checkPushSubscriptionStatus = async () => {
   if (Notification.permission !== 'granted') {
     return false;
   }
+  if (localStorage.getItem('rss_push_unsubscribed') === 'true') {
+    return false;
+  }
   try {
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
+    
+    // Om subscription saknas i webbläsaren men användaren tidigare haft det aktiverat:
+    if (!subscription && localStorage.getItem('rss_push_enabled') === 'true') {
+      return await autoSyncPushSubscription({ force: true });
+    }
+    
     return !!subscription;
   } catch (e) {
     return false;
@@ -101,7 +110,9 @@ export const subscribeToWebPush = async () => {
       });
     }
     
+    localStorage.setItem('rss_push_endpoint', subscription.endpoint);
     localStorage.setItem('rss_push_vapid_key', publicVapidKey);
+    localStorage.setItem('rss_push_last_synced_at', String(Date.now()));
     localStorage.removeItem('rss_push_unsubscribed');
     localStorage.setItem('rss_push_enabled', 'true');
     return subJSON?.endpoint || subscription.endpoint;
@@ -113,7 +124,7 @@ export const subscribeToWebPush = async () => {
 
 let isAutoSyncing = false;
 
-export const autoSyncPushSubscription = async () => {
+export const autoSyncPushSubscription = async ({ force = false } = {}) => {
   if (isAutoSyncing) {
     return false;
   }
@@ -133,35 +144,29 @@ export const autoSyncPushSubscription = async () => {
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
 
-    // Om ingen prenumeration finns och användaren aldrig haft det aktiverat, avbryt
-    if (!subscription && localStorage.getItem('rss_push_enabled') !== 'true') {
+    const previouslyEnabled = localStorage.getItem('rss_push_enabled') === 'true';
+    if (!subscription && !previouslyEnabled) {
       return false;
+    }
+
+    const savedEndpoint = localStorage.getItem('rss_push_endpoint');
+    const savedVapidKey = localStorage.getItem('rss_push_vapid_key');
+    const lastSyncedAt = Number(localStorage.getItem('rss_push_last_synced_at') || 0);
+    const isRecent = Date.now() - lastSyncedAt < 24 * 60 * 60 * 1000; // 24 timmar
+
+    // Snabbverifiering: Om vi redan har aktiv prenumeration och nyligen synkat mot servern,
+    // görs inget serveranrop (undviker onödig trafik vid pull-to-refresh).
+    if (subscription && !force && isRecent && savedEndpoint === subscription.endpoint && savedVapidKey) {
+      return true;
     }
 
     const vapidRes = await api.get('/push/vapid-public-key');
     const publicVapidKey = vapidRes?.data?.public_key;
     if (!publicVapidKey) return false;
 
-    const savedVapidKey = localStorage.getItem('rss_push_vapid_key');
     const deviceId = getDeviceId();
 
-    // Fall 1: Vi har redan en aktiv prenumeration och VAPID-nyckeln stämmer
-    if (subscription && savedVapidKey === publicVapidKey) {
-      const subJSON = subscription.toJSON();
-      if (subJSON && subJSON.endpoint && subJSON.keys) {
-        await api.post('/push/subscribe', {
-          endpoint: subJSON.endpoint,
-          p256dh: subJSON.keys.p256dh,
-          auth: subJSON.keys.auth,
-          device_id: deviceId
-        });
-      }
-      localStorage.removeItem('rss_push_unsubscribed');
-      localStorage.setItem('rss_push_enabled', 'true');
-      return true;
-    }
-
-    // Fall 2: VAPID-nyckeln på servern har roterats/bytts
+    // Fall 1: VAPID-nyckeln på servern har roterats/bytts
     if (subscription && savedVapidKey && savedVapidKey !== publicVapidKey) {
       try {
         await subscription.unsubscribe();
@@ -171,7 +176,7 @@ export const autoSyncPushSubscription = async () => {
       subscription = null;
     }
 
-    // Fall 3: Ingen prenumeration fanns, eller den avregistrerades ovan
+    // Fall 2: Prenumeration saknas i webbläsaren efter uppdatering
     if (!subscription) {
       const serverKeyArray = urlBase64ToUint8Array(publicVapidKey);
       subscription = await registration.pushManager.subscribe({
@@ -190,7 +195,9 @@ export const autoSyncPushSubscription = async () => {
           device_id: deviceId
         });
       }
+      localStorage.setItem('rss_push_endpoint', subscription.endpoint);
       localStorage.setItem('rss_push_vapid_key', publicVapidKey);
+      localStorage.setItem('rss_push_last_synced_at', String(Date.now()));
       localStorage.removeItem('rss_push_unsubscribed');
       localStorage.setItem('rss_push_enabled', 'true');
       return true;

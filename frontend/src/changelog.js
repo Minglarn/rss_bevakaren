@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.28',
+    date: '2026-09-12',
+    title: 'Automatisk statuskontroll och synkronisering av pushnotiser vid app-start och PWA-uppdateringar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Automatisk verifiering av enhetens push-prenumeration',
+        description: 'Appen kontrollerar och återskapar nu automatiskt enhetens push-prenumeration vid omstart och PWA-uppdateringar om behörighet redan är beviljad. Användaren behöver aldrig mer klicka manuellt på Aktivera pushnotiser efter en uppdatering.'
+      },
+      {
+        type: 'performance',
+        title: 'Intelligent synkronisering utan server-brus',
+        description: 'Implementerade 24-timmars cache och endpoint-verifiering. Vanliga sidladdningar och pull-to-refresh skickar noll onödiga nätverksanrop mot servern när prenumerationen redan är aktiv och synkad.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.27',
     date: '2026-09-12',
     title: 'Större källogotyper och kompaktare inställningsikon i bottenmenyn',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',

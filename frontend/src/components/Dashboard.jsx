@@ -1936,9 +1936,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           })}
                       </div>
 
-                      {/* Höger (grön ruta): Stor och tydlig källindikator */}
+                      {/* Höger (grön ruta): BARA ikonen */}
                       <div
-                        className="card-source-badge"
+                        className="card-source-badge icon-only"
                         onClick={(e) => {
                           e.stopPropagation();
                           if (item.feed_id) handleSelectFeed(item.feed_id);
@@ -1948,7 +1948,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         {item.feed_icon ? (
                           <img
                             src={item.feed_icon}
-                            alt=""
+                            alt={decodeHtmlEntities(item.source_title || '')}
                             className="card-source-badge-icon"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
@@ -1962,12 +1962,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           style={{ display: item.feed_icon ? 'none' : 'flex' }}
                         >
                           <Rss size={18} />
-                        </div>
-                        <div className="card-source-badge-info">
-                          <span className="card-source-badge-label">Källa</span>
-                          <span className="card-source-badge-name">
-                            {decodeHtmlEntities(item.source_title || '')}
-                          </span>
                         </div>
                       </div>
                     </div>
