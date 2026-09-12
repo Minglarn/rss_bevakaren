@@ -1235,6 +1235,8 @@ select:focus, input:focus {
     padding: 0.55rem 0.6rem !important; /* +30% höjd och luftighet */
     min-height: 38px !important;
     box-sizing: border-box !important;
+    border-top-left-radius: 8px !important;
+    border-top-right-radius: 11px !important;
   }
   
   .feed-card.card-modern .feed-card-bottombar.bottombar-modern {
@@ -1315,6 +1317,8 @@ select:focus, input:focus {
   min-height: 42px;
   box-sizing: border-box;
   color: #ffffff;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 11px;
 }
 
 .modern-time-pill {

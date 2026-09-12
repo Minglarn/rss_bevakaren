@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.09',
+    date: '2026-09-12',
+    title: 'Sömlös hörnpassning för moderna händelsekort',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Eliminerat pixelglapp i kortets övre hörn',
+        description: 'Justerade hörnradie (border-top-left-radius) och harmoniserade toppkantens färg med kortets tema för att ta bort subpixel-glipan mellan kortets ram och toppbaren.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.08',
     date: '2026-09-12',
     title: 'Mobil rubrikstorlek och elegant avdelare för taggar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',

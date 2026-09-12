@@ -1212,7 +1212,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     userSelect: 'none', 
                     WebkitUserSelect: 'none',
                     border: isClickbait ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border-color)',
-                    borderLeft: cardStyle === 'modern' ? (isClickbait ? '4px solid #ef4444' : `4px solid ${color}`) : undefined
+                    borderLeft: cardStyle === 'modern' ? (isClickbait ? '4px solid #ef4444' : `4px solid ${color}`) : undefined,
+                    borderTopColor: cardStyle === 'modern' ? (isClickbait ? '#ef4444' : color) : undefined,
+                    borderBottomColor: cardStyle === 'modern' ? (isClickbait ? '#ef4444' : color) : undefined
                   }}
                 >
                 {/* Klassisk layout: Vänster sido-stapel */}
@@ -1280,7 +1282,17 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                 )}
 
                 {/* Innehållsarea */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <div style={{ 
+                  flex: 1, 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  minWidth: 0,
+                  overflow: 'hidden',
+                  borderTopLeftRadius: cardStyle === 'modern' ? '8px' : undefined,
+                  borderTopRightRadius: cardStyle === 'modern' ? '11px' : undefined,
+                  borderBottomLeftRadius: cardStyle === 'modern' ? '8px' : undefined,
+                  borderBottomRightRadius: cardStyle === 'modern' ? '11px' : undefined
+                }}>
                   {/* Toppbar: Modernt vs Klassiskt format */}
                   {cardStyle === 'modern' ? (
                     <div 
@@ -1292,6 +1304,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         alignItems: 'center', 
                         marginBottom: 0, 
                         gap: '0.45rem',
+                        borderTopLeftRadius: '8px',
                         borderTopRightRadius: '11px',
                         borderBottom: 'none'
                       }}
