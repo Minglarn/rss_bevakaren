@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.20',
+    date: '2026-09-12',
+    title: 'Åtgärdat importfel i backend (Tuple) för ren uppstart',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Korrigerad Tuple-typimport i AI-tjänsten',
+        description: 'Lade till Tuple i typing-importen i ai_service.py vilket åtgärdade uppstartskraschen i backend-containern och återställde WebSocket-anslutningen.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.19',
     date: '2026-09-12',
     title: 'Renodlat rapport-kort, realtidsklustring och strukturerade Docker-loggar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',
