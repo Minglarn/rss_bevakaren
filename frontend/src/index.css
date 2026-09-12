@@ -1213,8 +1213,14 @@ select:focus, input:focus {
   }
   
   .feed-card-title {
-    font-size: 0.85rem !important;
-    margin-bottom: 0.35rem !important;
+    font-size: 0.98rem !important; /* Ökad rubrikstorlek på mobil för bättre läsbarhet */
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+    margin-bottom: 0.38rem !important;
+  }
+  
+  .card-tags-divider {
+    margin: 0.45rem 0 0.4rem 0 !important;
   }
   
   .feed-card-desc {
@@ -1446,6 +1452,15 @@ select:focus, input:focus {
   font-size: 0.95rem;
   word-break: break-word;
   overflow-wrap: anywhere;
+}
+
+.card-tags-divider {
+  height: 1px;
+  background: linear-gradient(90deg, var(--border-color) 0%, var(--border-color) 70%, transparent 100%);
+  margin: 0.6rem 0 0.5rem 0;
+  border: none;
+  width: 100%;
+  opacity: 0.85;
 }
 
 /* --- RSS MANAGER CLASSES --- */

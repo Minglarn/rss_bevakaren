@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.08',
+    date: '2026-09-12',
+    title: 'Mobil rubrikstorlek och elegant avdelare för taggar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Ökad rubrikstorlek i mobilvy',
+        description: 'Justerade händelsekortens titel på mobila skärmar till 0.98rem med tydligare tyngd (font-weight: 600) och radavstånd för förbättrad läsbarhet.'
+      },
+      {
+        type: 'ui',
+        title: 'Snygg avdelare mellan sammanfattning och taggar',
+        description: 'Införde en stilren och diskret gradient-avdelare som harmoniskt separerar AI-sammanfattningen från kategorier och taggar.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.07',
     date: '2026-09-12',
     title: 'UI-optimering: Proportioner och yta för kortets topp- och bottenrad',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',

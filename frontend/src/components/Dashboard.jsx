@@ -1651,7 +1651,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
                   {/* Taggar från AI-analys inklusive kategori */}
                   {shouldShowAi && (item.category || (item.tags && item.tags.length > 0)) && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem' }}>
+                    <div className="card-tags-section">
+                      <div className="card-tags-divider" />
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem' }}>
                       {item.category && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
@@ -1702,6 +1704,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             </button>
                           );
                         })}
+                      </div>
                     </div>
                   )}
                   
