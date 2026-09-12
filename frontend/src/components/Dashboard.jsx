@@ -183,6 +183,10 @@ const SwipeableArticleCard = ({
     } else if (dist < SWIPE_THRESHOLD && passedRef.current) {
       passedRef.current = false;
       setIsPassed(false);
+      // Diskret haptisk bekräftelse på att gesten har ångrats/avbrutits
+      if (navigator.vibrate) {
+        try { navigator.vibrate(15); } catch (_) {}
+      }
     }
   };
 
@@ -193,13 +197,16 @@ const SwipeableArticleCard = ({
 
     const dist = Math.abs(info.offset.x);
     const velocity = Math.abs(info.velocity.x);
-    const isVelocityFlick = velocity > 550 && dist > 55;
-    const isThresholdPassed = dist >= 110;
 
-    if (isThresholdPassed || isVelocityFlick) {
-      if (navigator.vibrate && !passedRef.current) {
-        try { navigator.vibrate(35); } catch (_) {}
-      }
+    // Är rörelsen på väg bort från centrum (samma tecken på offset och velocity)?
+    const isMovingOutward = (info.offset.x * info.velocity.x) > 0;
+    // Snabbt kast utåt (velocity flick)
+    const isVelocityFlick = isMovingOutward && velocity > 650 && dist > 60;
+    // Släpper medan tröskeln aktivt är passerad
+    const isReleaseBeyondThreshold = passedRef.current && dist >= 105;
+
+    // Om användaren har dragit tillbaka kortet mot centrum: utför ALDRIG åtgärd
+    if (isReleaseBeyondThreshold || isVelocityFlick) {
       if (isRead) {
         onMarkAsUnread(itemId);
       } else {

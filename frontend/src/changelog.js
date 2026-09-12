@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.36',
+    date: '2026-09-12',
+    title: 'Stöd för att ångra och avbryta swipe genom att dra tillbaka kortet',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Ångra-funktion vid tillbakadragning',
+        description: 'Om du passerat tröskeln men ångrar dig och drar kortet tillbaka mot mitten, avbryts åtgärden automatiskt med en diskret haptisk signal och ingen artikel markeras som läst när du släpper.'
+      },
+      {
+        type: 'fix',
+        title: 'Riktningsmedveten hastighetsdetektering',
+        description: 'Hastighetsbaserade svep (flick) kräver nu att rörelsen rör sig utåt bort från mitten, vilket eliminerar oavsiktliga triggningar när kortet dras snabbt tillbaka mot utgångsläget.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.35',
     date: '2026-09-12',
     title: 'Finslipad mobil swipe-fysik med realtidshaptik och scrollprioritet',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',
