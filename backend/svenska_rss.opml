@@ -143,6 +143,7 @@
     <outline text="Kollega" type="rss" created="Tue, 05 May 2026 22:05:19 +0200" xmlUrl="https://kollega.se/rss.xml" description="Unionen" htmlUrl="http://www.kollega.se" version="RSS2" />
     <outline text="Kommunalarbetaren" type="rss" created="Tue, 05 May 2026 22:05:19 +0200" xmlUrl="https://arbetet.se/ka/feed" description="Kommunal (LO Mediehus)" htmlUrl="https://arbetet.se/ka/feed" version="RSS2" />
     <outline text="Kristianstadsbladet" type="rss" created="Tue, 05 May 2026 22:05:19 +0200" xmlUrl="https://www.kristianstadsbladet.se/feed.xml" description="Gota Media AB" htmlUrl="https://www.kristianstadsbladet.se" version="RSS2" />
+    <outline text="Krisinformation" type="rss" created="Sat, 12 Sep 2026 08:21:00 +0200" xmlUrl="https://www.krisinformation.se/nyheter/?rss=true" description="Myndigheten för samhällsskydd och beredskap (MSB)" htmlUrl="https://www.krisinformation.se" version="RSS2" />
     <outline text="Kritiska EU-fakta" type="rss" created="Tue, 05 May 2026 22:05:19 +0200" xmlUrl="https://nejtilleu.se/kef/feed" description="Folkrörelsen Nej till EU" htmlUrl="https://nejtilleu.se/kef" version="RSS2" />
     <outline text="KT-Kuriren" type="rss" created="Tue, 05 May 2026 22:05:19 +0200" xmlUrl="https://www.kt-kuriren.se/feed" description="NWT Media AB" htmlUrl="https://www.kt-kuriren.se" version="RSS2" />
     <outline text="Kvällsstunden" type="rss" created="Tue, 05 May 2026 22:05:19 +0200" xmlUrl="https://kvallsstunden.se/feed" description="Tidningshuset Kvällsstunden AB" htmlUrl="https://kvallsstunden.se" version="RSS2" />
@@ -218,6 +219,7 @@
     <outline text="Senioren" type="rss" created="Tue, 05 May 2026 22:05:22 +0200" xmlUrl="https://www.senioren.se/feed" description="SPF Seniorerna" htmlUrl="https://www.senioren.se" version="RSS2" />
     <outline text="Signum" type="rss" created="Tue, 05 May 2026 22:05:22 +0200" xmlUrl="https://signum.se/feed" description="Newmaninstitutet" htmlUrl="https://signum.se" version="RSS2" />
     <outline text="Sjukhusläkaren" type="rss" created="Tue, 05 May 2026 22:05:22 +0200" xmlUrl="https://www.sjukhuslakaren.se/feed" description="Sjukhusläkarna (Sveriges Läkarförbund)" htmlUrl="https://www.sjukhuslakaren.se" version="RSS2" />
+    <outline text="Sjöräddningen Hela landet" type="rss" created="Sat, 12 Sep 2026 08:21:00 +0200" xmlUrl="https://www.sjoraddning.se/rss.xml" description="Sjöräddningssällskapet (SSRS)" htmlUrl="https://www.sjoraddning.se" version="RSS2" />
     <outline text="Skaraborgs Allehanda" type="rss" created="Tue, 05 May 2026 22:05:22 +0200" xmlUrl="https://www.sla.se/feed" description="NWT Media AB" htmlUrl="https://www.sla.se" version="RSS2" />
     <outline text="Skaraborgs Läns Tidning" type="rss" created="Tue, 05 May 2026 22:05:22 +0200" xmlUrl="https://www.skaraborgslanstidning.se/feed.xml" description="Bonnier News Local AB" htmlUrl="https://www.skaraborgslanstidning.se" version="RSS2" />
     <outline text="Skaraborgsbygden" type="rss" created="Tue, 05 May 2026 22:05:22 +0200" xmlUrl="https://www.skaraborgsbygden.se/feed" description="NWT Media AB" htmlUrl="https://www.skaraborgsbygden.se" version="RSS2" />

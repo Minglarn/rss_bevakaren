@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.03',
+    date: '2026-09-12',
+    title: 'Nya källor i katalogen: Krisinformation och Sjöräddningen',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Krisinformation och Sjöräddningen tillagda i katalogen',
+        description: 'Katalogen har utökats med två viktiga blåljus- och säkerhetskällor: Krisinformation (MSB) och Sjöräddningen Hela landet (SSRS). Båda kan nu enkelt utforskas och läggas till med ett klick.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.02',
     date: '2026-09-12',
     title: 'Användaruppdelad MQTT-arkitektur och garanterad flödespublicering',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',
