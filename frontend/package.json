@@ -1,7 +1,7 @@
 {
   "name": "rss-bevakare",
   "private": true,
-  "version": "2026.09.12.17",
+  "version": "2026.09.12.19",
   "type": "module",
   "scripts": {
     "dev": "vite",

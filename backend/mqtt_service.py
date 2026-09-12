@@ -237,22 +237,36 @@ def publish_article(
                 _published_prio_articles.clear()
                 _published_prio_articles.add(dedup_key)
         
+    feed_pub_ok = False
+    prio_pub_ok = False
+
     # 1. Publicera till användarens specifika flödestopic
     if not already_published_feed or is_update:
         feed_topic = f"{MQTT_TOPIC_PREFIX}/{user_slug}/feeds/{feed_slug}"
         try:
             _client.publish(feed_topic, payload_str, qos=MQTT_QOS, retain=MQTT_RETAIN)
-            log_tag = " [UPPDATERAD]" if is_update else ""
-            log_prio_tag = " [PRIO]" if is_prio else ""
-            print(f"[MQTT] Publicerade artikel #{article_id} ({user_slug}){log_tag}{log_prio_tag} -> '{feed_topic}'", flush=True)
+            feed_pub_ok = True
         except Exception as e:
-            print(f"[MQTT] Fel vid publicering till '{feed_topic}': {e}", flush=True)
+            print(f"[MQTT: {user_slug}] Fel vid publicering till '{feed_topic}': {e}", flush=True)
         
     # 2. Om artikeln är PRIO: publicera även till användarens specifika prio-topic
-    if is_prio and (not already_published_prio or is_update):
+    should_pub_prio = is_prio and (not already_published_prio or is_update)
+    if should_pub_prio:
         prio_topic = f"{MQTT_TOPIC_PREFIX}/{user_slug}/prio"
         try:
             _client.publish(prio_topic, payload_str, qos=MQTT_QOS, retain=MQTT_RETAIN)
-            print(f"[MQTT] Publicerade PRIO för #{article_id} ({user_slug}) -> '{prio_topic}'", flush=True)
+            prio_pub_ok = True
         except Exception as e:
-            print(f"[MQTT] Fel vid publicering till '{prio_topic}': {e}", flush=True)
+            print(f"[MQTT: {user_slug}] Fel vid publicering till '{prio_topic}': {e}", flush=True)
+
+    # Samlad, strukturerad och koncis loggrad per artikel
+    if feed_pub_ok or prio_pub_ok:
+        action_verb = "Uppdaterade berikad" if is_update else "Publicerade"
+        topics_desc = []
+        if feed_pub_ok:
+            topics_desc.append(f"'feeds/{feed_slug}'")
+        if prio_pub_ok:
+            topics_desc.append("'prio'")
+        dest_str = " & ".join(topics_desc)
+        prio_badge = " [PRIO]" if is_prio else ""
+        print(f"[MQTT: {user_slug}] {action_verb} #{article_id}{prio_badge} -> {dest_str}", flush=True)

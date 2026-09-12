@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.19',
+    date: '2026-09-12',
+    title: 'Renodlat rapport-kort, realtidsklustring och strukturerade Docker-loggar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Renodlat rapport-kort i mobilflödet',
+        description: 'Tog bort ordet "Briefing" ur rubriken så att endast "Morgonrapport" eller "Kvällsrapport" med datum visas, samt ökade kortets höjd och klickzon med ca 30% för bättre läsbarhet och ergonomi.'
+      },
+      {
+        type: 'feature',
+        title: 'Realtidsklustring av artiklar',
+        description: 'Synkroniserade embedding och topic-klustring med AI-bearbetningen så att sammanhängande nyhetsartiklar klustras ihop direkt i gränssnittet utan att användaren behöver byta flik.'
+      },
+      {
+        type: 'fix',
+        title: 'Enhetligt och strukturerat loggflöde i Docker',
+        description: 'Standardiserade loggprefix med användarnamn ([RSS: användare], [AI: användare], [MQTT: användare]), åtgärdade #None vid flödesinläsning och samlade MQTT-publiceringar på en tydlig rad.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.17',
     date: '2026-09-12',
     title: 'Fast klistrad toppbar och diskret feed-polling-avisering',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',

@@ -917,25 +917,30 @@ async def polling_loop():
                             new_articles.append(new_article)
                     
                     if new_articles:
+                        db.commit()
                         feed_title = feed.title or "RSS"
                         first_id = new_articles[0].id
                         last_id = new_articles[-1].id
                         id_range = f"#{first_id}" if first_id == last_id else f"#{first_id}-#{last_id}"
-                        
+                        art_count_str = "1 ny artikel sparad" if len(new_articles) == 1 else f"{len(new_articles)} nya artiklar sparade"
+
+                        feed_user = db.query(models.User).filter(models.User.id == feed.user_id).first()
+                        feed_username = feed_user.username if feed_user else f"user_{feed.user_id}"
+
                         # Burst-skydd: Om fler än 2 artiklar i en och samma poll kvalificerar sig för push, begränsa till max 2 nyaste
                         if not is_initial_poll:
                             push_eligible = [a for a in new_articles if a.allow_push == 1]
                             if len(push_eligible) > 2:
                                 for a in push_eligible[:-2]:
                                     a.allow_push = 0
-                                print(f"[ANTI-BURST] '{feed_title}': {len(push_eligible)} artiklar. Begränsar push till de 2 nyaste för att förhindra notis-bombning.", flush=True)
+                                db.commit()
+                                print(f"[ANTI-BURST: {feed_username}] '{feed_title}': {len(push_eligible)} artiklar. Begränsar push till de 2 nyaste.", flush=True)
 
-                        print(f"[POLL] {feed_title}: {len(new_articles)} nya artiklar sparade ({id_range})", flush=True)
-                        db.commit()
+                        print(f"[RSS: {feed_username}] {feed_title} | {art_count_str} ({id_range})", flush=True)
                         ai_wake_event.set()
                         
                         if is_initial_poll:
-                            print(f"[POLL] {feed_title}: Initial inläsning slutförd, artiklar sparade tyst utan push-notiser.", flush=True)
+                            print(f"[RSS: {feed_username}] {feed_title}: Initial inläsning slutförd, artiklar sparade tyst utan push-notiser.", flush=True)
                             await manager.send_personal_message(f"INITIAL_ARTICLES:{feed.id}:{len(new_articles)}", feed.user_id)
                         else:
                             await manager.send_personal_message(f"NEW_ARTICLES:{feed.id}:{len(new_articles)}", feed.user_id)
@@ -943,9 +948,6 @@ async def polling_loop():
                         # Check keywords and feed notify settings
                         user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == feed.user_id).all()
                         kw_texts = [kw.keyword.lower() for kw in user_keywords] if user_keywords else []
-                        
-                        feed_user = db.query(models.User).filter(models.User.id == feed.user_id).first()
-                        feed_username = feed_user.username if feed_user else f"user_{feed.user_id}"
 
                         # 1. Publicera inkommande artiklar direkt till användarens MQTT-flöde
                         if not is_initial_poll and mqtt_service.MQTT_ENABLED:
@@ -1185,15 +1187,15 @@ async def ai_processing_loop():
 
                         db.commit()
 
-                        # Generera semantisk embedding via LM Studio i bakgrunden
+                        # Generera semantisk embedding och utför Topic-klustring direkt så artikeln är klustrad i realtid
+                        cluster_info_str = ""
                         try:
                             summary_text = art.ai_summary or art.summary or ""
-                            asyncio.create_task(asyncio.to_thread(
-                                safe_bg_save_embedding,
-                                art.id,
-                                art.title,
-                                summary_text
-                            ))
+                            await asyncio.to_thread(ai_service.save_article_embedding, art.id, art.title, summary_text, db)
+                            cid, sim = await asyncio.to_thread(ai_service.find_or_create_article_cluster, art.id, db)
+                            if cid and cid != art.id:
+                                pct = int(round(sim * 100)) if sim else 100
+                                cluster_info_str = f" | Kluster #{cid} ({pct}%)"
                         except Exception:
                             pass
 
@@ -1255,23 +1257,10 @@ async def ai_processing_loop():
                                     silent=True
                                 )
                         except Exception as push_err:
-                            print(f"[Push] Fel vid hantering av push-notis för artikel {art.id}: {push_err}", flush=True)
+                            print(f"[Push: {u_display}] Fel vid hantering av push-notis för artikel {art.id}: {push_err}", flush=True)
 
-                        # Publicera till MQTT (uppdaterar användarens flödestopic med AI-data och vid prio även användarens prio-topic)
-                        try:
-                            mqtt_service.publish_article(
-                                article=art,
-                                feed=feed_obj,
-                                username=u_display,
-                                user_id=user_id,
-                                is_prio=is_prio,
-                                matched_keywords=matched_kw,
-                                is_update=True
-                            )
-                        except Exception as mqtt_err:
-                            print(f"[MQTT] Fel vid publicering av berikad artikel {art.id} för {u_display}: {mqtt_err}", flush=True)
-
-                        # LOGGNING ENLIGT FÖRSLAG B (Adaptivt format)
+                        # LOGGNING FÖR AI-ANALYS
+                        prio_tag = " [PRIO]" if is_prio else ""
                         if should_send_push:
                             tag_name = "BEVAKNINGSORD" if matched_kw else "PRIO-NOTIS"
                             kw_info = f": {', '.join(matched_kw)}" if matched_kw else ""
@@ -1295,7 +1284,7 @@ async def ai_processing_loop():
                                 f"====================================================================\n"
                                 f"[{tag_name}{kw_info}] Användare: {u_display} | Källa: {source or 'RSS'} | #{art.id}\n"
                                 f"  Titel:    \"{art.title}\"\n"
-                                f"  Analys:   {art.category} | {art.priority.upper()} ({art.prio_score}p) | Svarstid: {dur}s\n"
+                                f"  Analys:   {art.category} | {art.priority.upper()} ({art.prio_score}p){cluster_info_str} | Svarstid: {dur}s\n"
                                 f"  Leverans: {deliv_str}\n"
                                 f"====================================================================",
                                 flush=True
@@ -1303,9 +1292,23 @@ async def ai_processing_loop():
                         else:
                             # Kompakt 1-raders format för vanliga artiklar
                             print(
-                                f"[AI: {u_display}] {source or 'RSS'} #{art.id} | {art.category} | {art.priority.upper()} ({art.prio_score}p) | {dur}s | \"{art.title}\"",
+                                f"[AI: {u_display}] {source or 'RSS'} #{art.id} | {art.category} | {art.priority.upper()} ({art.prio_score}p){prio_tag}{cluster_info_str} | {dur}s | \"{art.title}\"",
                                 flush=True
                             )
+
+                        # Publicera till MQTT (uppdaterar användarens flödestopic med AI-data och vid prio även användarens prio-topic)
+                        try:
+                            mqtt_service.publish_article(
+                                article=art,
+                                feed=feed_obj,
+                                username=u_display,
+                                user_id=user_id,
+                                is_prio=is_prio,
+                                matched_keywords=matched_kw,
+                                is_update=True
+                            )
+                        except Exception as mqtt_err:
+                            print(f"[MQTT: {u_display}] Fel vid publicering av berikad artikel {art.id}: {mqtt_err}", flush=True)
 
                         # Skicka WS-signal om AI-uppdatering till användaren
                         if user_id:

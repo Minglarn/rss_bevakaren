@@ -35,6 +35,20 @@ const renderBriefingInline = (text) => {
   });
 };
 
+const formatReportTitle = (title) => {
+  if (!title) {
+    const hour = new Date().getHours();
+    return (hour >= 5 && hour < 12) ? 'Morgonrapport' : 'Kvällsrapport';
+  }
+  let clean = title.replace(/^(dagens\s+)?briefing\s*(-|–|:)?\s*/i, '').trim();
+  clean = clean.replace(/^briefing\s*(-|–|:)?\s*/i, '').trim();
+  if (!clean || clean.toLowerCase() === 'briefing') {
+    const hour = new Date().getHours();
+    return (hour >= 5 && hour < 12) ? 'Morgonrapport' : 'Kvällsrapport';
+  }
+  return clean;
+};
+
 const renderBriefingMarkdown = (content) => {
   if (!content) return null;
   const lines = content.split('\n');
@@ -1082,7 +1096,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           backgroundColor: 'var(--bg-card)',
           border: `1px solid ${isDigestExpanded ? 'rgba(59, 130, 246, 0.35)' : 'var(--border-color)'}`,
           borderRadius: '8px',
-          padding: isDigestExpanded ? '0.75rem 0.95rem' : '0.35rem 0.65rem',
+          padding: isDigestExpanded ? '0.85rem 1rem' : '0.52rem 0.75rem',
           marginBottom: isDigestExpanded ? '0.9rem' : '0.55rem',
           boxShadow: isDigestExpanded ? '0 4px 16px -2px rgba(0, 0, 0, 0.08)' : '0 1px 3px rgba(0, 0, 0, 0.03)',
           transition: 'all 0.2s ease',
@@ -1090,16 +1104,16 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         }}
         onClick={!isDigestExpanded ? () => setIsDigestExpanded(true) : undefined}
         >
-          {/* Kompakt Header Rad */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', minHeight: '28px' }}>
+          {/* Header Rad med ökad höjd (~30%) */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.45rem', minHeight: '36px' }}>
             <div 
               onClick={(e) => { e.stopPropagation(); setIsDigestExpanded(prev => !prev); }}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer', flex: 1, minWidth: 0 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', flex: 1, minWidth: 0 }}
             >
               <div style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '5px',
+                width: '30px',
+                height: '30px',
+                borderRadius: '6px',
                 backgroundColor: 'rgba(59, 130, 246, 0.12)',
                 color: 'var(--primary)',
                 display: 'flex',
@@ -1107,12 +1121,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <FileText size={13} />
+                <FileText size={15} />
               </div>
               
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, overflow: 'hidden' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
-                  {digest?.title ? digest.title.replace(/dagens briefing/i, 'Briefing') : 'Briefing'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0, overflow: 'hidden' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
+                  {formatReportTitle(digest?.title)}
                 </span>
                 
                 {digest?.digest_type === 'ai_generated' && (
@@ -1122,35 +1136,35 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                 )}
 
                 {digest?.created_at ? (
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                     {new Date(digest.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 ) : null}
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
               <button
                 onClick={(e) => { e.stopPropagation(); generateDigest(false); }}
                 disabled={digestLoading}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.3rem',
-                  padding: '0.2rem 0.5rem',
-                  fontSize: '0.72rem',
+                  gap: '0.35rem',
+                  padding: '0.25rem 0.6rem',
+                  fontSize: '0.76rem',
                   fontWeight: 600,
-                  borderRadius: '5px',
+                  borderRadius: '6px',
                   border: '1px solid var(--border-color)',
                   backgroundColor: 'var(--bg-app)',
                   color: 'var(--text-main)',
                   cursor: digestLoading ? 'not-allowed' : 'pointer',
                   transition: 'all 0.15s',
-                  height: '26px'
+                  height: '30px'
                 }}
                 title="Generera ny rapport via LM Studio"
               >
-                <RefreshCw size={11} className={digestLoading ? 'spin' : ''} />
+                <RefreshCw size={12} className={digestLoading ? 'spin' : ''} />
                 <span className="desktop-only">{digestLoading ? 'Analyserar...' : 'Uppdatera'}</span>
               </button>
 
@@ -1160,18 +1174,18 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '5px',
+                  width: '30px',
+                  height: '30px',
+                  borderRadius: '6px',
                   border: '1px solid var(--border-color)',
                   backgroundColor: 'var(--bg-app)',
                   color: 'var(--text-muted)',
                   cursor: 'pointer',
                   transition: 'all 0.15s'
                 }}
-                title={isDigestExpanded ? "Fäll ihop briefing" : "Expandera briefing"}
+                title={isDigestExpanded ? "Fäll ihop rapport" : "Expandera rapport"}
               >
-                <ChevronDown size={13} style={{ transform: isDigestExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                <ChevronDown size={14} style={{ transform: isDigestExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
               </button>
             </div>
           </div>

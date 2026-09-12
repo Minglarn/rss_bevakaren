@@ -23,6 +23,20 @@ const renderBriefingInline = (text) => {
   });
 };
 
+const formatReportTitle = (title) => {
+  if (!title) {
+    const hour = new Date().getHours();
+    return (hour >= 5 && hour < 12) ? 'Morgonrapport' : 'Kvällsrapport';
+  }
+  let clean = title.replace(/^(dagens\s+)?briefing\s*(-|–|:)?\s*/i, '').trim();
+  clean = clean.replace(/^briefing\s*(-|–|:)?\s*/i, '').trim();
+  if (!clean || clean.toLowerCase() === 'briefing') {
+    const hour = new Date().getHours();
+    return (hour >= 5 && hour < 12) ? 'Morgonrapport' : 'Kvällsrapport';
+  }
+  return clean;
+};
+
 const renderBriefingMarkdown = (content) => {
   if (!content) return null;
   const lines = content.split('\n');
@@ -306,7 +320,7 @@ const BriefingView = () => {
                 </div>
 
                 <h2 style={{ margin: '0 0 1.25rem 0', fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.35 }}>
-                  {selectedDigest.title || 'Dagens Briefing'}
+                  {formatReportTitle(selectedDigest.title)}
                 </h2>
 
                 <div style={{ color: 'var(--text-main)', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', marginBottom: '1.5rem' }}>
@@ -411,7 +425,7 @@ const BriefingView = () => {
                   >
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ fontSize: '0.85rem', fontWeight: isSelected ? 700 : 600, color: isSelected ? 'var(--primary)' : 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {d.title || 'Briefing'}
+                        {formatReportTitle(d.title)}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                         {formatDigestDate(d.created_at)} • {(d.articles || []).length || (d.article_ids || []).length} källor

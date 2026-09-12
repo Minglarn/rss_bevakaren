@@ -1284,21 +1284,22 @@ def compute_text_similarity(title1: str, title2: str) -> float:
         return max(jaccard, 0.85)
     return jaccard
 
-def find_or_create_article_cluster(article_id: int, db: Any, similarity_threshold: float = 0.84) -> Optional[int]:
+def find_or_create_article_cluster(article_id: int, db: Any, similarity_threshold: float = 0.84) -> Tuple[Optional[int], float]:
     """
     Söker efter liknande artiklar inom 36 timmar och kopplar artikeln till ett kluster.
     Använder semantisk Nomic-embedding om tillgängligt, annars heuristisk textlikhet.
+    Returnerar (cluster_id, likhetsgrad).
     """
     if not db or not article_id:
-        return None
+        return None, 0.0
     try:
         import models
         art = db.query(models.Article).filter(models.Article.id == article_id).first()
         if not art:
-            return None
+            return None, 0.0
 
         if art.cluster_id:
-            return art.cluster_id
+            return art.cluster_id, 1.0
 
         now_ts = int(time.time())
         cutoff_ts = now_ts - (36 * 3600)
@@ -1313,7 +1314,7 @@ def find_or_create_article_cluster(article_id: int, db: Any, similarity_threshol
         ).order_by(models.Article.received_ts.desc()).limit(150).all()
 
         if not candidates:
-            return None
+            return None, 0.0
 
         art_vec = None
         art_norm = 0.0
@@ -1356,8 +1357,7 @@ def find_or_create_article_cluster(article_id: int, db: Any, similarity_threshol
             
             art.cluster_id = cluster_id
             db.commit()
-            print(f"[Topic Clustering] Artikel {art.id} ('{art.title[:35]}...') kopplad till kluster {cluster_id} (likhet: {best_sim:.2f})", flush=True)
-            return cluster_id
+            return cluster_id, best_sim
 
     except Exception as e:
         print(f"[Topic Clustering] Fel vid klustring av artikel {article_id}: {e}", flush=True)
@@ -1365,7 +1365,7 @@ def find_or_create_article_cluster(article_id: int, db: Any, similarity_threshol
             db.rollback()
         except Exception:
             pass
-    return None
+    return None, 0.0
 
 def cluster_recent_unclustered_articles(db: Any, hours: int = 36, limit: int = 150) -> int:
     """Kör klustring på nyligen inkomna artiklar som saknar cluster_id."""
@@ -1381,7 +1381,7 @@ def cluster_recent_unclustered_articles(db: Any, hours: int = 36, limit: int = 1
 
         clustered_count = 0
         for art in articles:
-            cid = find_or_create_article_cluster(art.id, db)
+            cid, _ = find_or_create_article_cluster(art.id, db)
             if cid:
                 clustered_count += 1
         return clustered_count
@@ -1422,10 +1422,14 @@ def generate_daily_digest(db: Any, user_id: int, model: Optional[str] = None, fo
             models.Article.received_ts >= cutoff_48h
         ).order_by(models.Article.prio_score.desc(), models.Article.received_ts.desc()).limit(30).all()
 
+    local_hour = time.localtime(now_ts).tm_hour
+    period_name = "Morgonrapport" if 5 <= local_hour < 12 else ("Eftermiddagsrapport" if 12 <= local_hour < 18 else "Kvällsrapport")
+    today_str = time.strftime("%Y-%m-%d", time.localtime(now_ts))
+
     if not user_articles:
         return {
-            "title": "Dagens Briefing",
-            "content": "Inga aktuella nyhetshändelser finns tillgängliga för sammanställning just nu. Lägg till eller uppdatera RSS-flöden för att generera en briefing.",
+            "title": f"{period_name} ({today_str})",
+            "content": "Inga aktuella nyhetshändelser finns tillgängliga för sammanställning just nu. Lägg till eller uppdatera RSS-flöden för att generera en rapport.",
             "digest_type": "empty",
             "article_ids": [],
             "articles": [],
@@ -1441,7 +1445,7 @@ def generate_daily_digest(db: Any, user_id: int, model: Optional[str] = None, fo
                 continue
             seen_clusters.add(art.cluster_id)
         top_candidates.append(art)
-        if len(top_candidates) >= 8:
+        if len(top_candidates) >= 10:
             break
 
     covered_ids = [a.id for a in top_candidates]
@@ -1457,10 +1461,7 @@ def generate_daily_digest(db: Any, user_id: int, model: Optional[str] = None, fo
         for a in top_candidates
     ]
 
-    local_hour = time.localtime(now_ts).tm_hour
-    period_name = "Morgonrapport" if 5 <= local_hour < 12 else ("Eftermiddagsrapport" if 12 <= local_hour < 18 else "Kvällsrapport")
-    today_str = time.strftime("%Y-%m-%d", time.localtime(now_ts))
-    digest_title = f"Dagens Briefing - {period_name} ({today_str})"
+    digest_title = f"{period_name} ({today_str})"
 
     lm_online = False
     if not force_rule_based:
