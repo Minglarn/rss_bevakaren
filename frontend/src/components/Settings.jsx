@@ -274,10 +274,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 
   useEffect(() => {
     fetchData();
-    checkPushSubscriptionStatus().then(active => {
-      setPushEnabled(active);
-    });
-    fetchPushDevices();
+    if (activeTab === 'notifications') {
+      checkPushSubscriptionStatus().then(active => {
+        setPushEnabled(active);
+      });
+      fetchPushDevices();
+    }
   }, []);
 
   useEffect(() => {
@@ -285,6 +287,9 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       fetchAiConfig();
     }
     if (activeTab === 'notifications') {
+      checkPushSubscriptionStatus().then(active => {
+        setPushEnabled(active);
+      });
       fetchPushDevices();
     }
     if (activeTab === 'database') {

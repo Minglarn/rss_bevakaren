@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.24',
+    date: '2026-09-12',
+    title: 'Frikoppling av push-synk vid flödesuppdatering och pull-to-refresh',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Branschstandard för Web Push-initiering',
+        description: 'Tog bort automatisk push-prenumerationskontroll från appens startflöde och omladdning. Att dra nedåt i mobilflödet för att uppdatera nyheter rör inte längre push-servrarna.'
+      },
+      {
+        type: 'ui',
+        title: 'Isolerad pushhantering till inställningar',
+        description: 'Pushnotis-kontroller och enhetslistning körs nu uteslutande när användaren faktiskt navigerar till Notisfliken under Inställningar.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.23',
     date: '2026-09-12',
     title: 'Stabila enhets-ID:n för Web Push och eliminering av enhetsdubbletter',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

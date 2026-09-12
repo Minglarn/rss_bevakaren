@@ -12,7 +12,6 @@ import { AiChatProvider, useAiChat } from './context/AiChatContext';
 import PWABadge from './components/PWABadge';
 import WhatsNewModal from './components/WhatsNewModal';
 import api from './api';
-import { autoSyncPushSubscription } from './utils/notifications';
 import packageJson from '../package.json';
 import './App.css';
 import './index.css';
@@ -600,17 +599,6 @@ const App = () => {
           });
         }
       });
-      // Tyst automatisk synkronisering av web push om anvandaren beviljat notiser
-      autoSyncPushSubscription();
-    }
-
-    const onControllerChange = () => {
-      if (token) {
-        autoSyncPushSubscription();
-      }
-    };
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
     }
 
     const fetchPrioStatus = async () => {
