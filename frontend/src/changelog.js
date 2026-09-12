@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.06',
+    date: '2026-09-12',
+    title: 'Åtgärd för horisontell scrollbar och breddpassning på mobil',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Korrigerad toppbar-marginal på mobil',
+        description: 'Justerade toppbarens negativa sidomarginal på mobiler för att exakt matcha containerns nya minimala sidopadding, vilket eliminerar elementets utstick.'
+      },
+      {
+        type: 'fix',
+        title: 'Globalt skydd mot horisontellt spill',
+        description: 'Applicerade strikt breddkontroll och overflow-x: hidden på root, app-container och huvudvy så att oönskade scrollbars i botten förhindras.'
+      },
+      {
+        type: 'ui',
+        title: 'Optimerad flex-krympning i bottenraden',
+        description: 'Säkerställde att knapparna i kortets bottenrad kan skala och krympa mjukt även på extra smala mobilskärmar utan att pressa ut kortets totala bredd.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.05',
     date: '2026-09-12',
     title: 'Touch-vänlig bottenrad för händelsekort med namngivna knappar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',

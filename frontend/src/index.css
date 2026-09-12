@@ -13,8 +13,12 @@
   box-sizing: border-box;
 }
 
-body {
+html, body {
   margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   background-color: var(--bg-main);
   color: var(--text-main);
@@ -35,11 +39,16 @@ input, textarea, .card-content-text, .card-summary {
 #root {
   display: flex;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .app-container {
   display: flex;
   width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .sidebar {
@@ -1034,6 +1043,9 @@ select:focus, input:focus {
   
   .app-main-content {
     padding: 0.5rem 0.15rem 70px 0.15rem; /* Minimerad sido-padding för att maximera mobilens bredd */
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .app-main-content.chat-view {
@@ -1042,7 +1054,9 @@ select:focus, input:focus {
   
   .toppbar {
     padding: 0.5rem 0.5rem;
-    margin: -0.5rem -0.5rem 0.4rem -0.5rem; /* Dra ut till kanten med minimerat avstånd */
+    margin: -0.5rem -0.15rem 0.4rem -0.15rem; /* Matchar sido-padding 0.15rem exakt utan att sticka ut */
+    max-width: 100%;
+    box-sizing: border-box;
     top: 0;
   }
   
@@ -1218,12 +1232,16 @@ select:focus, input:focus {
   .feed-card.card-modern .feed-card-bottombar.bottombar-modern {
     padding: 0.35rem 0.4rem !important;
     gap: 0.25rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .feed-card.card-modern .modern-bottombar-btn {
     padding: 0.45rem 0.35rem !important;
     font-size: 0.73rem !important;
     min-height: 38px !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
   }
   
   .dashboard-header {
