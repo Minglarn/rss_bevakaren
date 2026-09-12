@@ -83,7 +83,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       
       const feed = myFeedsRef.current.find(f => f.id === feedId);
       const title = feed ? feed.title : `flöde ${feedId}`;
-      toast(`Söker nya händelser: ${title}...`, {
+      toast(`Söker: ${title}`, {
         id: `poll-${feedId}`,
         duration: 2500,
         style: {

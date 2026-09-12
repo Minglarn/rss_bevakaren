@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.31',
+    date: '2026-09-12',
+    title: 'Kompaktare text i söknings-toast',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Kortare toast-text vid flödessökning',
+        description: 'Ändrade notistexten vid avsökning av nya artiklar från "Söker nya händelser: [flöde]..." till det mer kompakta "Söker: [flöde]" så att notisen konsekvent ryms på en rad.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.30',
     date: '2026-09-12',
     title: 'Renodlat kortformat och borttagning av redundant källikon i taggraden',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',
