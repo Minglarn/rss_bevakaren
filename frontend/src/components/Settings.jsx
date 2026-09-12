@@ -55,6 +55,15 @@ const Settings = ({ onLogout }) => {
   const [sourceStats, setSourceStats] = useState(null);
   const [isLoadingSourceStats, setIsLoadingSourceStats] = useState(false);
   const [statsSort, setStatsSort] = useState('volume_desc');
+  const [swipeGesturesEnabled, setSwipeGesturesEnabled] = useState(() => localStorage.getItem('rss_swipe_gestures') !== 'false');
+
+  const toggleSwipeGestures = () => {
+    const nextVal = !swipeGesturesEnabled;
+    setSwipeGesturesEnabled(nextVal);
+    localStorage.setItem('rss_swipe_gestures', nextVal ? 'true' : 'false');
+    window.dispatchEvent(new Event('swipeGesturesChanged'));
+    toast.success(nextVal ? 'Swipe-gester aktiverade för mobilkort.' : 'Swipe-gester inaktiverade.');
+  };
 
   const handleCardStyleChange = (val) => {
     setCardStyle(val);
@@ -1161,6 +1170,29 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     type="checkbox"
                     checked={clusterMode}
                     onChange={toggleClusterMode}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            {/* Swipe-gester för mobilkort */}
+            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Smartphone size={18} style={{ color: 'var(--primary)' }} /> Swipe-gester för mobilkort
+              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                <div>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Svep i sidled för att markera som läst eller oläst</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.45, marginTop: '0.2rem' }}>
+                    Svep kortet i horisontell led med realtidshaptik. Vertikal scrollning prioriteras så att flödessurfningen inte störs. Låsning styrs alltid säkert via Lås-knappen.
+                  </div>
+                </div>
+                <label className="toggle-switch" style={{ flexShrink: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={swipeGesturesEnabled}
+                    onChange={toggleSwipeGestures}
                   />
                   <span className="toggle-slider"></span>
                 </label>

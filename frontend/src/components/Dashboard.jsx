@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText } from 'lucide-react';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText, Smartphone } from 'lucide-react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import ShareModal from './ShareModal';
@@ -119,6 +119,201 @@ const renderBriefingMarkdown = (content) => {
 
   flushList();
   return elements;
+};
+
+// Responsiv och optimerad kortkomponent med realtidshaptik och scrollprioritet
+const SwipeableArticleCard = ({
+  children,
+  itemId,
+  isRead,
+  swipeEnabled,
+  onMarkAsRead,
+  onMarkAsUnread,
+  onExpand,
+  className,
+  style
+}) => {
+  const x = useMotionValue(0);
+  const [isPassed, setIsPassed] = useState(false);
+  const passedRef = useRef(false);
+  const isDraggingRef = useRef(false);
+  const startYRef = useRef(0);
+  const startXRef = useRef(0);
+  const isVerticalScrollRef = useRef(false);
+
+  // Mjuka dynamiska transformeringar i realtid
+  const bgOpacity = useTransform(x, [-140, -40, 0, 40, 140], [0.4, 0.15, 0, 0.15, 0.4]);
+  const iconScale = useTransform(x, [-130, -50, 0, 50, 130], [1.15, 0.85, 0.5, 0.85, 1.15]);
+
+  const handlePointerDown = (e) => {
+    startYRef.current = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
+    startXRef.current = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
+    isVerticalScrollRef.current = false;
+    passedRef.current = false;
+    setIsPassed(false);
+  };
+
+  const handlePointerMove = (e) => {
+    if (isDraggingRef.current) return;
+    const currentY = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
+    const currentX = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
+    const diffY = Math.abs(currentY - startYRef.current);
+    const diffX = Math.abs(currentX - startXRef.current);
+
+    // Om fingret rör sig mer i höjdled än sidled: prioritera vertikal scroll
+    if (diffY > 7 && diffY > diffX * 1.3) {
+      isVerticalScrollRef.current = true;
+    }
+  };
+
+  const handleDragStart = () => {
+    isDraggingRef.current = true;
+  };
+
+  const handleDrag = (e, info) => {
+    const dist = Math.abs(info.offset.x);
+    const SWIPE_THRESHOLD = 110;
+
+    if (dist >= SWIPE_THRESHOLD && !passedRef.current) {
+      passedRef.current = true;
+      setIsPassed(true);
+      if (navigator.vibrate) {
+        try { navigator.vibrate(35); } catch (_) {}
+      }
+    } else if (dist < SWIPE_THRESHOLD && passedRef.current) {
+      passedRef.current = false;
+      setIsPassed(false);
+    }
+  };
+
+  const handleDragEnd = (e, info) => {
+    setTimeout(() => {
+      isDraggingRef.current = false;
+    }, 120);
+
+    const dist = Math.abs(info.offset.x);
+    const velocity = Math.abs(info.velocity.x);
+    const isVelocityFlick = velocity > 550 && dist > 55;
+    const isThresholdPassed = dist >= 110;
+
+    if (isThresholdPassed || isVelocityFlick) {
+      if (navigator.vibrate && !passedRef.current) {
+        try { navigator.vibrate(35); } catch (_) {}
+      }
+      if (isRead) {
+        onMarkAsUnread(itemId);
+      } else {
+        onMarkAsRead(itemId);
+      }
+    }
+
+    passedRef.current = false;
+    setIsPassed(false);
+  };
+
+  const handleClick = () => {
+    if (isDraggingRef.current || Math.abs(x.get()) > 10) return;
+    onExpand();
+  };
+
+  if (!swipeEnabled) {
+    return (
+      <div 
+        className={className}
+        style={style}
+        onClick={handleClick}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="feed-card-swipe-container"
+      style={{
+        position: 'relative',
+        overflow: 'hidden',
+        borderRadius: '12px'
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+    >
+      {/* Dynamisk bakgrundsindikator med realtidsrespons */}
+      <motion.div
+        className="feed-card-swipe-bg"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: isPassed
+            ? (isRead ? 'rgba(37, 99, 235, 0.35)' : 'rgba(22, 163, 74, 0.35)')
+            : (isRead ? 'rgba(59, 130, 246, 0.18)' : 'rgba(34, 197, 94, 0.22)'),
+          opacity: bgOpacity,
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 1.35rem',
+          zIndex: 0,
+          pointerEvents: 'none',
+          transition: 'background-color 0.2s ease'
+        }}
+      >
+        <motion.div 
+          style={{ 
+            scale: iconScale,
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.45rem', 
+            color: isRead ? '#1d4ed8' : '#15803d', 
+            fontWeight: 700, 
+            fontSize: '0.88rem' 
+          }}
+        >
+          {isRead ? <EyeOff size={20} /> : <CheckCheck size={20} />}
+          <span>{isRead ? 'Markera oläst' : 'Markera läst'}</span>
+        </motion.div>
+
+        <motion.div 
+          style={{ 
+            scale: iconScale,
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.45rem', 
+            color: isRead ? '#1d4ed8' : '#15803d', 
+            fontWeight: 700, 
+            fontSize: '0.88rem' 
+          }}
+        >
+          <span>{isRead ? 'Markera oläst' : 'Markera läst'}</span>
+          {isRead ? <EyeOff size={20} /> : <CheckCheck size={20} />}
+        </motion.div>
+      </motion.div>
+
+      {/* Själva kortet som dras */}
+      <motion.div
+        style={{
+          ...style,
+          x,
+          position: 'relative',
+          zIndex: 1,
+          touchAction: 'pan-y'
+        }}
+        className={className}
+        drag={isVerticalScrollRef.current ? false : "x"}
+        dragDirectionLock
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.5}
+        dragMomentum={false}
+        onDragStart={handleDragStart}
+        onDrag={handleDrag}
+        onDragEnd={handleDragEnd}
+        onClick={handleClick}
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
 };
 
 const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
@@ -262,6 +457,19 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     };
     window.addEventListener('cardStyleChanged', handleCardStyleChange);
     return () => window.removeEventListener('cardStyleChanged', handleCardStyleChange);
+  }, []);
+
+  // Swipe-gester för mobilkort
+  const [swipeEnabled, setSwipeEnabled] = useState(() => {
+    return localStorage.getItem('rss_swipe_gestures') !== 'false';
+  });
+
+  useEffect(() => {
+    const handleSwipeChange = () => {
+      setSwipeEnabled(localStorage.getItem('rss_swipe_gestures') !== 'false');
+    };
+    window.addEventListener('swipeGesturesChanged', handleSwipeChange);
+    return () => window.removeEventListener('swipeGesturesChanged', handleSwipeChange);
   }, []);
 
   const [expandedClusters, setExpandedClusters] = useState({});
@@ -1358,109 +1566,24 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
                   </div>
                 )}
-                <div 
-                  className="feed-card-swipe-container"
-                  style={{
-                    position: 'relative',
-                    overflow: 'hidden',
-                    borderRadius: '12px'
+                <SwipeableArticleCard
+                  itemId={item.id}
+                  isRead={Boolean(isArticleRead(item.id, item.is_read))}
+                  swipeEnabled={swipeEnabled}
+                  onMarkAsRead={() => markAsRead(item.id)}
+                  onMarkAsUnread={() => markAsUnread(item.id)}
+                  onExpand={() => handleExpand(index, item.link, item.id)}
+                  className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(!showRead && isArticleRead(item.id, item.is_read)) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
+                  style={{ 
+                    filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
+                    userSelect: 'none', 
+                    WebkitUserSelect: 'none',
+                    border: isClickbait ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border-color)',
+                    borderLeft: cardStyle === 'modern' ? (isClickbait ? '4px solid #ef4444' : `4px solid ${color}`) : undefined,
+                    borderTopColor: cardStyle === 'modern' ? (isClickbait ? '#ef4444' : color) : undefined,
+                    borderBottomColor: cardStyle === 'modern' ? (isClickbait ? '#ef4444' : color) : undefined
                   }}
                 >
-                  {/* Bakgrundsindikator för swipe: visar Läst/Oläst för både höger- och vänsterhänta */}
-                  <div
-                    className="feed-card-swipe-bg"
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      backgroundColor: isArticleRead(item.id, item.is_read) ? 'rgba(59, 130, 246, 0.18)' : 'rgba(34, 197, 94, 0.22)',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0 1.25rem',
-                      zIndex: 0,
-                      pointerEvents: 'none'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: isArticleRead(item.id, item.is_read) ? '#2563eb' : '#16a34a', fontWeight: 600, fontSize: '0.85rem' }}>
-                      {isArticleRead(item.id, item.is_read) ? <EyeOff size={18} /> : <CheckCheck size={18} />}
-                      <span>{isArticleRead(item.id, item.is_read) ? 'Markera oläst' : 'Markera läst'}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: isArticleRead(item.id, item.is_read) ? '#2563eb' : '#16a34a', fontWeight: 600, fontSize: '0.85rem' }}>
-                      <span>{isArticleRead(item.id, item.is_read) ? 'Markera oläst' : 'Markera läst'}</span>
-                      {isArticleRead(item.id, item.is_read) ? <EyeOff size={18} /> : <CheckCheck size={18} />}
-                    </div>
-                  </div>
-
-                  <motion.div 
-                    drag="x"
-                    dragDirectionLock
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.6}
-                    onDragStart={() => {
-                      isDraggingCard.current = true;
-                    }}
-                    onDragEnd={(e, info) => {
-                      setTimeout(() => {
-                        isDraggingCard.current = false;
-                      }, 120);
-
-                      if (Math.abs(info.offset.x) > 125) {
-                        if (navigator.vibrate) {
-                          try { navigator.vibrate(40); } catch (_) {}
-                        }
-                        if (isArticleRead(item.id, item.is_read)) {
-                          markAsUnread(item.id);
-                        } else {
-                          markAsRead(item.id);
-                        }
-                      }
-                    }}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: (!showRead && isArticleRead(item.id, item.is_read)) ? 0.5 : 1, x: 0 }}
-                    transition={{ duration: 0.2 }}
-                    onPointerDown={() => {
-                      longPressTimers.current[item.id] = setTimeout(() => {
-                        if (isArticleRead(item.id, item.is_read)) {
-                          markAsUnread(item.id);
-                        } else {
-                          markAsRead(item.id);
-                        }
-                      }, 600); // 600ms for long press
-                    }}
-                    onPointerUp={() => {
-                      if (longPressTimers.current[item.id]) {
-                        clearTimeout(longPressTimers.current[item.id]);
-                      }
-                    }}
-                    onPointerLeave={() => {
-                      if (longPressTimers.current[item.id]) {
-                        clearTimeout(longPressTimers.current[item.id]);
-                      }
-                    }}
-                    onPointerCancel={() => {
-                      if (longPressTimers.current[item.id]) {
-                        clearTimeout(longPressTimers.current[item.id]);
-                      }
-                    }}
-                    onClick={() => {
-                      if (isDraggingCard.current) return;
-                      handleExpand(index, item.link, item.id);
-                    }}
-                    className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(!showRead && isArticleRead(item.id, item.is_read)) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
-                    style={{ 
-                      position: 'relative',
-                      zIndex: 1,
-                      touchAction: 'pan-y',
-                      filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
-                      userSelect: 'none', 
-                      WebkitUserSelect: 'none',
-                      border: isClickbait ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border-color)',
-                      borderLeft: cardStyle === 'modern' ? (isClickbait ? '4px solid #ef4444' : `4px solid ${color}`) : undefined,
-                      borderTopColor: cardStyle === 'modern' ? (isClickbait ? '#ef4444' : color) : undefined,
-                      borderBottomColor: cardStyle === 'modern' ? (isClickbait ? '#ef4444' : color) : undefined
-                    }}
-                  >
                 {/* Klassisk layout: Vänster sido-stapel */}
                 {cardStyle === 'classic' && (
                   <div 
@@ -2252,10 +2375,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       </button>
                     </div>
                   )}
-                </div>
-              </motion.div>
-            </div>
-          </React.Fragment>
+                  </div>
+                </SwipeableArticleCard>
+              </React.Fragment>
             );
           })}
           

@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.35',
+    date: '2026-09-12',
+    title: 'Finslipad mobil swipe-fysik med realtidshaptik och scrollprioritet',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Realtidshaptik vid tröskelpassering',
+        description: 'Vibrationsfeedback triggas nu i exakt samma ögonblick som tröskeln passeras under dragningen, vilket ger ett tydligt mekaniskt klick i fingret innan man släpper.'
+      },
+      {
+        type: 'feature',
+        title: 'Scroll-prioritet och naturlig motståndsfri rörelse',
+        description: 'Vertikal scroll prioriteras nu konsekvent framför horisontellt drag, vilket eliminerar ryckighet vid vanlig flödessurfing. Dynamisk visuell skalning och hastighetsbaserat kast (velocity swipe).'
+      },
+      {
+        type: 'feature',
+        title: 'Valbart reglage för swipe-gester i inställningar',
+        description: 'Lade till en inställning i Inställningar -> Allmänt där swipe-gester för mobilkort enkelt kan aktiveras eller inaktiveras helt.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.34',
     date: '2026-09-12',
     title: 'Ökad swipe-tröskel och felrättning i Insikter',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
