@@ -2669,6 +2669,9 @@ def get_source_analytics(db: Session = Depends(database.get_db), current_user: m
                     "percentage": round((cnt / total_all_articles * 100), 1) if total_all_articles > 0 else 0.0
                 })
 
+        most_active = sources[0] if sources else None
+        least_active = sources[-1] if sources else None
+
         return {
             "summary": {
                 "total_feeds": len(feeds),
@@ -2703,10 +2706,18 @@ def get_source_analytics(db: Session = Depends(database.get_db), current_user: m
                 "stale_feeds_count": 0,
                 "avg_clickbait_pct": 0.0,
                 "avg_prio_pct": 0.0,
+                "total_categories": 0,
+                "total_unique_tags": 0,
                 "most_active_source": None,
                 "least_active_source": None
             },
-            "sources": []
+            "sources": [],
+            "categories": [],
+            "tags": [],
+            "tag_summary": {
+                "total_unique_tags": 0,
+                "tagged_articles_count": 0
+            }
         }
 
 @app.post("/articles/{article_id}/read")

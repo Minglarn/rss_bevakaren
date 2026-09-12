@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.38',
+    date: '2026-09-12',
+    title: 'Felrättning för variabelreferens i källstatistik och insikter',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Återställd variabeltilldelning för mest/minst aktiv källa',
+        description: 'Åtgärdat NameError där most_active och least_active saknades vid sammanställning av källanalysen, samt säkrat fallback-strukturen för kategorier och taggar.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.37',
     date: '2026-09-12',
     title: 'Kategori- och tagginsikter i Insiktsvyn',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',
