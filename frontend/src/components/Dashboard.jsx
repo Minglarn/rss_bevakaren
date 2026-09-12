@@ -207,6 +207,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [lockedItems, setLockedItems] = useState(new Set());
   const [unlockedItems, setUnlockedItems] = useState(new Set());
   const longPressTimers = useRef({});
+  const isDraggingCard = useRef(false);
   const [showRead, setShowRead] = useState(() => {
     return localStorage.getItem('rss_show_read') === 'true';
   });
@@ -1357,46 +1358,109 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
                   </div>
                 )}
-                <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: (!showRead && isArticleRead(item.id, item.is_read)) ? 0.5 : 1, x: 0 }}
-                  transition={{ duration: 0.2 }}
-                  onPointerDown={() => {
-                    longPressTimers.current[item.id] = setTimeout(() => {
-                      if (isArticleRead(item.id, item.is_read)) {
-                        markAsUnread(item.id);
-                      } else {
-                        markAsRead(item.id);
-                      }
-                    }, 600); // 600ms for long press
-                  }}
-                  onPointerUp={() => {
-                    if (longPressTimers.current[item.id]) {
-                      clearTimeout(longPressTimers.current[item.id]);
-                    }
-                  }}
-                  onPointerLeave={() => {
-                    if (longPressTimers.current[item.id]) {
-                      clearTimeout(longPressTimers.current[item.id]);
-                    }
-                  }}
-                  onPointerCancel={() => {
-                    if (longPressTimers.current[item.id]) {
-                      clearTimeout(longPressTimers.current[item.id]);
-                    }
-                  }}
-                  onClick={() => handleExpand(index, item.link, item.id)}
-                  className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(!showRead && isArticleRead(item.id, item.is_read)) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
-                  style={{ 
-                    filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
-                    userSelect: 'none', 
-                    WebkitUserSelect: 'none',
-                    border: isClickbait ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border-color)',
-                    borderLeft: cardStyle === 'modern' ? (isClickbait ? '4px solid #ef4444' : `4px solid ${color}`) : undefined,
-                    borderTopColor: cardStyle === 'modern' ? (isClickbait ? '#ef4444' : color) : undefined,
-                    borderBottomColor: cardStyle === 'modern' ? (isClickbait ? '#ef4444' : color) : undefined
+                <div 
+                  className="feed-card-swipe-container"
+                  style={{
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: '12px'
                   }}
                 >
+                  {/* Bakgrundsindikator för swipe: visar Läst/Oläst för både höger- och vänsterhänta */}
+                  <div
+                    className="feed-card-swipe-bg"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      backgroundColor: isArticleRead(item.id, item.is_read) ? 'rgba(59, 130, 246, 0.18)' : 'rgba(34, 197, 94, 0.22)',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0 1.25rem',
+                      zIndex: 0,
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: isArticleRead(item.id, item.is_read) ? '#2563eb' : '#16a34a', fontWeight: 600, fontSize: '0.85rem' }}>
+                      {isArticleRead(item.id, item.is_read) ? <EyeOff size={18} /> : <CheckCheck size={18} />}
+                      <span>{isArticleRead(item.id, item.is_read) ? 'Markera oläst' : 'Markera läst'}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: isArticleRead(item.id, item.is_read) ? '#2563eb' : '#16a34a', fontWeight: 600, fontSize: '0.85rem' }}>
+                      <span>{isArticleRead(item.id, item.is_read) ? 'Markera oläst' : 'Markera läst'}</span>
+                      {isArticleRead(item.id, item.is_read) ? <EyeOff size={18} /> : <CheckCheck size={18} />}
+                    </div>
+                  </div>
+
+                  <motion.div 
+                    drag="x"
+                    dragDirectionLock
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.45}
+                    onDragStart={() => {
+                      isDraggingCard.current = true;
+                    }}
+                    onDragEnd={(e, info) => {
+                      setTimeout(() => {
+                        isDraggingCard.current = false;
+                      }, 120);
+
+                      if (Math.abs(info.offset.x) > 75) {
+                        if (navigator.vibrate) {
+                          try { navigator.vibrate(40); } catch (_) {}
+                        }
+                        if (isArticleRead(item.id, item.is_read)) {
+                          markAsUnread(item.id);
+                        } else {
+                          markAsRead(item.id);
+                        }
+                      }
+                    }}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: (!showRead && isArticleRead(item.id, item.is_read)) ? 0.5 : 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
+                    onPointerDown={() => {
+                      longPressTimers.current[item.id] = setTimeout(() => {
+                        if (isArticleRead(item.id, item.is_read)) {
+                          markAsUnread(item.id);
+                        } else {
+                          markAsRead(item.id);
+                        }
+                      }, 600); // 600ms for long press
+                    }}
+                    onPointerUp={() => {
+                      if (longPressTimers.current[item.id]) {
+                        clearTimeout(longPressTimers.current[item.id]);
+                      }
+                    }}
+                    onPointerLeave={() => {
+                      if (longPressTimers.current[item.id]) {
+                        clearTimeout(longPressTimers.current[item.id]);
+                      }
+                    }}
+                    onPointerCancel={() => {
+                      if (longPressTimers.current[item.id]) {
+                        clearTimeout(longPressTimers.current[item.id]);
+                      }
+                    }}
+                    onClick={() => {
+                      if (isDraggingCard.current) return;
+                      handleExpand(index, item.link, item.id);
+                    }}
+                    className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(!showRead && isArticleRead(item.id, item.is_read)) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
+                    style={{ 
+                      position: 'relative',
+                      zIndex: 1,
+                      touchAction: 'pan-y',
+                      filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
+                      userSelect: 'none', 
+                      WebkitUserSelect: 'none',
+                      border: isClickbait ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border-color)',
+                      borderLeft: cardStyle === 'modern' ? (isClickbait ? '4px solid #ef4444' : `4px solid ${color}`) : undefined,
+                      borderTopColor: cardStyle === 'modern' ? (isClickbait ? '#ef4444' : color) : undefined,
+                      borderBottomColor: cardStyle === 'modern' ? (isClickbait ? '#ef4444' : color) : undefined
+                    }}
+                  >
                 {/* Klassisk layout: Vänster sido-stapel */}
                 {cardStyle === 'classic' && (
                   <div 
@@ -2190,7 +2254,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   )}
                 </div>
               </motion.div>
-              </React.Fragment>
+            </div>
+          </React.Fragment>
             );
           })}
           

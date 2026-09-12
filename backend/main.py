@@ -4,7 +4,7 @@ import asyncio
 import time
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, text, desc, and_
+from sqlalchemy import or_, text, desc, and_, func, case
 from typing import List, Optional, Dict, Any
 from datetime import timedelta
 import os
@@ -2488,6 +2488,143 @@ def get_database_stats(db: Session = Depends(database.get_db), current_user: mod
             "active_feeds": 0,
             "notify_feeds": 0,
             "top_categories": []
+        }
+
+@app.get("/analytics/sources")
+def get_source_analytics(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """
+    Returnerar fördjupad statistik och volymdata per nyhetsflöde för inloggad användare:
+    - Volym (totalt antal artiklar, olästa)
+    - Senaste aktivitet (tidsstämpel och antal dagar sedan senaste mottagna artikel)
+    - Inaktivitetsvarning (is_stale: true om flödet inte har tagit emot artiklar på över 7 dagar)
+    - Kvalitetsradar (andel klickbete, andel prio-nyheter, genomsnittlig prio-poäng samt sammanvägt kvalitetsindex)
+    """
+    try:
+        now_ts = int(time.time())
+        feeds = db.query(models.Feed).filter(models.Feed.user_id == current_user.id).all()
+        if not feeds:
+            return {
+                "summary": {
+                    "total_feeds": 0,
+                    "total_articles": 0,
+                    "stale_feeds_count": 0,
+                    "avg_clickbait_pct": 0.0,
+                    "avg_prio_pct": 0.0,
+                    "most_active_source": None,
+                    "least_active_source": None
+                },
+                "sources": []
+            }
+
+        sources = []
+        total_all_articles = 0
+        stale_count = 0
+        total_clickbait_all = 0
+        total_prio_all = 0
+
+        for feed in feeds:
+            art_stats = db.query(
+                func.count(models.Article.id).label("total"),
+                func.max(models.Article.received_ts).label("max_received"),
+                func.sum(case((models.Article.is_clickbait == 1, 1), else_=0)).label("clickbait_cnt"),
+                func.sum(case((or_(models.Article.priority == 'high', models.Article.prio_score >= 75), 1), else_=0)).label("prio_cnt"),
+                func.avg(models.Article.prio_score).label("avg_prio"),
+                func.sum(case(((models.Article.is_read == 0) | (models.Article.is_read == None), 1), else_=0)).label("unread_cnt")
+            ).filter(models.Article.feed_id == feed.id).first()
+
+            count = art_stats.total or 0
+            max_rec = art_stats.max_received or 0
+            cb_cnt = art_stats.clickbait_cnt or 0
+            prio_cnt = art_stats.prio_cnt or 0
+            avg_prio = round(float(art_stats.avg_prio or 0), 1)
+            unread_cnt = art_stats.unread_cnt or 0
+
+            days_since_last = None
+            is_stale = False
+            if max_rec > 0:
+                diff_sec = max(0, now_ts - max_rec)
+                days_since_last = round(diff_sec / 86400, 1)
+                if diff_sec > (7 * 86400):
+                    is_stale = True
+            elif feed.last_polled and (now_ts - feed.last_polled > 86400):
+                is_stale = True
+
+            if is_stale:
+                stale_count += 1
+
+            cb_pct = round((cb_cnt / count * 100), 1) if count > 0 else 0.0
+            prio_pct = round((prio_cnt / count * 100), 1) if count > 0 else 0.0
+
+            # Kvalitetsindex (0-100):
+            # Baslinje 60p, premiera hög andel prio (+0.4) och straffa klickbeten (-0.6)
+            raw_quality = 60.0 + (prio_pct * 0.4) - (cb_pct * 0.6)
+            quality_score = max(5, min(100, round(raw_quality, 1))) if count > 0 else 50.0
+
+            sources.append({
+                "id": feed.id,
+                "title": feed.title or feed.url,
+                "url": feed.url,
+                "icon_url": get_feed_icon_url(feed),
+                "total_articles": count,
+                "unread_articles": unread_cnt,
+                "last_polled": feed.last_polled,
+                "last_article_ts": max_rec,
+                "days_since_last_article": days_since_last,
+                "is_stale": is_stale,
+                "clickbait_count": cb_cnt,
+                "clickbait_percentage": cb_pct,
+                "prio_count": prio_cnt,
+                "prio_percentage": prio_pct,
+                "avg_prio_score": avg_prio,
+                "quality_score": quality_score
+            })
+
+            total_all_articles += count
+            total_clickbait_all += cb_cnt
+            total_prio_all += prio_cnt
+
+        sources.sort(key=lambda s: s["total_articles"], reverse=True)
+
+        avg_cb_pct = round((total_clickbait_all / total_all_articles * 100), 1) if total_all_articles > 0 else 0.0
+        avg_pr_pct = round((total_prio_all / total_all_articles * 100), 1) if total_all_articles > 0 else 0.0
+
+        most_active = sources[0] if sources else None
+        # Minst aktiva: sista flödet i sorteringen
+        least_active = sources[-1] if sources else None
+
+        return {
+            "summary": {
+                "total_feeds": len(feeds),
+                "total_articles": total_all_articles,
+                "stale_feeds_count": stale_count,
+                "avg_clickbait_pct": avg_cb_pct,
+                "avg_prio_pct": avg_pr_pct,
+                "most_active_source": {
+                    "title": most_active["title"],
+                    "total_articles": most_active["total_articles"]
+                } if most_active else None,
+                "least_active_source": {
+                    "title": least_active["title"],
+                    "total_articles": least_active["total_articles"],
+                    "is_stale": least_active["is_stale"],
+                    "days_since_last_article": least_active["days_since_last_article"]
+                } if least_active else None
+            },
+            "sources": sources
+        }
+    except Exception as e:
+        print(f"[ANALYTICS] Fel vid generering av källstatistik: {e}", flush=True)
+        return {
+            "summary": {
+                "total_feeds": 0,
+                "total_articles": 0,
+                "stale_feeds_count": 0,
+                "avg_clickbait_pct": 0.0,
+                "avg_prio_pct": 0.0,
+                "most_active_source": None,
+                "least_active_source": None
+            },
+            "sources": []
         }
 
 @app.post("/articles/{article_id}/read")

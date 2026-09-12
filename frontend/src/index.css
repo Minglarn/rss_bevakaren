@@ -1807,9 +1807,9 @@ input:checked + .toggle-slider:before {
 /* Inställningar Flikknappar */
 .settings-tabs-container {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.45rem;
+  margin-bottom: 1.75rem;
   width: 100%;
 }
 
@@ -1817,10 +1817,10 @@ input:checked + .toggle-slider:before {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.65rem 0.6rem;
+  gap: 0.45rem;
+  padding: 0.65rem 0.45rem;
   border-radius: 10px;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 500;
   cursor: pointer;
   border: 1px solid var(--border-color);
@@ -1854,7 +1854,7 @@ input:checked + .toggle-slider:before {
 
 @media (max-width: 960px) {
   .settings-tabs-container {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -1868,6 +1868,27 @@ input:checked + .toggle-slider:before {
     font-size: 0.82rem;
     gap: 0.35rem;
   }
+}
+
+/* Mobil Swipe-interaktion för artikelkort */
+.feed-card-swipe-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  touch-action: pan-y;
+  background-color: var(--bg-card);
+}
+
+.feed-card-swipe-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.25rem;
+  z-index: 0;
+  pointer-events: none;
 }
 
 

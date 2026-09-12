@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.33',
+    date: '2026-09-12',
+    title: 'Swipe-snabbhantering för mobil samt Källstatistik och Insikter',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Swipe-gester för snabb markering som läst/oläst',
+        description: 'Svep artikelkortet åt höger eller vänster för att snabbt markera som läst eller oläst med haptisk vibration och grön bakgrundsindikator. Fullt anpassat för både höger- och vänsterhänta användare. Låsning sker fortsatt tryggt och uteslutande via Lås-knappen.'
+      },
+      {
+        type: 'feature',
+        title: 'Insikter och källstatistik med inaktivitetsdetektor',
+        description: 'Ny dedikerad flik "Insikter" i Inställningar med volymdiagram över mest och minst aktiva flöden, varningar för flöden som eventuellt har slutat uppdatera sig, samt kvalitetsradar och klickbetesanalys per nyhetskälla.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.32',
     date: '2026-09-12',
     title: 'Enkel slimmad toast-design utan dubbla rutor',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',

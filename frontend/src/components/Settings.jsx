@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
@@ -52,6 +52,9 @@ const Settings = ({ onLogout }) => {
   const [feedMode, setFeedMode] = useState(() => localStorage.getItem('rss_feed_mode') || 'ai');
   const [clusterMode, setClusterMode] = useState(() => localStorage.getItem('rss_cluster_mode') !== 'false');
   const [purgeDays, setPurgeDays] = useState(30);
+  const [sourceStats, setSourceStats] = useState(null);
+  const [isLoadingSourceStats, setIsLoadingSourceStats] = useState(false);
+  const [statsSort, setStatsSort] = useState('volume_desc');
 
   const handleCardStyleChange = (val) => {
     setCardStyle(val);
@@ -243,6 +246,49 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
   };
 
+  const fetchSourceStats = async (showToast = false) => {
+    try {
+      setIsLoadingSourceStats(true);
+      const res = await api.get('/analytics/sources');
+      if (res && res.data) {
+        setSourceStats(res.data);
+      }
+      if (showToast) {
+        toast.success('Källstatistik och insikter uppdaterade!', { id: 'source-stats' });
+      }
+    } catch (err) {
+      console.error("Kunde inte hämta källstatistik:", err);
+      if (showToast) {
+        toast.error('Kunde inte ladda källstatistik.', { id: 'source-stats' });
+      }
+    } finally {
+      setIsLoadingSourceStats(false);
+    }
+  };
+
+  const sortedSources = React.useMemo(() => {
+    if (!sourceStats || !sourceStats.sources) return [];
+    let list = [...sourceStats.sources];
+    if (statsSort === 'volume_desc') {
+      list.sort((a, b) => b.total_articles - a.total_articles);
+    } else if (statsSort === 'volume_asc') {
+      list.sort((a, b) => a.total_articles - b.total_articles);
+    } else if (statsSort === 'stale_only') {
+      list = list.filter(s => s.is_stale);
+      list.sort((a, b) => (b.days_since_last_article || 999) - (a.days_since_last_article || 999));
+    } else if (statsSort === 'quality_desc') {
+      list.sort((a, b) => b.quality_score - a.quality_score);
+    } else if (statsSort === 'clickbait_desc') {
+      list.sort((a, b) => b.clickbait_percentage - a.clickbait_percentage);
+    }
+    return list;
+  }, [sourceStats, statsSort]);
+
+  const maxArticleCount = React.useMemo(() => {
+    if (!sourceStats || !sourceStats.sources || sourceStats.sources.length === 0) return 1;
+    return Math.max(...sourceStats.sources.map(s => s.total_articles), 1);
+  }, [sourceStats]);
+
   const fetchData = async () => {
     try {
       const [kwRes, feedsRes, sysRes] = await Promise.all([
@@ -295,6 +341,9 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     if (activeTab === 'database') {
       fetchDbStats();
       fetchAiConfig();
+    }
+    if (activeTab === 'insights') {
+      fetchSourceStats();
     }
   }, [activeTab]);
 
@@ -797,6 +846,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           <Palette size={16} /> Utseende
         </button>
         <button 
+          onClick={() => handleTabChange('insights')}
+          className={`settings-tab-btn ${activeTab === 'insights' ? 'active' : ''}`}
+        >
+          <BarChart2 size={16} /> Insikter
+        </button>
+        <button 
           onClick={() => handleTabChange('database')}
           className={`settings-tab-btn ${activeTab === 'database' ? 'active' : ''}`}
         >
@@ -1157,6 +1212,410 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               </div>
             </div>
           </div>
+        </motion.div>
+      )}
+
+      {activeTab === 'insights' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {/* Header & Uppdatera */}
+          <div style={{ 
+            backgroundColor: 'var(--bg-card)', 
+            padding: '1.25rem 1.5rem', 
+            borderRadius: '12px', 
+            border: '1px solid var(--border-color)', 
+            boxShadow: '0 4px 10px rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div>
+              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.25rem' }}>
+                <BarChart2 size={24} style={{ color: 'var(--primary)' }} />
+                Insikter & Källstatistik
+              </h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0.35rem 0 0 0' }}>
+                Övervaka nyhetsvolymer per källa, upptäck flöden som slutat uppdatera sig samt granska källornas redaktionella kvalitet och klickbetesfrekvens.
+              </p>
+            </div>
+            <button
+              onClick={() => fetchSourceStats(true)}
+              disabled={isLoadingSourceStats}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.6rem 1.1rem',
+                backgroundColor: 'var(--primary)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: isLoadingSourceStats ? 'not-allowed' : 'pointer',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)'
+              }}
+            >
+              <RefreshCw size={15} className={isLoadingSourceStats ? 'spin' : ''} />
+              <span>{isLoadingSourceStats ? 'Hämtar...' : 'Uppdatera statistik'}</span>
+            </button>
+          </div>
+
+          {/* KPI-kort */}
+          {sourceStats && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.85rem' }}>
+              <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <FileText size={14} /> Totalt artiklar
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  {sourceStats.summary?.total_articles ?? 0}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  Över {sourceStats.summary?.total_feeds ?? 0} flöden
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Activity size={14} /> Övervakade flöden
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--primary)' }}>
+                  {sourceStats.summary?.total_feeds ?? 0}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  Aktiva källor
+                </div>
+              </div>
+
+              <div style={{ 
+                padding: '1.1rem', 
+                borderRadius: '10px', 
+                border: (sourceStats.summary?.stale_feeds_count > 0) ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--border-color)',
+                backgroundColor: (sourceStats.summary?.stale_feeds_count > 0) ? 'rgba(239, 68, 68, 0.05)' : 'var(--bg-card)'
+              }}>
+                <div style={{ fontSize: '0.78rem', color: (sourceStats.summary?.stale_feeds_count > 0) ? '#ef4444' : 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <AlertOctagon size={14} /> Inaktiva flöden
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: (sourceStats.summary?.stale_feeds_count > 0) ? '#ef4444' : 'var(--text-main)' }}>
+                  {sourceStats.summary?.stale_feeds_count ?? 0}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  Inga artiklar på &gt; 7 dagar
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <ShieldAlert size={14} /> Klickbetesandel
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: (sourceStats.summary?.avg_clickbait_pct > 15) ? '#ef4444' : '#16a34a' }}>
+                  {sourceStats.summary?.avg_clickbait_pct ?? 0}%
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  Snitt över alla flöden
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Flame size={14} /> Prio-andel
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#f97316' }}>
+                  {sourceStats.summary?.avg_prio_pct ?? 0}%
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  Högintressanta nyheter
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Volymdiagram och källista */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+                  <BarChart2 size={18} style={{ color: 'var(--primary)' }} />
+                  Flödesvolymer & Inaktivitetsdetektor
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0.25rem 0 0 0' }}>
+                  Visar vilka flöden som genererar flest respektive minst artiklar. Flöden med inaktivitetsvarning kan ha upphört eller ändrat RSS-länk.
+                </p>
+              </div>
+
+              {/* Sorteringsfilter */}
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => setStatsSort('volume_desc')}
+                  style={{
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: statsSort === 'volume_desc' ? 'var(--primary)' : 'var(--bg-app)',
+                    color: statsSort === 'volume_desc' ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Flest artiklar
+                </button>
+                <button
+                  onClick={() => setStatsSort('volume_asc')}
+                  style={{
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: statsSort === 'volume_asc' ? 'var(--primary)' : 'var(--bg-app)',
+                    color: statsSort === 'volume_asc' ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Minst artiklar
+                </button>
+                <button
+                  onClick={() => setStatsSort('stale_only')}
+                  style={{
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: statsSort === 'stale_only' ? '#ef4444' : 'var(--bg-app)',
+                    color: statsSort === 'stale_only' ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Endast inaktiva
+                </button>
+                <button
+                  onClick={() => setStatsSort('quality_desc')}
+                  style={{
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: statsSort === 'quality_desc' ? 'var(--primary)' : 'var(--bg-app)',
+                    color: statsSort === 'quality_desc' ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Högst kvalitet
+                </button>
+                <button
+                  onClick={() => setStatsSort('clickbait_desc')}
+                  style={{
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: statsSort === 'clickbait_desc' ? '#ea580c' : 'var(--bg-app)',
+                    color: statsSort === 'clickbait_desc' ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Mest klickbete
+                </button>
+              </div>
+            </div>
+
+            {/* Innehåll i diagrammet */}
+            {isLoadingSourceStats && !sourceStats ? (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '3rem', color: 'var(--text-muted)', gap: '0.6rem' }}>
+                <Loader2 size={24} className="spin" />
+                <span>Analyserar flöden och källvolymer...</span>
+              </div>
+            ) : sortedSources.length === 0 ? (
+              <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                Inga källor matchade det valda filtret.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                {sortedSources.map((source) => {
+                  const pct = Math.max(2, Math.round((source.total_articles / maxArticleCount) * 100));
+                  return (
+                    <div 
+                      key={source.id} 
+                      style={{ 
+                        backgroundColor: source.is_stale ? 'rgba(239, 68, 68, 0.04)' : 'var(--bg-app)', 
+                        padding: '0.9rem 1rem', 
+                        borderRadius: '10px', 
+                        border: source.is_stale ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid var(--border-color)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      {/* Rad 1: Header med källa, länk och inaktivitetsstatus */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+                          {source.icon_url ? (
+                            <img 
+                              src={source.icon_url} 
+                              alt="" 
+                              style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'contain', backgroundColor: '#ffffff', padding: '1px' }} 
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: 'var(--primary)', opacity: 0.8 }} />
+                          )}
+                          <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {source.title}
+                          </span>
+                          <a 
+                            href={source.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center' }}
+                            title="Öppna RSS-länk"
+                          >
+                            <ExternalLink size={12} />
+                          </a>
+                        </div>
+
+                        {/* Statusbricka */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {source.is_stale ? (
+                            <span style={{ 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '0.35rem', 
+                              backgroundColor: 'rgba(239, 68, 68, 0.15)', 
+                              color: '#ef4444', 
+                              padding: '0.2rem 0.55rem', 
+                              borderRadius: '20px', 
+                              fontSize: '0.75rem', 
+                              fontWeight: 600 
+                            }}>
+                              <AlertOctagon size={12} />
+                              {source.days_since_last_article 
+                                ? `Inaktivt (${Math.round(source.days_since_last_article)} dagar sedan senaste)`
+                                : 'Inga artiklar mottagna'}
+                            </span>
+                          ) : (
+                            <span style={{ 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '0.35rem', 
+                              backgroundColor: 'rgba(34, 197, 94, 0.12)', 
+                              color: '#16a34a', 
+                              padding: '0.2rem 0.55rem', 
+                              borderRadius: '20px', 
+                              fontSize: '0.75rem', 
+                              fontWeight: 500 
+                            }}>
+                              <Clock size={12} />
+                              {source.days_since_last_article !== null 
+                                ? (source.days_since_last_article < 1 
+                                    ? 'Aktivt (idag)' 
+                                    : `Aktivt (${Math.round(source.days_since_last_article)} d sedan)`)
+                                : 'Aktivt'}
+                            </span>
+                          )}
+
+                          <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)', minWidth: '65px', textAlign: 'right' }}>
+                            {source.total_articles} st
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Rad 2: Horisontell stapel */}
+                      <div style={{ width: '100%', height: '9px', backgroundColor: 'var(--border-color)', borderRadius: '6px', overflow: 'hidden', position: 'relative' }}>
+                        <div 
+                          style={{ 
+                            width: `${pct}%`, 
+                            height: '100%', 
+                            borderRadius: '6px',
+                            background: source.is_stale 
+                              ? 'linear-gradient(90deg, #94a3b8, #cbd5e1)' 
+                              : 'linear-gradient(90deg, var(--primary), #8b5cf6)',
+                            transition: 'width 0.5s ease-out'
+                          }} 
+                        />
+                      </div>
+
+                      {/* Rad 3: Metadatarad för kvalitet och klickbete */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: 'var(--text-muted)', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.85rem' }}>
+                          <span>Olästa: <strong style={{ color: 'var(--text-main)' }}>{source.unread_articles}</strong></span>
+                          <span>Prio-nyheter: <strong style={{ color: '#f97316' }}>{source.prio_percentage}%</strong> ({source.prio_count} st)</span>
+                          <span>Klickbete: <strong style={{ color: source.clickbait_percentage > 15 ? '#ef4444' : 'var(--text-main)' }}>{source.clickbait_percentage}%</strong> ({source.clickbait_count} st)</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span>Kvalitetsindex:</span>
+                          <span style={{ 
+                            fontWeight: 700, 
+                            color: source.quality_score >= 70 ? '#16a34a' : source.quality_score >= 50 ? '#f59e0b' : '#ef4444' 
+                          }}>
+                            {source.quality_score} / 100
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Källprofilering & Kvalitetsradar */}
+          {sourceStats && sourceStats.sources && sourceStats.sources.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem' }}>
+              {/* Topp-kvalitet källor */}
+              <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.98rem' }}>
+                  <Award size={18} style={{ color: '#16a34a' }} /> Högsta kvalitetsindex (Mest substans)
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  {[...sourceStats.sources]
+                    .filter(s => s.total_articles >= 2)
+                    .sort((a, b) => b.quality_score - a.quality_score)
+                    .slice(0, 4)
+                    .map((s, idx) => (
+                      <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.65rem', backgroundColor: 'var(--bg-app)', borderRadius: '6px', fontSize: '0.84rem' }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{idx + 1}. {s.title}</span>
+                        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.75rem', color: '#f97316' }}>{s.prio_percentage}% prio</span>
+                          <span style={{ fontWeight: 700, color: '#16a34a' }}>{s.quality_score}p</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Klickbetestoppen */}
+              <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.98rem' }}>
+                  <ShieldAlert size={18} style={{ color: '#ef4444' }} /> Klickbetestoppen (Högst sensationell andel)
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  {[...sourceStats.sources]
+                    .filter(s => s.total_articles >= 2)
+                    .sort((a, b) => b.clickbait_percentage - a.clickbait_percentage)
+                    .slice(0, 4)
+                    .map((s, idx) => (
+                      <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.65rem', backgroundColor: 'var(--bg-app)', borderRadius: '6px', fontSize: '0.84rem' }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{idx + 1}. {s.title}</span>
+                        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{s.clickbait_count} st</span>
+                          <span style={{ fontWeight: 700, color: s.clickbait_percentage > 15 ? '#ef4444' : 'var(--text-muted)' }}>
+                            {s.clickbait_percentage}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+
         </motion.div>
       )}
 
