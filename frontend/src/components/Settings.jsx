@@ -48,9 +48,17 @@ const Settings = ({ onLogout }) => {
   const [isLoadingDbStats, setIsLoadingDbStats] = useState(false);
   const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
   const [theme, setTheme] = useState(() => localStorage.getItem('rss_theme') || 'system');
+  const [cardStyle, setCardStyle] = useState(() => localStorage.getItem('rss_card_style') || 'modern');
   const [feedMode, setFeedMode] = useState(() => localStorage.getItem('rss_feed_mode') || 'ai');
   const [clusterMode, setClusterMode] = useState(() => localStorage.getItem('rss_cluster_mode') !== 'false');
   const [purgeDays, setPurgeDays] = useState(30);
+
+  const handleCardStyleChange = (val) => {
+    setCardStyle(val);
+    localStorage.setItem('rss_card_style', val);
+    window.dispatchEvent(new Event('cardStyleChanged'));
+    toast.success(val === 'modern' ? 'Kortstil: Modernt vald.' : 'Kortstil: Klassisk vald.');
+  };
 
   const handleFeedModeChange = (val) => {
     setFeedMode(val);
@@ -1027,6 +1035,55 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   <option value="light">Ljust tema</option>
                   <option value="dark">Mörkt tema</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Kortstil i nyhetsflödet */}
+            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Layers size={18} style={{ color: 'var(--primary)' }} /> Kortstil i nyhetsflödet
+              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '220px' }}>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Utseende på händelsekorten</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Välj mellan modernt format (färgad toppbar, 4px accentlist och full skärmbredd) eller klassiskt format (sidopanel med tidsblock).
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleCardStyleChange('modern')}
+                    style={{
+                      padding: '0.45rem 0.95rem',
+                      borderRadius: '6px',
+                      border: cardStyle === 'modern' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                      backgroundColor: cardStyle === 'modern' ? 'var(--primary)' : 'var(--bg-card)',
+                      color: cardStyle === 'modern' ? '#ffffff' : 'var(--text-main)',
+                      fontWeight: cardStyle === 'modern' ? 600 : 400,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    Modernt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCardStyleChange('classic')}
+                    style={{
+                      padding: '0.45rem 0.95rem',
+                      borderRadius: '6px',
+                      border: cardStyle === 'classic' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                      backgroundColor: cardStyle === 'classic' ? 'var(--primary)' : 'var(--bg-card)',
+                      color: cardStyle === 'classic' ? '#ffffff' : 'var(--text-main)',
+                      fontWeight: cardStyle === 'classic' ? 600 : 400,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    Klassisk
+                  </button>
+                </div>
               </div>
             </div>
 

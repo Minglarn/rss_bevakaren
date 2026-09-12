@@ -1,9 +1,36 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.04',
+    date: '2026-09-12',
+    title: 'Modernt händelsekort, färgad toppbar och stilväljare',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Ny modern kortdesign med färgad toppbar och 4px accentlist',
+        description: 'En helt ny modern kortlayout med källfärg i toppbaren och en 4px vertikal accentlist längs kanten. AI-sammanfattningen och händelserubriken använder 100% av kortets bredd.'
+      },
+      {
+        type: 'feature',
+        title: 'Maximerad mobilvy och minimerad sidobredd',
+        description: 'Sidomarginaler och döda zoner i mobilläget har minskats med över 65-90%, vilket ger väsentligt mer läsyta för text och nyheter på mindre skärmar.'
+      },
+      {
+        type: 'feature',
+        title: 'Stilväljare i Inställningar (Klassisk eller Modernt)',
+        description: 'Välj själv hur händelsekorten ska presenteras under Inställningar -> Utseende: Klassisk vy med sidopanel eller Modernt format med färgad toppbar och full bredd.'
+      },
+      {
+        type: 'fix',
+        title: 'Komplett svensk lokalisering i nyhetsflödet',
+        description: 'Åtgärdat engelska texter såsom "TODAY\'S NEWS" till "DAGENS NYHETER", datumavdelare till svenskt format (sv-SE) samt "Läs hela händelsen".'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.03',
     date: '2026-09-12',
     title: 'Nya källor i katalogen: Krisinformation och Sjöräddningen',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

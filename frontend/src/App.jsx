@@ -395,7 +395,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               fontSize: '1rem'
             }}
           >
-            <LogOut size={20} /> {!isCollapsed && "Logout"}
+            <LogOut size={20} /> {!isCollapsed && "Logga ut"}
           </button>
         </div>
       </div>
@@ -407,7 +407,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
 
       </div>
 
-      {/* Mobile Bottom Bar: HOME, PRIO, CHATT, FEEDS, SETTINGS */}
+      {/* Mobile Bottom Bar: HEM, PRIO, CHATT, FLÖDEN, INSTÄLLNINGAR */}
       <div className="mobile-bottom-bar">
         <Link to="/" className={`bottom-bar-item ${location.pathname === '/' && !location.search.includes('feedId') ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
@@ -416,7 +416,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               <span className="bottom-bar-badge">{myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}</span>
             )}
           </div>
-          <span>HOME</span>
+          <span>HEM</span>
         </Link>
         <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
@@ -441,13 +441,13 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           <div className="icon-wrapper">
             <Filter size={22} />
           </div>
-          <span>FEEDS</span>
+          <span>FLÖDEN</span>
         </button>
         <Link to="/settings" className={`bottom-bar-item ${location.pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <SettingsIcon size={22} />
           </div>
-          <span>SETTINGS</span>
+          <span>INSTÄLLNINGAR</span>
         </Link>
       </div>
 

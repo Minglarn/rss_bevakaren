@@ -236,6 +236,19 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     return () => window.removeEventListener('clusterModeChanged', handleClusterModeChange);
   }, []);
 
+  // Kortstil (Modernt vs Klassisk)
+  const [cardStyle, setCardStyle] = useState(() => {
+    return localStorage.getItem('rss_card_style') || 'modern';
+  });
+
+  useEffect(() => {
+    const handleCardStyleChange = () => {
+      setCardStyle(localStorage.getItem('rss_card_style') || 'modern');
+    };
+    window.addEventListener('cardStyleChanged', handleCardStyleChange);
+    return () => window.removeEventListener('cardStyleChanged', handleCardStyleChange);
+  }, []);
+
   const [expandedClusters, setExpandedClusters] = useState({});
   const toggleClusterExpand = (clusterId) => {
     setExpandedClusters(prev => ({ ...prev, [clusterId]: !prev[clusterId] }));
@@ -596,12 +609,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
   const formatDateLabel = (dateString) => {
     const d = new Date(dateString);
-    if (isNaN(d.getTime())) return 'TODAY';
+    if (isNaN(d.getTime())) return 'IDAG';
     const today = new Date();
     if (d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()) {
-      return 'TODAY';
+      return 'IDAG';
     }
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'];
     return `${d.getDate()} ${months[d.getMonth()]}`;
   };
 
@@ -905,8 +918,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             }}>
               {isPrioMode && <Flame size={20} style={{ color: '#f97316', flexShrink: 0 }} />}
               {isPrioMode 
-                ? 'PRIO FEED' 
-                : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : "TODAY'S NEWS")}
+                ? 'PRIO-FLÖDE' 
+                : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : "DAGENS NYHETER")}
             </h1>
             {isPrioMode && (
               <span className="desktop-only" style={{ 
@@ -919,7 +932,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                 border: '1px solid rgba(249, 115, 22, 0.3)',
                 whiteSpace: 'nowrap'
               }}>
-                Only high priority events
+                Endast händelser med hög prioritet
               </span>
             )}
           </div>
@@ -944,10 +957,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   transition: 'all 0.15s',
                   whiteSpace: 'nowrap'
                 }}
-                title="Select category"
+                title="Välj kategori"
               >
                 <Filter size={13} style={{ color: (selectedCategory !== 'All' && selectedCategory !== 'Alla') ? '#f97316' : 'var(--text-muted)' }} />
-                <span>{(selectedCategory === 'All' || selectedCategory === 'Alla') ? 'Categories' : selectedCategory}</span>
+                <span>{(selectedCategory === 'All' || selectedCategory === 'Alla') ? 'Kategorier' : selectedCategory}</span>
                 <ChevronDown size={14} style={{ transform: isCategoryMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
               </button>
 
@@ -1063,179 +1076,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         </div>
       )}
 
-      {/* Dagens Briefing - Expanderbart toppkort (Visas i mobilflödet) */}
-      {!feedId && !articleId && (!isPrioMode || prioEnabled) && (
-        <div className={`daily-briefing-card dashboard-mobile-only-briefing ${isDigestExpanded ? 'expanded' : 'collapsed'}`} style={{
-          backgroundColor: 'var(--bg-card)',
-          border: `1px solid ${isDigestExpanded ? 'rgba(59, 130, 246, 0.35)' : 'var(--border-color)'}`,
-          borderRadius: '8px',
-          padding: isDigestExpanded ? '0.75rem 0.95rem' : '0.35rem 0.65rem',
-          marginBottom: isDigestExpanded ? '0.9rem' : '0.55rem',
-          boxShadow: isDigestExpanded ? '0 4px 16px -2px rgba(0, 0, 0, 0.08)' : '0 1px 3px rgba(0, 0, 0, 0.03)',
-          transition: 'all 0.2s ease',
-          cursor: isDigestExpanded ? 'default' : 'pointer'
-        }}
-        onClick={!isDigestExpanded ? () => setIsDigestExpanded(true) : undefined}
-        >
-          {/* Kompakt Header Rad */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', minHeight: '28px' }}>
-            <div 
-              onClick={(e) => { e.stopPropagation(); setIsDigestExpanded(prev => !prev); }}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer', flex: 1, minWidth: 0 }}
-            >
-              <div style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '5px',
-                backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                color: 'var(--primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <FileText size={13} />
-              </div>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, overflow: 'hidden' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
-                  {digest?.title || 'Dagens Briefing'}
-                </span>
-                
-                {digest?.digest_type === 'ai_generated' && (
-                  <span className="desktop-only" style={{ fontSize: '0.65rem', fontWeight: 600, color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>
-                    AI
-                  </span>
-                )}
-
-                {digest?.created_at ? (
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                    {new Date(digest.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
-              <button
-                onClick={(e) => { e.stopPropagation(); generateDigest(false); }}
-                disabled={digestLoading}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                  padding: '0.2rem 0.5rem',
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  borderRadius: '5px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-app)',
-                  color: 'var(--text-main)',
-                  cursor: digestLoading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.15s',
-                  height: '26px'
-                }}
-                title="Generera ny rapport via LM Studio"
-              >
-                <RefreshCw size={11} className={digestLoading ? 'spin' : ''} />
-                <span className="desktop-only">{digestLoading ? 'Analyserar...' : 'Uppdatera'}</span>
-              </button>
-
-              <button
-                onClick={(e) => { e.stopPropagation(); setIsDigestExpanded(prev => !prev); }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '5px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-app)',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s'
-                }}
-                title={isDigestExpanded ? "Fäll ihop briefing" : "Expandera briefing"}
-              >
-                <ChevronDown size={13} style={{ transform: isDigestExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-              </button>
-            </div>
-          </div>
-
-          {/* Utfällt läge med Markdown-stöd */}
-          {isDigestExpanded && (
-            <div style={{ marginTop: '0.65rem', paddingTop: '0.65rem', borderTop: '1px solid var(--border-color)' }}>
-              {digest?.content ? (
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>
-                  {renderBriefingMarkdown(digest.content)}
-                </div>
-              ) : (
-                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '0.5rem 0' }}>
-                  Ingen briefing har genererats än. Klicka på &apos;Uppdatera&apos; för att skapa en sammanställning av dagens viktigaste händelser.
-                </div>
-              )}
-
-              {/* Länkar till berörda artiklar */}
-              {digest?.articles && digest.articles.length > 0 && (
-                <div style={{ marginTop: '0.85rem', paddingTop: '0.6rem', borderTop: '1px dashed var(--border-color)' }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: '0.4rem' }}>
-                    Berörda händelser i rapporten:
-                  </span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                    {digest.articles.map((art) => (
-                      <a
-                        key={art.id}
-                        href={art.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '5px',
-                          fontSize: '0.75rem',
-                          backgroundColor: 'var(--bg-app)',
-                          border: '1px solid var(--border-color)',
-                          color: 'var(--text-main)',
-                          textDecoration: 'none',
-                          transition: 'all 0.15s'
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.color = 'var(--text-main)'; }}
-                        title={`${art.source_title}: ${art.title}`}
-                      >
-                        <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{art.source_title}:</span>
-                        <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{decodeHtmlEntities(art.title)}</span>
-                        <ExternalLink size={10} style={{ opacity: 0.7, flexShrink: 0 }} />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ marginTop: '0.65rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', textAlign: 'right' }}>
-                <Link
-                  to="/briefing"
-                  style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: 'var(--primary)',
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}
-                >
-                  Öppna Briefing och historik &rarr;
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {isPrioMode && !prioEnabled ? (
         <div style={{ 
           backgroundColor: 'var(--bg-card)', 
@@ -1316,7 +1156,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     }
                 }
                 if (showDivider) {
-                    let text = currentD.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+                    let text = currentD.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
                     // Capitalize first letter
                     dividerText = text.charAt(0).toUpperCase() + text.slice(1);
                 }
@@ -1366,208 +1206,349 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     }
                   }}
                   onClick={() => handleExpand(index, item.link, item.id)}
-                  className={`feed-card ${(!showRead && isArticleRead(item.id, item.is_read)) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
+                  className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(!showRead && isArticleRead(item.id, item.is_read)) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                   style={{ 
                     filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
                     userSelect: 'none', 
                     WebkitUserSelect: 'none',
-                    border: isClickbait ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border-color)'
+                    border: isClickbait ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border-color)',
+                    borderLeft: cardStyle === 'modern' ? (isClickbait ? '4px solid #ef4444' : `4px solid ${color}`) : undefined
                   }}
                 >
-                {/* Left colored bar */}
-                <div 
-                  className={`feed-card-left ${isClickbait ? 'clickbait-bar' : ''}`}
-                  style={{ 
-                    backgroundColor: color 
-                  }}
-                >
-                  <div className="feed-card-time">
-                    {formatTime(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
-                  </div>
-                  <div className="feed-card-date">
-                    {formatDateLabel(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
-                  </div>
-                  
-                  {/* Actions: Lock/Read buttons */}
-                  <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
-                    {/* Read button */}
-                    {isArticleRead(item.id, item.is_read) ? (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                        title="Mark as unread"
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <EyeOff size={18} />
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                        title="Mark as read"
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <CheckCheck size={18} />
-                      </button>
-                    )}
+                {/* Klassisk layout: Vänster sido-stapel */}
+                {cardStyle === 'classic' && (
+                  <div 
+                    className={`feed-card-left ${isClickbait ? 'clickbait-bar' : ''}`}
+                    style={{ 
+                      backgroundColor: color 
+                    }}
+                  >
+                    <div className="feed-card-time">
+                      {formatTime(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
+                    </div>
+                    <div className="feed-card-date">
+                      {formatDateLabel(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
+                    </div>
+                    
+                    {/* Actions: Lock/Read buttons */}
+                    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+                      {/* Read button */}
+                      {isArticleRead(item.id, item.is_read) ? (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                          title="Markera som oläst"
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <EyeOff size={18} />
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                          title="Markera som läst"
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <CheckCheck size={18} />
+                        </button>
+                      )}
 
-                    {/* Lock button */}
-                    {isArticleLocked(item.id, item.is_locked) ? (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                        title="Unlock event"
-                      >
-                        <Lock size={16} />
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: '1px solid transparent', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                        title="Lock event"
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <Unlock size={16} />
-                      </button>
-                    )}
+                      {/* Lock button */}
+                      {isArticleLocked(item.id, item.is_locked) ? (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                          title="Lås upp händelse"
+                        >
+                          <Lock size={16} />
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: '1px solid transparent', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                          title="Lås händelse"
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <Unlock size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Right content area */}
+                {/* Innehållsarea */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                  {/* Toppbar */}
-                  <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0, gap: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }}>
-                      {/* Source and original published date */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
-                        <Rss size={14} /> {decodeHtmlEntities(item.source_title)}
-                        {item.published && (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.35rem' }} title="Original publication time">
-                            • {formatDateLabel(item.published)} {formatTime(item.published)}
+                  {/* Toppbar: Modernt vs Klassiskt format */}
+                  {cardStyle === 'modern' ? (
+                    <div 
+                      className="feed-card-topbar topbar-modern" 
+                      style={{ 
+                        backgroundColor: color, 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        marginBottom: 0, 
+                        gap: '0.45rem',
+                        borderTopRightRadius: '11px',
+                        borderBottom: 'none'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
+                        {/* Tidsbricka */}
+                        <span className="modern-time-pill">
+                          {formatTime(item.received_ts ? new Date(item.received_ts * 1000) : item.published)} {formatDateLabel(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
+                        </span>
+
+                        {/* Källnamn */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#ffffff', fontWeight: 700, fontSize: '0.82rem' }}>
+                          <Rss size={13} style={{ color: '#ffffff', flexShrink: 0 }} />
+                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
+                            {decodeHtmlEntities(item.source_title)}
                           </span>
+                        </div>
+
+                        {/* PRIO Badge */}
+                        {shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.2rem',
+                            backgroundColor: 'rgba(249, 115, 22, 0.95)',
+                            color: '#ffffff',
+                            padding: '0.12rem 0.45rem',
+                            borderRadius: '4px',
+                            fontSize: '0.7rem',
+                            fontWeight: 700
+                          }} title={formatCategoryPrioReason(item.prio_reason, item.category) || "Hög prioritet av AI"}>
+                            <Flame size={12} /> PRIO {item.prio_score ? `${item.prio_score}p` : ''}
+                          </span>
+                        )}
+
+                        {/* Klickbetesvarning */}
+                        {shouldShowAi && Boolean(item.is_clickbait) && (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.2rem',
+                            backgroundColor: 'rgba(239, 68, 68, 0.95)',
+                            color: '#ffffff',
+                            padding: '0.12rem 0.45rem',
+                            borderRadius: '4px',
+                            fontSize: '0.7rem',
+                            fontWeight: 700
+                          }} title={item.clickbait_reason || "Klickbetesvarning"}>
+                            <AlertTriangle size={12} /> Klickbete
+                          </span>
+                        )}
+
+                        {/* Kategori */}
+                        {shouldShowAi && item.category && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
+                            style={{
+                              color: '#ffffff',
+                              padding: '0.12rem 0.45rem',
+                              backgroundColor: 'rgba(0, 0, 0, 0.22)',
+                              border: '1px solid rgba(255, 255, 255, 0.3)',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                            title={`Filtrera på kategori: ${item.category}`}
+                          >
+                            {decodeHtmlEntities(item.category)}
+                          </button>
                         )}
                       </div>
 
-                      {/* PRIO Badge vid hög prioritet */}
-                      {shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                          backgroundColor: 'rgba(249, 115, 22, 0.15)',
-                          color: '#f97316',
-                          border: '1px solid rgba(249, 115, 22, 0.35)',
-                          padding: '0.15rem 0.5rem',
-                          borderRadius: '6px',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          letterSpacing: '0.5px'
-                        }} title={formatCategoryPrioReason(item.prio_reason, item.category) || "High priority by AI"}>
-                          <Flame size={13} /> PRIO {item.prio_score ? `${item.prio_score}p` : ''}
-                        </span>
-                      )}
+                      {/* Åtgärdsknappar i modern toppbar */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                        {isArticleRead(item.id, item.is_read) ? (
+                          <button
+                            className="modern-topbar-action-btn"
+                            onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
+                            title="Markera som oläst"
+                          >
+                            <EyeOff size={15} />
+                          </button>
+                        ) : (
+                          <button
+                            className="modern-topbar-action-btn"
+                            onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
+                            title="Markera som läst"
+                          >
+                            <CheckCheck size={15} />
+                          </button>
+                        )}
 
-                      {/* Clickbait Warning Badge */}
-                      {shouldShowAi && Boolean(item.is_clickbait) && (
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                          backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                          color: '#ef4444',
-                          border: '1px solid rgba(239, 68, 68, 0.35)',
-                          padding: '0.15rem 0.5rem',
-                          borderRadius: '6px',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          letterSpacing: '0.3px'
-                        }} title={item.clickbait_reason || "Clickbait headline"}>
-                          <AlertTriangle size={12} /> Clickbait warning
-                        </span>
-                      )}
+                        {isArticleLocked(item.id, item.is_locked) ? (
+                          <button
+                            className="modern-topbar-action-btn"
+                            onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
+                            title="Lås upp händelse"
+                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.38)' }}
+                          >
+                            <Lock size={14} />
+                          </button>
+                        ) : (
+                          <button
+                            className="modern-topbar-action-btn"
+                            onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
+                            title="Lås händelse"
+                          >
+                            <Unlock size={14} />
+                          </button>
+                        )}
 
-                      {/* AI Kategori */}
-                      {shouldShowAi && item.category && (
+                        {prioEnabled && (
+                          <button
+                            className="modern-topbar-action-btn"
+                            onClick={(e) => { e.stopPropagation(); setPrioritizeItem(item); }}
+                            title="Prioritera händelse / bevaka ämne"
+                          >
+                            <Flame size={14} />
+                          </button>
+                        )}
+
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
-                          style={{
-                            color: selectedCategory === item.category ? '#ffffff' : 'var(--text-muted)',
-                            padding: '0.15rem 0.55rem',
-                            backgroundColor: selectedCategory === item.category ? '#f97316' : 'var(--bg-app)',
+                          className="modern-topbar-action-btn"
+                          onClick={(e) => { e.stopPropagation(); setShareItem(item); }}
+                          title="Dela händelse"
+                        >
+                          <Share2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Klassisk Toppbar */
+                    <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0, gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--primary)', fontWeight: 600 }}>
+                          <Rss size={14} /> {decodeHtmlEntities(item.source_title)}
+                          {item.published && (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.35rem' }} title="Ursprunglig publiceringstid">
+                              • {formatDateLabel(item.published)} {formatTime(item.published)}
+                            </span>
+                          )}
+                        </div>
+
+                        {shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            backgroundColor: 'rgba(249, 115, 22, 0.15)',
+                            color: '#f97316',
+                            border: '1px solid rgba(249, 115, 22, 0.35)',
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.5px'
+                          }} title={formatCategoryPrioReason(item.prio_reason, item.category) || "Hög prioritet av AI"}>
+                            <Flame size={13} /> PRIO {item.prio_score ? `${item.prio_score}p` : ''}
+                          </span>
+                        )}
+
+                        {shouldShowAi && Boolean(item.is_clickbait) && (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                            color: '#ef4444',
+                            border: '1px solid rgba(239, 68, 68, 0.35)',
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: '6px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.3px'
+                          }} title={item.clickbait_reason || "Klickbetesvarning"}>
+                            <AlertTriangle size={12} /> Klickbetesvarning
+                          </span>
+                        )}
+
+                        {shouldShowAi && item.category && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
+                            style={{
+                              color: selectedCategory === item.category ? '#ffffff' : 'var(--text-muted)',
+                              padding: '0.15rem 0.55rem',
+                              backgroundColor: selectedCategory === item.category ? '#f97316' : 'var(--bg-app)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s'
+                            }}
+                            title={`Filtrera på kategori: ${item.category}`}
+                          >
+                            {decodeHtmlEntities(item.category)}
+                          </button>
+                        )}
+                        
+                        {item.categories && item.categories.map((cat, cIdx) => (
+                          <div key={cIdx} style={{ 
+                            color: 'var(--text-muted)', 
+                            padding: '0.1rem 0.45rem', 
+                            backgroundColor: 'var(--bg-app)',
                             border: '1px solid var(--border-color)',
                             borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            transition: 'all 0.15s'
-                          }}
-                          title={`Filter by category: ${item.category}`}
-                        >
-                          {decodeHtmlEntities(item.category)}
-                        </button>
-                      )}
-                      
-                      {/* RSS Original Categories */}
-                      {item.categories && item.categories.map((cat, cIdx) => (
-                        <div key={cIdx} style={{ 
-                          color: 'var(--text-muted)', 
-                          padding: '0.1rem 0.45rem', 
-                          backgroundColor: 'var(--bg-app)',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: '4px',
-                          fontSize: '0.72rem',
-                          opacity: 0.85
-                        }}>
-                          {decodeHtmlEntities(cat)}
-                        </div>
-                      ))}
-                    </div>
+                            fontSize: '0.72rem',
+                            opacity: 0.85
+                          }}>
+                            {decodeHtmlEntities(cat)}
+                          </div>
+                        ))}
+                      </div>
 
-                    {/* Action buttons: Prioritize, Analyze and Share */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      {prioEnabled && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        {prioEnabled && (
+                          <button
+                            className="feed-card-share-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPrioritizeItem(item);
+                            }}
+                            title={item.priority === 'high' ? "Prioriterad (klicka för att redigera/bevaka ämne)" : "Prioritera händelse / bevaka ämne"}
+                            style={{
+                              color: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : undefined,
+                              backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? 'rgba(249, 115, 22, 0.12)' : undefined
+                            }}
+                          >
+                            <Flame size={16} />
+                          </button>
+                        )}
+
+                        {prioEnabled && isPrioMode && (
+                          <button
+                            className="feed-card-share-btn"
+                            onClick={(e) => triggerAnalysis(e, item.id)}
+                            title={item.ai_processed ? "Kör om AI-analys" : "Kör AI-analys nu"}
+                            style={{ color: analyzingIds.has(item.id) ? '#f97316' : undefined }}
+                          >
+                            {analyzingIds.has(item.id) ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
+                          </button>
+                        )}
+
                         <button
                           className="feed-card-share-btn"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setPrioritizeItem(item);
+                            setShareItem(item);
                           }}
-                          title={item.priority === 'high' ? "Prioritized (click to edit/monitor topic)" : "Prioritize event / monitor topic"}
-                          style={{
-                            color: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : undefined,
-                            backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? 'rgba(249, 115, 22, 0.12)' : undefined
-                          }}
+                          title="Dela händelse"
                         >
-                          <Flame size={16} />
+                          <Share2 size={16} />
                         </button>
-                      )}
-
-                      {prioEnabled && isPrioMode && (
-                        <button
-                          className="feed-card-share-btn"
-                          onClick={(e) => triggerAnalysis(e, item.id)}
-                          title={item.ai_processed ? "Rerun AI analysis" : "Run AI analysis now"}
-                          style={{ color: analyzingIds.has(item.id) ? '#f97316' : undefined }}
-                        >
-                          {analyzingIds.has(item.id) ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
-                        </button>
-                      )}
-
-                      <button
-                        className="feed-card-share-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShareItem(item);
-                        }}
-                        title="Share event"
-                      >
-                        <Share2 size={16} />
-                      </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Main content padding wrapper */}
                   <div className="feed-card-content">
@@ -1950,7 +1931,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     <span style={{ backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : color, color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
                       {formatTime(item.published)}
                     </span>
-                    {expandedItems[index] ? 'Collapse' : 'Read full event'} <ChevronRight size={16} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+                    {expandedItems[index] ? 'Dölj' : 'Läs hela händelsen'} <ChevronRight size={16} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
                   </div>
                   </div>
                 </div>
@@ -1972,7 +1953,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         <button
           className="scroll-to-top"
           onClick={scrollToTop}
-          title="To top"
+          title="Till toppen"
         >
           <ArrowUp size={24} />
         </button>

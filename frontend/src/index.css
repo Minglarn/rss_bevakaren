@@ -573,7 +573,7 @@ select:focus, input:focus {
     margin: 1rem 0.5rem;
   }
   .events-list {
-    padding: 0 0.5rem;
+    padding: 0 0.15rem;
   }
   .card {
     padding: 1rem;
@@ -1033,11 +1033,11 @@ select:focus, input:focus {
   }
   
   .app-main-content {
-    padding: 0.5rem 0.5rem 70px 0.5rem; /* Space for bottom bar and smaller side padding */
+    padding: 0.5rem 0.15rem 70px 0.15rem; /* Minimerad sido-padding för att maximera mobilens bredd */
   }
 
   .app-main-content.chat-view {
-    padding: 0.25rem 0.25rem 68px 0.25rem;
+    padding: 0.25rem 0.15rem 68px 0.15rem;
   }
   
   .toppbar {
@@ -1207,6 +1207,14 @@ select:focus, input:focus {
     font-size: 0.75rem !important; /* >35% minskning */
   }
   
+  .feed-card.card-modern .feed-card-content {
+    padding: 0.4rem 0.45rem 0.65rem 0.45rem !important;
+  }
+  
+  .feed-card.card-modern .feed-card-topbar.topbar-modern {
+    padding: 0.35rem 0.45rem !important;
+  }
+  
   .dashboard-header {
     margin-bottom: 0.35rem !important;
   }
@@ -1255,6 +1263,48 @@ select:focus, input:focus {
   color: inherit;
   cursor: pointer;
   height: 100%;
+}
+
+.feed-card.card-modern {
+  flex-direction: column;
+  border-left-width: 4px !important;
+}
+
+.feed-card.card-modern .feed-card-topbar.topbar-modern {
+  border-bottom: none;
+  font-size: 0.8rem;
+  padding: 0.45rem 0.85rem;
+  color: #ffffff;
+}
+
+.modern-time-pill {
+  background: rgba(0, 0, 0, 0.22);
+  color: #ffffff;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.modern-topbar-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.modern-topbar-action-btn:hover {
+  background: rgba(0, 0, 0, 0.32);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .feed-card.is-clickbait {
