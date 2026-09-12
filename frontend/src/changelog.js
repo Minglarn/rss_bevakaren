@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.16',
+    date: '2026-09-12',
+    title: 'Tydliga och responsiva knappar för inställningsflikar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Responsiva flikknappar',
+        description: 'Byggde om inställningsflikarna till strukturerade och tryckvänliga knappar med enhetliga ikoner för alla flikar (Allmänt, Hantera flöden, Utseende, Databas, Notiser, AI-analys).'
+      },
+      {
+        type: 'ui',
+        title: 'Svenska texter i systeminformation',
+        description: 'Översatte alla kvarvarande engelska texter och felsökningsknappar i inställningsfliken till svenska.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.15',
     date: '2026-09-12',
     title: 'Enradig och kompakt AI-analyslogg i Docker',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
@@ -770,64 +770,42 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       </h1>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '2rem', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
+      <div className="settings-tabs-container">
         <button 
           onClick={() => handleTabChange('general')}
-          style={{ background: 'none', border: 'none', color: activeTab === 'general' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'general' ? 600 : 400, cursor: 'pointer', fontSize: '1rem', padding: '0.5rem 1rem' }}
+          className={`settings-tab-btn ${activeTab === 'general' ? 'active' : ''}`}
         >
-          Allmänt
+          <Sliders size={16} /> Allmänt
         </button>
         <button 
           onClick={() => handleTabChange('manage')}
-          style={{ 
-            background: 'none', 
-            border: 'none', 
-            color: activeTab === 'manage' ? 'var(--primary)' : 'var(--text-muted)', 
-            fontWeight: activeTab === 'manage' ? 600 : 400, 
-            cursor: 'pointer', 
-            fontSize: '1rem', 
-            padding: '0.5rem 1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem'
-          }}
+          className={`settings-tab-btn ${activeTab === 'manage' ? 'active' : ''}`}
         >
           <List size={16} /> Hantera flöden
         </button>
         <button 
           onClick={() => handleTabChange('ui')}
-          style={{ background: 'none', border: 'none', color: activeTab === 'ui' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'ui' ? 600 : 400, cursor: 'pointer', fontSize: '1rem', padding: '0.5rem 1rem' }}
+          className={`settings-tab-btn ${activeTab === 'ui' ? 'active' : ''}`}
         >
-          Utseende
+          <Palette size={16} /> Utseende
         </button>
         <button 
           onClick={() => handleTabChange('database')}
-          style={{ background: 'none', border: 'none', color: activeTab === 'database' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'database' ? 600 : 400, cursor: 'pointer', fontSize: '1rem', padding: '0.5rem 1rem' }}
+          className={`settings-tab-btn ${activeTab === 'database' ? 'active' : ''}`}
         >
-          Databas
+          <Database size={16} /> Databas
         </button>
         <button 
           onClick={() => handleTabChange('notifications')}
-          style={{ background: 'none', border: 'none', color: activeTab === 'notifications' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'notifications' ? 600 : 400, cursor: 'pointer', fontSize: '1rem', padding: '0.5rem 1rem' }}
+          className={`settings-tab-btn ${activeTab === 'notifications' ? 'active' : ''}`}
         >
-          Notiser
+          <Bell size={16} /> Notiser
         </button>
         <button 
           onClick={() => handleTabChange('ai')}
-          style={{ 
-            background: 'none', 
-            border: 'none', 
-            color: activeTab === 'ai' ? '#f97316' : 'var(--text-muted)', 
-            fontWeight: activeTab === 'ai' ? 600 : 400, 
-            cursor: 'pointer', 
-            fontSize: '1rem', 
-            padding: '0.5rem 1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem'
-          }}
+          className={`settings-tab-btn ai-tab ${activeTab === 'ai' ? 'active' : ''}`}
         >
-          <Sparkles size={16} style={{ color: activeTab === 'ai' ? '#f97316' : 'inherit' }} /> AI-analys & Prompt
+          <Sparkles size={16} /> AI-analys
         </button>
       </div>
 
@@ -836,42 +814,42 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Info size={20} /> System Information
+              <Info size={20} /> Systeminformation
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem' }}>
-              Technical information about your installation of RSS Bevakaren.
+              Teknisk information om din installation av RSS-bevakaren.
             </p>
             
             {sysInfo ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
                 <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Server size={14} /> Server Version</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Server size={14} /> Serverversion</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--primary)' }}>{sysInfo.version}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Updated: {sysInfo.last_update}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Uppdaterad: {sysInfo.last_update}</div>
                 </div>
                 
                 <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Database size={14} /> Database</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Database size={14} /> Databas</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{(sysInfo.database_size_bytes / 1024 / 1024).toFixed(2)} MB</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>SQLite Storage</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>SQLite-lagring</div>
                 </div>
 
                 <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><FileText size={14} /> Content</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{sysInfo.total_articles} articles</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>From {sysInfo.total_feeds} feeds</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><FileText size={14} /> Innehåll</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{sysInfo.total_articles} artiklar</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Från {sysInfo.total_feeds} flöden</div>
                 </div>
               </div>
             ) : (
-              <p style={{ color: 'var(--text-muted)', paddingLeft: '0.35rem' }}>Loading system information...</p>
+              <p style={{ color: 'var(--text-muted)', paddingLeft: '0.35rem' }}>Läser in systeminformation...</p>
             )}
 
             <div style={{ marginTop: '1.25rem', padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
               <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                Troubleshooting
+                Felsökning
               </h4>
               <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                If the app feels outdated or you have issues with saved data, you can force an update. This clears the browser's local storage for the app.
+                Om applikationen upplevs inaktuell eller vid problem med sparad data kan du tvinga en uppdatering. Detta rensar webbläsarens lokala cache och service workers.
               </p>
               <button 
                 onClick={async () => {
@@ -905,7 +883,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   fontSize: '0.85rem'
                 }}
               >
-                Force App Update
+                Tvinga app-uppdatering
               </button>
             </div>
           </div>

@@ -1696,4 +1696,70 @@ input:checked + .toggle-slider:before {
   }
 }
 
+/* Inställningar Flikknappar */
+.settings-tabs-container {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.settings-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.settings-tab-btn:hover {
+  background: var(--bg-main);
+  color: var(--text-main);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.settings-tab-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 600;
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.settings-tab-btn.active.ai-tab {
+  background: #ea580c;
+  border-color: #ea580c;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25);
+}
+
+@media (max-width: 960px) {
+  .settings-tabs-container {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .settings-tabs-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.45rem;
+  }
+  .settings-tab-btn {
+    padding: 0.65rem 0.35rem;
+    font-size: 0.82rem;
+    gap: 0.35rem;
+  }
+}
+
 
