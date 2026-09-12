@@ -947,11 +947,34 @@ async def polling_loop():
                         user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == feed.user_id).all()
                         kw_texts = [kw.keyword.lower() for kw in user_keywords] if user_keywords else []
                         
+                        feed_user = db.query(models.User).filter(models.User.id == feed.user_id).first()
+                        feed_username = feed_user.username if feed_user else f"user_{feed.user_id}"
+
+                        # 1. Publicera inkommande artiklar direkt till användarens MQTT-flöde
+                        if not is_initial_poll and mqtt_service.MQTT_ENABLED:
+                            for art in new_articles:
+                                try:
+                                    art_matched_kws = []
+                                    if kw_texts:
+                                        search_text = f"{art.title or ''} {art.summary or ''}".lower()
+                                        art_matched_kws = [k for k in kw_texts if k in search_text]
+                                    raw_is_prio = bool(art_matched_kws)
+                                    mqtt_service.publish_article(
+                                        article=art,
+                                        feed=feed,
+                                        username=feed_username,
+                                        user_id=feed.user_id,
+                                        is_prio=raw_is_prio,
+                                        matched_keywords=art_matched_kws
+                                    )
+                                except Exception as mqtt_err:
+                                    print(f"[MQTT] Fel vid publicering av artikel {art.id} för {feed_username}: {mqtt_err}", flush=True)
+
+                        # 2. Rå-pushnotiser (endast om användaren inte har AI aktiverat)
                         if not is_initial_poll:
                             user_ai_pref = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == feed.user_id).first()
                             ai_enabled_for_user = bool(user_ai_pref and user_ai_pref.prio_enabled)
 
-                            # Om AI inte är aktiverat skickas traditionell rå-push (endast för tillåtna artiklar)
                             if not ai_enabled_for_user:
                                 for art in new_articles:
                                     if art.allow_push != 1:
@@ -967,6 +990,7 @@ async def polling_loop():
                                         notify_title = f"{feed.title or 'RSS'}: {art.title}"
                                         notify_body = art.summary or art.title
                                         
+                                    matched_kws = []
                                     if kw_texts:
                                         search_text = f"{art.title or ''} {art.summary or ''}".lower()
                                         matched_kws = [k for k in kw_texts if k in search_text]
@@ -986,18 +1010,6 @@ async def polling_loop():
                                             image_url=art.image_url,
                                             context="Rå-Push"
                                         )
-
-                                    # Publicera till MQTT om AI inte är aktiverat
-                                    try:
-                                        raw_is_prio = bool(matched_kws) if 'matched_kws' in locals() else False
-                                        mqtt_service.publish_article(
-                                            article=art,
-                                            feed=feed,
-                                            is_prio=raw_is_prio,
-                                            matched_keywords=matched_kws if ('matched_kws' in locals() and matched_kws) else []
-                                        )
-                                    except Exception as mqtt_err:
-                                        print(f"[MQTT] Fel vid publicering av rå artikel {art.id}: {mqtt_err}", flush=True)
                     
                     # Update last polled time
                     feed.last_polled = int(time.time())
@@ -1248,16 +1260,19 @@ async def ai_processing_loop():
                         except Exception as push_err:
                             print(f"[Push] Fel vid hantering av push-notis för artikel {art.id}: {push_err}", flush=True)
 
-                        # Publicera till MQTT (alltid till flödets topic och vid prio även till prio-topic)
+                        # Publicera till MQTT (uppdaterar användarens flödestopic med AI-data och vid prio även användarens prio-topic)
                         try:
                             mqtt_service.publish_article(
                                 article=art,
                                 feed=feed_obj,
+                                username=u_display,
+                                user_id=user_id,
                                 is_prio=is_prio,
-                                matched_keywords=matched_kw
+                                matched_keywords=matched_kw,
+                                is_update=True
                             )
                         except Exception as mqtt_err:
-                            print(f"[MQTT] Fel vid publicering av artikel {art.id}: {mqtt_err}", flush=True)
+                            print(f"[MQTT] Fel vid publicering av berikad artikel {art.id} för {u_display}: {mqtt_err}", flush=True)
 
                         # LOGGNING ENLIGT FÖRSLAG B (Adaptivt format)
                         if should_send_push:

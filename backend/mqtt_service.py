@@ -21,8 +21,31 @@ MQTT_QOS = int(os.environ.get("MQTT_QOS", "1").strip() or 1)
 # Global MQTT-klient
 _client: Optional[mqtt.Client] = None
 _is_connected: bool = False
-_published_article_ids: set = set()
+_published_feed_articles: set = set()
+_published_prio_articles: set = set()
 MAX_DEDUP_IDS = 10000
+
+def slugify_username(username: Optional[str]) -> str:
+    """
+    Konverterar ett användarnamn till en ren och läsbar MQTT-topic-komponent.
+    Exempel: 'Admin' -> 'admin', 'Kalle Anka' -> 'kalle_anka'
+    """
+    if not username or not str(username).strip():
+        return "default"
+    
+    s = str(username).strip().lower()
+    replacements = {
+        'å': 'a', 'ä': 'a', 'ö': 'o',
+        'Å': 'a', 'Ä': 'a', 'Ö': 'o',
+        'é': 'e', 'è': 'e', 'ü': 'u',
+        '–': '-', '—': '-'
+    }
+    for k, v in replacements.items():
+        s = s.replace(k, v)
+        
+    s = re.sub(r'[^a-z0-9_]+', '_', s)
+    s = s.strip('_')
+    return s if s else "default"
 
 def slugify_feed_title(title: Optional[str]) -> str:
     """
@@ -124,29 +147,38 @@ def stop_mqtt():
 def publish_article(
     article: Any,
     feed: Any,
+    username: Optional[str] = None,
+    user_id: Optional[int] = None,
     is_prio: bool = False,
-    matched_keywords: Optional[List[str]] = None
+    matched_keywords: Optional[List[str]] = None,
+    is_update: bool = False
 ):
     """
-    Publicerar en artikel till MQTT:
-    1. Alltid till flödets topic: {prefix}/feeds/{feed_slug}
-    2. Om is_prio är true: Även till {prefix}/prio
+    Publicerar en artikel till användarens specifika MQTT-ämnen:
+    1. Användarens flödestopic: {prefix}/{användare}/feeds/{feed_slug}
+    2. Om is_prio är true: Även till användarens prio-topic: {prefix}/{användare}/prio
     """
-    global _client, _is_connected, _published_article_ids
+    global _client, _is_connected, _published_feed_articles, _published_prio_articles
     
     if not MQTT_ENABLED or _client is None:
         return
         
+    resolved_user_id = user_id or getattr(feed, "user_id", None)
+    resolved_username = username
+    if not resolved_username and hasattr(feed, "owner") and feed.owner:
+        resolved_username = getattr(feed.owner, "username", None)
+        
+    user_slug = slugify_username(resolved_username or (f"user_{resolved_user_id}" if resolved_user_id else "default"))
     article_id = getattr(article, "id", None)
-    if article_id is not None:
-        if article_id in _published_article_ids:
-            return
-        _published_article_ids.add(article_id)
-        if len(_published_article_ids) > MAX_DEDUP_IDS:
-            # Rensa de äldsta vid behov
-            _published_article_ids.clear()
-            _published_article_ids.add(article_id)
-            
+    dedup_key = f"{user_slug}:{article_id}" if article_id is not None else None
+    
+    already_published_feed = (dedup_key in _published_feed_articles) if dedup_key else False
+    already_published_prio = (dedup_key in _published_prio_articles) if dedup_key else False
+
+    # Om varken uppdatering eller ny prio och artikeln redan skickats till feed, hoppa över
+    if already_published_feed and not is_update and (not is_prio or already_published_prio):
+        return
+
     feed_title = getattr(feed, "title", None) or "RSS"
     feed_slug = slugify_feed_title(feed_title)
     
@@ -161,9 +193,11 @@ def publish_article(
         except Exception:
             parsed_tags = [t.strip() for t in tags_val.split(",") if t.strip()]
 
-    # Konstruera ren och komplett JSON-nyttolast
+    # Konstruera ren och komplett JSON-nyttolast med användarkontext
     payload = {
         "id": article_id,
+        "user": user_slug,
+        "user_id": resolved_user_id,
         "title": getattr(article, "title", "") or "",
         "source": feed_title,
         "feed_slug": feed_slug,
@@ -188,23 +222,37 @@ def publish_article(
     try:
         payload_str = json.dumps(payload, ensure_ascii=False)
     except Exception as e:
-        print(f"[MQTT] Serialiseringsfel för artikel {article_id}: {e}", flush=True)
+        print(f"[MQTT] Serialiseringsfel för artikel {article_id} (användare: {user_slug}): {e}", flush=True)
         return
+
+    # Registrera i dedubbleringsmängder
+    if dedup_key:
+        _published_feed_articles.add(dedup_key)
+        if len(_published_feed_articles) > MAX_DEDUP_IDS:
+            _published_feed_articles.clear()
+            _published_feed_articles.add(dedup_key)
+        if is_prio:
+            _published_prio_articles.add(dedup_key)
+            if len(_published_prio_articles) > MAX_DEDUP_IDS:
+                _published_prio_articles.clear()
+                _published_prio_articles.add(dedup_key)
         
-    # 1. Publicera till flödets specifika topic
-    feed_topic = f"{MQTT_TOPIC_PREFIX}/feeds/{feed_slug}"
-    try:
-        _client.publish(feed_topic, payload_str, qos=MQTT_QOS, retain=MQTT_RETAIN)
-        log_prio_tag = " [PRIO]" if is_prio else ""
-        print(f"[MQTT] Publicerade artikel #{article_id}{log_prio_tag} -> '{feed_topic}'", flush=True)
-    except Exception as e:
-        print(f"[MQTT] Fel vid publicering till '{feed_topic}': {e}", flush=True)
+    # 1. Publicera till användarens specifika flödestopic
+    if not already_published_feed or is_update:
+        feed_topic = f"{MQTT_TOPIC_PREFIX}/{user_slug}/feeds/{feed_slug}"
+        try:
+            _client.publish(feed_topic, payload_str, qos=MQTT_QOS, retain=MQTT_RETAIN)
+            log_tag = " [UPPDATERAD]" if is_update else ""
+            log_prio_tag = " [PRIO]" if is_prio else ""
+            print(f"[MQTT] Publicerade artikel #{article_id} ({user_slug}){log_tag}{log_prio_tag} -> '{feed_topic}'", flush=True)
+        except Exception as e:
+            print(f"[MQTT] Fel vid publicering till '{feed_topic}': {e}", flush=True)
         
-    # 2. Om artikeln är PRIO: publicera även till dedikerad prio-topic
-    if is_prio:
-        prio_topic = f"{MQTT_TOPIC_PREFIX}/prio"
+    # 2. Om artikeln är PRIO: publicera även till användarens specifika prio-topic
+    if is_prio and (not already_published_prio or is_update):
+        prio_topic = f"{MQTT_TOPIC_PREFIX}/{user_slug}/prio"
         try:
             _client.publish(prio_topic, payload_str, qos=MQTT_QOS, retain=MQTT_RETAIN)
-            print(f"[MQTT] Publicerade PRIO-kopia för #{article_id} -> '{prio_topic}'", flush=True)
+            print(f"[MQTT] Publicerade PRIO för #{article_id} ({user_slug}) -> '{prio_topic}'", flush=True)
         except Exception as e:
             print(f"[MQTT] Fel vid publicering till '{prio_topic}': {e}", flush=True)

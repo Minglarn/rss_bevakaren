@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.11.07-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.12.02-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -127,7 +127,7 @@ RSS-Bevakaren har ett dedikerat konversationsgränssnitt (**AI Chatt**) som nås
 
 ## MQTT-integration & Hemautomation
 
-RSS-Bevakaren har inbyggt stöd för publicering via MQTT. När funktionen aktiveras skickas varje inkommande artikel och prioriterad händelse i realtid till din MQTT-broker (såsom Eclipse Mosquitto, Home Assistant eller Node-RED).
+RSS-Bevakaren har inbyggt stöd för publicering via MQTT. När funktionen aktiveras skickas varje inkommande artikel och prioriterad händelse i realtid till din MQTT-broker (såsom Eclipse Mosquitto, Home Assistant eller Node-RED). Systemet är fullt uppdelat per användare, vilket gör att varje användare får sina egna dedikerade ämnen (topics).
 
 ### Konfiguration i docker-compose.yml
 
@@ -151,47 +151,51 @@ services:
 
 ### Ämnesarkitektur (Topic Hierarchy)
 
-MQTT-tjänsten använder en ren och förutsägbar hierarki:
+MQTT-tjänsten använder en ren och förutsägbar hierarki uppdelad per användare:
 
 | Ämne (Topic) | Beskrivning | Retained |
 |---|---|---|
-| `{prefix}/status` | Systemets anslutningsstatus via LWT (Last Will and Testament). Skickar `"online"` vid anslutning och `"offline"` om backend avslutas. | Ja |
-| `{prefix}/feeds/{feed_slug}` | Individuell ström för varje bevakat flöde. Specialtecken saneras automatiskt (t.ex. blir `Polisen - Skåne län` till `polisen_skane_lan`). | Konfigurerbart |
-| `{prefix}/prio` | Dedikerad kanal för högprioriterade händelser. Artiklar med `priority: high` eller som matchar bevakade sökord publiceras här parallellt. | Konfigurerbart |
+| `{prefix}/status` | Systemets globala anslutningsstatus via LWT (Last Will and Testament). Skickar `"online"` vid anslutning och `"offline"` om backend avslutas. | Ja |
+| `{prefix}/{användare}/feeds/{feed_slug}` | Individuell ström för varje användares bevakade flöden (t.ex. `rss_bevakaren/admin/feeds/polisen_skane_lan` eller `rss_bevakaren/wife/feeds/svt_nyheter`). Specialtecken saneras automatiskt. | Konfigurerbart |
+| `{prefix}/{användare}/prio` | Dedikerad kanal för användarens högprioriterade händelser. Artiklar med hög prioritet eller som matchar användarens egna bevakningsord publiceras här. | Konfigurerbart |
 
 #### Rekommenderade prenumerationsmönster
-- **Alla händelser:** `rss_bevakaren/#`
-- **Alla flödesströmmar:** `rss_bevakaren/feeds/+`
-- **Specifikt flöde:** `rss_bevakaren/feeds/polisen_skane_lan`
-- **Endast prioriterade larm (Home Assistant / notiser):** `rss_bevakaren/prio`
+- **Allt för specifik användare:** `rss_bevakaren/admin/#`
+- **Endast admins prioriterade larm:** `rss_bevakaren/admin/prio`
+- **Alla flöden för en specifik användare:** `rss_bevakaren/admin/feeds/+`
+- **Prioriterade larm för ALLA användare:** `rss_bevakaren/+/prio`
+- **Samtliga händelser i hela systemet:** `rss_bevakaren/#`
 
 ---
 
 ### Detaljerad JSON-dataspecifikation
 
-Varje meddelande som publiceras innehåller en strukturerad JSON-nyttolast med fullständig händelsemetadata:
+Varje meddelande som publiceras innehåller en strukturerad JSON-nyttolast med fullständig händelse- och användarmetadata:
 
 ```json
 {
   "id": 1420,
+  "user": "admin",
+  "user_id": 1,
   "title": "Chocksiffrorna: Nu höjs bilskatten med 1300%",
+  "source": "CarUp",
+  "feed_slug": "carup",
+  "feed_id": 4,
   "summary": "Nya EU-siffror visar att laddhybrider släpper ut betydligt mer koldioxid än vad biltillverkarna tidigare uppgett. Detta innebär att tusentals nya bilar kommer att drabbas av betydligt högre skatter baserat på de faktiska utsläppen.",
-  "ai_summary": "Nya EU-siffror visar att laddhybrider släpper ut betydligt mer koldioxid än vad biltillverkarna tidigare uppgett. Detta innebär att tusentals nya bilar kommer att drabbas av betydligt högre skatter baserat på de faktiska utsläppen.",
+  "raw_summary": "Nya EU-siffror visar att laddhybrider släpper ut mer...",
   "link": "https://carup.se/chocksiffrorna-nu-hojs-bilskatten-med-1300/",
-  "published_at": "2026-09-09T17:15:00Z",
-  "received_ts": 1788983700,
-  "source_name": "CarUp",
-  "source_slug": "carup",
-  "category": "Ekonomi",
-  "priority": "low",
-  "prio_score": 25,
-  "prio_reason": "Normalprioriterad kategori: Ekonomi (5/10)",
-  "is_prio": false,
-  "matched_keywords": [],
+  "image_url": "https://carup.se/wp-content/uploads/2026/09/laddhybrid-skatt.jpg",
+  "published": "Tue, 09 Sep 2026 17:15:00 +0200",
+  "published_ts": 1788983700,
+  "received_ts": 1788983750,
+  "is_prio": true,
+  "prio_score": 85,
+  "prio_reason": "Träff på bevakningsord: bilskatt",
+  "matched_keywords": ["bilskatt"],
   "is_clickbait": true,
-  "clickbait_reason": "Rubriken använder sensationella ord som 'Chocksiffrorna' och 'höjs med 1300%' för att locka klick utan att direkt förklara att det handlar om korrigerade utsläppsvärden för laddhybrider. Fakta har lyfts fram i sammanfattningen ovan.",
-  "tags": ["bilskatt", "laddhybrider", "utsläpp", "EU", "ekonomi"],
-  "image_url": "https://carup.se/wp-content/uploads/2026/09/laddhybrid-skatt.jpg"
+  "clickbait_reason": "Rubriken döljer att det handlar om justerade utsläppsvärden för laddhybrider.",
+  "category": "Ekonomi",
+  "tags": ["bilskatt", "laddhybrider", "utsläpp", "EU", "ekonomi"]
 }
 ```
 
@@ -200,41 +204,44 @@ Varje meddelande som publiceras innehåller en strukturerad JSON-nyttolast med f
 | Fält | Typ | Beskrivning |
 |---|---|---|
 | `id` | heltal | Unikt artikel-ID i databasen. |
+| `user` | sträng | Sanerat användarnamn som äger flödet/bevakningen (t.ex. `admin`, `wife`). |
+| `user_id` | heltal | Användarens numeriska ID i databasen. |
 | `title` | sträng | Artikelns fullständiga rubrik. |
+| `source` | sträng | Visningsnamn på flödeskällan (t.ex. `Polisen`, `CarUp`, `SVT Nyheter`). |
+| `feed_slug` | sträng | Sanerat ID som matchar flödets MQTT-underämne. |
+| `feed_id` | heltal | Numeriskt ID för det bevakade flödet. |
 | `summary` | sträng | AI-sammanfattning (eller RSS-beskrivning om AI är avstängt). |
-| `ai_summary` | sträng | Dedikerad AI-genererad sammanfattningstext. |
+| `raw_summary` | sträng | Ursprunglig sammanfattning/ingress från källans RSS-flöde. |
 | `link` | sträng | Direkt webbadress till originalartikeln. |
-| `published_at`| sträng | Publiceringsdatum och tid formaterat i ISO 8601 (UTC). |
+| `image_url` | sträng | Bildadress om flödet tillhandahåller en artikelbild. |
+| `published` | sträng | Publiceringsdatum som sträng från källan. |
+| `published_ts`| heltal | UNIX-tidsstämpel för publicering. |
 | `received_ts` | heltal | UNIX-tidsstämpel (sekunder) när artikeln togs emot. |
-| `source_name` | sträng | Visningsnamn på flödeskällan (t.ex. `Polisen`, `CarUp`, `SVT Nyheter`). |
-| `source_slug` | sträng | Sanerat ID som matchar flödets MQTT-underämne. |
-| `category` | sträng | AI-klassificerad kategori (t.ex. `Blåljus`, `Ekonomi`, `Teknik`, `Lokalt`). |
-| `priority` | sträng | Prioritetsklass: `high`, `medium` eller `low`. |
-| `prio_score` | heltal | Relevanspoäng från `0` till `100`. Poäng >= 75 publiceras på `prio`. |
-| `prio_reason` | sträng | Motivering för poängen (t.ex. `Högprioriterad kategori: Blåljus (9/10)`). |
-| `is_prio` | boolean | `true` om artikeln kvalificerar sig som prioriterad. |
-| `matched_keywords` | lista[sträng] | Lista med bevakade sökord som matchats. |
+| `is_prio` | boolean | `true` om artikeln kvalificerar sig som prioriterad (eller matchat bevakningsord). |
+| `prio_score` | heltal | Relevanspoäng från `0` till `100`. |
+| `prio_reason` | sträng | Motivering för poängen eller träff på bevakningsord. |
+| `matched_keywords` | lista[sträng] | Lista med bevakade sökord som matchats för användaren. |
 | `is_clickbait`| boolean | `true` om AI identifierat klickbetestaktik i rubriken. |
 | `clickbait_reason` | sträng | Förklaring av vad rubriken undanhöll och bekräftelse på att fakta lyfts fram. |
+| `category` | sträng | AI-klassificerad kategori (t.ex. `Blåljus`, `Ekonomi`, `Teknik`, `Lokalt`). |
 | `tags` | lista[sträng] | AI-genererade ämnestaggar för snabb indelning. |
-| `image_url` | sträng | Bildadress om flödet tillhandahåller en artikelbild. |
 
 ---
 
 ### Automatiseringsexempel för Home Assistant
 
-Få direkta aviseringar i mobilen när en högprioriterad händelse inträffar:
+Få direkta aviseringar i mobilen när en högprioriterad händelse inträffar för din användare:
 
 ```yaml
 automation:
-  - alias: "RSS Prio Händelselarm"
+  - alias: "RSS Prio Händelselarm (Admin)"
     trigger:
       - platform: mqtt
-        topic: "rss_bevakaren/prio"
+        topic: "rss_bevakaren/admin/prio"
     action:
       - service: notify.notify
         data:
-          title: "{{ trigger.payload_json.source_name }}: {{ trigger.payload_json.title }}"
+          title: "{{ trigger.payload_json.source }}: {{ trigger.payload_json.title }}"
           message: "{{ trigger.payload_json.summary }}"
           data:
             url: "{{ trigger.payload_json.link }}"

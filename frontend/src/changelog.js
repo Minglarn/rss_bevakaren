@@ -1,9 +1,48 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.02',
+    date: '2026-09-12',
+    title: 'Användaruppdelad MQTT-arkitektur och garanterad flödespublicering',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Dedikerade MQTT-ämnen per användare',
+        description: 'MQTT-strukturen är nu helt uppdelad per användare: flöden publiceras på {prefix}/{användare}/feeds/{feed_slug} och prioriterade händelser på {prefix}/{användare}/prio.'
+      },
+      {
+        type: 'feature',
+        title: 'Användarkontext i JSON-nyttolasten',
+        description: 'Varje meddelande innehåller nu fälten user och user_id vilket gör det enkelt för Home Assistant och hemautomation att filtrera och dirigera notiser per person.'
+      },
+      {
+        type: 'fix',
+        title: 'Frikopplad MQTT-leverans för alla användare',
+        description: 'Åtgärdade en logisk spärr där användare utan AI-prioritering eller med många samtidiga artiklar inte fick sina flöden skickade till MQTT. Samtliga användares flöden och bevakningsord levereras nu tillförlitligt i realtid.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.12.01',
+    date: '2026-09-12',
+    title: 'Sanering av RSS-katalogen och fullständig svensk flödeshantering',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Total genomsökning och sanering av RSS-katalogen',
+        description: 'Samtliga 287 svenska källor i katalogen har kontrollerats och validerats mot aktiva endpoints. 17 trasiga och nedlagda flöden har rensats bort och 31 källor har uppdaterats till sina nya permanenta adresser.'
+      },
+      {
+        type: 'ui',
+        title: 'Komplett svensk flödeshanterare',
+        description: 'Dialogrutan och formulären för att utforska katalogflöden och hantera egna källor har översatts till svenska utan några engelska fragment.'
+      }
+    ]
+  },
+  {
     version: '2026.09.11.07',
     date: '2026-09-11',
     title: 'Automatisk artikel-skrapning före AI-analys och svensk Utseende-flik',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',
