@@ -2588,9 +2588,86 @@ def get_source_analytics(db: Session = Depends(database.get_db), current_user: m
         avg_cb_pct = round((total_clickbait_all / total_all_articles * 100), 1) if total_all_articles > 0 else 0.0
         avg_pr_pct = round((total_prio_all / total_all_articles * 100), 1) if total_all_articles > 0 else 0.0
 
-        most_active = sources[0] if sources else None
-        # Minst aktiva: sista flödet i sorteringen
-        least_active = sources[-1] if sources else None
+        user_feed_ids = [f.id for f in feeds]
+
+        # Kategoristatistik
+        categories_stats = []
+        if user_feed_ids:
+            cat_rows = db.query(
+                models.Article.category,
+                func.count(models.Article.id).label("total"),
+                func.sum(case(((models.Article.is_read == 0) | (models.Article.is_read == None), 1), else_=0)).label("unread_cnt"),
+                func.sum(case((models.Article.is_clickbait == 1, 1), else_=0)).label("clickbait_cnt"),
+                func.sum(case((or_(models.Article.priority == 'high', models.Article.prio_score >= 75), 1), else_=0)).label("prio_cnt")
+            ).filter(models.Article.feed_id.in_(user_feed_ids))\
+             .group_by(models.Article.category)\
+             .order_by(func.count(models.Article.id).desc()).all()
+
+            for row in cat_rows:
+                c_name = (row[0] or "Övrigt").strip()
+                c_total = row.total or 0
+                c_unread = row.unread_cnt or 0
+                c_cb = row.clickbait_cnt or 0
+                c_prio = row.prio_cnt or 0
+                c_pct = round((c_total / total_all_articles * 100), 1) if total_all_articles > 0 else 0.0
+                cb_pct = round((c_cb / c_total * 100), 1) if c_total > 0 else 0.0
+                prio_pct = round((c_prio / c_total * 100), 1) if c_total > 0 else 0.0
+                categories_stats.append({
+                    "name": c_name,
+                    "total_articles": c_total,
+                    "unread_articles": c_unread,
+                    "clickbait_count": c_cb,
+                    "clickbait_percentage": cb_pct,
+                    "prio_count": c_prio,
+                    "prio_percentage": prio_pct,
+                    "percentage": c_pct
+                })
+
+        # Taggstatistik och trendande ämnesord
+        from collections import Counter
+        tag_counter = Counter()
+        tagged_articles_count = 0
+        top_tags = []
+        tag_summary = {
+            "total_unique_tags": 0,
+            "tagged_articles_count": 0
+        }
+
+        if user_feed_ids:
+            tag_rows = db.query(models.Article.tags).filter(
+                models.Article.feed_id.in_(user_feed_ids),
+                models.Article.tags.isnot(None),
+                models.Article.tags != "[]",
+                models.Article.tags != ""
+            ).all()
+
+            for (t_val,) in tag_rows:
+                if not t_val:
+                    continue
+                found_tags = []
+                try:
+                    loaded = json.loads(t_val)
+                    if isinstance(loaded, list):
+                        found_tags = [str(x).strip() for x in loaded if str(x).strip()]
+                except Exception:
+                    found_tags = [str(x).strip() for x in t_val.split(",") if str(x).strip()]
+
+                if found_tags:
+                    tagged_articles_count += 1
+                    for t in found_tags:
+                        # Filtrera bort extremt korta eller brusiga taggar
+                        if len(t) >= 2:
+                            tag_counter[t] += 1
+
+            tag_summary["total_unique_tags"] = len(tag_counter)
+            tag_summary["tagged_articles_count"] = tagged_articles_count
+
+            for t_name, cnt in tag_counter.most_common(60):
+                top_tags.append({
+                    "tag": t_name,
+                    "count": cnt,
+                    "percentage": round((cnt / total_all_articles * 100), 1) if total_all_articles > 0 else 0.0
+                })
 
         return {
             "summary": {
@@ -2599,6 +2676,8 @@ def get_source_analytics(db: Session = Depends(database.get_db), current_user: m
                 "stale_feeds_count": stale_count,
                 "avg_clickbait_pct": avg_cb_pct,
                 "avg_prio_pct": avg_pr_pct,
+                "total_categories": len(categories_stats),
+                "total_unique_tags": tag_summary["total_unique_tags"],
                 "most_active_source": {
                     "title": most_active["title"],
                     "total_articles": most_active["total_articles"]
@@ -2610,7 +2689,10 @@ def get_source_analytics(db: Session = Depends(database.get_db), current_user: m
                     "days_since_last_article": least_active["days_since_last_article"]
                 } if least_active else None
             },
-            "sources": sources
+            "sources": sources,
+            "categories": categories_stats,
+            "tags": top_tags,
+            "tag_summary": tag_summary
         }
     except Exception as e:
         print(f"[ANALYTICS] Fel vid generering av källstatistik: {e}", flush=True)

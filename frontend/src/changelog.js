@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.37',
+    date: '2026-09-12',
+    title: 'Kategori- och tagginsikter i Insiktsvyn',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Kategorifördelning & Ämnesanalys',
+        description: 'Översikt med volymer, progress-bars, sortering och fördelning av olästa artiklar, prio-andel samt ClickBait-grad per ämneskategori i nyhetsflödet.'
+      },
+      {
+        type: 'feature',
+        title: 'Trendande taggar & Taggmoln',
+        description: 'Interaktivt taggmoln med frekvensanalys över AI-genererade ämnesord och direkt sökfiltrering för snabb överblick av aktuella nyhetsämnen.'
+      },
+      {
+        type: 'improvement',
+        title: 'Språkanpassning för ClickBait',
+        description: 'Standardiserat terminologin till ClickBait genomgående i Insikter och källstatistiken enligt applikationens språkregler.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.36',
     date: '2026-09-12',
     title: 'Stöd för att ångra och avbryta swipe genom att dra tillbaka kortet',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, AlertTriangle, ExternalLink, Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
@@ -55,6 +55,8 @@ const Settings = ({ onLogout }) => {
   const [sourceStats, setSourceStats] = useState(null);
   const [isLoadingSourceStats, setIsLoadingSourceStats] = useState(false);
   const [statsSort, setStatsSort] = useState('volume_desc');
+  const [categorySort, setCategorySort] = useState('volume_desc');
+  const [tagSearch, setTagSearch] = useState('');
   const [swipeGesturesEnabled, setSwipeGesturesEnabled] = useState(() => localStorage.getItem('rss_swipe_gestures') !== 'false');
 
   const toggleSwipeGestures = () => {
@@ -297,6 +299,33 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     if (!sourceStats || !sourceStats.sources || sourceStats.sources.length === 0) return 1;
     return Math.max(...sourceStats.sources.map(s => s.total_articles), 1);
   }, [sourceStats]);
+
+  const sortedCategories = React.useMemo(() => {
+    if (!sourceStats || !sourceStats.categories) return [];
+    let list = [...sourceStats.categories];
+    if (categorySort === 'volume_desc') {
+      list.sort((a, b) => b.total_articles - a.total_articles);
+    } else if (categorySort === 'prio_desc') {
+      list.sort((a, b) => b.prio_percentage - a.prio_percentage);
+    } else if (categorySort === 'clickbait_desc') {
+      list.sort((a, b) => b.clickbait_percentage - a.clickbait_percentage);
+    } else if (categorySort === 'name_asc') {
+      list.sort((a, b) => a.name.localeCompare(b.name, 'sv'));
+    }
+    return list;
+  }, [sourceStats, categorySort]);
+
+  const maxCategoryCount = React.useMemo(() => {
+    if (!sourceStats || !sourceStats.categories || sourceStats.categories.length === 0) return 1;
+    return Math.max(...sourceStats.categories.map(c => c.total_articles), 1);
+  }, [sourceStats]);
+
+  const filteredTags = React.useMemo(() => {
+    if (!sourceStats || !sourceStats.tags) return [];
+    if (!tagSearch.trim()) return sourceStats.tags;
+    const q = tagSearch.trim().toLowerCase();
+    return sourceStats.tags.filter(t => t.tag.toLowerCase().includes(q));
+  }, [sourceStats, tagSearch]);
 
   const fetchData = async () => {
     try {
@@ -1341,7 +1370,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 
               <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <ShieldAlert size={14} /> Klickbetesandel
+                  <ShieldAlert size={14} /> ClickBait-andel
                 </div>
                 <div style={{ fontSize: '1.4rem', fontWeight: 700, color: (sourceStats.summary?.avg_clickbait_pct > 15) ? '#ef4444' : '#16a34a' }}>
                   {sourceStats.summary?.avg_clickbait_pct ?? 0}%
@@ -1362,8 +1391,287 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   Högintressanta nyheter
                 </div>
               </div>
+
+              <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Layers size={14} /> Kategorier
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  {sourceStats.categories?.length ?? sourceStats.summary?.total_categories ?? 0}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  Aktiva ämnesområden
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Tag size={14} /> Unika taggar
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--primary)' }}>
+                  {sourceStats.tag_summary?.total_unique_tags ?? sourceStats.summary?.total_unique_tags ?? 0}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  {sourceStats.tag_summary?.tagged_articles_count ?? 0} taggade artiklar
+                </div>
+              </div>
             </div>
           )}
+
+          {/* Tvåkolumners sektion: Kategorifördelning och Taggmoln */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.25rem' }}>
+            {/* Kategorifördelning */}
+            <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.4rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.05)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+                    <Layers size={18} style={{ color: 'var(--primary)' }} />
+                    Kategorifördelning
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: '0.25rem 0 0 0' }}>
+                    Fördelning över ämneskategorier med prio- och ClickBait-grad.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setCategorySort('volume_desc')}
+                    style={{
+                      padding: '0.35rem 0.65rem',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: categorySort === 'volume_desc' ? 'var(--primary)' : 'var(--bg-app)',
+                      color: categorySort === 'volume_desc' ? '#fff' : 'var(--text-muted)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Flest
+                  </button>
+                  <button
+                    onClick={() => setCategorySort('prio_desc')}
+                    style={{
+                      padding: '0.35rem 0.65rem',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: categorySort === 'prio_desc' ? '#f97316' : 'var(--bg-app)',
+                      color: categorySort === 'prio_desc' ? '#fff' : 'var(--text-muted)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Prio
+                  </button>
+                  <button
+                    onClick={() => setCategorySort('clickbait_desc')}
+                    style={{
+                      padding: '0.35rem 0.65rem',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: categorySort === 'clickbait_desc' ? '#ef4444' : 'var(--bg-app)',
+                      color: categorySort === 'clickbait_desc' ? '#fff' : 'var(--text-muted)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ClickBait
+                  </button>
+                  <button
+                    onClick={() => setCategorySort('name_asc')}
+                    style={{
+                      padding: '0.35rem 0.65rem',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: categorySort === 'name_asc' ? 'var(--primary)' : 'var(--bg-app)',
+                      color: categorySort === 'name_asc' ? '#fff' : 'var(--text-muted)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    A-Ö
+                  </button>
+                </div>
+              </div>
+
+              {isLoadingSourceStats && !sourceStats ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '2rem', color: 'var(--text-muted)', gap: '0.5rem' }}>
+                  <Loader2 size={18} className="spin" />
+                  <span style={{ fontSize: '0.85rem' }}>Läser in kategorier...</span>
+                </div>
+              ) : sortedCategories.length === 0 ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                  Inga kategoriserade artiklar tillgängliga.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '420px', overflowY: 'auto', paddingRight: '0.3rem' }}>
+                  {sortedCategories.map((cat) => {
+                    const barPct = Math.max(3, Math.round((cat.total_articles / maxCategoryCount) * 100));
+                    return (
+                      <div 
+                        key={cat.name}
+                        style={{
+                          backgroundColor: 'var(--bg-app)',
+                          padding: '0.75rem 0.9rem',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.45rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                              {cat.name}
+                            </span>
+                            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                              ({cat.percentage}%)
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.75rem' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>{cat.unread_articles} olästa</span>
+                            <span style={{ color: '#f97316', fontWeight: 600 }}>{cat.prio_percentage}% prio</span>
+                            {cat.clickbait_percentage > 0 && (
+                              <span style={{ color: cat.clickbait_percentage > 15 ? '#ef4444' : 'var(--text-muted)', fontWeight: cat.clickbait_percentage > 15 ? 700 : 400 }}>
+                                {cat.clickbait_percentage}% CB
+                              </span>
+                            )}
+                            <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-main)', minWidth: '45px', textAlign: 'right' }}>
+                              {cat.total_articles} st
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ width: '100%', height: '7px', backgroundColor: 'var(--border-color)', borderRadius: '5px', overflow: 'hidden' }}>
+                          <div 
+                            style={{ 
+                              width: `${barPct}%`, 
+                              height: '100%', 
+                              borderRadius: '5px',
+                              background: 'linear-gradient(90deg, var(--primary), #06b6d4)',
+                              transition: 'width 0.4s ease-out'
+                            }} 
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Trendande Taggar & Ämnesord */}
+            <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.4rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.05)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+                    <Tag size={18} style={{ color: '#06b6d4' }} />
+                    Trendande Taggar & Ämnesord
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: '0.25rem 0 0 0' }}>
+                    AI-genererade ämnesord extraherade från artiklarna.
+                  </p>
+                </div>
+
+                {/* Sökfält för taggar */}
+                <div style={{ position: 'relative', width: '100%', maxWidth: '200px' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    value={tagSearch}
+                    onChange={(e) => setTagSearch(e.target.value)}
+                    placeholder="Sök tagg..."
+                    style={{
+                      width: '100%',
+                      padding: '0.4rem 0.6rem 0.4rem 2rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.8rem',
+                      outline: 'none'
+                    }}
+                  />
+                  {tagSearch && (
+                    <button
+                      onClick={() => setTagSearch('')}
+                      style={{
+                        position: 'absolute',
+                        right: '0.4rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: 0
+                      }}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {isLoadingSourceStats && !sourceStats ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '2rem', color: 'var(--text-muted)', gap: '0.5rem' }}>
+                  <Loader2 size={18} className="spin" />
+                  <span style={{ fontSize: '0.85rem' }}>Analyserar taggar...</span>
+                </div>
+              ) : filteredTags.length === 0 ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                  {tagSearch ? 'Inga taggar matchar sökningen.' : 'Inga taggar har genererats ännu. Skapas automatiskt vid AI-analys.'}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', maxHeight: '420px', overflowY: 'auto', paddingRight: '0.3rem', alignContent: 'flex-start' }}>
+                  {filteredTags.map((tagItem, idx) => {
+                    const isTopTag = idx < 8 || tagItem.count >= 8;
+                    return (
+                      <motion.button
+                        key={tagItem.tag}
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => {
+                          toast.success(`Tagg #${tagItem.tag}: ${tagItem.count} st artiklar (${tagItem.percentage}% av flödet).`, { id: 'tag-info' });
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          padding: '0.35rem 0.65rem',
+                          borderRadius: '20px',
+                          fontSize: isTopTag ? '0.83rem' : '0.78rem',
+                          fontWeight: isTopTag ? 600 : 500,
+                          backgroundColor: isTopTag ? 'rgba(37, 99, 235, 0.12)' : 'var(--bg-app)',
+                          color: isTopTag ? 'var(--primary)' : 'var(--text-main)',
+                          border: isTopTag ? '1px solid rgba(37, 99, 235, 0.35)' : '1px solid var(--border-color)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        title={`Klicka för detaljer om #${tagItem.tag}`}
+                      >
+                        <span>#{tagItem.tag}</span>
+                        <span style={{
+                          backgroundColor: isTopTag ? 'var(--primary)' : 'var(--border-color)',
+                          color: isTopTag ? '#ffffff' : 'var(--text-muted)',
+                          padding: '0.05rem 0.4rem',
+                          borderRadius: '10px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700
+                        }}>
+                          {tagItem.count}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Volymdiagram och källista */}
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.05)' }}>
@@ -1578,7 +1886,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                         <div style={{ display: 'flex', gap: '0.85rem' }}>
                           <span>Olästa: <strong style={{ color: 'var(--text-main)' }}>{source.unread_articles}</strong></span>
                           <span>Prio-nyheter: <strong style={{ color: '#f97316' }}>{source.prio_percentage}%</strong> ({source.prio_count} st)</span>
-                          <span>Klickbete: <strong style={{ color: source.clickbait_percentage > 15 ? '#ef4444' : 'var(--text-main)' }}>{source.clickbait_percentage}%</strong> ({source.clickbait_count} st)</span>
+                          <span>ClickBait: <strong style={{ color: source.clickbait_percentage > 15 ? '#ef4444' : 'var(--text-main)' }}>{source.clickbait_percentage}%</strong> ({source.clickbait_count} st)</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                           <span>Kvalitetsindex:</span>
@@ -1622,10 +1930,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 </div>
               </div>
 
-              {/* Klickbetestoppen */}
+              {/* ClickBait-toppen */}
               <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                 <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.98rem' }}>
-                  <ShieldAlert size={18} style={{ color: '#ef4444' }} /> Klickbetestoppen (Högst sensationell andel)
+                  <ShieldAlert size={18} style={{ color: '#ef4444' }} /> ClickBait-toppen (Högst sensationell andel)
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                   {[...sourceStats.sources]
