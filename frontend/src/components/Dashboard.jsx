@@ -1396,7 +1396,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     drag="x"
                     dragDirectionLock
                     dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.45}
+                    dragElastic={0.6}
                     onDragStart={() => {
                       isDraggingCard.current = true;
                     }}
@@ -1405,7 +1405,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         isDraggingCard.current = false;
                       }, 120);
 
-                      if (Math.abs(info.offset.x) > 75) {
+                      if (Math.abs(info.offset.x) > 125) {
                         if (navigator.vibrate) {
                           try { navigator.vibrate(40); } catch (_) {}
                         }

@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.34',
+    date: '2026-09-12',
+    title: 'Ökad swipe-tröskel och felrättning i Insikter',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Ökad swipe-tröskel till 125 px',
+        description: 'Justerade tröskelvärdet för att markera artiklar som lästa/olästa från 75 px till 125 px för att helt förhindra oavsiktliga markeringar under snabb vertikal scrollning.'
+      },
+      {
+        type: 'fix',
+        title: 'Åtgärdat referensfel i Insikter-vyn',
+        description: 'Lade till den saknade importen av ExternalLink-ikonen i inställningskomponenten vilket löser kraschen vid visning av källflödesdiagrammet.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.33',
     date: '2026-09-12',
     title: 'Swipe-snabbhantering för mobil samt Källstatistik och Insikter',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',
