@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.11',
+    date: '2026-09-12',
+    title: 'Förstärkt svärta och kontrast för taggavdelaren',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Ökad svärta på kortets avdelare',
+        description: 'Förstärkte kontrasten och opaciteten på avdelaren mellan sammanfattningen och taggarna så att den syns distinkt och tydligt i både ljust och mörkt läge.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.10',
     date: '2026-09-12',
     title: 'Återaktiverat Briefing-kort på mobil med ren titelsättning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

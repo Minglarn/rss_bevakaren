@@ -1459,12 +1459,16 @@ select:focus, input:focus {
 }
 
 .card-tags-divider {
-  height: 1px;
-  background: linear-gradient(90deg, var(--border-color) 0%, var(--border-color) 70%, transparent 100%);
-  margin: 0.6rem 0 0.5rem 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.28) 0%, rgba(15, 23, 42, 0.20) 70%, transparent 100%);
+  margin: 0.65rem 0 0.55rem 0;
   border: none;
   width: 100%;
-  opacity: 0.85;
+}
+
+[data-theme='dark'] .card-tags-divider,
+.dark .card-tags-divider {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.22) 70%, transparent 100%);
 }
 
 /* --- RSS MANAGER CLASSES --- */
