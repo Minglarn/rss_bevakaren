@@ -59,14 +59,9 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
         const { feedId, count } = e.detail;
         const feed = myFeedsRef.current.find(f => f.id === feedId);
         if (feed) {
-          toast.success(`${count} new events from ${feed.title}!`, {
-            duration: 6000,
-            style: {
-              borderRadius: '10px',
-              background: 'var(--bg-card)',
-              color: 'var(--text-main)',
-              border: '1px solid var(--accent)',
-            }
+          toast.success(`${count} nya händelser från ${feed.title}!`, {
+            duration: 5000,
+            id: `feed-update-${feedId}`
           });
         }
       }
@@ -85,24 +80,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       const title = feed ? feed.title : `flöde ${feedId}`;
       toast(`Söker: ${title}`, {
         id: `poll-${feedId}`,
-        duration: 2500,
-        style: {
-          borderRadius: '8px',
-          background: '#18181b',
-          color: '#f4f4f5',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          fontSize: '0.88rem',
-          fontWeight: 500,
-          padding: '10px 16px',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3)',
-          maxWidth: 'min(92vw, 420px)',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          lineHeight: '1.4'
-        }
+        duration: 2500
       });
     };
     const handleEnd = (e) => {
@@ -705,13 +683,13 @@ const App = () => {
             borderRadius: '8px',
             background: '#18181b',
             color: '#f4f4f5',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3)',
-            fontSize: '0.88rem',
+            border: '1px solid rgba(255, 255, 255, 0.16)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.45)',
+            fontSize: '0.86rem',
             fontWeight: 500,
-            padding: '10px 16px',
-            maxWidth: 'min(92vw, 420px)',
-            lineHeight: '1.4'
+            padding: '8px 14px',
+            maxWidth: 'min(92vw, 380px)',
+            lineHeight: '1.35'
           },
           success: {
             iconTheme: {

@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.32',
+    date: '2026-09-12',
+    title: 'Enkel slimmad toast-design utan dubbla rutor',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Borttagning av dubbla rutor i toasts',
+        description: 'Åtgärdade kapslad CSS-styling där både toastens wrapper och inre status-behållare fick ramar och bakgrunder. Toasts renderas nu som en enda ren, slimmad och elegant ruta med 8 px rundade hörn.'
+      },
+      {
+        type: 'ui',
+        title: 'Svensk översättning av flödesuppdateringar och delningsmeddelanden',
+        description: 'Översatte flödesuppdaterings-toast till svenska ("X nya händelser från [flöde]!") och delningsnotis till "Kopierad till urklipp!".'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.31',
     date: '2026-09-12',
     title: 'Kompaktare text i söknings-toast',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',

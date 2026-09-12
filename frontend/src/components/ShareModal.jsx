@@ -68,14 +68,8 @@ const ShareModal = ({ item, onClose }) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      toast.success('Copied to clipboard!', {
-        duration: 2500,
-        style: {
-          borderRadius: '8px',
-          background: 'var(--bg-card)',
-          color: 'var(--text-main)',
-          border: '1px solid var(--border-color)',
-        }
+      toast.success('Kopierad till urklipp!', {
+        duration: 2500
       });
       setTimeout(() => {
         setCopied(false);

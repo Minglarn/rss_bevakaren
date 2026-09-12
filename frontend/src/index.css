@@ -1670,20 +1670,31 @@ input:checked + .toggle-slider:before {
   }
 }
 
+/* Endast 1 slimmad ruta per toast */
 .my-toast-container [role="status"],
+.my-toast-container [role="alert"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
 .my-toast-container > div > div {
   border-radius: 8px !important;
   background: #18181b !important;
   color: #f4f4f5 !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3) !important;
-  font-size: 0.88rem !important;
-  line-height: 1.4 !important;
-  max-width: min(92vw, 420px) !important;
-  padding: 10px 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+  font-size: 0.86rem !important;
+  line-height: 1.35 !important;
+  max-width: min(92vw, 380px) !important;
+  padding: 8px 14px !important;
 }
 
-.my-toast-container [role="status"] > div:last-child {
+.my-toast-container [role="status"] > div:last-child,
+.my-toast-container [role="alert"] > div:last-child,
+.my-toast-container > div > div > div:last-child {
   display: -webkit-box !important;
   -webkit-line-clamp: 2 !important;
   -webkit-box-orient: vertical !important;
