@@ -1878,13 +1878,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     return null;
                   })()}
 
-                  {/* Taggar från AI-analys och prominent källbricka till höger (grön ruta) */}
-                  <div className="card-tags-section" style={{ marginTop: 'auto' }}>
-                    <div className="card-tags-divider" />
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.65rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
-                      {/* Vänster: Kategori- och nyckelordstaggar */}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', flex: 1, minWidth: 0, alignItems: 'center' }}>
-                        {shouldShowAi && item.category && (
+                  {/* Taggar från AI-analys inklusive kategori */}
+                  {shouldShowAi && (item.category || (item.tags && item.tags.length > 0)) && (
+                    <div className="card-tags-section">
+                      <div className="card-tags-divider" />
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem' }}>
+                        {item.category && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
                             style={{
@@ -1906,7 +1905,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             <Tag size={11} /> {decodeHtmlEntities(item.category)}
                           </button>
                         )}
-                        {shouldShowAi && item.tags && item.tags
+                        {item.tags && item.tags
                           .filter(tag => !item.category || tag.toLowerCase() !== item.category.toLowerCase())
                           .map((tag, tIdx) => {
                             const isTagActive = selectedTag.toLowerCase() === tag.toLowerCase();
@@ -1935,37 +1934,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             );
                           })}
                       </div>
-
-                      {/* Höger (grön ruta): BARA ikonen */}
-                      <div
-                        className="card-source-badge icon-only"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (item.feed_id) handleSelectFeed(item.feed_id);
-                        }}
-                        title={`Källa: ${decodeHtmlEntities(item.source_title || '')} (Klicka för att filtrera på flödet)`}
-                      >
-                        {item.feed_icon ? (
-                          <img
-                            src={item.feed_icon}
-                            alt={decodeHtmlEntities(item.source_title || '')}
-                            className="card-source-badge-icon"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              const fb = e.currentTarget.parentElement?.querySelector('.card-source-badge-fallback');
-                              if (fb) fb.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        <div
-                          className="card-source-badge-fallback"
-                          style={{ display: item.feed_icon ? 'none' : 'flex' }}
-                        >
-                          <Rss size={18} />
-                        </div>
-                      </div>
                     </div>
-                  </div>
+                  )}
                   
                   {/* Expanded Content (Full scraped text) */}
                   {expandedItems[index] && (

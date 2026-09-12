@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.30',
+    date: '2026-09-12',
+    title: 'Renodlat kortformat och borttagning av redundant källikon i taggraden',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Renare artikelkort utan plottrighet',
+        description: 'Tog bort den extra källikonen från taggraden längst ner i artikelkortet. Källikonen visas nu uteslutande på sin naturliga och tydliga plats i toppbaren (22 px hög med vit bakgrund) bredvid källnamnet.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.29',
     date: '2026-09-12',
     title: 'Finjusterad toast-positionering strax ovanför mobilens bottenmeny',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',
