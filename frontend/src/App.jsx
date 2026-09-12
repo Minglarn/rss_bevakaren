@@ -82,24 +82,33 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       });
       
       const feed = myFeedsRef.current.find(f => f.id === feedId);
-      const title = feed ? feed.title : `feed ${feedId}`;
-      toast(`Looking for new events in ${title}...`, {
-        id: `poll-${feedId}`, // Ensures we don't spam if it starts again quickly
-        duration: 6000,
+      const title = feed ? feed.title : `flöde ${feedId}`;
+      toast(`Söker nya händelser: ${title}...`, {
+        id: `poll-${feedId}`,
+        duration: 2000,
         style: {
-          borderRadius: '10px',
+          borderRadius: '20px',
           background: 'var(--bg-card)',
-          color: 'var(--text-main)',
-          border: '1px solid var(--primary)',
+          color: 'var(--text-muted)',
+          border: '1px solid var(--border-color)',
+          fontSize: '0.76rem',
+          padding: '4px 12px',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+          maxWidth: '300px',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
         }
       });
     };
     const handleEnd = (e) => {
+      const feedId = e.detail;
       setPollingFeeds(prev => {
         const newSet = new Set(prev);
-        newSet.delete(e.detail);
+        newSet.delete(feedId);
         return newSet;
       });
+      toast.dismiss(`poll-${feedId}`);
     };
     window.addEventListener('pollingStart', handleStart);
     window.addEventListener('pollingEnd', handleEnd);

@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.17',
+    date: '2026-09-12',
+    title: 'Fast klistrad toppbar och diskret feed-polling-avisering',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Fast klistrad toppbar (Sticky header)',
+        description: 'Gjorde verktygsraden med sök och "markera alla som lästa" permanent fastklistrad i toppen av skärmen så att den alltid finns till hands när man scrollar i flödet och prio-fliken.'
+      },
+      {
+        type: 'ui',
+        title: 'Diskret polling-avisering på svenska',
+        description: 'Gjorde feed-hämtningens popup till en kompakt, diskret liten piller-avisering på svenska med kortare visningstid och automatisk stängning så fort hämtningen slutförts.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.16',
     date: '2026-09-12',
     title: 'Tydliga och responsiva knappar för inställningsflikar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',
