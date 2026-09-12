@@ -9,6 +9,10 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  const deviceId = localStorage.getItem('rss_device_id');
+  if (deviceId) {
+    config.headers['X-Device-Id'] = deviceId;
+  }
   return config;
 });
 

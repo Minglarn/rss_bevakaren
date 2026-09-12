@@ -55,6 +55,7 @@ class PushSubscriptionBase(BaseModel):
     endpoint: str
     p256dh: str
     auth: str
+    device_id: Optional[str] = ""
 
 class PushSubscriptionCreate(PushSubscriptionBase):
     pass
@@ -63,6 +64,7 @@ class PushSubscriptionResponse(PushSubscriptionBase):
     id: int
     user_id: int
     user_agent: Optional[str] = ""
+    device_id: Optional[str] = ""
     created_at: Optional[int] = 0
     updated_at: Optional[int] = 0
 
@@ -74,6 +76,7 @@ class PushDeviceInfo(BaseModel):
     endpoint_snippet: str
     device_name: str
     user_agent: Optional[str] = ""
+    device_id: Optional[str] = ""
     created_at: Optional[int] = 0
     updated_at: Optional[int] = 0
     is_current: Optional[bool] = False

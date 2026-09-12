@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.23',
+    date: '2026-09-12',
+    title: 'Stabila enhets-ID:n för Web Push och eliminering av enhetsdubbletter',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Klientbaserat stabilt enhets-ID',
+        description: 'Införde unika beständiga enhets-ID:n per webbläsare i localStorage som skickas med i alla anrop, vilket säkerställer att återkommande sessioner återanvänder samma enhetspost.'
+      },
+      {
+        type: 'fix',
+        title: 'Eliminerade återregistrering och tokengenerering vid refresh',
+        description: 'Tog bort den opålitliga byte-jämförelsen mot PushManager på mobila Chromium-enheter. Befintliga pushprenumerationer återanvänds nu stabilt utan att kasta bort FCM-token vid siduppdatering.'
+      },
+      {
+        type: 'feature',
+        title: 'Automatisk sanering av gamla enhetsregistreringar',
+        description: 'Backend genomför nu automatisk sammanslagning och städning av föräldralösa registreringar från samma webbläsare så att listan över aktiva enheter hålls ren och korrekt.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.22',
     date: '2026-09-12',
     title: 'Geografisk platsvalidering vid händelseklustring och UI-förbättringar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

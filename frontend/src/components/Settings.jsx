@@ -379,6 +379,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       }
       localStorage.setItem('rss_push_unsubscribed', 'true');
       localStorage.removeItem('rss_push_enabled');
+      localStorage.removeItem('rss_push_vapid_key');
       setPushEnabled(false);
       await fetchPushDevices();
       toast.success('Denna enhet ar nu avregistrerad fran pushnotiser.');
@@ -403,6 +404,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       }
       localStorage.setItem('rss_push_unsubscribed', 'true');
       localStorage.removeItem('rss_push_enabled');
+      localStorage.removeItem('rss_push_vapid_key');
       setPushEnabled(false);
       await fetchPushDevices();
       toast.success("Alla pushenheter har rensats fran databasen.");

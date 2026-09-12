@@ -185,6 +185,10 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE push_subscriptions ADD COLUMN user_agent TEXT DEFAULT ''"))
                     conn.commit()
                     print("[DB] Added user_agent column to push_subscriptions", flush=True)
+                if "device_id" not in s_cols:
+                    conn.execute(text("ALTER TABLE push_subscriptions ADD COLUMN device_id TEXT DEFAULT ''"))
+                    conn.commit()
+                    print("[DB] Added device_id column to push_subscriptions", flush=True)
                 if "created_at" not in s_cols:
                     conn.execute(text("ALTER TABLE push_subscriptions ADD COLUMN created_at INTEGER DEFAULT 0"))
                     conn.commit()
@@ -417,9 +421,10 @@ def run_db_migrations(db_path: str):
             except sqlite3.OperationalError:
                 pass
 
-        # Migration 14: Add user_agent, created_at, updated_at to push_subscriptions
+        # Migration 14: Add user_agent, device_id, created_at, updated_at to push_subscriptions
         for col_def in [
             ("user_agent", "TEXT DEFAULT ''"),
+            ("device_id", "TEXT DEFAULT ''"),
             ("created_at", "INTEGER DEFAULT 0"),
             ("updated_at", "INTEGER DEFAULT 0")
         ]:
@@ -2111,19 +2116,36 @@ def subscribe_push(
     user_agent = request.headers.get("user-agent", "")
     now_ts = int(time.time())
     dev_name = parse_device_name(user_agent)
+    device_id = (sub.device_id or "").strip()
+    if not device_id:
+        device_id = request.headers.get("x-device-id", "").strip()
 
-    existing = db.query(models.PushSubscription).filter(
-        models.PushSubscription.endpoint == sub.endpoint
-    ).first()
-    
+    # 1. Sök efter befintlig prenumeration via device_id (för samma användare)
+    existing = None
+    if device_id:
+        existing = db.query(models.PushSubscription).filter(
+            models.PushSubscription.user_id == current_user.id,
+            models.PushSubscription.device_id == device_id
+        ).first()
+
+    # 2. Om inte funnen via device_id, sök via exakt endpoint
+    if not existing:
+        existing = db.query(models.PushSubscription).filter(
+            models.PushSubscription.endpoint == sub.endpoint
+        ).first()
+
     if existing:
         existing.user_id = current_user.id
+        existing.endpoint = sub.endpoint
         existing.p256dh = sub.p256dh
         existing.auth = sub.auth
         existing.user_agent = user_agent
+        if device_id:
+            existing.device_id = device_id
         existing.updated_at = now_ts
         db.commit()
-        print(f"[Push] Uppdaterade prenumeration för enhet ({dev_name}) kopplad till '{current_user.username}'", flush=True)
+        active_sub_id = existing.id
+        print(f"[Push] Uppdaterade prenumeration för enhet ({dev_name}, dev_id={device_id[:8] if device_id else 'n/a'}) för '{current_user.username}'", flush=True)
     else:
         db_sub = models.PushSubscription(
             endpoint=sub.endpoint,
@@ -2131,21 +2153,63 @@ def subscribe_push(
             auth=sub.auth,
             user_id=current_user.id,
             user_agent=user_agent,
+            device_id=device_id,
             created_at=now_ts,
             updated_at=now_ts
         )
         db.add(db_sub)
         db.commit()
-        print(f"[Push] Registrerade ny prenumerationsenhet ({dev_name}) för '{current_user.username}'", flush=True)
-    
+        active_sub_id = db_sub.id
+        print(f"[Push] Registrerade ny prenumerationsenhet ({dev_name}, dev_id={device_id[:8] if device_id else 'n/a'}) för '{current_user.username}'", flush=True)
+
+    # 3. Automatisk städning av dubbletter:
+    # A) Om samma enhets-ID har andra rader
+    if device_id:
+        dup_devs = db.query(models.PushSubscription).filter(
+            models.PushSubscription.user_id == current_user.id,
+            models.PushSubscription.device_id == device_id,
+            models.PushSubscription.id != active_sub_id
+        ).all()
+        for d in dup_devs:
+            db.delete(d)
+        if dup_devs:
+            db.commit()
+
+    # B) Om samma användare har ackumulerat många äldre registreringar med identisk user_agent
+    # (städar automatiskt bort historiska dubbletter från samma webbläsare)
+    if user_agent:
+        ua_duplicates = db.query(models.PushSubscription).filter(
+            models.PushSubscription.user_id == current_user.id,
+            models.PushSubscription.user_agent == user_agent,
+            models.PushSubscription.id != active_sub_id
+        ).all()
+        if ua_duplicates:
+            for uad in ua_duplicates:
+                db.delete(uad)
+            db.commit()
+            print(f"[Push] Automatisk sanering: rensade {len(ua_duplicates)} äldre dubblettregistreringar för ({dev_name})", flush=True)
+
     return {"status": "ok"}
 
 @app.post("/push/unsubscribe", response_model=dict)
-def unsubscribe_push(sub: schemas.PushSubscriptionCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    existing = db.query(models.PushSubscription).filter(
-        models.PushSubscription.endpoint == sub.endpoint,
-        models.PushSubscription.user_id == current_user.id
-    ).first()
+def unsubscribe_push(
+    sub: schemas.PushSubscriptionCreate, 
+    request: Request,
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    device_id = (sub.device_id or "").strip() or request.headers.get("x-device-id", "").strip()
+    existing = None
+    if device_id:
+        existing = db.query(models.PushSubscription).filter(
+            models.PushSubscription.user_id == current_user.id,
+            models.PushSubscription.device_id == device_id
+        ).first()
+    if not existing:
+        existing = db.query(models.PushSubscription).filter(
+            models.PushSubscription.endpoint == sub.endpoint,
+            models.PushSubscription.user_id == current_user.id
+        ).first()
     
     if existing:
         db.delete(existing)
@@ -2161,17 +2225,27 @@ def get_user_push_subscriptions(
     current_user: models.User = Depends(auth.get_current_user)
 ):
     current_ua = request.headers.get("user-agent", "")
-    subs = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == current_user.id).all()
+    client_device_id = request.headers.get("x-device-id", "").strip()
+    subs = db.query(models.PushSubscription).filter(
+        models.PushSubscription.user_id == current_user.id
+    ).order_by(models.PushSubscription.updated_at.desc()).all()
+    
     result = []
     for sub in subs:
         endpoint_snip = sub.endpoint[-28:] if sub.endpoint else "okänd"
         dev_title = parse_device_name(sub.user_agent)
-        is_cur = bool(current_ua and sub.user_agent and current_ua == sub.user_agent)
+        is_cur = False
+        if client_device_id and sub.device_id:
+            is_cur = bool(client_device_id == sub.device_id)
+        elif current_ua and sub.user_agent and current_ua == sub.user_agent:
+            is_cur = True
+
         result.append(schemas.PushDeviceInfo(
             id=sub.id,
             endpoint_snippet=endpoint_snip,
             device_name=dev_title,
             user_agent=sub.user_agent or "",
+            device_id=sub.device_id or "",
             created_at=sub.created_at or 0,
             updated_at=sub.updated_at or 0,
             is_current=is_cur

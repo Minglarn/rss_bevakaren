@@ -50,6 +50,7 @@ class PushSubscription(Base):
     auth = Column(String)
     user_id = Column(Integer, ForeignKey("users.id"))
     user_agent = Column(String, default="")
+    device_id = Column(String, index=True, default="")
     created_at = Column(Integer, default=0)
     updated_at = Column(Integer, default=0)
 
