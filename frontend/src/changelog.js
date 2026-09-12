@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.15',
+    date: '2026-09-12',
+    title: 'Enradig och kompakt AI-analyslogg i Docker',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Enradig AI-logg',
+        description: 'Formaterade om loggutskriften för AI-analyserade artiklar så att användare, källa, ID, kategori, prioritet, svarstid och titel ryms på en enda koncis rad.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.14',
     date: '2026-09-12',
     title: 'Renodlad och koncis RSS-flödesloggning i Docker',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

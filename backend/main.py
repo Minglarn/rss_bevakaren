@@ -1301,10 +1301,9 @@ async def ai_processing_loop():
                                 flush=True
                             )
                         else:
-                            # Kompakt 2-raders format för vanliga artiklar
+                            # Kompakt 1-raders format för vanliga artiklar
                             print(
-                                f"[AI: {u_display}] {source or 'RSS'} #{art.id} | {art.category} | {art.priority.upper()} ({art.prio_score}p) | {dur}s\n"
-                                f"  \"{art.title}\"",
+                                f"[AI: {u_display}] {source or 'RSS'} #{art.id} | {art.category} | {art.priority.upper()} ({art.prio_score}p) | {dur}s | \"{art.title}\"",
                                 flush=True
                             )
 
