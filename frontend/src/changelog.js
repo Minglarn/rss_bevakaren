@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.10',
+    date: '2026-09-12',
+    title: 'Återaktiverat Briefing-kort på mobil med ren titelsättning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Återinfört expanderbart Briefing-kort i mobilflödet',
+        description: 'Återaktiverade det kompakta AI-briefing-kortet i mobilvyn med uppdatering och expandering, med rubriken renodlad till Briefing istället för Dagens Briefing.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.09',
     date: '2026-09-12',
     title: 'Sömlös hörnpassning för moderna händelsekort',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
