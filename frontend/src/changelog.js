@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.29',
+    date: '2026-09-12',
+    title: 'Finjusterad toast-positionering strax ovanför mobilens bottenmeny',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Toast placerad strax över bottenmenyn',
+        description: 'Justerade bottenavståndet för toasts på mobila skärmar så att notiser lägger sig strax över mobilens bottenmeny (8 px ovanför menyn) istället för att hamna för högt upp på skärmen.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.28',
     date: '2026-09-12',
     title: 'Automatisk statuskontroll och synkronisering av pushnotiser vid app-start och PWA-uppdateringar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

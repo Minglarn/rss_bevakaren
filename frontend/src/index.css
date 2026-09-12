@@ -1688,26 +1688,29 @@ input:checked + .toggle-slider:before {
   .desktop-only { display: flex !important; }
 }
 
-/* Toast-placering i botten (ovanfor mobilens bottombar), mork bakgrund, max 2 rader */
+/* Toast-placering i botten (strax ovanfor mobilens bottombar), mork bakgrund, max 2 rader */
 .my-toast-container {
   bottom: 24px !important;
+  top: auto !important;
   z-index: 9999 !important;
+  pointer-events: none !important;
 }
 
 .my-toast-container > div {
-  bottom: 24px !important;
+  bottom: 0 !important;
   top: auto !important;
   justify-content: center !important;
+  pointer-events: auto !important;
 }
 
 @media (max-width: 1024px) {
   .my-toast-container {
-    bottom: calc(65px + 14px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(65px + 8px + env(safe-area-inset-bottom, 0px)) !important;
+    top: auto !important;
   }
   .my-toast-container > div {
-    bottom: calc(65px + 14px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: 0 !important;
     top: auto !important;
-    justify-content: center !important;
   }
 }
 
