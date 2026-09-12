@@ -883,11 +883,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           </div>
         </div>
       </div>
-
-      <div className="dashboard-header" style={{ marginBottom: isPrioMode ? '0.35rem' : undefined }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-            {(feedId || isPrioMode) && (
+ 
+      {(feedId || isPrioMode) && (
+        <div className="dashboard-header" style={{ marginBottom: isPrioMode ? '0.35rem' : undefined }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
               <Link 
                 to="/" 
                 style={{ 
@@ -905,22 +905,21 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               >
                 <ArrowLeft size={18} />
               </Link>
-            )}
-            <h1 style={{ 
-              color: isPrioMode ? '#f97316' : 'var(--primary)', 
-              margin: 0, 
-              fontSize: isPrioMode ? '1.25rem' : '1.4rem', 
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              whiteSpace: 'nowrap'
-            }}>
-              {isPrioMode && <Flame size={20} style={{ color: '#f97316', flexShrink: 0 }} />}
-              {isPrioMode 
-                ? 'PRIO-FLÖDE' 
-                : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : "DAGENS NYHETER")}
-            </h1>
+              <h1 style={{ 
+                color: isPrioMode ? '#f97316' : 'var(--primary)', 
+                margin: 0, 
+                fontSize: isPrioMode ? '1.25rem' : '1.4rem', 
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                whiteSpace: 'nowrap'
+              }}>
+                {isPrioMode && <Flame size={20} style={{ color: '#f97316', flexShrink: 0 }} />}
+                {isPrioMode 
+                  ? 'PRIO-FLÖDE' 
+                  : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : '')}
+              </h1>
             {isPrioMode && (
               <span className="desktop-only" style={{ 
                 fontSize: '0.75rem', 
@@ -1057,6 +1056,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           </AnimatePresence>
         )}
       </div>
+      )}
 
       {/* Back to all events banner if viewing a specific article */}
       {articleId && (

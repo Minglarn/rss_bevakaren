@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.12.12',
+    date: '2026-09-12',
+    title: 'Statisk toppbar och borttagen text "Dagens Nyheter"',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Borttagen text "Dagens Nyheter"',
+        description: 'Tog bort den statiska rubriken "DAGENS NYHETER" från flödeshuvudet eftersom flödet kan innehålla artiklar från tidigare dagar.'
+      },
+      {
+        type: 'ui',
+        title: 'Fast toppbar (icke-klibbande)',
+        description: 'Ändrade verktygsfältet (toppbaren) så att den sitter fast i sidans topp och inte klibbar/följer med när användaren scrollar ner i flödet eller prio-fliken.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.11',
     date: '2026-09-12',
     title: 'Förstärkt svärta och kontrast för taggavdelaren',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'ui',

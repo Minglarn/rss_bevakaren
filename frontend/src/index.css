@@ -993,9 +993,8 @@ select:focus, input:focus {
   margin: -1rem -1rem 1.5rem -1rem;
   background-color: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
-  position: sticky;
-  top: 0;
-  z-index: 50;
+  position: relative;
+  z-index: 10;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
@@ -1057,7 +1056,7 @@ select:focus, input:focus {
     margin: -0.5rem -0.15rem 0.4rem -0.15rem; /* Matchar sido-padding 0.15rem exakt utan att sticka ut */
     max-width: 100%;
     box-sizing: border-box;
-    top: 0;
+    position: relative;
   }
   
   .scroll-to-top {
