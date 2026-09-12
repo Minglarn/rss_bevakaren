@@ -1,22 +1,25 @@
 export const CHANGELOG_DATA = [
   {
-    version: '2026.09.12.20',
+    version: '2026.09.12.22',
     date: '2026-09-12',
-    title: 'Åtgärdat importfel i backend (Tuple) för ren uppstart',
+    title: 'Geografisk platsvalidering vid händelseklustring och UI-förbättringar',
     badge: 'Senaste',
     highlights: [
       {
-        type: 'fix',
-        title: 'Korrigerad Tuple-typimport i AI-tjänsten',
-        description: 'Lade till Tuple i typing-importen i ai_service.py vilket åtgärdade uppstartskraschen i backend-containern och återställde WebSocket-anslutningen.'
-      }
-    ]
-  },
-  {
-    version: '2026.09.12.19',
-    date: '2026-09-12',
-    title: 'Renodlat rapport-kort, realtidsklustring och strukturerade Docker-loggar',
-    highlights: [
+        type: 'feature',
+        title: 'Geografisk platskontroll vid klustring',
+        description: 'Införde automatisk orts- och platsvalidering som förhindrar att händelser på olika platser i landet (t.ex. Sollefteå vs Östermalm) slås ihop, samt skärpte AI-embedding-tröskeln för blåljusartiklar.'
+      },
+      {
+        type: 'ui',
+        title: 'Korrigerat z-index och marginal för sidfältsknappen',
+        description: 'Höjde z-index för sidofältets minimeringsknapp och ökade vänsteravståndet i den klistrade toppbaren på desktop så att sökfältet inte klipper eller överlappar knappen.'
+      },
+      {
+        type: 'ui',
+        title: 'Optimerad ändringsloggs-modal på mobil',
+        description: 'Byggde om modalen till en ren och luftig bottom-sheet på mobila skärmar, eliminerade ruta-i-ruta-effekten och gav alla notiser ordentligt med läsutrymme.'
+      },
       {
         type: 'ui',
         title: 'Renodlat rapport-kort i mobilflödet',
@@ -29,8 +32,8 @@ export const CHANGELOG_DATA = [
       },
       {
         type: 'fix',
-        title: 'Enhetligt och strukturerat loggflöde i Docker',
-        description: 'Standardiserade loggprefix med användarnamn ([RSS: användare], [AI: användare], [MQTT: användare]), åtgärdade #None vid flödesinläsning och samlade MQTT-publiceringar på en tydlig rad.'
+        title: 'Tydlig [POLL] loggning i Docker',
+        description: 'Återinförde [POLL: användare] prefixet vid varje flödesavstämning och loggar nu tydligt både när det finns nya artiklar (med antal och ID-intervall) och när det är 0 nya artiklar.'
       }
     ]
   },

@@ -46,14 +46,19 @@ const WhatsNewModal = ({ forceOpen = false, onClose = null }) => {
   return (
     <div className="whats-new-overlay" onClick={handleDismiss}>
       <div className="whats-new-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Mobil Drag Handle */}
+        <div className="whats-new-drag-handle-container">
+          <div className="whats-new-drag-handle" />
+        </div>
+
         {/* Header */}
         <div className="whats-new-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0, flex: 1 }}>
             <div className="whats-new-icon-box">
-              <Sparkles size={24} />
+              <Sparkles size={22} />
             </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <h3 className="whats-new-title">
                   Nyheter i RSS-Bevakaren
                 </h3>
@@ -73,13 +78,13 @@ const WhatsNewModal = ({ forceOpen = false, onClose = null }) => {
             title="Stäng"
             aria-label="Stäng dialog"
           >
-            <X size={22} />
+            <X size={20} />
           </button>
         </div>
 
         {/* Scrollable Content */}
         <div className="whats-new-body">
-          <div>
+          <div className="whats-new-release-section">
             <h4 className="whats-new-release-title">
               {latestRelease.title}
             </h4>
@@ -88,18 +93,18 @@ const WhatsNewModal = ({ forceOpen = false, onClose = null }) => {
               {latestRelease.highlights.map((item, idx) => (
                 <div 
                   key={idx}
-                  className={`whats-new-item-card ${item.type}`}
+                  className={`whats-new-item-card ${item.type || 'feature'}`}
                 >
                   <div className="whats-new-item-icon">
                     {item.type === 'feature' ? (
-                      <Sparkles size={20} />
+                      <Sparkles size={18} />
                     ) : item.type === 'fix' ? (
-                      <Wrench size={20} />
+                      <Wrench size={18} />
                     ) : (
-                      <CheckCircle2 size={20} />
+                      <CheckCircle2 size={18} />
                     )}
                   </div>
-                  <div>
+                  <div className="whats-new-item-content">
                     <div className="whats-new-item-title">
                       {item.title}
                     </div>
@@ -119,13 +124,13 @@ const WhatsNewModal = ({ forceOpen = false, onClose = null }) => {
                 onClick={() => setShowHistory(!showHistory)}
                 className="whats-new-history-toggle"
               >
-                <History size={18} />
+                <History size={16} />
                 <span>{showHistory ? 'Dölj tidigare versioner' : 'Visa tidigare versionshistorik'}</span>
-                {showHistory ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                {showHistory ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </button>
 
               {showHistory && (
-                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="whats-new-history-list-wrapper">
                   {olderReleases.map((rel) => (
                     <div key={rel.version} className="whats-new-history-card">
                       <div className="whats-new-history-header">
@@ -141,8 +146,8 @@ const WhatsNewModal = ({ forceOpen = false, onClose = null }) => {
                       </div>
                       <ul className="whats-new-history-list">
                         {rel.highlights.map((h, i) => (
-                          <li key={i} style={{ marginBottom: '4px' }}>
-                            {h.description}
+                          <li key={i}>
+                            <strong>{h.title}:</strong> {h.description}
                           </li>
                         ))}
                       </ul>
@@ -154,7 +159,7 @@ const WhatsNewModal = ({ forceOpen = false, onClose = null }) => {
           )}
         </div>
 
-        {/* Footer */}
+        {/* Sticky Footer */}
         <div className="whats-new-footer">
           <span className="whats-new-footer-hint">
             Klicka på versionsnumret i menyn för att öppna ändringsloggen igen

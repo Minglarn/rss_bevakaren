@@ -178,7 +178,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           position: 'sticky',
           top: 0,
           height: '100vh',
-          zIndex: 100
+          zIndex: 150
         }}
       >
         {/* Toggle Collapse Button */}
@@ -199,7 +199,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             justifyContent: 'center',
             cursor: 'pointer',
             padding: 0,
-            zIndex: 10
+            zIndex: 200
           }}
         >
           {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}

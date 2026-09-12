@@ -916,16 +916,16 @@ async def polling_loop():
                             db.add(new_article)
                             new_articles.append(new_article)
                     
+                    feed_title = feed.title or "RSS"
+                    feed_user = db.query(models.User).filter(models.User.id == feed.user_id).first()
+                    feed_username = feed_user.username if feed_user else f"user_{feed.user_id}"
+
                     if new_articles:
                         db.commit()
-                        feed_title = feed.title or "RSS"
                         first_id = new_articles[0].id
                         last_id = new_articles[-1].id
                         id_range = f"#{first_id}" if first_id == last_id else f"#{first_id}-#{last_id}"
                         art_count_str = "1 ny artikel sparad" if len(new_articles) == 1 else f"{len(new_articles)} nya artiklar sparade"
-
-                        feed_user = db.query(models.User).filter(models.User.id == feed.user_id).first()
-                        feed_username = feed_user.username if feed_user else f"user_{feed.user_id}"
 
                         # Burst-skydd: Om fler än 2 artiklar i en och samma poll kvalificerar sig för push, begränsa till max 2 nyaste
                         if not is_initial_poll:
@@ -936,11 +936,11 @@ async def polling_loop():
                                 db.commit()
                                 print(f"[ANTI-BURST: {feed_username}] '{feed_title}': {len(push_eligible)} artiklar. Begränsar push till de 2 nyaste.", flush=True)
 
-                        print(f"[RSS: {feed_username}] {feed_title} | {art_count_str} ({id_range})", flush=True)
+                        print(f"[POLL: {feed_username}] {feed_title}: {art_count_str} ({id_range})", flush=True)
                         ai_wake_event.set()
                         
                         if is_initial_poll:
-                            print(f"[RSS: {feed_username}] {feed_title}: Initial inläsning slutförd, artiklar sparade tyst utan push-notiser.", flush=True)
+                            print(f"[POLL: {feed_username}] {feed_title}: Initial inläsning slutförd, artiklar sparade tyst utan push-notiser.", flush=True)
                             await manager.send_personal_message(f"INITIAL_ARTICLES:{feed.id}:{len(new_articles)}", feed.user_id)
                         else:
                             await manager.send_personal_message(f"NEW_ARTICLES:{feed.id}:{len(new_articles)}", feed.user_id)
@@ -1009,6 +1009,8 @@ async def polling_loop():
                                             image_url=art.image_url,
                                             context="Rå-Push"
                                         )
+                    else:
+                        print(f"[POLL: {feed_username}] {feed_title}: 0 nya artiklar", flush=True)
                     
                     # Update last polled time
                     feed.last_polled = int(time.time())
@@ -1632,9 +1634,23 @@ def get_dashboard_feeds(
         # Sortera i klustret: högst prio först, sedan nyast mottagen
         c_items.sort(key=lambda x: (x.get("prio_score", 0), x.get("received_ts", 0)), reverse=True)
         head = c_items[0]
-        head["cluster_size"] = len(c_items)
-        similar = []
+        head_locs = ai_service.extract_article_locations(head.get("title", ""), head.get("ai_summary", ""), head.get("tags"))
+
+        valid_c_items = [head]
         for other in c_items[1:]:
+            other_locs = ai_service.extract_article_locations(other.get("title", ""), other.get("ai_summary", ""), other.get("tags"))
+            if ai_service.has_location_conflict(head_locs, other_locs):
+                # Geografisk konflikt: Bryt ut artikeln till separat händelse direkt i UI
+                other["cluster_id"] = None
+                other["cluster_size"] = 1
+                other["similar_articles"] = []
+                unclustered.append(other)
+            else:
+                valid_c_items.append(other)
+
+        head["cluster_size"] = len(valid_c_items)
+        similar = []
+        for other in valid_c_items[1:]:
             similar.append({
                 "id": other["id"],
                 "feed_id": other["feed_id"],

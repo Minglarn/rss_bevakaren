@@ -1284,10 +1284,66 @@ def compute_text_similarity(title1: str, title2: str) -> float:
         return max(jaccard, 0.85)
     return jaccard
 
-def find_or_create_article_cluster(article_id: int, db: Any, similarity_threshold: float = 0.84) -> Tuple[Optional[int], float]:
+GENERIC_LOCATION_TERMS = {
+    'blåljus', 'trafikolycka', 'polis', 'ambulans', 'brand', 'räddningstjänst', 
+    'inbrott', 'olycka', 'stöld', 'misshandel', 'rån', 'mord', 'dråp', 'brott', 
+    'larm', 'varning', 'vittne', 'krasch', 'singelolycka', 'trafik', 'politik', 
+    'ekonomi', 'sport', 'inrikes', 'utrikes', 'teknik', 'motor', 'nyheter', 
+    'händelse', 'händelser', 'aktuellt', 'lördag', 'söndag', 'måndag', 'tisdag',
+    'onsdag', 'torsdag', 'fredag', 'idag', 'igår', 'september', 'oktober', 'november',
+    'december', 'januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti'
+}
+
+def extract_article_locations(title: str, text: str = "", tags: Any = None) -> set:
+    """Extraherar orter, stadsdelar, vägar och geografiska entiteter ur en artikel."""
+    locs = set()
+    if tags:
+        parsed_tags = tags
+        if isinstance(tags, str):
+            try:
+                parsed_tags = json.loads(tags)
+            except Exception:
+                parsed_tags = [t.strip() for t in tags.split(',') if t.strip()]
+        if isinstance(parsed_tags, list):
+            for t in parsed_tags:
+                if isinstance(t, str):
+                    t_clean = t.strip().lower()
+                    if t_clean and t_clean not in GENERIC_LOCATION_TERMS and len(t_clean) > 2:
+                        locs.add(t_clean)
+
+    full_text = f"{title or ''}. {text or ''}"
+    
+    # Polisen-format i titel: t.ex. "12 september 07.28, Trafikolycka, Sollefteå"
+    m_police = re.search(r',\s*([A-ZÅÄÖ][a-zåäöA-ZÅÄÖ\-]+(?:\s+[A-ZÅÄÖ][a-zåäöA-ZÅÄÖ\-]+)?)$', title or '')
+    if m_police:
+        w = m_police.group(1).strip().lower()
+        if w not in GENERIC_LOCATION_TERMS and len(w) > 2:
+            locs.add(w)
+
+    # Prepositionsmönster: i, på, vid, från, utanför, nära <Plats>
+    for m in re.finditer(r'\b(?:i|på|vid|från|utanför|nära|kring)\s+([A-ZÅÄÖ][a-zåäöA-ZÅÄÖ\-]+)\b', full_text):
+        w = m.group(1).strip().lower()
+        if w not in GENERIC_LOCATION_TERMS and len(w) > 2:
+            locs.add(w)
+
+    # Vägar och motorvägar
+    for m in re.finditer(r'\b(?:länsväg|riksväg|e|lv|rv)\s*\d+\b', full_text, re.IGNORECASE):
+        cleaned_road = re.sub(r'\s+', ' ', m.group(0).lower())
+        locs.add(cleaned_road)
+
+    return locs
+
+def has_location_conflict(locs1: set, locs2: set) -> bool:
+    """Returnerar True om båda artiklarna har identifierade platser men saknar gemensam plats (konflikt)."""
+    if not locs1 or not locs2:
+        return False
+    return len(locs1.intersection(locs2)) == 0
+
+def find_or_create_article_cluster(article_id: int, db: Any, similarity_threshold: float = 0.88) -> Tuple[Optional[int], float]:
     """
     Söker efter liknande artiklar inom 36 timmar och kopplar artikeln till ett kluster.
-    Använder semantisk Nomic-embedding om tillgängligt, annars heuristisk textlikhet.
+    Validerar geografisk plats (förhindrar att olyckor i olika orter slås ihop)
+    och använder semantisk Nomic-embedding om tillgängligt, annars heuristisk textlikhet.
     Returnerar (cluster_id, likhetsgrad).
     """
     if not db or not article_id:
@@ -1325,10 +1381,27 @@ def find_or_create_article_cluster(article_id: int, db: Any, similarity_threshol
             except Exception:
                 art_vec = None
 
+        art_locs = extract_article_locations(art.title or "", art.ai_summary or art.content or "", art.tags)
+        is_crime_or_accident = (art.category == "Blåljus") or any(k in (art.title or "").lower() for k in ["olycka", "krasch", "mord", "skjutning", "brand", "rån", "misshandel"])
+
         best_match = None
         best_sim = 0.0
 
         for cand in candidates:
+            # 1. Geografisk validering: Skilda orter/platser kan aldrig vara samma lokala händelse
+            cand_locs = extract_article_locations(cand.title or "", cand.ai_summary or cand.content or "", cand.tags)
+            if has_location_conflict(art_locs, cand_locs):
+                continue
+
+            # 2. Anpassa tröskel: Blåljus kräver högre precision såvida inte samma plats bekräftats
+            has_shared_loc = bool(art_locs and cand_locs and art_locs.intersection(cand_locs))
+            if is_crime_or_accident or cand.category == "Blåljus":
+                target_threshold = 0.86 if has_shared_loc else 0.91
+            elif has_shared_loc:
+                target_threshold = max(0.84, similarity_threshold - 0.03)
+            else:
+                target_threshold = similarity_threshold
+
             sim = 0.0
             if art_vec is not None and cand.embedding and cand.embedding.vector:
                 try:
@@ -1340,12 +1413,12 @@ def find_or_create_article_cluster(article_id: int, db: Any, similarity_threshol
                     sim = 0.0
 
             # Heuristisk fallback om vektorjämförelse inte räckte eller saknades
-            if sim < similarity_threshold:
+            if sim < target_threshold:
                 text_sim = compute_text_similarity(art.title or "", cand.title or "")
                 if text_sim > sim:
                     sim = text_sim
 
-            if sim >= similarity_threshold and sim > best_sim:
+            if sim >= target_threshold and sim > best_sim:
                 best_sim = sim
                 best_match = cand
 
