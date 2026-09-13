@@ -637,16 +637,15 @@ select:focus, input:focus {
 }
 
 .events-list.layout-compact {
-  align-items: start;
+  align-items: stretch;
 }
 
 .events-list.layout-compact .feed-card-swipe-container {
-  height: auto;
-  align-self: start;
+  height: 100%;
 }
 
 .events-list.layout-compact .feed-card {
-  height: auto;
+  height: 100%;
 }
 
 .events-list.layout-stretch {

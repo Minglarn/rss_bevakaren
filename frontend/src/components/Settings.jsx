@@ -145,14 +145,14 @@ const Settings = ({ onLogout }) => {
     return `Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {
   "category": "Välj den mest passande av följande kategorier: ${catsStr}",
-  "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. OBLIGATORISKT: 1. Ange ALLTID geografisk plats (ort, kommun, stad eller land) om det framgår i artikeln (t.ex. 'i Lekebergs kommun' eller 'i centrala Malmö'). 2. Undvik helt metasnack som 'rapporterar Expressen' eller 'enligt tidningen' – fokusera enbart på själva händelsen. 3. Om rubriken är klickbete eller undanhåller vem, vad eller var, ska svaret avslöjas rakt på sak i första meningen.",
+  "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. OBLIGATORISKT: 1. Ange ALLTID geografisk plats (ort, kommun, stad eller land) om det framgår i artikeln (t.ex. 'i Lekebergs kommun' eller 'i centrala Malmö'). 2. Undvik helt metasnack som 'rapporterar Expressen' eller 'enligt tidningen' – fokusera enbart på själva händelsen. 3. Om rubriken är Clickbait eller undanhåller vem, vad eller var, ska svaret avslöjas rakt på sak i första meningen.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
   "clickbait_reason": ""
 }
 Riktlinjer för is_clickbait (Var mycket restriktiv):
-- Sätt ENDAST is_clickbait till true vid uppenbara klickbeten där rubriken avsiktligt döljer själva händelsen eller ämnet med vaga formuleringar eller pronomen (t.ex. "Här slår han till", "Det här ska du aldrig göra", "Chockbeskedet", "Du anar inte vad som hände").
-- SAKLIGA NYHETER ska ALLTID ha is_clickbait: false! Rubriker som beskriver vad som faktiskt hänt (t.ex. "Knarkcontainer på väg till Sverige stoppades", "Skottlossning i Malmö", "Regeringen presenterar budgeten", "Brand i villa") är sakliga nyheter och är ALDRIG klickbete, även om de är korta eller inte nämner alla detaljer.
+- Sätt ENDAST is_clickbait till true vid uppenbara Clickbaits där rubriken avsiktligt döljer själva händelsen eller ämnet med vaga formuleringar eller pronomen (t.ex. "Här slår han till", "Det här ska du aldrig göra", "Chockbeskedet", "Du anar inte vad som hände").
+- SAKLIGA NYHETER ska ALLTID ha is_clickbait: false! Rubriker som beskriver vad som faktiskt hänt (t.ex. "Knarkcontainer på väg till Sverige stoppades", "Skottlossning i Malmö", "Regeringen presenterar budgeten", "Brand i villa") är sakliga nyheter och är ALDRIG Clickbait, även om de är korta eller inte nämner alla detaljer.
 - Vid minsta tveksamhet, sätt alltid is_clickbait: false.`;
   };
 
@@ -1293,7 +1293,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 <div>
                   <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Hämta fullständig artikeltext före AI-analys</div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.45, marginTop: '0.2rem' }}>
-                    Hämtar automatiskt artikelns brödtext från webbkällan innan AI-analysen genereras. Detta gör att AI-modellen kan avslöja vad klickbeten döljer (t.ex. orsaker, namn eller summor) och ger mer informativa sammanfattningar för korta RSS-ingresser.
+                    Hämtar automatiskt artikelns brödtext från webbkällan innan AI-analysen genereras. Detta gör att AI-modellen kan avslöja vad clickbaits döljer (t.ex. orsaker, namn eller summor) och ger mer informativa sammanfattningar för korta RSS-ingresser.
                   </div>
                 </div>
                 <label className="toggle-switch" style={{ flexShrink: 0 }}>
@@ -1354,7 +1354,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 Insikter & Källstatistik
               </h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0.35rem 0 0 0' }}>
-                Övervaka nyhetsvolymer per källa, upptäck flöden som slutat uppdatera sig samt granska källornas redaktionella kvalitet och klickbetesfrekvens.
+                Övervaka nyhetsvolymer per källa, upptäck flöden som slutat uppdatera sig samt granska källornas redaktionella kvalitet och clickbait-frekvens.
               </p>
             </div>
             <button
@@ -1941,7 +1941,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     cursor: 'pointer'
                   }}
                 >
-                  Mest klickbete
+                  Mest clickbait
                 </button>
               </div>
             </div>
@@ -2061,12 +2061,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                         />
                       </div>
 
-                      {/* Rad 3: Metadatarad för kvalitet och klickbete */}
+                      {/* Rad 3: Metadatarad för kvalitet och Clickbait */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: 'var(--text-muted)', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.1rem' }}>
                         <div style={{ display: 'flex', gap: '0.85rem' }}>
                           <span>Olästa: <strong style={{ color: 'var(--text-main)' }}>{source.unread_articles}</strong></span>
                           <span>Prio-nyheter: <strong style={{ color: '#f97316' }}>{source.prio_percentage}%</strong> ({source.prio_count} st)</span>
-                          <span>ClickBait: <strong style={{ color: source.clickbait_percentage > 15 ? '#ef4444' : 'var(--text-main)' }}>{source.clickbait_percentage}%</strong> ({source.clickbait_count} st)</span>
+                          <span>Clickbait: <strong style={{ color: source.clickbait_percentage > 15 ? '#ef4444' : 'var(--text-main)' }}>{source.clickbait_percentage}%</strong> ({source.clickbait_count} st)</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                           <span>Kvalitetsindex:</span>

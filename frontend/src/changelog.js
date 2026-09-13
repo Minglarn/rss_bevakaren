@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.13.06',
+    date: '2026-09-13',
+    title: 'Kompakt layout med sidotumnagel samt Clickbait-standardisering',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Sidotumnagel i kompakt läge (Väg 2)',
+        description: 'Artikelbilder visas nu som eleganta tumnaglar vid sidan av rubriken i kompakt läge, vilket ger spikraka och harmoniska rader utan tomma hål mellan raderna.'
+      },
+      {
+        type: 'improvement',
+        title: 'Standardisering till Clickbait',
+        description: 'Samtliga benämningar för klickbete har uppdaterats konsekvent till det etablerade begreppet Clickbait i hela gränssnittet och analysen.'
+      }
+    ]
+  },
+  {
     version: '2026.09.13.05',
     date: '2026-09-13',
     title: 'Åtgärdad bakgrundsfärg för knappen Flöden i mörkt tema',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

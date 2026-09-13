@@ -12,10 +12,10 @@ const DEFAULT_CATEGORIES = ['All', 'Technology', 'Politics', 'Emergency', 'Local
 
 const formatCategoryPrioReason = (reason, category) => {
   if (!reason) return '';
-  // Ta bort klickbetes-tillägg som t.ex. "(Klickbete: ...)" eller "(Klickbete-varning: ...)"
-  let cleaned = reason.replace(/\s*\((Klickbete|Klickbete-varning):.*?\)\s*$/i, '').trim();
-  // Om texten enbart bestod av klickbete-info, visa istället kategori-info om det finns
-  if (/^Klickbete(:|$)/i.test(cleaned)) {
+  // Ta bort Clickbait-tillägg som t.ex. "(Clickbait: ...)" eller "(Clickbait-varning: ...)"
+  let cleaned = reason.replace(/\s*\((Clickbait|ClickBait|Klickbete|Clickbait-varning|Klickbete-varning):.*?\)\s*$/i, '').trim();
+  // Om texten enbart bestod av Clickbait-info, visa istället kategori-info om det finns
+  if (/^(Clickbait|ClickBait|Klickbete)(:|$)/i.test(cleaned)) {
     return category ? `Kategori: ${category}` : '';
   }
   return cleaned;
@@ -1777,7 +1777,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           </span>
                         )}
 
-                        {/* Klickbetesvarning */}
+                        {/* Clickbait-varning */}
                         {shouldShowAi && Boolean(item.is_clickbait) && (
                           <span style={{
                             display: 'inline-flex',
@@ -1789,8 +1789,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             borderRadius: '4px',
                             fontSize: '0.7rem',
                             fontWeight: 700
-                          }} title={item.clickbait_reason || "Klickbetesvarning"}>
-                            <AlertTriangle size={12} /> Klickbete
+                          }} title={item.clickbait_reason || "Clickbait-varning"}>
+                            <AlertTriangle size={12} /> Clickbait
                           </span>
                         )}
                       </div>
@@ -1857,8 +1857,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             fontSize: '0.72rem',
                             fontWeight: 700,
                             letterSpacing: '0.3px'
-                          }} title={item.clickbait_reason || "Klickbetesvarning"}>
-                            <AlertTriangle size={12} /> Klickbetesvarning
+                          }} title={item.clickbait_reason || "Clickbait-varning"}>
+                            <AlertTriangle size={12} /> Clickbait-varning
                           </span>
                         )}
 
@@ -1942,23 +1942,58 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
                   {/* Main content padding wrapper */}
                   <div className="feed-card-content">
-                  {/* Title / Content */}
-                  <h3 className="feed-card-title">
-                    {decodeHtmlEntities(item.title)}
-                  </h3>
-                  
-                  {showImages && item.image_url && (
-                    <div 
-                      style={{ 
-                        width: '100%', 
-                        height: flowLayout === 'stretch' ? '200px' : '150px', 
-                        marginBottom: '1rem', 
-                        borderRadius: '8px', 
-                        overflow: 'hidden'
-                      }}
-                    >
-                      <img src={item.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {/* Title / Content + Thumbnail i kompakt läge (Väg 2) */}
+                  {flowLayout === 'compact' ? (
+                    <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                      <h3 className="feed-card-title" style={{ flex: 1, margin: 0 }}>
+                        {decodeHtmlEntities(item.title)}
+                      </h3>
+                      {showImages && item.image_url && (
+                        <div 
+                          style={{ 
+                            width: '92px', 
+                            height: '76px', 
+                            borderRadius: '8px', 
+                            overflow: 'hidden',
+                            flexShrink: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.08)'
+                          }}
+                        >
+                          <img 
+                            src={item.image_url} 
+                            alt="" 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
+                          />
+                        </div>
+                      )}
                     </div>
+                  ) : (
+                    <>
+                      <h3 className="feed-card-title">
+                        {decodeHtmlEntities(item.title)}
+                      </h3>
+                      
+                      {showImages && item.image_url && (
+                        <div 
+                          style={{ 
+                            width: '100%', 
+                            height: '200px', 
+                            marginBottom: '1rem', 
+                            borderRadius: '8px', 
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <img 
+                            src={item.image_url} 
+                            alt="" 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                   
                   {/* AI-sammanfattning & Laddningsläge / Fallback */}
@@ -2082,7 +2117,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             }}>
                               <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444', fontStyle: 'normal' }} />
                               <span>
-                                <strong style={{ color: '#ef4444', fontStyle: 'normal' }}>Klickbete:</strong>{' '}
+                                <strong style={{ color: '#ef4444', fontStyle: 'normal' }}>Clickbait:</strong>{' '}
                                 {item.clickbait_reason || "Rubriken undanhåller centrala fakta eller överdriver för att locka klick. Fakta har lyfts fram i sammanfattningen ovan."}
                               </span>
                             </div>

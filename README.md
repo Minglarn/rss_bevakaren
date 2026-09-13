@@ -1,13 +1,13 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.13.05-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.13.06-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
 
 ![Dashboard Screenshot](screenshot_1.jpg)
 
-RSS-Bevakaren är ett modernt, självhostat system för att övervaka, filtrera, prioritera och presentera RSS- och Atom-flöden i realtid. Systemet kombinerar en robust Python-backend, en responsiv React-frontend och en kraftfull lokal AI-motor för automatisk analys, sammanfattning, klickbetesdetektering och händelseprioritering.
+RSS-Bevakaren är ett modernt, självhostat system för att övervaka, filtrera, prioritera och presentera RSS- och Atom-flöden i realtid. Systemet kombinerar en robust Python-backend, en responsiv React-frontend och en kraftfull lokal AI-motor för automatisk analys, sammanfattning, Clickbait-detektering och händelseprioritering.
 
 ---
 
@@ -19,7 +19,7 @@ RSS-Bevakaren är ett modernt, självhostat system för att övervaka, filtrera,
 - **Fleranvändararkitektur:** Säker autentisering med JWT-tokens där varje användare har sina egna flöden, filter och personliga AI-preferenser.
 - **Flödeshantering:** Lägg till, organisera och ta bort RSS- och Atom-flöden. Inbyggt stöd för i stort sett alla standard-RSS/Atom-specifikationer och WordPress-flöden.
 - **Två visningslägen (AI-flöde & Klassisk RSS):** Välj mellan ett AI-berikat flöde med koncisa sammanfattningar eller en snabb, minimalistisk råtextvy.
-- **Klickbetesdetektering och Anti-Klickbete:** Intelligent identifiering av sensationella och undanhållande rubriker. AI-sammanfattningen avslöjar fakta direkt, varningsbrickor flaggar artikeln och klickbete nedprioriteras automatiskt från prio-flödet.
+- **Clickbait-detektering och Anti-Clickbait:** Intelligent identifiering av sensationella och undanhållande rubriker. AI-sammanfattningen avslöjar fakta direkt, varningsbrickor flaggar artikeln och Clickbait nedprioriteras automatiskt från prio-flödet.
 - **AI-skelettladdning & Mjuka övergångar:** Nya artiklar visar en diskret laddningsindikator medan AI-analys pågår och tonar in mjukt utan layoutskiftningar.
 - **Robust timeout & Offline-fallback:** Om din lokala LLM (t.ex. LM Studio) är offline eller tar för lång tid faller artiklar automatiskt tillbaka till RSS-originaltexten efter 45 sekunder, eller direkt med ett klick.
 - **Dedikerat Prio-flöde:** Realtidsprioritering baserad på dina anpassade regler, bevakade sökord och kategorivikter.
@@ -38,12 +38,12 @@ RSS-Bevakaren har en inbyggd AI-pipeline som ansluter till lokala språkmodeller
 Varje inkommande artikel bearbetas automatiskt i bakgrunden:
 
 1. **Koncisa sammanfattningar:** Skapar en informativ sammanfattning på 1-2 meningar som gör att du förstår kärnan i händelsen på några sekunder.
-2. **Klickbetesdetektering (Anti-Klickbete):**
+2. **Clickbait-detektering (Anti-Clickbait):**
    - Identifierar sensationalism, överdrifter och avsiktliga kunskapsluckor i rubriker.
-   - Flaggar artikeln med en tydlig varningsbricka: `Klickbete-varning`.
-   - Visar förklaringen direkt i sammanfattningsblocket (*Klickbete-notis: ...*), vilket gör den lättläst även på mobil.
-   - **Avslöjar klickbetet:** Sammanfattningen instrueras att omedelbart lyfta fram fakta och besvara rubrikens gåta i den allra första meningen.
-   - **Rensar prio-flödet:** Klickbetesartiklar begränsas automatiskt till låg prioritet (maximalt 25 poäng) för att undvika skräp i ditt prio-flöde.
+   - Flaggar artikeln med en tydlig varningsbricka: `Clickbait-varning`.
+   - Visar förklaringen direkt i sammanfattningsblocket (*Clickbait-notis: ...*), vilket gör den lättläst även på mobil.
+   - **Avslöjar hemlighållandet:** Sammanfattningen instrueras att omedelbart lyfta fram fakta och besvara rubrikens gåta i den allra första meningen.
+   - **Rensar prio-flödet:** Clickbait-artiklar begränsas automatiskt till låg prioritet (maximalt 25 poäng) för att undvika skräp i ditt prio-flöde.
 3. **Kategorisering:** Klassificerar artiklar i dina valda kategorier (Teknik, Politik, Blåljus, Ekonomi, Lokalt, Motor, etc.).
 4. **Relevanspoäng & Prioritering:** Poängsätter artiklar från 0 till 100 baserat på dina personliga vikter och sökordsregler.
 5. **Automatiska taggar:** Extraherar relevanta ämnestaggar för direkt filtrering via hashtaggar.
@@ -69,7 +69,7 @@ Lägg till viktiga sökord eller platser i *Prioriterade sökord & ämnen* (t.ex
 - Alla artiklar som matchar ett bevakat sökord får **omedelbart 100 poäng och Hög prioritet**, oavsett kategori.
 
 #### 4. Anpassad systemprompt
-Granska och redigera den aktiva systemprompten direkt i webbgränssnittet. Du kan justera ton, kategoridefinitioner, klickbeteskriterier eller språkinställningar direkt.
+Granska och redigera den aktiva systemprompten direkt i webbgränssnittet. Du kan justera ton, kategoridefinitioner, Clickbait-kriterier eller språkinställningar direkt.
 
 ---
 
@@ -77,7 +77,7 @@ Granska och redigera den aktiva systemprompten direkt i webbgränssnittet. Du ka
 
 Konfigurera ditt föredragna visningsläge under **Inställningar -> Utseende**:
 
-- **AI-flöde (Sammanfattningar & Taggar):** Visar AI-sammanfattningar, kategoritaggar, klickbetesvarningar och prioritetsindikatorer. Obearbetade artiklar visar ett skelettladdningsläge (*Analyserar med AI...*).
+- **AI-flöde (Sammanfattningar & Taggar):** Visar AI-sammanfattningar, kategoritaggar, Clickbait-varningar och prioritetsindikatorer. Obearbetade artiklar visar ett skelettladdningsläge (*Analyserar med AI...*).
 - **Klassiskt RSS-flöde (Råtext utan AI):** Ett snabbt och avskalat flöde som visar ursprunglig ingresstext från RSS-flödet utan AI-bearbetning.
 
 Oavsett inställning finns **PRIO-flödet** alltid tillgängligt i navigeringen för att följa högprioriterade händelser.
@@ -221,7 +221,7 @@ Varje meddelande som publiceras innehåller en strukturerad JSON-nyttolast med f
 | `prio_score` | heltal | Relevanspoäng från `0` till `100`. |
 | `prio_reason` | sträng | Motivering för poängen eller träff på bevakningsord. |
 | `matched_keywords` | lista[sträng] | Lista med bevakade sökord som matchats för användaren. |
-| `is_clickbait`| boolean | `true` om AI identifierat klickbetestaktik i rubriken. |
+| `is_clickbait`| boolean | `true` om AI identifierat Clickbait-taktik i rubriken. |
 | `clickbait_reason` | sträng | Förklaring av vad rubriken undanhöll och bekräftelse på att fakta lyfts fram. |
 | `category` | sträng | AI-klassificerad kategori (t.ex. `Blåljus`, `Ekonomi`, `Teknik`, `Lokalt`). |
 | `tags` | lista[sträng] | AI-genererade ämnestaggar för snabb indelning. |
