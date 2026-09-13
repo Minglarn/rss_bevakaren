@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.13.09',
+    date: '2026-09-13',
+    title: 'Återförsök vid AI-fel och stabil svepning på samtliga artikelkort',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Smidig swipe på alla kort inklusive det första',
+        description: 'Avlägsnade felaktig pointer-blockering och tilldelade unika nycklar till samtliga swipe-kort. Det första kortet i flödet reagerar nu omedelbart och följsamt på horisontella sveprörelser.'
+      },
+      {
+        type: 'improvement',
+        title: 'Automatisk retry-mekanism för AI-analys',
+        description: 'Om analys via LM Studio misslyckas för en artikel görs nu upp till 3 automatiska återförsök med tidsfördröjning istället för att artikeln avbryts direkt. Tidigare misslyckade artiklar återställs automatiskt för ny analys.'
+      }
+    ]
+  },
+  {
     version: '2026.09.13.08',
     date: '2026-09-13',
     title: 'Expanderbar bild till fullbredd vid klick på artikelkort',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

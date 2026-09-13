@@ -1076,6 +1076,8 @@ def safe_bg_save_embedding(art_id: int, title: str, summary: str):
         sess.close()
 
 ai_wake_event = asyncio.Event()
+ai_failed_attempts: dict[int, int] = {}
+ai_retry_after: dict[int, float] = {}
 
 async def ai_processing_loop():
     print("Background AI enrichment loop started", flush=True)
@@ -1097,6 +1099,23 @@ async def ai_processing_loop():
                 now = int(time.time())
                 cutoff_ts = now - (max_age_hours * 3600)
 
+                # 0. Återställ automatiskt tidigare artiklar med tillfälligt analysfel så att de får en ny chans
+                try:
+                    resets = db.query(models.Article).filter(
+                        models.Article.prio_reason.like("%Standardprioritering (AI-analys kunde inte slutföras)%"),
+                        models.Article.received_ts >= cutoff_ts,
+                        or_(models.Article.is_read == 0, models.Article.is_read == None)
+                    ).update({
+                        models.Article.ai_processed: 0,
+                        models.Article.prio_reason: "",
+                        models.Article.ai_summary: None
+                    }, synchronize_session=False)
+                    if resets > 0:
+                        db.commit()
+                        print(f"[AI] Återställde {resets} tidigare misslyckade artiklar för ny AI-analys.", flush=True)
+                except Exception:
+                    pass
+
                 # 1. Arkivera/hoppa automatiskt över gamla artiklar (> max_age_hours) och artiklar som redan är lästa
                 # så att LM Studio inte slösar tid och resurser på historisk backlog
                 db.query(models.Article).filter(
@@ -1108,13 +1127,17 @@ async def ai_processing_loop():
                 ).update({models.Article.ai_processed: 2}, synchronize_session=False)
                 db.commit()
 
-                # 2. Hämta endast färska, olästa artiklar från aktiva flöden som inkommit inom tidsfönstret
-                unprocessed = db.query(models.Article).join(models.Feed).filter(
+                # 2. Hämta färska, olästa artiklar från aktiva flöden som inkommit inom tidsfönstret
+                cur_time = time.time()
+                raw_unprocessed = db.query(models.Article).join(models.Feed).filter(
                     or_(models.Article.ai_processed == 0, models.Article.ai_processed == None),
                     models.Article.received_ts >= cutoff_ts,
                     or_(models.Article.is_read == 0, models.Article.is_read == None),
                     models.Feed.include_in_dashboard == 1
-                ).order_by(models.Article.received_ts.desc()).limit(3).all()
+                ).order_by(models.Article.received_ts.desc()).limit(12).all()
+                
+                # Filtrera bort artiklar som har en aktiv retry-fördröjning
+                unprocessed = [art for art in raw_unprocessed if ai_retry_after.get(art.id, 0) <= cur_time][:3]
                 
                 if not unprocessed:
                     db.close()
@@ -1348,6 +1371,10 @@ async def ai_processing_loop():
                         except Exception as mqtt_err:
                             print(f"[MQTT: {u_display}] Fel vid publicering av berikad artikel {art.id}: {mqtt_err}", flush=True)
 
+                        # Rensa eventuella tidigare felaktiga försök vid framgång
+                        ai_failed_attempts.pop(art.id, None)
+                        ai_retry_after.pop(art.id, None)
+
                         # Skicka WS-signal om AI-uppdatering till användaren
                         if user_id:
                             await manager.send_personal_message(f"AI_UPDATED:{art.id}", user_id)
@@ -1359,16 +1386,26 @@ async def ai_processing_loop():
                             await asyncio.sleep(10)
                             break
                         else:
-                            # LM Studio är online men analysen kunde inte slutföras för denna artikel.
-                            # Sätt standardvärden så att inte en enskild artikel blockerar hela kön i en oändlig loop.
-                            print(f"[AI] Varning: Analys misslyckades för artikel {art.id}. Tilldelar standardvärden så kön inte blockeras.", flush=True)
-                            art.ai_processed = 1
-                            art.category = "Övrigt"
-                            art.priority = "medium"
-                            art.prio_score = 50
-                            art.prio_reason = "Standardprioritering (AI-analys kunde inte slutföras)"
-                            art.tags = "[]"
-                            db.commit()
+                            # LM Studio är online men analysen kunde inte slutföras för denna artikel
+                            attempts = ai_failed_attempts.get(art.id, 0) + 1
+                            ai_failed_attempts[art.id] = attempts
+
+                            if attempts < 3:
+                                # Skjut upp artikeln 45 sekunder så att kön kan fortsätta med andra artiklar
+                                ai_retry_after[art.id] = time.time() + 45
+                                print(f"[AI] Artikel #{art.id} ('{art.title[:45]}...') misslyckades vid försök {attempts}/3. Schemalägger automatiskt återförsök om 45 sekunder.", flush=True)
+                            else:
+                                # 3 försök har misslyckats. Tilldela standardvärden så att inte kön blockeras permanent
+                                print(f"[AI] Varning: 3 automatiska försök misslyckades för artikel #{art.id}. Tilldelar standardvärden så kön inte blockeras.", flush=True)
+                                art.ai_processed = 1
+                                art.category = "Övrigt"
+                                art.priority = "medium"
+                                art.prio_score = 50
+                                art.prio_reason = "Standardprioritering (AI-analys kunde inte slutföras)"
+                                art.tags = "[]"
+                                db.commit()
+                                ai_failed_attempts.pop(art.id, None)
+                                ai_retry_after.pop(art.id, None)
                         
                 # 3. Bakgrundsvektorisering: Vektorisera färska artiklar som saknar embedding
                 try:

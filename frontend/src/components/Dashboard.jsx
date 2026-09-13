@@ -139,9 +139,6 @@ const SwipeableArticleCard = ({
   const [dismissDir, setDismissDir] = useState(1);
   const passedRef = useRef(false);
   const isDraggingRef = useRef(false);
-  const startYRef = useRef(0);
-  const startXRef = useRef(0);
-  const isVerticalScrollRef = useRef(false);
 
   // Återställ alltid tillstånd om komponenten återanvänds för ett annat element
   useEffect(() => {
@@ -155,28 +152,6 @@ const SwipeableArticleCard = ({
   // Mjuka dynamiska transformeringar i realtid
   const bgOpacity = useTransform(x, [-140, -40, 0, 40, 140], [0.4, 0.15, 0, 0.15, 0.4]);
   const iconScale = useTransform(x, [-130, -50, 0, 50, 130], [1.15, 0.85, 0.5, 0.85, 1.15]);
-
-  const handlePointerDown = (e) => {
-    if (isDismissing) return;
-    startYRef.current = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
-    startXRef.current = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
-    isVerticalScrollRef.current = false;
-    passedRef.current = false;
-    setIsPassed(false);
-  };
-
-  const handlePointerMove = (e) => {
-    if (isDismissing || isDraggingRef.current) return;
-    const currentY = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
-    const currentX = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
-    const diffY = Math.abs(currentY - startYRef.current);
-    const diffX = Math.abs(currentX - startXRef.current);
-
-    // Om fingret rör sig mer i höjdled än sidled: prioritera vertikal scroll
-    if (diffY > 7 && diffY > diffX * 1.3) {
-      isVerticalScrollRef.current = true;
-    }
-  };
 
   const handleDragStart = () => {
     isDraggingRef.current = true;
@@ -274,8 +249,6 @@ const SwipeableArticleCard = ({
         opacity: { duration: 0.22, ease: "easeOut" },
         scale: { duration: 0.22, ease: "easeOut" }
       }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
     >
       {/* Dynamisk bakgrundsindikator med realtidsrespons */}
       <motion.div
@@ -338,10 +311,10 @@ const SwipeableArticleCard = ({
           touchAction: 'pan-y'
         }}
         className={className}
-        drag={isDismissing || isVerticalScrollRef.current ? false : "x"}
+        drag={isDismissing ? false : "x"}
         dragDirectionLock
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.5}
+        dragElastic={0.6}
         dragMomentum={false}
         onDragStart={handleDragStart}
         onDrag={handleDrag}
@@ -1636,6 +1609,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   </div>
                 )}
                 <SwipeableArticleCard
+                  key={item.id}
                   itemId={item.id}
                   isRead={Boolean(isArticleRead(item.id, item.is_read))}
                   swipeEnabled={swipeEnabled}
@@ -1918,11 +1892,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           </button>
                         )}
 
-                        {prioEnabled && isPrioMode && (
+                        {prioEnabled && (!item.ai_summary || isPrioMode) && (
                           <button
                             className="feed-card-share-btn"
                             onClick={(e) => triggerAnalysis(e, item.id)}
-                            title={item.ai_processed ? "Kör om AI-analys" : "Kör AI-analys nu"}
+                            title={item.ai_summary ? "Kör om AI-analys" : "Kör AI-analys nu"}
                             style={{ color: analyzingIds.has(item.id) ? '#f97316' : undefined }}
                           >
                             {analyzingIds.has(item.id) ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
