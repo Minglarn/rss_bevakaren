@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.13.10',
+    date: '2026-09-13',
+    title: 'Åtgärdad saknad import av Calendar-ikon',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Åtgärdad Calendar ReferenceError-krasch',
+        description: 'Lade till den saknade importen av Calendar-ikonen från lucide-react i Dashboard, vilket omedelbart åtgärdar webbläsarkraschen vid rendering av datumavskiljare.'
+      }
+    ]
+  },
+  {
     version: '2026.09.13.09',
     date: '2026-09-13',
     title: 'Återförsök vid AI-fel och stabil svepning på samtliga artikelkort',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
