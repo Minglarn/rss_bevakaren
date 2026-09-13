@@ -143,6 +143,15 @@ const SwipeableArticleCard = ({
   const startXRef = useRef(0);
   const isVerticalScrollRef = useRef(false);
 
+  // Återställ alltid tillstånd om komponenten återanvänds för ett annat element
+  useEffect(() => {
+    setIsDismissing(false);
+    setIsPassed(false);
+    x.set(0);
+    passedRef.current = false;
+    isDraggingRef.current = false;
+  }, [itemId, x]);
+
   // Mjuka dynamiska transformeringar i realtid
   const bgOpacity = useTransform(x, [-140, -40, 0, 40, 140], [0.4, 0.15, 0, 0.15, 0.4]);
   const iconScale = useTransform(x, [-130, -50, 0, 50, 130], [1.15, 0.85, 0.5, 0.85, 1.15]);
@@ -252,6 +261,7 @@ const SwipeableArticleCard = ({
 
   return (
     <motion.div 
+      layout="position"
       className="feed-card-swipe-container"
       style={{
         position: 'relative',
@@ -259,7 +269,11 @@ const SwipeableArticleCard = ({
         borderRadius: '12px'
       }}
       animate={isDismissing ? { opacity: 0, scale: 0.96 } : { opacity: 1, scale: 1 }}
-      transition={{ duration: 0.22, ease: "easeOut" }}
+      transition={{
+        layout: { duration: 0.25, ease: "easeOut" },
+        opacity: { duration: 0.22, ease: "easeOut" },
+        scale: { duration: 0.22, ease: "easeOut" }
+      }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
     >
@@ -966,17 +980,18 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   };
 
   const handleExpand = async (index, link, id) => {
+    const itemKey = id !== undefined ? id : index;
     setExpandedItems(prev => {
-      const isExpanding = !prev[index];
+      const isExpanding = !prev[itemKey];
       
       return {
         ...prev,
-        [index]: isExpanding
+        [itemKey]: isExpanding
       };
     });
     
     // If expanding and content not scraped yet
-    if (!expandedItems[index] && !scrapedContents[link]) {
+    if (!expandedItems[itemKey] && !scrapedContents[link]) {
       const feedItems = allFeeds.filter(f => f.link === link);
       const preloadedContent = feedItems.find(f => f.content)?.content;
       if (preloadedContent) {
@@ -1576,7 +1591,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             }
             
             return (
-              <React.Fragment key={index}>
+              <React.Fragment key={item.id || index}>
                 {showDivider && (
                   <div className={`divider-header ${index === 0 ? 'first-divider' : ''}`} style={{ 
                     display: 'flex', 
@@ -2149,7 +2164,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   )}
                   
                   {/* Expanded Content (Full scraped text) */}
-                  {expandedItems[index] && (
+                  {Boolean(expandedItems[item.id] || expandedItems[index]) && (
                     <motion.div 
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}

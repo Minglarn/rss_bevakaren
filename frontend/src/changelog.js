@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.13.03',
+    date: '2026-09-13',
+    title: 'Åtgärdat glapp och osynliga kort vid swipe av översta artikelkortet',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Stabil nyckelhantering för artikelflödet',
+        description: 'Ersatt index-baserade nycklar med unika artikel-ID:n i listan. Detta förhindrar att efterföljande artikel ärver ut-toningsläge och blir osynlig när det översta kortet sveps bort.'
+      },
+      {
+        type: 'improvement',
+        title: 'Mjuk positionsövergång vid borttagning',
+        description: 'Korten under glider nu mjukt och naturligt uppåt när ett överliggande kort försvinner, vilket eliminerar alla visuella tomrum och glapp i flödet.'
+      }
+    ]
+  },
+  {
     version: '2026.09.13.02',
     date: '2026-09-13',
     title: 'Mjuk swipe-fade och naturlig ut-toning vid markering av artikelkort',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
