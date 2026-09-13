@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText, Smartphone } from 'lucide-react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
@@ -135,6 +135,8 @@ const SwipeableArticleCard = ({
 }) => {
   const x = useMotionValue(0);
   const [isPassed, setIsPassed] = useState(false);
+  const [isDismissing, setIsDismissing] = useState(false);
+  const [dismissDir, setDismissDir] = useState(1);
   const passedRef = useRef(false);
   const isDraggingRef = useRef(false);
   const startYRef = useRef(0);
@@ -146,6 +148,7 @@ const SwipeableArticleCard = ({
   const iconScale = useTransform(x, [-130, -50, 0, 50, 130], [1.15, 0.85, 0.5, 0.85, 1.15]);
 
   const handlePointerDown = (e) => {
+    if (isDismissing) return;
     startYRef.current = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
     startXRef.current = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
     isVerticalScrollRef.current = false;
@@ -154,7 +157,7 @@ const SwipeableArticleCard = ({
   };
 
   const handlePointerMove = (e) => {
-    if (isDraggingRef.current) return;
+    if (isDismissing || isDraggingRef.current) return;
     const currentY = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
     const currentX = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
     const diffY = Math.abs(currentY - startYRef.current);
@@ -171,6 +174,7 @@ const SwipeableArticleCard = ({
   };
 
   const handleDrag = (e, info) => {
+    if (isDismissing) return;
     const dist = Math.abs(info.offset.x);
     const SWIPE_THRESHOLD = 110;
 
@@ -207,11 +211,22 @@ const SwipeableArticleCard = ({
 
     // Om användaren har dragit tillbaka kortet mot centrum: utför ALDRIG åtgärd
     if (isReleaseBeyondThreshold || isVelocityFlick) {
-      if (isRead) {
-        onMarkAsUnread(itemId);
-      } else {
-        onMarkAsRead(itemId);
-      }
+      const dir = info.offset.x !== 0 ? Math.sign(info.offset.x) : 1;
+      setDismissDir(dir);
+      setIsDismissing(true);
+
+      // Mjuk slide utåt i svepriktningen
+      animate(x, dir * 350, { duration: 0.22, ease: [0.25, 1, 0.5, 1] });
+
+      // Mjuk ut-toning (fade) så kortet glider och tonar ut mjukt under 220ms istället för att försvinna tvärt
+      setTimeout(() => {
+        if (isRead) {
+          onMarkAsUnread(itemId);
+        } else {
+          onMarkAsRead(itemId);
+        }
+      }, 220);
+      return;
     }
 
     passedRef.current = false;
@@ -236,13 +251,15 @@ const SwipeableArticleCard = ({
   }
 
   return (
-    <div 
+    <motion.div 
       className="feed-card-swipe-container"
       style={{
         position: 'relative',
         overflow: 'hidden',
         borderRadius: '12px'
       }}
+      animate={isDismissing ? { opacity: 0, scale: 0.96 } : { opacity: 1, scale: 1 }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
     >
@@ -255,7 +272,7 @@ const SwipeableArticleCard = ({
           backgroundColor: isPassed
             ? (isRead ? 'rgba(37, 99, 235, 0.35)' : 'rgba(22, 163, 74, 0.35)')
             : (isRead ? 'rgba(59, 130, 246, 0.18)' : 'rgba(34, 197, 94, 0.22)'),
-          opacity: bgOpacity,
+          opacity: isDismissing ? 0 : bgOpacity,
           borderRadius: '12px',
           display: 'flex',
           alignItems: 'center',
@@ -263,7 +280,7 @@ const SwipeableArticleCard = ({
           padding: '0 1.35rem',
           zIndex: 0,
           pointerEvents: 'none',
-          transition: 'background-color 0.2s ease'
+          transition: 'background-color 0.2s ease, opacity 0.2s ease'
         }}
       >
         <motion.div 
@@ -307,7 +324,7 @@ const SwipeableArticleCard = ({
           touchAction: 'pan-y'
         }}
         className={className}
-        drag={isVerticalScrollRef.current ? false : "x"}
+        drag={isDismissing || isVerticalScrollRef.current ? false : "x"}
         dragDirectionLock
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.5}
@@ -319,7 +336,7 @@ const SwipeableArticleCard = ({
       >
         {children}
       </motion.div>
-    </div>
+    </motion.div>
   );
 };
 

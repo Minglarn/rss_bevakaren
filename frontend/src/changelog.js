@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.13.02',
+    date: '2026-09-13',
+    title: 'Mjuk swipe-fade och naturlig ut-toning vid markering av artikelkort',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Mjuk ut-toning vid swipe (Fade Out)',
+        description: 'När ett kort sveps och släpps glider det vidare i svepriktningen och tonar ut mjukt under 220 millisekunder istället för att försvinna tvärt, vilket ger en silkeslen övergång.'
+      }
+    ]
+  },
+  {
     version: '2026.09.13.01',
     date: '2026-09-13',
     title: 'Omgjord ämnesradar för trendande nyckelord samt optimerad layout i Insiktsvyn',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
