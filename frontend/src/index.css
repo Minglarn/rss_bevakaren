@@ -1122,7 +1122,17 @@ select:focus, input:focus {
     position: relative;
     height: 52px;
     margin: 0 2px;
+    background: transparent;
+    border: none;
+    outline: none;
+    cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  button.bottom-bar-item {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
   }
   
   .bottom-bar-item.active {

@@ -434,9 +434,10 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           <span style={{ color: location.pathname === '/chat' ? 'var(--primary)' : undefined }}>CHATT</span>
         </Link>
         <button 
+          type="button"
           className={`bottom-bar-item ${isMobileSheetOpen || location.search.includes('feedId') ? 'active' : ''}`}
           onClick={() => setIsMobileSheetOpen(true)}
-          style={{ border: 'none', fontFamily: 'inherit', cursor: 'pointer' }}
+          style={{ background: 'transparent', border: 'none', fontFamily: 'inherit', cursor: 'pointer', color: 'inherit' }}
         >
           <div className="icon-wrapper">
             <Filter size={22} />

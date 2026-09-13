@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.13.05',
+    date: '2026-09-13',
+    title: 'Åtgärdad bakgrundsfärg för knappen Flöden i mörkt tema',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Transparent bakgrund på Flöden-knappen',
+        description: 'Knappen Flöden i den mobila bottenraden har nu transparent bakgrund i alla teman istället för webbläsarens vita standardknapp-bakgrund vid mörkt tema.'
+      }
+    ]
+  },
+  {
     version: '2026.09.13.04',
     date: '2026-09-13',
     title: 'Kompakt & dynamisk flödeslayout i desktop samt val i Inställningar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
