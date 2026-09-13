@@ -510,6 +510,19 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     return () => window.removeEventListener('swipeGesturesChanged', handleSwipeChange);
   }, []);
 
+  // Flödeslayout i desktop (Kompakt vs Sträckt/Original)
+  const [flowLayout, setFlowLayout] = useState(() => {
+    return localStorage.getItem('rss_flow_layout') || 'compact';
+  });
+
+  useEffect(() => {
+    const handleFlowLayoutChange = () => {
+      setFlowLayout(localStorage.getItem('rss_flow_layout') || 'compact');
+    };
+    window.addEventListener('flowLayoutChanged', handleFlowLayoutChange);
+    return () => window.removeEventListener('flowLayoutChanged', handleFlowLayoutChange);
+  }, []);
+
   const [expandedClusters, setExpandedClusters] = useState({});
   const toggleClusterExpand = (clusterId) => {
     setExpandedClusters(prev => ({ ...prev, [clusterId]: !prev[clusterId] }));
@@ -1559,7 +1572,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           <p style={{ color: 'var(--text-muted)' }}>Inga olästa nyheter just nu. Byt till &apos;Visa lästa&apos; eller uppdatera flödena.</p>
         </div>
       ) : (
-        <div className={`events-list cols-${desktopColumns}`} style={{ gap: '1rem' }}>
+        <div className={`events-list cols-${desktopColumns} ${flowLayout === 'stretch' ? 'layout-stretch' : 'layout-compact'}`} style={{ gap: '1rem' }}>
           {displayedFeeds.map((item, index) => {
             const isClickbait = Boolean(shouldShowAi && item.is_clickbait);
             const color = isClickbait ? '#ef4444' : getBorderColor(item.feed_id || 1);
@@ -1938,7 +1951,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     <div 
                       style={{ 
                         width: '100%', 
-                        height: '200px', 
+                        height: flowLayout === 'stretch' ? '200px' : '150px', 
                         marginBottom: '1rem', 
                         borderRadius: '8px', 
                         overflow: 'hidden'

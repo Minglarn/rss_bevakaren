@@ -636,6 +636,23 @@ select:focus, input:focus {
   align-items: stretch;
 }
 
+.events-list.layout-compact {
+  align-items: start;
+}
+
+.events-list.layout-compact .feed-card-swipe-container {
+  height: auto;
+  align-self: start;
+}
+
+.events-list.layout-compact .feed-card {
+  height: auto;
+}
+
+.events-list.layout-stretch {
+  align-items: stretch;
+}
+
 @media (min-width: 1024px) {
   .events-list.cols-1 { grid-template-columns: 1fr; }
   .events-list.cols-2 { grid-template-columns: repeat(2, 1fr); }

@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.13.04',
+    date: '2026-09-13',
+    title: 'Kompakt & dynamisk flödeslayout i desktop samt val i Inställningar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Kompakt flödeslayout (ingen dödyta)',
+        description: 'Kort i flödet anpassar nu sin höjd dynamiskt efter sitt faktiska innehåll med balanserad bildhöjd och knappar direkt under innehållet, vilket eliminerar stora tomma ytor.'
+      },
+      {
+        type: 'feature',
+        title: 'Inställningsval för flödeslayout',
+        description: 'Lagt till inställning under Gränssnitt för att enkelt växla mellan ny kompakt layout och den klassiska sträckta layouten (original UI).'
+      }
+    ]
+  },
+  {
     version: '2026.09.13.03',
     date: '2026-09-13',
     title: 'Åtgärdat glapp och osynliga kort vid swipe av översta artikelkortet',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

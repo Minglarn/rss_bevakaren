@@ -49,6 +49,7 @@ const Settings = ({ onLogout }) => {
   const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
   const [theme, setTheme] = useState(() => localStorage.getItem('rss_theme') || 'system');
   const [cardStyle, setCardStyle] = useState(() => localStorage.getItem('rss_card_style') || 'modern');
+  const [flowLayout, setFlowLayout] = useState(() => localStorage.getItem('rss_flow_layout') || 'compact');
   const [feedMode, setFeedMode] = useState(() => localStorage.getItem('rss_feed_mode') || 'ai');
   const [clusterMode, setClusterMode] = useState(() => localStorage.getItem('rss_cluster_mode') !== 'false');
   const [purgeDays, setPurgeDays] = useState(30);
@@ -72,6 +73,13 @@ const Settings = ({ onLogout }) => {
     localStorage.setItem('rss_card_style', val);
     window.dispatchEvent(new Event('cardStyleChanged'));
     toast.success(val === 'modern' ? 'Kortstil: Modernt vald.' : 'Kortstil: Klassisk vald.');
+  };
+
+  const handleFlowLayoutChange = (val) => {
+    setFlowLayout(val);
+    localStorage.setItem('rss_flow_layout', val);
+    window.dispatchEvent(new Event('flowLayoutChanged'));
+    toast.success(val === 'compact' ? 'Flödeslayout: Kompakt (dynamisk) vald.' : 'Flödeslayout: Original (sträckt) vald.');
   };
 
   const handleFeedModeChange = (val) => {
@@ -1160,6 +1168,54 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     }}
                   >
                     Klassisk
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Laptop size={18} style={{ color: 'var(--primary)' }} /> Flödeslayout i desktop
+              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '220px' }}>
+                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Korthöjd och packning i rutnät</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Välj mellan kompakt layout (korten anpassas naturligt till sitt innehåll utan onödig dödyta) eller original UI (korten på samma rad tvingas till samma höjd).
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleFlowLayoutChange('compact')}
+                    style={{
+                      padding: '0.45rem 0.95rem',
+                      borderRadius: '6px',
+                      border: flowLayout === 'compact' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                      backgroundColor: flowLayout === 'compact' ? 'var(--primary)' : 'var(--bg-card)',
+                      color: flowLayout === 'compact' ? '#ffffff' : 'var(--text-main)',
+                      fontWeight: flowLayout === 'compact' ? 600 : 400,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    Kompakt (Ny)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFlowLayoutChange('stretch')}
+                    style={{
+                      padding: '0.45rem 0.95rem',
+                      borderRadius: '6px',
+                      border: flowLayout === 'stretch' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                      backgroundColor: flowLayout === 'stretch' ? 'var(--primary)' : 'var(--bg-card)',
+                      color: flowLayout === 'stretch' ? '#ffffff' : 'var(--text-main)',
+                      fontWeight: flowLayout === 'stretch' ? 600 : 400,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    Original (Sträckt)
                   </button>
                 </div>
               </div>
