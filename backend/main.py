@@ -2623,9 +2623,8 @@ def get_source_analytics(db: Session = Depends(database.get_db), current_user: m
                     "percentage": c_pct
                 })
 
-        # Taggstatistik och trendande ämnesord
-        from collections import Counter
-        tag_counter = Counter()
+        # Taggstatistik och trendande ämnesord med smart normalisering och aktualitetsviktning
+        from collections import defaultdict
         tagged_articles_count = 0
         top_tags = []
         tag_summary = {
@@ -2633,15 +2632,27 @@ def get_source_analytics(db: Session = Depends(database.get_db), current_user: m
             "tagged_articles_count": 0
         }
 
+        STOP_WORDS = {
+            "nyheter", "nyhet", "sverige", "artikel", "inrikes", "utrikes", "expressen", "aftonbladet",
+            "svt", "sr", "dn", "svd", "omni", "text", "senaste", "övrigt", "allmänt", "larm", "händelse",
+            "rapport", "rubrik", "video", "bild", "just nu", "live", "direkt", "tv", "radio", "se"
+        }
+        UPPER_ACRONYMS = {
+            "AI", "NATO", "USA", "EU", "SMHI", "MSB", "SD", "S", "M", "KD", "V", "L", "MP", "C",
+            "FN", "WHO", "IMF", "PKK", "IDF", "BBC", "CNN", "LO", "TCO", "SACO", "SEB", "SHB"
+        }
+
         if user_feed_ids:
-            tag_rows = db.query(models.Article.tags).filter(
+            tag_rows = db.query(models.Article.tags, models.Article.received_ts, models.Article.feed_id).filter(
                 models.Article.feed_id.in_(user_feed_ids),
                 models.Article.tags.isnot(None),
                 models.Article.tags != "[]",
                 models.Article.tags != ""
             ).all()
 
-            for (t_val,) in tag_rows:
+            tag_data = defaultdict(lambda: {"total_count": 0, "recent_count": 0, "feed_ids": set()})
+
+            for t_val, rec_ts, f_id in tag_rows:
                 if not t_val:
                     continue
                 found_tags = []
@@ -2654,19 +2665,51 @@ def get_source_analytics(db: Session = Depends(database.get_db), current_user: m
 
                 if found_tags:
                     tagged_articles_count += 1
-                    for t in found_tags:
-                        # Filtrera bort extremt korta eller brusiga taggar
-                        if len(t) >= 2:
-                            tag_counter[t] += 1
+                    is_recent = bool(rec_ts and (now_ts - rec_ts) <= (72 * 3600)) # Senaste 3 dygnen
 
-            tag_summary["total_unique_tags"] = len(tag_counter)
+                    for raw_t in found_tags:
+                        clean = raw_t.strip().strip('"\'`#.,:;!?()[]{}').strip()
+                        if len(clean) < 2 or clean.lower() in STOP_WORDS or clean.isdigit():
+                            continue
+
+                        # Normalisera format: Akronymer med versaler, annars Title Case
+                        if clean.upper() in UPPER_ACRONYMS:
+                            norm_name = clean.upper()
+                        elif clean.isupper() and len(clean) <= 4:
+                            norm_name = clean.upper()
+                        else:
+                            norm_name = clean[0].upper() + clean[1:].lower() if len(clean) > 1 else clean.upper()
+
+                        tag_data[norm_name]["total_count"] += 1
+                        if is_recent:
+                            tag_data[norm_name]["recent_count"] += 1
+                        if f_id:
+                            tag_data[norm_name]["feed_ids"].add(f_id)
+
+            tag_summary["total_unique_tags"] = len(tag_data)
             tag_summary["tagged_articles_count"] = tagged_articles_count
 
-            for t_name, cnt in tag_counter.most_common(60):
+            # Sortera efter aktualitet och källspridning (trend-score)
+            sorted_tags = sorted(
+                tag_data.items(),
+                key=lambda item: (
+                    (item[1]["recent_count"] * 3.5) + (len(item[1]["feed_ids"]) * 2.0) + (item[1]["total_count"] * 0.4)
+                ),
+                reverse=True
+            )
+
+            for t_name, st in sorted_tags[:36]:
+                tot_cnt = st["total_count"]
+                rec_cnt = st["recent_count"]
+                src_cnt = len(st["feed_ids"])
+                is_hot = rec_cnt >= 2 or (rec_cnt >= 1 and src_cnt >= 2)
                 top_tags.append({
                     "tag": t_name,
-                    "count": cnt,
-                    "percentage": round((cnt / total_all_articles * 100), 1) if total_all_articles > 0 else 0.0
+                    "count": tot_cnt,
+                    "recent_count": rec_cnt,
+                    "sources_count": src_cnt,
+                    "is_hot": is_hot,
+                    "percentage": round((tot_cnt / total_all_articles * 100), 1) if total_all_articles > 0 else 0.0
                 })
 
         most_active = sources[0] if sources else None

@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.13.01',
+    date: '2026-09-13',
+    title: 'Omgjord ämnesradar för trendande nyckelord samt optimerad layout i Insiktsvyn',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Uppflyttad kvalitetsradar och ClickBait-topp',
+        description: 'Högsta kvalitetsindex och ClickBait-toppen visas nu direkt efter KPI-korten för omedelbar tillgång till källornas redaktionella profil.'
+      },
+      {
+        type: 'feature',
+        title: 'Ny smart ämnesradar för trendande nyckelord',
+        description: 'Helt omarbetad ämnesanalys med tidsviktning och källspridning som lyfter fram de mest omtalade nyhetsämnena just nu, normaliserade taggar och rensning av brus.'
+      }
+    ]
+  },
+  {
     version: '2026.09.12.38',
     date: '2026-09-12',
     title: 'Felrättning för variabelreferens i källstatistik och insikter',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
