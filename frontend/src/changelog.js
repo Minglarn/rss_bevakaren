@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.13.08',
+    date: '2026-09-13',
+    title: 'Expanderbar bild till fullbredd vid klick på artikelkort',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Fullbreddsbild vid expansion i kompakt läge',
+        description: 'När ett artikelkort expanderas (via knappen eller klick på tumnageln) förstoras bilden automatiskt från den lilla sidotumnageln till en stor, högupplöst fullbreddsbild. Detta underlättar läsningen och bildgranskningen särskilt på mobila skärmar.'
+      },
+      {
+        type: 'improvement',
+        title: 'Svenska ingress- och källnotiser',
+        description: 'Översatte resterande engelska ledtexter och knappar i händelsevyn till ren svenska.'
+      }
+    ]
+  },
+  {
     version: '2026.09.13.07',
     date: '2026-09-13',
     title: 'Helt transparent bottenrad utan gråa knappbakgrunder',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

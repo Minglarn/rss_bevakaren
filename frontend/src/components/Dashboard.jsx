@@ -1574,6 +1574,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       ) : (
         <div className={`events-list cols-${desktopColumns} ${flowLayout === 'stretch' ? 'layout-stretch' : 'layout-compact'}`} style={{ gap: '1rem' }}>
           {displayedFeeds.map((item, index) => {
+            const isItemExpanded = Boolean(expandedItems[item.id] !== undefined ? expandedItems[item.id] : expandedItems[index]);
             const isClickbait = Boolean(shouldShowAi && item.is_clickbait);
             const color = isClickbait ? '#ef4444' : getBorderColor(item.feed_id || 1);
             const isLast = index === displayedFeeds.length - 1;
@@ -1609,13 +1610,29 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   <div className={`divider-header ${index === 0 ? 'first-divider' : ''}`} style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    gap: '0.75rem', 
+                    gap: '1rem', 
+                    marginTop: index === 0 ? '0' : '2.5rem', 
+                    marginBottom: '1.25rem',
                     gridColumn: '1 / -1'
                   }}>
-                    <div style={{ fontWeight: 'bold', color: isPrioMode ? '#f97316' : '#2563eb', fontSize: '1.1rem' }}>
-                      {dividerText}
+                    <div style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '0.45rem', 
+                      padding: '0.35rem 0.85rem', 
+                      borderRadius: '20px', 
+                      background: 'var(--bg-card)', 
+                      border: '1px solid var(--border-color)', 
+                      fontSize: '0.8rem', 
+                      fontWeight: 600, 
+                      color: 'var(--text-main)', 
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.04)',
+                      letterSpacing: '0.2px'
+                    }}>
+                      <Calendar size={13} style={{ color: 'var(--primary)', opacity: 0.9 }} />
+                      <span>{dividerText}</span>
                     </div>
-                    <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border-color)', opacity: 0.7 }}></div>
                   </div>
                 )}
                 <SwipeableArticleCard
@@ -1659,61 +1676,45 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
                           title="Markera som oläst"
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
                           <EyeOff size={18} />
                         </button>
                       ) : (
                         <button 
                           onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
                           title="Markera som läst"
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
-                          <CheckCheck size={18} />
+                          <Eye size={18} />
                         </button>
                       )}
 
                       {/* Lock button */}
-                      {isArticleLocked(item.id, item.is_locked) ? (
+                      {isItemLocked(item.id, item.is_locked) ? (
                         <button 
-                          onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                          title="Lås upp händelse"
+                          onClick={(e) => { e.stopPropagation(); unlockArticle(item.id); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                          title="Lås upp artikel (kan rensas automatiskt)"
                         >
-                          <Lock size={16} />
+                          <Lock size={18} />
                         </button>
                       ) : (
                         <button 
-                          onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: '1px solid transparent', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                          title="Lås händelse"
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          onClick={(e) => { e.stopPropagation(); lockArticle(item.id); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                          title="Lås artikel (skydda från automatisk rensning)"
                         >
-                          <Unlock size={16} />
+                          <Unlock size={18} />
                         </button>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* Innehållsarea */}
-                <div style={{ 
-                  flex: 1, 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  minWidth: 0,
-                  overflow: 'hidden',
-                  borderTopLeftRadius: cardStyle === 'modern' ? '8px' : undefined,
-                  borderTopRightRadius: cardStyle === 'modern' ? '11px' : undefined,
-                  borderBottomLeftRadius: cardStyle === 'modern' ? '8px' : undefined,
-                  borderBottomRightRadius: cardStyle === 'modern' ? '11px' : undefined
-                }}>
-                  {/* Toppbar: Modernt vs Klassiskt format */}
-                  {cardStyle === 'modern' ? (
+                {/* Kortkropp */}
+                <div className="feed-card-body">
+                  {/* Modern Topp-Bar */}
+                  {cardStyle === 'modern' && (
                     <div 
                       className="feed-card-topbar topbar-modern" 
                       style={{ 
@@ -1724,7 +1725,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         marginBottom: 0, 
                         gap: '0.45rem',
                         borderTopLeftRadius: '8px',
-                        borderTopRightRadius: '11px',
+                        borderTopRightRadius: '8px',
                         borderBottom: 'none'
                       }}
                     >
@@ -1795,7 +1796,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         )}
                       </div>
                     </div>
-                  ) : (
+                  )}
+
+                  {cardStyle !== 'modern' && (
                     /* Klassisk Toppbar */
                     <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0, gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }}>
@@ -1943,13 +1946,18 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   {/* Main content padding wrapper */}
                   <div className="feed-card-content">
                   {/* Title / Content + Thumbnail i kompakt läge (Väg 2) */}
-                  {flowLayout === 'compact' ? (
+                  {flowLayout === 'compact' && !isItemExpanded ? (
                     <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                       <h3 className="feed-card-title" style={{ flex: 1, margin: 0 }}>
                         {decodeHtmlEntities(item.title)}
                       </h3>
                       {showImages && item.image_url && (
                         <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExpand(index, item.link, item.id);
+                          }}
+                          title="Klicka för att expandera artikel och bild"
                           style={{ 
                             width: '92px', 
                             height: '76px', 
@@ -1957,7 +1965,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             overflow: 'hidden',
                             flexShrink: 0,
                             backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.08)'
+                            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.08)',
+                            cursor: 'pointer',
+                            transition: 'transform 0.15s ease'
                           }}
                         >
                           <img 
@@ -1979,10 +1989,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         <div 
                           style={{ 
                             width: '100%', 
-                            height: '200px', 
+                            height: flowLayout === 'stretch' ? '200px' : '230px', 
                             marginBottom: '1rem', 
                             borderRadius: '8px', 
-                            overflow: 'hidden'
+                            overflow: 'hidden',
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                            transition: 'all 0.25s ease'
                           }}
                         >
                           <img 
@@ -2138,8 +2151,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             color: 'var(--text-main)', 
                             fontSize: '0.95rem', 
                             lineHeight: '1.5',
-                            display: expandedItems[index] ? 'block' : '-webkit-box',
-                            WebkitLineClamp: expandedItems[index] ? 'unset' : 3,
+                            display: isItemExpanded ? 'block' : '-webkit-box',
+                            WebkitLineClamp: isItemExpanded ? 'unset' : 3,
                             WebkitBoxOrient: 'vertical',
                             overflow: 'hidden'
                           }}>
@@ -2212,7 +2225,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   )}
                   
                   {/* Expanded Content (Full scraped text) */}
-                  {Boolean(expandedItems[item.id] || expandedItems[index]) && (
+                  {isItemExpanded && (
                     <motion.div 
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
@@ -2220,14 +2233,14 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     >
                       {item.ai_summary && item.summary && (
                         <div style={{ marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                          <strong style={{ display: 'block', color: 'var(--text-main)', marginBottom: '0.25rem' }}>RSS Lead:</strong>
+                          <strong style={{ display: 'block', color: 'var(--text-main)', marginBottom: '0.25rem' }}>RSS-ingress:</strong>
                           {item.summary}
                         </div>
                       )}
 
                       {scrapingUrls[item.link] ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
-                          <Loader2 className="spin" size={16} /> Fetching full article...
+                          <Loader2 className="spin" size={16} /> Hämtar hela artikeln...
                         </div>
                       ) : scrapedContents[item.link] && scrapedContents[item.link] !== item.summary ? (
                         <div style={{ whiteSpace: 'pre-line' }}>
@@ -2235,13 +2248,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         </div>
                       ) : (
                         <div style={{ color: 'var(--text-muted)' }}>
-                          No further text could be fetched automatically. Read the full article on the original source.
+                          Ingen ytterligare text kunde hämtas automatiskt. Läs hela artikeln hos originalkällan.
                         </div>
                       )}
                       
                       <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
-                          <ExternalLink size={16} /> Read at original source
+                          <ExternalLink size={16} /> Läs hos originalkällan
                         </a>
                         <button
                           onClick={(e) => {
@@ -2370,7 +2383,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       <span style={{ backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : color, color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
                         {formatTime(item.published)}
                       </span>
-                      {expandedItems[index] ? 'Dölj' : 'Läs hela händelsen'} <ChevronRight size={16} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+                      {isItemExpanded ? 'Dölj' : 'Läs hela händelsen'} <ChevronRight size={16} style={{ transform: isItemExpanded ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
                     </div>
                   )}
                   </div>
@@ -2454,11 +2467,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       <button
                         className="modern-bottombar-btn"
                         onClick={(e) => { e.stopPropagation(); handleExpand(index, item.link, item.id); }}
-                        title={expandedItems[index] ? "Dölj händelsedetaljer" : "Läs hela händelsen"}
+                        title={isItemExpanded ? "Dölj händelsedetaljer" : "Läs hela händelsen"}
                         style={{ flex: 1.2 }}
                       >
-                        <span>{expandedItems[index] ? 'Dölj' : 'Läs hela'}</span>
-                        <ChevronRight size={13} style={{ transform: expandedItems[index] ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+                        <span>{isItemExpanded ? 'Dölj' : 'Läs hela'}</span>
+                        <ChevronRight size={13} style={{ transform: isItemExpanded ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
                       </button>
                     </div>
                   )}
