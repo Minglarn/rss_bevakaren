@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.13.11',
+    date: '2026-09-13',
+    title: 'Kompakt vattenfalls-layout (Masonry) för desktopflödet',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Kompakt Vattenfall (Masonry)',
+        description: 'Desktopflödet renderas nu i en dynamisk fler-kolumnlayout där varje artikelkort anpassar sig naturligt till sitt faktiska innehåll. De stora tomma hålrummen inuti kort och artificiella radglapp har eliminerats helt.'
+      },
+      {
+        type: 'improvement',
+        title: 'Oberoende kolumnflöde',
+        description: 'Artiklarna fördelas jämnt över kolumnerna per dag. När ett kort expanderas fälls det ut mjukt i sin egen kolumn utan att tvinga intilliggande kort på samma rad att sträckas ut i onödan.'
+      }
+    ]
+  },
+  {
     version: '2026.09.13.10',
     date: '2026-09-13',
     title: 'Åtgärdad saknad import av Calendar-ikon',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

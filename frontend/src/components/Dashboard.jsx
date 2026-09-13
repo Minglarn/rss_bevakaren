@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText, Smartphone, Calendar } from 'lucide-react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
@@ -494,6 +494,57 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     };
     window.addEventListener('flowLayoutChanged', handleFlowLayoutChange);
     return () => window.removeEventListener('flowLayoutChanged', handleFlowLayoutChange);
+  }, []);
+
+  // Responsiv desktop-detektering för kolumnhantering
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Gruppera artiklar per dag för snygga datumavgränsare och oberoende masonry-kolumner
+  const dayGroups = useMemo(() => {
+    const groups = [];
+    let currentGroup = null;
+
+    displayedFeeds.forEach((item, index) => {
+      const currentTs = item.received_ts ? item.received_ts * 1000 : new Date(item.published).getTime();
+      const currentD = new Date(currentTs);
+      let dateLabel = '';
+      let dayKey = 'all';
+
+      if (!isNaN(currentD.getTime())) {
+        const text = currentD.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
+        dateLabel = text.charAt(0).toUpperCase() + text.slice(1);
+        dayKey = `${currentD.getFullYear()}-${currentD.getMonth()}-${currentD.getDate()}`;
+      }
+
+      if (!currentGroup || currentGroup.dayKey !== dayKey) {
+        currentGroup = {
+          dayKey,
+          dateLabel,
+          items: []
+        };
+        groups.push(currentGroup);
+      }
+      currentGroup.items.push({ item, index });
+    });
+
+    return groups;
+  }, [displayedFeeds]);
+
+  // Hjälpfunktion för att fördela artiklar jämnt över kolumner (Masonry / Vattenfall)
+  const partitionIntoColumns = useCallback((items, colCount) => {
+    const cols = Array.from({ length: colCount }, () => []);
+    items.forEach((entry, idx) => {
+      cols[idx % colCount].push(entry);
+    });
+    return cols;
   }, []);
 
   const [expandedClusters, setExpandedClusters] = useState({});
@@ -1545,69 +1596,15 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           <p style={{ color: 'var(--text-muted)' }}>Inga olästa nyheter just nu. Byt till &apos;Visa lästa&apos; eller uppdatera flödena.</p>
         </div>
       ) : (
-        <div className={`events-list cols-${desktopColumns} ${flowLayout === 'stretch' ? 'layout-stretch' : 'layout-compact'}`} style={{ gap: '1rem' }}>
-          {displayedFeeds.map((item, index) => {
-            const isItemExpanded = Boolean(expandedItems[item.id] !== undefined ? expandedItems[item.id] : expandedItems[index]);
-            const isClickbait = Boolean(shouldShowAi && item.is_clickbait);
-            const color = isClickbait ? '#ef4444' : getBorderColor(item.feed_id || 1);
-            const isLast = index === displayedFeeds.length - 1;
-            
-            let showDivider = false;
-            let dividerText = '';
-            
-            const currentTs = item.received_ts ? item.received_ts * 1000 : new Date(item.published).getTime();
-            const currentD = new Date(currentTs);
-            if (!isNaN(currentD.getTime())) {
-                if (index === 0) {
-                    showDivider = true;
-                } else {
-                    const prevItem = displayedFeeds[index - 1];
-                    const prevTs = prevItem.received_ts ? prevItem.received_ts * 1000 : new Date(prevItem.published).getTime();
-                    const prevD = new Date(prevTs);
-                    // Check if day changed
-                    if (!isNaN(prevD.getTime()) && 
-                       (currentD.getDate() !== prevD.getDate() || currentD.getMonth() !== prevD.getMonth() || currentD.getFullYear() !== prevD.getFullYear())) {
-                        showDivider = true;
-                    }
-                }
-                if (showDivider) {
-                    let text = currentD.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
-                    // Capitalize first letter
-                    dividerText = text.charAt(0).toUpperCase() + text.slice(1);
-                }
-            }
-            
-            return (
-              <React.Fragment key={item.id || index}>
-                {showDivider && (
-                  <div className={`divider-header ${index === 0 ? 'first-divider' : ''}`} style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '1rem', 
-                    marginTop: index === 0 ? '0' : '2.5rem', 
-                    marginBottom: '1.25rem',
-                    gridColumn: '1 / -1'
-                  }}>
-                    <div style={{ 
-                      display: 'inline-flex', 
-                      alignItems: 'center', 
-                      gap: '0.45rem', 
-                      padding: '0.35rem 0.85rem', 
-                      borderRadius: '20px', 
-                      background: 'var(--bg-card)', 
-                      border: '1px solid var(--border-color)', 
-                      fontSize: '0.8rem', 
-                      fontWeight: 600, 
-                      color: 'var(--text-main)', 
-                      boxShadow: '0 2px 5px rgba(0,0,0,0.04)',
-                      letterSpacing: '0.2px'
-                    }}>
-                      <Calendar size={13} style={{ color: 'var(--primary)', opacity: 0.9 }} />
-                      <span>{dividerText}</span>
-                    </div>
-                    <div style={{ flex: 1, height: '1px', background: 'var(--border-color)', opacity: 0.7 }}></div>
-                  </div>
-                )}
+        <div className="events-flow-wrapper">
+          {(() => {
+            const renderArticleCard = (item, index) => {
+              const isItemExpanded = Boolean(expandedItems[item.id] !== undefined ? expandedItems[item.id] : expandedItems[index]);
+              const isClickbait = Boolean(shouldShowAi && item.is_clickbait);
+              const color = isClickbait ? '#ef4444' : getBorderColor(item.feed_id || 1);
+              const isLast = index === displayedFeeds.length - 1;
+
+              return (
                 <SwipeableArticleCard
                   key={item.id}
                   itemId={item.id}
@@ -2451,12 +2448,66 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   )}
                   </div>
                 </SwipeableArticleCard>
-              </React.Fragment>
-            );
-          })}
-          
+              );
+            };
+
+            return dayGroups.map((group, groupIndex) => {
+              const effectiveCols = isDesktop ? desktopColumns : 1;
+              const useMasonry = flowLayout === 'compact' && effectiveCols > 1;
+
+              return (
+                <div key={group.dayKey || groupIndex} className="day-group-section" style={{ marginBottom: '1.75rem' }}>
+                  {/* Datumavgränsare */}
+                  {group.dateLabel && (
+                    <div className={`divider-header ${groupIndex === 0 ? 'first-divider' : ''}`} style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '1rem', 
+                      marginTop: groupIndex === 0 ? '0' : '2.5rem', 
+                      marginBottom: '1.25rem'
+                    }}>
+                      <div style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '0.45rem', 
+                        padding: '0.35rem 0.85rem', 
+                        borderRadius: '20px', 
+                        background: 'var(--bg-card)', 
+                        border: '1px solid var(--border-color)', 
+                        fontSize: '0.8rem', 
+                        fontWeight: 600, 
+                        color: 'var(--text-main)', 
+                        boxShadow: '0 2px 5px rgba(0,0,0,0.04)',
+                        letterSpacing: '0.2px'
+                      }}>
+                        <Calendar size={13} style={{ color: 'var(--primary)', opacity: 0.9 }} />
+                        <span>{group.dateLabel}</span>
+                      </div>
+                      <div style={{ flex: 1, height: '1px', background: 'var(--border-color)', opacity: 0.7 }}></div>
+                    </div>
+                  )}
+
+                  {/* Kort i Masonry-kolumner (Kompakt) eller Klassiskt rutnät (Sträckt) */}
+                  {useMasonry ? (
+                    <div className={`events-masonry-container cols-${effectiveCols}`}>
+                      {partitionIntoColumns(group.items, effectiveCols).map((colEntries, colIdx) => (
+                        <div key={colIdx} className="events-masonry-column">
+                          {colEntries.map(({ item, index }) => renderArticleCard(item, index))}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={`events-list cols-${effectiveCols} ${flowLayout === 'stretch' ? 'layout-stretch' : 'layout-compact'}`} style={{ gap: '1rem' }}>
+                      {group.items.map(({ item, index }) => renderArticleCard(item, index))}
+                    </div>
+                  )}
+                </div>
+              );
+            });
+          })()}
+
           {displayedFeeds.length < allFeeds.length && (
-            <div ref={lastElementRef} style={{ display: 'flex', justifyContent: 'center', padding: '2rem', color: 'var(--text-muted)', gridColumn: '1 / -1' }}>
+            <div ref={lastElementRef} style={{ display: 'flex', justifyContent: 'center', padding: '2rem', color: 'var(--text-muted)', width: '100%' }}>
               <Loader2 className="spin" size={24} />
             </div>
           )}

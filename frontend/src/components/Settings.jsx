@@ -79,7 +79,7 @@ const Settings = ({ onLogout }) => {
     setFlowLayout(val);
     localStorage.setItem('rss_flow_layout', val);
     window.dispatchEvent(new Event('flowLayoutChanged'));
-    toast.success(val === 'compact' ? 'Flödeslayout: Kompakt (dynamisk) vald.' : 'Flödeslayout: Original (sträckt) vald.');
+    toast.success(val === 'compact' ? 'Flödeslayout: Kompakt vattenfall vald (inga tomma hål).' : 'Flödeslayout: Klassiskt rutnät vald.');
   };
 
   const handleFeedModeChange = (val) => {
@@ -1181,7 +1181,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 <div style={{ flex: 1, minWidth: '220px' }}>
                   <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Korthöjd och packning i rutnät</div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    Välj mellan kompakt layout (korten anpassas naturligt till sitt innehåll utan onödig dödyta) eller original UI (korten på samma rad tvingas till samma höjd).
+                    Välj mellan kompakt vattenfall (korten anpassas naturligt till sitt innehåll i oberoende kolumner utan tomma hålrum) eller klassiskt rutnät (korten på samma rad tvingas till samma höjd).
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -1199,7 +1199,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       transition: 'all 0.15s'
                     }}
                   >
-                    Kompakt (Ny)
+                    Kompakt Vattenfall (Ny)
                   </button>
                   <button
                     type="button"
@@ -1215,7 +1215,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       transition: 'all 0.15s'
                     }}
                   >
-                    Original (Sträckt)
+                    Klassiskt Rutnät
                   </button>
                 </div>
               </div>
