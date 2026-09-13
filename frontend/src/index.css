@@ -1121,32 +1121,42 @@ select:focus, input:focus {
     position: relative;
     height: 52px;
     margin: 0 2px;
-    background: transparent;
-    border: none;
-    outline: none;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-tap-highlight-color: transparent;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  button.bottom-bar-item {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
+  .bottom-bar-item:hover,
+  .bottom-bar-item:focus,
+  .bottom-bar-item:active {
+    background: transparent !important;
+    background-color: transparent !important;
+    outline: none !important;
   }
   
   .bottom-bar-item.active {
     color: var(--primary);
-    background: rgba(37, 99, 235, 0.12);
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
   .theme-dark .bottom-bar-item.active {
     color: #60a5fa;
-    background: rgba(59, 130, 246, 0.18);
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
   .bottom-bar-item.prio-active {
     color: #f97316 !important;
-    background: rgba(249, 115, 22, 0.14) !important;
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
   /* Topp-indikatorlinje för aktiv flik */

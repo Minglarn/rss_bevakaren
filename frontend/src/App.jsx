@@ -433,17 +433,20 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           </div>
           <span style={{ color: location.pathname === '/chat' ? 'var(--primary)' : undefined }}>CHATT</span>
         </Link>
-        <button 
-          type="button"
+        <a 
+          href="#feeds"
+          role="button"
           className={`bottom-bar-item ${isMobileSheetOpen || location.search.includes('feedId') ? 'active' : ''}`}
-          onClick={() => setIsMobileSheetOpen(true)}
-          style={{ background: 'transparent', border: 'none', fontFamily: 'inherit', cursor: 'pointer', color: 'inherit' }}
+          onClick={(e) => {
+            e.preventDefault();
+            setIsMobileSheetOpen(true);
+          }}
         >
           <div className="icon-wrapper">
             <Filter size={22} />
           </div>
           <span>FLÖDEN</span>
-        </button>
+        </a>
         <Link 
           to="/settings" 
           className={`bottom-bar-item ${location.pathname === '/settings' ? 'active' : ''}`} 
@@ -461,7 +464,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       <div className={`mobile-feeds-sheet-overlay ${isMobileSheetOpen ? 'open' : ''}`} onClick={() => setIsMobileSheetOpen(false)}></div>
       <div className={`mobile-feeds-sheet ${isMobileSheetOpen ? 'open' : ''}`}>
         <div className="sheet-handle"></div>
-        <div className="sheet-title">My Feeds</div>
+        <div className="sheet-title">Mina flöden</div>
         <div className="sheet-content">
           <Link 
             to="/" 
@@ -473,7 +476,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             }}
             onClick={() => setIsMobileSheetOpen(false)}
           >
-            <Home size={20} /> All Feeds
+            <Home size={20} /> Alla flöden
           </Link>
           {prioEnabled && (
             <Link 
@@ -486,7 +489,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               }}
               onClick={() => setIsMobileSheetOpen(false)}
             >
-              <Flame size={20} style={{ color: '#f97316' }} /> Prio Feed
+              <Flame size={20} style={{ color: '#f97316' }} /> Prio-flöde
               {prioUnreadCount > 0 && (
                 <span style={{ backgroundColor: '#f97316', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold', marginLeft: 'auto' }}>
                   {prioUnreadCount}

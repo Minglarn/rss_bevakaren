@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.13.07',
+    date: '2026-09-13',
+    title: 'Helt transparent bottenrad utan gråa knappbakgrunder',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Konsekvent genomskinliga bottenknappar',
+        description: 'Ersatte HTML-knapptaggen för Flöden med ett renodlat ankarelement samt nollställde samtliga bakgrundsdeklarationer så att varken Flöden eller övriga knappar får gråa eller opaka bakgrundsplattor.'
+      },
+      {
+        type: 'improvement',
+        title: 'Svenska navigationstexter i bottenmenyn',
+        description: 'Översatte My Feeds och underliggande länkar till svenska (Mina flöden, Alla flöden och Prio-flöde).'
+      }
+    ]
+  },
+  {
     version: '2026.09.13.06',
     date: '2026-09-13',
     title: 'Kompakt layout med sidotumnagel samt Clickbait-standardisering',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
