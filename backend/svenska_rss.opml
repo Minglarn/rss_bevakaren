@@ -278,5 +278,57 @@
     <outline text="Ölandsbladet" type="rss" created="Tue, 05 May 2026 22:05:25 +0200" xmlUrl="https://www.olandsbladet.se/feed.xml" description="Gota Media AB" htmlUrl="https://www.olandsbladet.se" version="RSS2" />
     <outline text="Øresund News" type="rss" created="Tue, 05 May 2026 22:05:25 +0200" xmlUrl="https://www.newsoresund.se/feed" description="Øresundsinstituttet" htmlUrl="https://www.newsoresund.se" version="RSS2" />
     <outline text="Örnsköldsviks Allehanda" type="rss" created="Tue, 05 May 2026 22:05:25 +0200" xmlUrl="https://www.allehanda.se/feed.xml" description="Bonnier News Local AB" htmlUrl="https://www.allehanda.se" version="RSS2" />
+    <outline text="Teknik &amp; IT" title="Teknik &amp; IT">
+      <outline type="rss" text="Ars Technica" title="Ars Technica" xmlUrl="https://feeds.arstechnica.com/arstechnica/index" description="Djupgående teknik- och vetenskapsartiklar" htmlUrl="https://arstechnica.com"/>
+      <outline type="rss" text="The Verge" title="The Verge" xmlUrl="https://www.theverge.com/rss/index.xml" description="Teknik, prylar och digital kultur" htmlUrl="https://www.theverge.com"/>
+      <outline type="rss" text="TechCrunch" title="TechCrunch" xmlUrl="https://techcrunch.com/feed/" description="Startups, tech-nyheter och investeringar" htmlUrl="https://techcrunch.com"/>
+      <outline type="rss" text="SweClockers" title="SweClockers" xmlUrl="https://www.sweclockers.com/feeds/nyheter" description="Svensk hårdvara, gaming och PC-bygge" htmlUrl="https://www.sweclockers.com"/>
+    </outline>
+    <outline text="Formel 1 &amp; Motorsport" title="Formel 1 &amp; Motorsport">
+      <outline type="rss" text="Autosport F1" title="Autosport F1" xmlUrl="https://www.autosport.com/rss/feed/f1" description="Nyheter, analyser och resultat från Formel 1" htmlUrl="https://www.autosport.com"/>
+      <outline type="rss" text="Motorsport.com F1" title="Motorsport.com F1" xmlUrl="https://www.motorsport.com/rss/f1/news/" description="Global motorsport och F1-bevakning" htmlUrl="https://www.motorsport.com"/>
+      <outline type="rss" text="RaceFans" title="RaceFans" xmlUrl="https://www.racefans.net/feed/" description="Oberoende F1-analyser och förardata" htmlUrl="https://www.racefans.net"/>
+    </outline>
+    <outline text="Allmänna nyheter" title="Allmänna nyheter">
+      <outline type="rss" text="SVT Nyheter" title="SVT Nyheter" xmlUrl="https://www.svt.se/rss.xml" description="Svenska toppnyheter och snabba uppdateringar" htmlUrl="https://www.svt.se"/>
+      <outline type="rss" text="BBC News - World" title="BBC News - World" xmlUrl="https://feeds.bbci.co.uk/news/world/rss.xml" description="Internationella världsnyheter" htmlUrl="https://www.bbc.com/news"/>
+      <outline type="rss" text="Reuters - Top News" title="Reuters - Top News" xmlUrl="https://news.google.com/rss/search?q=source:Reuters&amp;ceid=US:en" description="Global neutral nyhetsrapportering via standardiserad feed" htmlUrl="https://www.reuters.com"/>
+    </outline>
+    <outline text="Open Source, Hårdvara &amp; Linux" title="Open Source, Hårdvara &amp; Linux">
+      <outline type="rss" text="Hackaday" title="Hackaday" xmlUrl="https://hackaday.com/feed/" description="DIY-teknik, hårdvaruhacks och mikrokontrollers" htmlUrl="https://hackaday.com"/>
+      <outline type="rss" text="Phoronix" title="Phoronix" xmlUrl="https://www.phoronix.com/phoronix-rss.php" description="Linux hårdvaruprestanda och open source-nyheter" htmlUrl="https://www.phoronix.com"/>
+      <outline type="rss" text="Ars Technica – Open Source" title="Ars Technica – Open Source" xmlUrl="https://feeds.arstechnica.com/arstechnica/open-source" description="Open source-mjukvara och systemutveckling" htmlUrl="https://arstechnica.com"/>
+      <outline type="rss" text="Raspberry Pi Blog" title="Raspberry Pi Blog" xmlUrl="https://www.raspberrypi.com/news/feed/" description="Raspberry Pi projekt, guider och produktnyheter" htmlUrl="https://www.raspberrypi.com"/>
+    </outline>
+    <outline text="AI &amp; Maskininlärning" title="AI &amp; Maskininlärning">
+      <outline type="rss" text="Hugging Face Blog" title="Hugging Face Blog" xmlUrl="https://huggingface.co/blog/feed.xml" description="Artiklar, modeller och forskning inom modern AI" htmlUrl="https://huggingface.co"/>
+      <outline type="rss" text="MIT Technology Review – AI" title="MIT Technology Review – AI" xmlUrl="https://www.technologyreview.com/topic/artificial-intelligence/feed" description="Djupgående rapporter om AI-utveckling och etik" htmlUrl="https://www.technologyreview.com"/>
+      <outline type="rss" text="MarkTechPost" title="MarkTechPost" xmlUrl="https://www.marktechpost.com/feed/" description="Senaste AI-forskningspapper och innovationer" htmlUrl="https://www.marktechpost.com"/>
+    </outline>
+    <outline text="IT-säkerhet &amp; Nätverk" title="IT-säkerhet &amp; Nätverk">
+      <outline type="rss" text="BleepingComputer" title="BleepingComputer" xmlUrl="https://www.bleepingcomputer.com/feed/" description="Nyheter om säkerhetshål, malware och ransomware" htmlUrl="https://www.bleepingcomputer.com"/>
+      <outline type="rss" text="Krebs on Security" title="Krebs on Security" xmlUrl="https://krebsonsecurity.com/feed/" description="Granskande journalistik om cyberbrottslighet" htmlUrl="https://krebsonsecurity.com"/>
+      <outline type="rss" text="Schneier on Security" title="Schneier on Security" xmlUrl="https://schneier.com/feed/atom/" description="Bruce Schneier om kryptografi, integritet och IT-säkerhet" htmlUrl="https://schneier.com"/>
+    </outline>
+    <outline text="Elfordon &amp; Energi" title="Elfordon &amp; Energi">
+      <outline type="rss" text="Electrek" title="Electrek" xmlUrl="https://electrek.co/feed/" description="Elbilar, ren energi och grön transport" htmlUrl="https://electrek.co"/>
+      <outline type="rss" text="CleanTechnica" title="CleanTechnica" xmlUrl="https://cleantechnica.com/feed/" description="Solenergi, vindkraft och ren teknik" htmlUrl="https://cleantechnica.com"/>
+    </outline>
+    <outline text="Rymdfart &amp; Vetenskap" title="Rymdfart &amp; Vetenskap">
+      <outline type="rss" text="SpaceNews" title="SpaceNews" xmlUrl="https://spacenews.com/feed/" description="Kommersiell och militär rymdfart samt astronomi" htmlUrl="https://spacenews.com"/>
+      <outline type="rss" text="Phys.org - Technology" title="Phys.org - Technology" xmlUrl="https://phys.org/rss-feed/technology-news/" description="Vetenskapliga genombrott och tekniska framsteg" htmlUrl="https://phys.org"/>
+    </outline>
+    <outline text="Film &amp; Nöje" title="Film &amp; Nöje">
+      <outline type="rss" text="Deadline Hollywood" title="Deadline Hollywood" xmlUrl="https://deadline.com/feed/" description="Film, TV och nöjesbranschens stora avslöjanden" htmlUrl="https://deadline.com"/>
+      <outline type="rss" text="Variety" title="Variety" xmlUrl="https://variety.com/feed/" description="Analyser, recensioner och nyheter från underhållningsvärlden" htmlUrl="https://variety.com"/>
+      <outline type="rss" text="The Hollywood Reporter" title="The Hollywood Reporter" xmlUrl="https://www.hollywoodreporter.com/feed/" description="Nöjesnyheter, filmer, streaming och profiler" htmlUrl="https://www.hollywoodreporter.com"/>
+      <outline type="rss" text="Collider" title="Collider" xmlUrl="https://collider.com/feed/" description="Film- och seriebevakning, intervjuer och trailers" htmlUrl="https://collider.com"/>
+      <outline type="rss" text="SlashFilm" title="SlashFilm" xmlUrl="https://www.slashfilm.com/feed/" description="Kultfilmer, Hollywood och filmdebatt" htmlUrl="https://www.slashfilm.com"/>
+      <outline type="rss" text="Screen Rant" title="Screen Rant" xmlUrl="https://screenrant.com/feed/" description="Film- och streamingnyheter, teorier och guider" htmlUrl="https://screenrant.com"/>
+      <outline type="rss" text="MovieZine" title="MovieZine" xmlUrl="https://www.moviezine.se/rss" description="Sveriges ledande filmsajt med recensioner och trailers" htmlUrl="https://www.moviezine.se"/>
+      <outline type="rss" text="IndieWire" title="IndieWire" xmlUrl="https://indiewire.com/feed/" description="Oberoende film, festivaler och filmskapare" htmlUrl="https://indiewire.com"/>
+      <outline type="rss" text="ComingSoon" title="ComingSoon" xmlUrl="https://www.comingsoon.net/feed" description="Kommande biopremiärer, trailers och releasedatum" htmlUrl="https://www.comingsoon.net"/>
+      <outline type="rss" text="Dark Horizons" title="Dark Horizons" xmlUrl="https://www.darkhorizons.com/feed/" description="Klassisk nyhetssajt för film och TV-produktioner" htmlUrl="https://www.darkhorizons.com"/>
+    </outline>
   </body>
 </opml>

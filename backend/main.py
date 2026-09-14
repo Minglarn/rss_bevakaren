@@ -1591,16 +1591,108 @@ def get_opml_feeds(current_user: models.User = Depends(auth.get_current_user)):
         if os.path.exists(opml_path):
             tree = ET.parse(opml_path)
             root = tree.getroot()
-            for outline in root.iter("outline"):
-                if outline.get("type") == "rss":
-                    feeds.append({
-                        "title": outline.get("text") or outline.get("title", ""),
-                        "url": outline.get("xmlUrl", ""),
-                        "description": outline.get("description", "")
-                    })
+            body = root.find("body")
+            if body is not None:
+                def parse_nodes(parent, current_category="Svensk press"):
+                    for elem in parent.findall("outline"):
+                        xml_url = elem.get("xmlUrl")
+                        if xml_url:
+                            cat = elem.get("category") or current_category
+                            feeds.append({
+                                "title": elem.get("text") or elem.get("title", ""),
+                                "url": xml_url,
+                                "description": elem.get("description", ""),
+                                "category": cat
+                            })
+                        else:
+                            cat_name = elem.get("text") or elem.get("title") or current_category
+                            parse_nodes(elem, cat_name)
+                parse_nodes(body)
+            else:
+                for outline in root.iter("outline"):
+                    if outline.get("type") == "rss" or outline.get("xmlUrl"):
+                        feeds.append({
+                            "title": outline.get("text") or outline.get("title", ""),
+                            "url": outline.get("xmlUrl", ""),
+                            "description": outline.get("description", ""),
+                            "category": outline.get("category", "")
+                        })
     except Exception as e:
         print(f"Error parsing OPML: {e}")
     return feeds
+
+@app.post("/feeds/batch")
+def create_feeds_batch(payload: dict, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    feeds_data = payload.get("feeds", [])
+    if not feeds_data:
+        return {"status": "ok", "added_count": 0}
+    
+    existing_urls = set(f.url for f in db.query(models.Feed.url).filter(models.Feed.user_id == current_user.id).all())
+    added_count = 0
+    
+    for item in feeds_data:
+        feed_url = (item.get("url") or "").strip()
+        if not feed_url or feed_url in existing_urls:
+            continue
+        
+        feed_title = (item.get("title") or "").strip() or feed_url
+        icon_url = get_feed_icon_url(None, feed_url)
+        
+        db_feed = models.Feed(
+            url=feed_url,
+            title=feed_title,
+            polling_interval=60,
+            scrape_enabled=1,
+            include_in_dashboard=1,
+            notify_enabled=0,
+            icon_url=icon_url,
+            user_id=current_user.id
+        )
+        db.add(db_feed)
+        existing_urls.add(feed_url)
+        added_count += 1
+        
+    if added_count > 0:
+        db.commit()
+        
+    return {"status": "ok", "added_count": added_count}
+
+@app.get("/preview-feed")
+def preview_feed(url: str, current_user: models.User = Depends(auth.get_current_user)):
+    import requests
+    import feedparser
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        resp = requests.get(url, headers=headers, timeout=8)
+        parsed = feedparser.parse(resp.content)
+        
+        articles = []
+        for entry in parsed.entries[:5]:
+            summary_raw = entry.get("summary") or entry.get("description") or ""
+            # Enkel rensning av eventuell HTML i sammanfattningen
+            import re
+            clean_summary = re.sub('<[^<]+?>', '', summary_raw).strip()
+            if len(clean_summary) > 220:
+                clean_summary = clean_summary[:217] + "..."
+                
+            articles.append({
+                "title": entry.get("title", "Ingen rubrik"),
+                "link": entry.get("link", ""),
+                "published": entry.get("published") or entry.get("updated") or "",
+                "summary": clean_summary
+            })
+            
+        feed_info = parsed.feed if hasattr(parsed, "feed") else {}
+        return {
+            "title": feed_info.get("title", "") if feed_info else "",
+            "description": feed_info.get("description", "") if feed_info else "",
+            "articles": articles
+        }
+    except Exception as e:
+        return {"error": f"Kunde inte läsa flödet: {str(e)}", "articles": []}
+
 
 @app.get("/dashboard-feeds", response_model=List[schemas.ArticleResponse])
 def get_dashboard_feeds(

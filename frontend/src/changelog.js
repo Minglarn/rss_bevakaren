@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.14.04',
+    date: '2026-09-14',
+    title: 'Omstrukturerad flödeskatalog med kategorikort, masstillägg och förhandsgranskning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Dedikerad katalogflik och kategorinavigering',
+        description: 'Flödeshanteraren har delats upp i två renodlade huvudflikar: "Mina flöden" och "Flödeskatalog & Upptäck". Katalogen erbjuder interaktiva ämneskort med källräknare för omedelbar filtrering.'
+      },
+      {
+        type: 'improvement',
+        title: 'Masstillägg och snabbprenumeration per kategori',
+        description: 'Stöd för att välja flera flöden med kryssrutor och lägga till samtliga samtidigt via en flytande åtgärdspanel, eller lägga till alla källor i en specifik kategori med ett enda klick.'
+      },
+      {
+        type: 'improvement',
+        title: 'Live förhandsgranskning och smarta filter',
+        description: 'Möjlighet att förhandsgranska de senaste artiklarna direkt ur flödet innan tillägg, samt filter för att dölja redan prenumererade källor.'
+      }
+    ]
+  },
+  {
     version: '2026.09.14.03',
     date: '2026-09-14',
     title: 'Strukturerade inställningar för utseende samt komplett svensk UI-översättning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
