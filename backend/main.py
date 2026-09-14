@@ -738,11 +738,16 @@ def send_push_notification_to_user(
                 "body": body,
                 "url": url or "/",
                 "article_id": article_id,
-                "icon": "/pwa-192x192.png?v=2026.09.09.03",
-                "badge": "/badge.png?v=2026.09.09.03"
+                "icon": "/pwa-192x192.png?v=2026.09.14.01",
+                "badge": "/badge.png?v=2026.09.14.01"
             }
             if image_url:
                 payload["image"] = image_url
+            if article_id:
+                payload["actions"] = [
+                    {"action": "mark_read", "title": "Markera som läst"},
+                    {"action": "open_event", "title": "Öppna"}
+                ]
 
             resp = webpush(
                 subscription_info={
@@ -1608,6 +1613,7 @@ def get_dashboard_feeds(
     category: Optional[str] = None,
     tag: Optional[str] = None,
     cluster_mode: Optional[bool] = True,
+    locked_only: Optional[bool] = False,
     db: Session = Depends(database.get_db), 
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -1621,7 +1627,9 @@ def get_dashboard_feeds(
         else:
             query = query.filter(models.Feed.include_in_dashboard == 1)
             
-        if not show_read:
+        if locked_only:
+            query = query.filter(models.Article.is_locked == 1)
+        elif not show_read:
             query = query.filter((models.Article.is_read == 0) | (models.Article.is_read == None))
             
         if prio_only:

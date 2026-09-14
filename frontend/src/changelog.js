@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.14.01',
+    date: '2026-09-14',
+    title: 'Notis-knappar, filter för låsta artiklar och fullständig svensk översättning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Filterknapp för Låsta artiklar',
+        description: 'En ny filterknapp "Låsta" har lagts till i verktygsraden. Med ett enkelt klick filtreras flödet fram så att endast dina sparade och skyddade artiklar visas, oavsett om de är lästa eller olästa.'
+      },
+      {
+        type: 'improvement',
+        title: 'Markera som läst direkt i notisen',
+        description: 'Webb-notiser för nya artiklar har nu en direkt knapp för "Markera som läst". När knappen klickas stängs notisen och artikeln markeras som läst i bakgrunden utan att webbläsaren eller applikationen behöver öppnas.'
+      },
+      {
+        type: 'improvement',
+        title: 'Svensk översättning av dialoger och knappar',
+        description: 'Prioriteringsdialogen för Prio-flödet samt filterknapparna i gränssnittet ("Visa lästa", "Dölj lästa", "Sök nyheter", "Markera alla som lästa") har översatts till ren svenska.'
+      }
+    ]
+  },
+  {
     version: '2026.09.13.11',
     date: '2026-09-13',
     title: 'Kompakt vattenfalls-layout (Masonry) för desktopflödet',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

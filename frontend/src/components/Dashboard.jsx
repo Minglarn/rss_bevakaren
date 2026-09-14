@@ -417,6 +417,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [showRead, setShowRead] = useState(() => {
     return localStorage.getItem('rss_show_read') === 'true';
   });
+  const [showLockedOnly, setShowLockedOnly] = useState(false);
   const [showImages, setShowImages] = useState(() => {
     return localStorage.getItem('rss_show_images') !== 'false';
   });
@@ -644,6 +645,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     feedId,
     articleId,
     showRead,
+    showLockedOnly,
     debouncedSearch,
     selectedCategory,
     selectedTag,
@@ -657,6 +659,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       feedId: fId,
       articleId: aId,
       showRead: sRead,
+      showLockedOnly: sLocked,
       debouncedSearch: dSearch,
       selectedCategory: sCat,
       selectedTag: sTag,
@@ -671,7 +674,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       const queryParts = [];
       if (fId) queryParts.push(`feed_id=${encodeURIComponent(fId)}`);
       if (aId) queryParts.push(`article_id=${encodeURIComponent(aId)}`);
-      if (sRead) queryParts.push('show_read=true');
+      if (sLocked) {
+        queryParts.push('locked_only=true');
+      } else if (sRead) {
+        queryParts.push('show_read=true');
+      }
       if (dSearch) queryParts.push(`search=${encodeURIComponent(dSearch)}`);
       if (pMode) {
         queryParts.push('prio_only=true');
@@ -831,7 +838,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
       }
     };
-  }, [feedId, articleId, showRead, debouncedSearch, isPrioMode, selectedCategory, selectedTag, clusterMode]);
+  }, [feedId, articleId, showRead, showLockedOnly, debouncedSearch, isPrioMode, selectedCategory, selectedTag, clusterMode]);
 
   const handleSelectCategory = (cat) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -1102,7 +1109,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                 height: '36px',
                 transition: 'all 0.2s'
               }}
-              title="Search news"
+              title="Sök nyheter"
             >
               <Search size={16} />
             </button>
@@ -1110,6 +1117,28 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setShowLockedOnly(!showLockedOnly)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '6px 12px',
+              border: showLockedOnly ? '1px solid #f59e0b' : '1px solid var(--border-color)',
+              backgroundColor: showLockedOnly ? '#f59e0b' : 'var(--bg-card)',
+              color: showLockedOnly ? 'white' : 'var(--text-muted)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+              height: '36px'
+            }}
+            title={showLockedOnly ? "Visa alla artiklar i flödet" : "Visa endast sparade och låsta artiklar"}
+          >
+            <Lock size={16} />
+            <span className="desktop-only">{showLockedOnly ? "Alla artiklar" : "Låsta"}</span>
+          </button>
           <button
             onClick={() => setShowRead(!showRead)}
             style={{
@@ -1127,10 +1156,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               transition: 'all 0.2s',
               height: '36px'
             }}
-            title={showRead ? "Hide read items" : "Show read items"}
+            title={showRead ? "Dölj lästa artiklar" : "Visa lästa artiklar"}
           >
             {showRead ? <EyeOff size={16} /> : <Eye size={16} />}
-            <span className="desktop-only">{showRead ? "Hide read" : "Show read"}</span>
+            <span className="desktop-only">{showRead ? "Dölj lästa" : "Visa lästa"}</span>
           </button>
           <button
             onClick={markAllAsRead}
@@ -1157,10 +1186,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               e.currentTarget.style.color = 'var(--text-muted)';
               e.currentTarget.style.borderColor = 'var(--border-color)';
             }}
-            title="Mark all current news as read"
+            title="Markera alla aktuella artiklar som lästa"
           >
             <CheckCheck size={16} />
-            <span className="desktop-only">Mark all as read</span>
+            <span className="desktop-only">Markera alla som lästa</span>
           </button>
           
           {/* Layout controls (desktop only) */}
@@ -1593,7 +1622,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         <p style={{ color: 'var(--text-muted)' }}>Laddar nyheter...</p>
       ) : allFeeds.length === 0 ? (
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)' }}>Inga olästa nyheter just nu. Byt till &apos;Visa lästa&apos; eller uppdatera flödena.</p>
+          <p style={{ color: 'var(--text-muted)' }}>
+            {showLockedOnly 
+              ? "Inga låsta artiklar hittades. Du kan spara artiklar med lås-ikonen på artikelkorten." 
+              : "Inga olästa nyheter just nu. Byt till 'Visa lästa' eller uppdatera flödena."}
+          </p>
         </div>
       ) : (
         <div className="events-flow-wrapper">
@@ -1661,9 +1694,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       )}
 
                       {/* Lock button */}
-                      {isItemLocked(item.id, item.is_locked) ? (
+                      {isArticleLocked(item.id, item.is_locked) ? (
                         <button 
-                          onClick={(e) => { e.stopPropagation(); unlockArticle(item.id); }}
+                          onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
                           title="Lås upp artikel (kan rensas automatiskt)"
                         >
@@ -1671,7 +1704,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         </button>
                       ) : (
                         <button 
-                          onClick={(e) => { e.stopPropagation(); lockArticle(item.id); }}
+                          onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
                           title="Lås artikel (skydda från automatisk rensning)"
                         >

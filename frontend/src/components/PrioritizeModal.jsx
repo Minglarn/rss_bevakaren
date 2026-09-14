@@ -95,7 +95,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
       onClose();
     } catch (err) {
       console.error('Could not prioritize article:', err);
-      setError('Could not update priority. Please try again.');
+      setError('Kunde inte uppdatera prioriteringen. Försök igen.');
     } finally {
       setLoading(false);
     }
@@ -161,10 +161,10 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                  Prioritize in PRIO Feed
+                  Prioritera i Prio-flödet
                 </h3>
                 <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Move event to your prioritized feed
+                  Lyft händelsen till ditt prioriterade flöde
                 </p>
               </div>
             </div>
@@ -206,13 +206,13 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
             {/* Topic input */}
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                Topic or keyword to monitor in the future:
+                Ämne eller nyckelord att bevaka framåt:
               </label>
               <input
                 type="text"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                placeholder="e.g. Saab, Central Bank, Defense..."
+                placeholder="T.ex. Saab, Riksbanken, Försvar..."
                 style={{
                   width: '100%',
                   padding: '0.65rem 0.85rem',
@@ -226,7 +226,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
                 }}
               />
               <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Field is automatically pre-filled with suggestions from the article. You can edit the text or click a suggestion below.
+                Fältet fylls i automatiskt med förslag från artikeln. Du kan redigera texten eller klicka på ett förslag nedan.
               </p>
             </div>
 
@@ -234,7 +234,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
             {suggestedTags.length > 0 && (
               <div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
-                  Suggestions from article (click to select):
+                  Förslag från artikeln (klicka för att välja):
                 </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                   {suggestedTags.map((t, idx) => (
@@ -286,7 +286,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
                 />
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <BellRing size={14} style={{ color: '#f97316' }} />
-                  Also add as an active keyword in your monitor list
+                  Lägg även till som aktivt nyckelord i din bevakningslista
                 </span>
               </label>
             )}
@@ -330,7 +330,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
                 fontWeight: 500
               }}
             >
-              Cancel
+              Avbryt
             </button>
 
             <button
@@ -348,7 +348,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
                 fontWeight: 500
               }}
             >
-              Only this article
+              Endast denna artikel
             </button>
 
             <button
@@ -375,7 +375,7 @@ const PrioritizeModal = ({ isOpen, onClose, article, onPrioritized }) => {
               ) : (
                 <Flame size={16} />
               )}
-              Prioritize & monitor topic
+              Prioritera och bevaka ämne
             </button>
           </div>
         </motion.div>

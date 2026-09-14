@@ -601,12 +601,13 @@ const App = () => {
 
   useEffect(() => {
     if (token && 'serviceWorker' in navigator) {
+      const msg = { type: 'SET_TOKEN', token: token };
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage(msg);
+      }
       navigator.serviceWorker.ready.then(registration => {
         if (registration.active) {
-          registration.active.postMessage({
-            type: 'SET_TOKEN',
-            token: token
-          });
+          registration.active.postMessage(msg);
         }
       });
     }
@@ -618,6 +619,9 @@ const App = () => {
 
     const onControllerChange = () => {
       if (token) {
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'SET_TOKEN', token: token });
+        }
         // Ny service worker har aktiverats vid uppdatering -> säkerställ prenumeration
         autoSyncPushSubscription({ force: true });
       }

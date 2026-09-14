@@ -217,19 +217,27 @@ export const sendNotification = (title, options = {}) => {
 
   if (Notification.permission === 'granted') {
     const defaultOptions = {
-      icon: '/pwa-192x192.png?v=2026.09.09.03',
-      badge: '/badge.png?v=2026.09.09.03'
+      icon: '/pwa-192x192.png?v=2026.09.14.01',
+      badge: '/badge.png?v=2026.09.14.01'
     };
+    
+    const finalOptions = { ...defaultOptions, ...options };
+    if (finalOptions.data && finalOptions.data.article_id && !finalOptions.actions) {
+      finalOptions.actions = [
+        { action: 'mark_read', title: 'Markera som läst' },
+        { action: 'open_event', title: 'Öppna' }
+      ];
+    }
     
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then(registration => {
-        registration.showNotification(title, { ...defaultOptions, ...options }).catch(e => {
+        registration.showNotification(title, finalOptions).catch(e => {
           console.error("Could not show SW notification", e);
-          new Notification(title, { ...defaultOptions, ...options });
+          new Notification(title, finalOptions);
         });
       });
     } else {
-      new Notification(title, { ...defaultOptions, ...options });
+      new Notification(title, finalOptions);
     }
   }
 };

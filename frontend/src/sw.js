@@ -63,8 +63,8 @@ self.addEventListener('push', function(event) {
     let title = 'RSS Bevakaren';
     let options = {
       body: 'Ny notis mottagen',
-      icon: '/pwa-192x192.png?v=2026.09.09.03',
-      badge: '/badge.png?v=2026.09.09.03',
+      icon: '/pwa-192x192.png?v=2026.09.14.01',
+      badge: '/badge.png?v=2026.09.14.01',
       vibrate: [200, 100, 200],
       renotify: true,
       data: {
@@ -84,6 +84,14 @@ self.addEventListener('push', function(event) {
       if (data.image) {
         options.image = data.image;
       }
+      if (data.actions && Array.isArray(data.actions)) {
+        options.actions = data.actions;
+      } else if (data.article_id) {
+        options.actions = [
+          { action: 'mark_read', title: 'Markera som läst' },
+          { action: 'open_event', title: 'Öppna' }
+        ];
+      }
     } catch (_e) {
       options.body = event.data.text();
     }
@@ -93,8 +101,8 @@ self.addEventListener('push', function(event) {
         console.warn('SW showNotification with full options failed, attempting minimal fallback:', err);
         const fallbackOptions = {
           body: options.body,
-          icon: options.icon || '/pwa-192x192.png?v=2026.09.09.03',
-          badge: '/badge.png?v=2026.09.09.03',
+          icon: options.icon || '/pwa-192x192.png?v=2026.09.14.01',
+          badge: '/badge.png?v=2026.09.14.01',
           data: options.data
         };
         if (options.image) {
@@ -126,13 +134,13 @@ self.addEventListener('notificationclick', function(event) {
                 'Authorization': `Bearer ${token}`
               }
             });
-            // Try to notify all clients to refresh feeds
-            const allClients = await clients.matchAll();
+            // Notifiera alla aktiva klienter att uppdatera sitt flöde i realtid
+            const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
             for (const client of allClients) {
               client.postMessage({ type: 'REFRESH_FEEDS' });
             }
           } catch(e) {
-            console.error("Failed to mark as read", e);
+            console.error("Failed to mark as read in background", e);
           }
         }
       })());
@@ -140,21 +148,24 @@ self.addEventListener('notificationclick', function(event) {
     return;
   }
   
-  if (action === 'open_event' || action.includes('open') || action.includes('ppna')) {
-    if (event.notification.data && event.notification.data.article_id) {
-      event.waitUntil(clients.openWindow(`/?articleId=${event.notification.data.article_id}`));
-    } else {
-      event.waitUntil(clients.openWindow('/'));
-    }
-    return;
-  }
+  const targetUrl = (event.notification.data && event.notification.data.article_id)
+    ? `/?articleId=${event.notification.data.article_id}`
+    : (event.notification.data && event.notification.data.url ? event.notification.data.url : '/');
 
-  // Default action
-  if (event.notification.data && event.notification.data.article_id) {
-    event.waitUntil(clients.openWindow(`/?articleId=${event.notification.data.article_id}`));
-  } else {
-    event.waitUntil(clients.openWindow('/'));
-  }
+  event.waitUntil((async () => {
+    const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of windowClients) {
+      if ('focus' in client) {
+        if ('navigate' in client) {
+          await client.navigate(targetUrl);
+        }
+        return client.focus();
+      }
+    }
+    if (clients.openWindow) {
+      return clients.openWindow(targetUrl);
+    }
+  })());
 });
 
 // Handle messages
