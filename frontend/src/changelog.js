@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.14.02',
+    date: '2026-09-14',
+    title: 'Mjuk och följsam expansion av artikelkort enligt branschstandard',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Mjuk och naturlig animation vid expansion',
+        description: 'Artikelkorten expanderar och fälls nu ihop med en avvägd övergång (320 ms / 240 ms) och en mjuk ease-out-kurva. Detta ersätter de tidigare abrupta hoppen med en behaglig och följsam läsupplevelse.'
+      },
+      {
+        type: 'improvement',
+        title: 'Sömlös ihopvikning och bildövergång',
+        description: 'Med AnimatePresence och höjdanimation viks artikeln ihop lika mjukt som den vecklas ut, och fullbreddsbilden tonas fram utan hackiga layoutskiftningar.'
+      }
+    ]
+  },
+  {
     version: '2026.09.14.01',
     date: '2026-09-14',
     title: 'Notis-knappar, filter för låsta artiklar och fullständig svensk översättning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

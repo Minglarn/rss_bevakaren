@@ -1990,16 +1990,17 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       </h3>
                       
                       {showImages && item.image_url && (
-                        <div 
+                        <motion.div 
+                          initial={flowLayout === 'compact' ? { opacity: 0, height: 0 } : false}
+                          animate={{ opacity: 1, height: flowLayout === 'stretch' ? 200 : 230 }}
+                          transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
                           style={{ 
                             width: '100%', 
-                            height: flowLayout === 'stretch' ? '200px' : '230px', 
                             marginBottom: '1rem', 
                             borderRadius: '8px', 
                             overflow: 'hidden',
                             backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-                            transition: 'all 0.25s ease'
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
                           }}
                         >
                           <img 
@@ -2008,7 +2009,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                             onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
                           />
-                        </div>
+                        </motion.div>
                       )}
                     </>
                   )}
@@ -2148,7 +2149,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         <div style={{ marginBottom: '0.65rem' }}>
                           {shouldShowAi && !item.ai_summary && (
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontStyle: 'italic' }}>
-                              {isTimedOut ? 'AI offline / timeout - showing original text' : 'Original RSS text'}
+                              {isTimedOut ? 'AI offline / tidsgräns överskriden - visar ursprunglig text' : 'Ursprunglig RSS-text'}
                             </div>
                           )}
                           <div style={{ 
@@ -2229,61 +2230,89 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   )}
                   
                   {/* Expanded Content (Full scraped text) */}
-                  {isItemExpanded && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', fontSize: '0.95rem', lineHeight: '1.6', color: 'var(--text-main)' }}
-                    >
-                      {item.ai_summary && item.summary && (
-                        <div style={{ marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                          <strong style={{ display: 'block', color: 'var(--text-main)', marginBottom: '0.25rem' }}>RSS-ingress:</strong>
-                          {item.summary}
-                        </div>
-                      )}
+                  <AnimatePresence initial={false}>
+                    {isItemExpanded && (
+                      <motion.div 
+                        key={`expanded-${item.id}`}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ 
+                          opacity: 1, 
+                          height: 'auto',
+                          transition: {
+                            height: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
+                            opacity: { duration: 0.28, delay: 0.04, ease: "easeOut" }
+                          }
+                        }}
+                        exit={{ 
+                          opacity: 0, 
+                          height: 0,
+                          transition: {
+                            height: { duration: 0.24, ease: [0.16, 1, 0.3, 1] },
+                            opacity: { duration: 0.16, ease: "easeIn" }
+                          }
+                        }}
+                        style={{ 
+                          overflow: 'hidden',
+                          marginBottom: '1.25rem', 
+                          backgroundColor: 'var(--bg-app)', 
+                          borderRadius: '8px', 
+                          fontSize: '0.95rem', 
+                          lineHeight: '1.6', 
+                          color: 'var(--text-main)' 
+                        }}
+                      >
+                        <div style={{ padding: '1rem' }}>
+                          {item.ai_summary && item.summary && (
+                            <div style={{ marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                              <strong style={{ display: 'block', color: 'var(--text-main)', marginBottom: '0.25rem' }}>RSS-ingress:</strong>
+                              {item.summary}
+                            </div>
+                          )}
 
-                      {scrapingUrls[item.link] ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
-                          <Loader2 className="spin" size={16} /> Hämtar hela artikeln...
+                          {scrapingUrls[item.link] ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
+                              <Loader2 className="spin" size={16} /> Hämtar hela artikeln...
+                            </div>
+                          ) : scrapedContents[item.link] && scrapedContents[item.link] !== item.summary ? (
+                            <div style={{ whiteSpace: 'pre-line' }}>
+                              {scrapedContents[item.link]}
+                            </div>
+                          ) : (
+                            <div style={{ color: 'var(--text-muted)' }}>
+                              Ingen ytterligare text kunde hämtas automatiskt. Läs hela artikeln hos originalkällan.
+                            </div>
+                          )}
+                          
+                          <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
+                              <ExternalLink size={16} /> Läs hos originalkällan
+                            </a>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShareItem(item);
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                background: 'transparent',
+                                border: '1px solid var(--border-color)',
+                                color: 'var(--text-main)',
+                                padding: '0.3rem 0.75rem',
+                                borderRadius: '6px',
+                                fontSize: '0.85rem',
+                                fontWeight: 500,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Share2 size={14} style={{ color: 'var(--primary)' }} /> Dela händelse
+                            </button>
+                          </div>
                         </div>
-                      ) : scrapedContents[item.link] && scrapedContents[item.link] !== item.summary ? (
-                        <div style={{ whiteSpace: 'pre-line' }}>
-                          {scrapedContents[item.link]}
-                        </div>
-                      ) : (
-                        <div style={{ color: 'var(--text-muted)' }}>
-                          Ingen ytterligare text kunde hämtas automatiskt. Läs hela artikeln hos originalkällan.
-                        </div>
-                      )}
-                      
-                      <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
-                          <ExternalLink size={16} /> Läs hos originalkällan
-                        </a>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShareItem(item);
-                          }}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            background: 'transparent',
-                            border: '1px solid var(--border-color)',
-                            color: 'var(--text-main)',
-                            padding: '0.3rem 0.75rem',
-                            borderRadius: '6px',
-                            fontSize: '0.85rem',
-                            fontWeight: 500,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <Share2 size={14} style={{ color: 'var(--primary)' }} /> Share event
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {/* Klustrade källor & dubletthantering */}
                   {item.similar_articles && item.similar_articles.length > 0 && (
