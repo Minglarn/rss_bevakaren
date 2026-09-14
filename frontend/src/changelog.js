@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.14.03',
+    date: '2026-09-14',
+    title: 'Strukturerade inställningar för utseende samt komplett svensk UI-översättning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Expanderbara sektioner för Utseende-inställningar',
+        description: 'Inställningssidan för Utseende har strukturerats upp med logiska och ihopfällbara rutor för Tema & Flödeslayout, Artikelkort & Mobilupplevelse samt Nyhetsklustring & AI-hämtning. Detta minskar behovet av vertikal scrollning och ger snabbare överblick.'
+      },
+      {
+        type: 'improvement',
+        title: 'Fullständig svensk översättning av Databas, Notiser och AI',
+        description: 'Samtliga sektioner under Databas, Notiser och AI har översatts till ren svenska, inklusive korrekta å, ä och ö, uppdaterade statusbrickor, hjälpinformation och knapptexter.'
+      }
+    ]
+  },
+  {
     version: '2026.09.14.02',
     date: '2026-09-14',
     title: 'Mjuk och följsam expansion av artikelkort enligt branschstandard',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

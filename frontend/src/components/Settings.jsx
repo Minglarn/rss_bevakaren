@@ -59,6 +59,37 @@ const Settings = ({ onLogout }) => {
   const [categorySort, setCategorySort] = useState('volume_desc');
   const [tagSearch, setTagSearch] = useState('');
   const [swipeGesturesEnabled, setSwipeGesturesEnabled] = useState(() => localStorage.getItem('rss_swipe_gestures') !== 'false');
+  const [expandedUiSections, setExpandedUiSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rss_expanded_ui_sections');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // Ignorera sparade fel
+    }
+    return {
+      themeAndLayout: true,
+      cardsAndGestures: true,
+      clusteringAndAi: true
+    };
+  });
+
+  const toggleUiSection = (key) => {
+    setExpandedUiSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('rss_expanded_ui_sections', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const setAllUiSections = (expand) => {
+    const next = {
+      themeAndLayout: expand,
+      cardsAndGestures: expand,
+      clusteringAndAi: expand
+    };
+    setExpandedUiSections(next);
+    localStorage.setItem('rss_expanded_ui_sections', JSON.stringify(next));
+  };
 
   const toggleSwipeGestures = () => {
     const nextVal = !swipeGesturesEnabled;
@@ -159,7 +190,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
   const getWeightBadge = (weight) => {
     if (weight >= 8) {
       return {
-        label: 'Always PRIO (75-100p)',
+        label: 'Alltid PRIO (75–100p)',
         color: '#16a34a',
         bg: 'rgba(22, 163, 74, 0.12)',
         border: '1px solid rgba(22, 163, 74, 0.3)'
@@ -167,7 +198,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
     if (weight >= 5) {
       return {
-        label: 'Standard feed (50-70p)',
+        label: 'Standardflöde (50–70p)',
         color: '#0284c7',
         bg: 'rgba(2, 132, 199, 0.12)',
         border: '1px solid rgba(2, 132, 199, 0.25)'
@@ -175,14 +206,14 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
     if (weight >= 1) {
       return {
-        label: 'Low prio (10-40p)',
+        label: 'Låg prio (10–40p)',
         color: 'var(--text-muted)',
         bg: 'rgba(100, 116, 139, 0.1)',
         border: '1px solid var(--border-color)'
       };
     }
     return {
-      label: 'Ignored (0p - Never PRIO)',
+      label: 'Ignoreras (0p - Aldrig PRIO)',
       color: '#ef4444',
       bg: 'rgba(239, 68, 68, 0.12)',
       border: '1px solid rgba(239, 68, 68, 0.3)'
@@ -612,12 +643,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         setAiConfig(res.data);
       }
       toast.success(nextState 
-        ? 'Notifications restricted to PRIO feed and keywords only.' 
-        : 'Notifications enabled for all articles in your feeds.');
+        ? 'Notiser begränsade till endast PRIO-flödet och nyckelord.' 
+        : 'Notiser aktiverade för alla artiklar i dina flöden.');
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
       console.error("Could not change PRIO notify only status:", err);
-      toast.error('Failed to save setting.');
+      toast.error('Kunde inte spara inställningen.');
     } finally {
       setIsSavingAi(false);
     }
@@ -650,11 +681,11 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       if (res.data) {
         setAiConfig(res.data);
       }
-      toast.success(`${label} is now ${nextVal ? 'enabled' : 'disabled'}.`);
+      toast.success(`${label} har ${nextVal ? 'aktiverats' : 'inaktiverats'}.`);
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
       console.error(`Could not update push setting ${key}:`, err);
-      toast.error('Failed to save notification setting.');
+      toast.error('Kunde inte spara notisinställningen.');
     } finally {
       setIsSavingAi(false);
     }
@@ -686,11 +717,11 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         auto_scrape_article_text: aiConfig.auto_scrape_article_text !== false
       });
       if (res.data) setAiConfig(res.data);
-      toast.success(nextVal ? 'Automatic nightly purge enabled (runs at 03:00).' : 'Automatic nightly purge disabled.');
+      toast.success(nextVal ? 'Automatisk nattlig rensning aktiverad (körs kl 03:00).' : 'Automatisk nattlig rensning inaktiverad.');
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
       console.error(err);
-      toast.error('Failed to update automatic purge setting.');
+      toast.error('Kunde inte uppdatera automatisk rensning.');
     } finally {
       setIsSavingAi(false);
     }
@@ -722,11 +753,11 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         auto_scrape_article_text: nextVal
       });
       if (res.data) setAiConfig(res.data);
-      toast.success(nextVal ? 'Automatisk artikel-skrapning for AI ar nu aktiverad.' : 'Automatisk artikel-skrapning for AI ar nu inaktiverad.');
+      toast.success(nextVal ? 'Automatisk artikel-skrapning för AI är nu aktiverad.' : 'Automatisk artikel-skrapning för AI är nu inaktiverad.');
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
       console.error(err);
-      toast.error('Kunde inte spara installningen.');
+      toast.error('Kunde inte spara inställningen.');
     } finally {
       setIsSavingAi(false);
     }
@@ -802,7 +833,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     const currentCats = aiConfig.categories || [];
     const exists = currentCats.some(c => (typeof c === 'object' ? c.name : c).toLowerCase() === cat.toLowerCase());
     if (exists) {
-      toast.error('Category already exists');
+      toast.error('Kategorin finns redan');
       return;
     }
     const updatedCats = [
@@ -832,7 +863,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
   };
 
   const handleResetAiCategories = () => {
-    if (!window.confirm("Do you want to reset all categories and weights to default?")) return;
+    if (!window.confirm("Vill du återställa alla kategorier och vikter till standard?")) return;
     setAiConfig(prev => {
       const updated = { ...prev, categories: DEFAULT_CATS_WEIGHTS };
       if (!isCustomPromptEdited) {
@@ -840,7 +871,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       }
       return updated;
     });
-    toast.success('Categories and default weights restored');
+    toast.success('Kategorier och standardvikter har återställts');
   };
 
   const handleRegeneratePromptFromRules = () => {
@@ -850,11 +881,11 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       system_prompt: generated
     }));
     setIsCustomPromptEdited(false);
-    toast.success('Prompt regenerated from your categories');
+    toast.success('Systemprompten har återskapats från dina kategorier');
   };
 
   const handleResetAiPrompt = () => {
-    if (!window.confirm("Do you want to reset the analysis prompt and categories to default?")) return;
+    if (!window.confirm("Vill du återställa analysprompten och kategorierna till standard?")) return;
     const generated = updatePromptFromRules(DEFAULT_CATS_WEIGHTS);
     setAiConfig(prev => ({
       ...prev,
@@ -862,7 +893,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       system_prompt: generated
     }));
     setIsCustomPromptEdited(false);
-    toast.success('Prompt reset to default');
+    toast.success('Systemprompten har återställts till standard');
   };
 
   return (
@@ -1094,241 +1125,496 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       )}
 
       {activeTab === 'ui' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
-            <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ImageIcon size={20} /> Utseende och visning
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem' }}>
-              Anpassa hur applikationen ser ut, hur nyheter presenteras och hur djupt innehållet analyseras.
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          
+          {/* Huvudkort för Utseende med snabbknappar */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.15rem' }}>
+                <Palette size={20} style={{ color: 'var(--primary)' }} /> Utseende och visning
+              </h3>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setAllUiSections(true)}
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-app)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    fontWeight: 500
+                  }}
+                >
+                  Fäll ut alla
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAllUiSections(false)}
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-app)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    fontWeight: 500
+                  }}
+                >
+                  Fäll ihop alla
+                </button>
+              </div>
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.45 }}>
+              Anpassa hur applikationen ser ut, hur nyhetsflödet disponeras och hur djupt innehållet analyseras. Klicka på sektionerna nedan för att öppna eller stänga inställningarna.
             </p>
-
-            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ImageIcon size={18} /> Färgtema
-              </h4>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Tema</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Välj mellan systemstandard, ljust eller mörkt tema.</div>
-                </div>
-                <select 
-                  value={theme}
-                  onChange={toggleTheme}
-                  style={{ flex: 'none', width: 'auto', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
-                >
-                  <option value="system">Automatiskt (System)</option>
-                  <option value="light">Ljust tema</option>
-                  <option value="dark">Mörkt tema</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Kortstil i nyhetsflödet */}
-            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Layers size={18} style={{ color: 'var(--primary)' }} /> Kortstil i nyhetsflödet
-              </h4>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: '220px' }}>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Utseende på händelsekorten</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    Välj mellan modernt format (färgad toppbar, 4px accentlist och full skärmbredd) eller klassiskt format (sidopanel med tidsblock).
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleCardStyleChange('modern')}
-                    style={{
-                      padding: '0.45rem 0.95rem',
-                      borderRadius: '6px',
-                      border: cardStyle === 'modern' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                      backgroundColor: cardStyle === 'modern' ? 'var(--primary)' : 'var(--bg-card)',
-                      color: cardStyle === 'modern' ? '#ffffff' : 'var(--text-main)',
-                      fontWeight: cardStyle === 'modern' ? 600 : 400,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    Modernt
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleCardStyleChange('classic')}
-                    style={{
-                      padding: '0.45rem 0.95rem',
-                      borderRadius: '6px',
-                      border: cardStyle === 'classic' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                      backgroundColor: cardStyle === 'classic' ? 'var(--primary)' : 'var(--bg-card)',
-                      color: cardStyle === 'classic' ? '#ffffff' : 'var(--text-main)',
-                      fontWeight: cardStyle === 'classic' ? 600 : 400,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    Klassisk
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Laptop size={18} style={{ color: 'var(--primary)' }} /> Flödeslayout i desktop
-              </h4>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: '220px' }}>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Korthöjd och packning i rutnät</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    Välj mellan kompakt vattenfall (korten anpassas naturligt till sitt innehåll i oberoende kolumner utan tomma hålrum) eller klassiskt rutnät (korten på samma rad tvingas till samma höjd).
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleFlowLayoutChange('compact')}
-                    style={{
-                      padding: '0.45rem 0.95rem',
-                      borderRadius: '6px',
-                      border: flowLayout === 'compact' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                      backgroundColor: flowLayout === 'compact' ? 'var(--primary)' : 'var(--bg-card)',
-                      color: flowLayout === 'compact' ? '#ffffff' : 'var(--text-main)',
-                      fontWeight: flowLayout === 'compact' ? 600 : 400,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    Kompakt Vattenfall (Ny)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleFlowLayoutChange('stretch')}
-                    style={{
-                      padding: '0.45rem 0.95rem',
-                      borderRadius: '6px',
-                      border: flowLayout === 'stretch' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                      backgroundColor: flowLayout === 'stretch' ? 'var(--primary)' : 'var(--bg-card)',
-                      color: flowLayout === 'stretch' ? '#ffffff' : 'var(--text-main)',
-                      fontWeight: flowLayout === 'stretch' ? 600 : 400,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    Klassiskt Rutnät
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <ImageIcon size={18} /> Bilder i flödet
-              </h4>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Visa artikelbilder i händelsekorten</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Välj om nyhetsartiklar ska visa tillhörande bild eller enbart ren text.</div>
-                </div>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={showImages}
-                    onChange={toggleImages}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-
-            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Layers size={18} style={{ color: 'var(--primary)' }} /> Nyhetsklustring (Topic Clustering)
-              </h4>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Gruppera artiklar som handlar om samma händelse</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Minskar brus genom att sammanföra rapporter från olika nyhetskällor till en samlad händelse.</div>
-                </div>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={clusterMode}
-                    onChange={toggleClusterMode}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-
-            {/* Swipe-gester för mobilkort */}
-            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Smartphone size={18} style={{ color: 'var(--primary)' }} /> Swipe-gester för mobilkort
-              </h4>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                <div>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Svep i sidled för att markera som läst eller oläst</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.45, marginTop: '0.2rem' }}>
-                    Svep kortet i horisontell led med realtidshaptik. Vertikal scrollning prioriteras så att flödessurfningen inte störs. Låsning styrs alltid säkert via Lås-knappen.
-                  </div>
-                </div>
-                <label className="toggle-switch" style={{ flexShrink: 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={swipeGesturesEnabled}
-                    onChange={toggleSwipeGestures}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-
-            {/* Ny inställning: Automatisk artikel-skrapning före AI-analys */}
-            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FileText size={18} style={{ color: 'var(--primary)' }} /> Automatisk artikel-skrapning för AI
-              </h4>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                <div>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Hämta fullständig artikeltext före AI-analys</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.45, marginTop: '0.2rem' }}>
-                    Hämtar automatiskt artikelns brödtext från webbkällan innan AI-analysen genereras. Detta gör att AI-modellen kan avslöja vad clickbaits döljer (t.ex. orsaker, namn eller summor) och ger mer informativa sammanfattningar för korta RSS-ingresser.
-                  </div>
-                </div>
-                <label className="toggle-switch" style={{ flexShrink: 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={aiConfig.auto_scrape_article_text !== false}
-                    onChange={handleToggleAutoScrape}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-
-            <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sparkles size={18} style={{ color: '#f97316' }} /> Flödesvisning i Dashboard
-              </h4>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-                <div style={{ maxWidth: '500px' }}>
-                  <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>Välj läge för nyhetsflödet</div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                    Välj om ditt ordinarie nyhetsflöde ska berikas med AI-sammanfattningar, taggar och kategorier eller visas i klassiskt minimalistiskt RSS-läge.
-                  </div>
-                </div>
-                <select 
-                  value={feedMode}
-                  onChange={(e) => handleFeedModeChange(e.target.value)}
-                  style={{ flex: 'none', width: 'auto', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: 600 }}
-                >
-                  <option value="ai">AI-flöde (Sammanfattningar & Taggar)</option>
-                  <option value="classic">Klassiskt RSS-flöde (Råtext utan AI)</option>
-                </select>
-              </div>
-            </div>
           </div>
+
+          {/* Sektion 1: Tema och flödeslayout */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <div 
+              onClick={() => toggleUiSection('themeAndLayout')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                backgroundColor: expandedUiSections.themeAndLayout ? 'var(--bg-card)' : 'var(--bg-app)',
+                borderBottom: expandedUiSections.themeAndLayout ? '1px solid var(--border-color)' : 'none',
+                userSelect: 'none',
+                transition: 'background-color 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                  color: 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Palette size={18} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '1rem' }}>
+                    Tema och flödeslayout
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    Färgtema, kortstil, korthöjd/packning samt läge för Dashboard
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{
+                  fontSize: '0.72rem',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '12px',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border-color)',
+                  fontWeight: 600,
+                  display: 'none',
+                  '@media (min-width: 640px)': { display: 'inline-block' }
+                }}>
+                  {cardStyle === 'modern' ? 'Modernt' : 'Klassiskt'} · {flowLayout === 'compact' ? 'Vattenfall' : 'Rutnät'}
+                </span>
+                <motion.div
+                  animate={{ rotate: expandedUiSections.themeAndLayout ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronDown size={18} />
+                </motion.div>
+              </div>
+            </div>
+
+            {expandedUiSections.themeAndLayout && (
+              <div style={{ padding: '1.15rem', display: 'flex', flexDirection: 'column', gap: '1rem', backgroundColor: 'var(--bg-card)' }}>
+                {/* Färgtema */}
+                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+                    <ImageIcon size={17} style={{ color: 'var(--primary)' }} /> Färgtema
+                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.88rem' }}>Tema</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Välj mellan automatiskt systemstandard, ljust eller mörkt tema.</div>
+                    </div>
+                    <select 
+                      value={theme}
+                      onChange={toggleTheme}
+                      style={{ flex: 'none', width: 'auto', padding: '0.45rem 0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 500 }}
+                    >
+                      <option value="system">Automatiskt (System)</option>
+                      <option value="light">Ljust tema</option>
+                      <option value="dark">Mörkt tema</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Kortstil i nyhetsflödet */}
+                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+                    <Layers size={17} style={{ color: 'var(--primary)' }} /> Kortstil i nyhetsflödet
+                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '220px' }}>
+                      <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.88rem' }}>Utseende på händelsekorten</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                        Välj mellan modernt format (färgad toppbar, 4px accentlist och full skärmbredd) eller klassiskt format (sidopanel med tidsblock).
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleCardStyleChange('modern')}
+                        style={{
+                          padding: '0.45rem 0.95rem',
+                          borderRadius: '6px',
+                          border: cardStyle === 'modern' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                          backgroundColor: cardStyle === 'modern' ? 'var(--primary)' : 'var(--bg-card)',
+                          color: cardStyle === 'modern' ? '#ffffff' : 'var(--text-main)',
+                          fontWeight: cardStyle === 'modern' ? 600 : 400,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        Modernt
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCardStyleChange('classic')}
+                        style={{
+                          padding: '0.45rem 0.95rem',
+                          borderRadius: '6px',
+                          border: cardStyle === 'classic' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                          backgroundColor: cardStyle === 'classic' ? 'var(--primary)' : 'var(--bg-card)',
+                          color: cardStyle === 'classic' ? '#ffffff' : 'var(--text-main)',
+                          fontWeight: cardStyle === 'classic' ? 600 : 400,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        Klassisk
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Flödeslayout i desktop */}
+                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+                    <Laptop size={17} style={{ color: 'var(--primary)' }} /> Flödeslayout i desktop
+                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '220px' }}>
+                      <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.88rem' }}>Korthöjd och packning i rutnät</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                        Välj mellan kompakt vattenfall (korten anpassas naturligt till sitt innehåll i oberoende kolumner utan tomma hålrum) eller klassiskt rutnät (korten på samma rad tvingas till samma höjd).
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleFlowLayoutChange('compact')}
+                        style={{
+                          padding: '0.45rem 0.95rem',
+                          borderRadius: '6px',
+                          border: flowLayout === 'compact' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                          backgroundColor: flowLayout === 'compact' ? 'var(--primary)' : 'var(--bg-card)',
+                          color: flowLayout === 'compact' ? '#ffffff' : 'var(--text-main)',
+                          fontWeight: flowLayout === 'compact' ? 600 : 400,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        Kompakt Vattenfall
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFlowLayoutChange('stretch')}
+                        style={{
+                          padding: '0.45rem 0.95rem',
+                          borderRadius: '6px',
+                          border: flowLayout === 'stretch' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                          backgroundColor: flowLayout === 'stretch' ? 'var(--primary)' : 'var(--bg-card)',
+                          color: flowLayout === 'stretch' ? '#ffffff' : 'var(--text-main)',
+                          fontWeight: flowLayout === 'stretch' ? 600 : 400,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        Klassiskt Rutnät
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Flödesvisning i Dashboard */}
+                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+                    <Sparkles size={17} style={{ color: '#f97316' }} /> Flödesvisning i Dashboard
+                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div style={{ maxWidth: '500px' }}>
+                      <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.88rem' }}>Välj läge för nyhetsflödet</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                        Välj om ditt ordinarie nyhetsflöde ska berikas med AI-sammanfattningar, taggar och kategorier eller visas i klassiskt minimalistiskt RSS-läge.
+                      </div>
+                    </div>
+                    <select 
+                      value={feedMode}
+                      onChange={(e) => handleFeedModeChange(e.target.value)}
+                      style={{ flex: 'none', width: 'auto', padding: '0.45rem 0.9rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.85rem' }}
+                    >
+                      <option value="ai">AI-flöde (Sammanfattningar & Taggar)</option>
+                      <option value="classic">Klassiskt RSS-flöde (Råtext utan AI)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sektion 2: Artikelkort och interaktion */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <div 
+              onClick={() => toggleUiSection('cardsAndGestures')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                backgroundColor: expandedUiSections.cardsAndGestures ? 'var(--bg-card)' : 'var(--bg-app)',
+                borderBottom: expandedUiSections.cardsAndGestures ? '1px solid var(--border-color)' : 'none',
+                userSelect: 'none',
+                transition: 'background-color 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                  color: '#10b981',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Smartphone size={18} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '1rem' }}>
+                    Artikelkort och mobilinteraktion
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    Artikelbilder i korten samt svepgester för pekskärmar
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{
+                  fontSize: '0.72rem',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '12px',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border-color)',
+                  fontWeight: 600,
+                  display: 'none',
+                  '@media (min-width: 640px)': { display: 'inline-block' }
+                }}>
+                  {showImages ? 'Bilder på' : 'Bilder av'} · {swipeGesturesEnabled ? 'Svep på' : 'Svep av'}
+                </span>
+                <motion.div
+                  animate={{ rotate: expandedUiSections.cardsAndGestures ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronDown size={18} />
+                </motion.div>
+              </div>
+            </div>
+
+            {expandedUiSections.cardsAndGestures && (
+              <div style={{ padding: '1.15rem', display: 'flex', flexDirection: 'column', gap: '1rem', backgroundColor: 'var(--bg-card)' }}>
+                {/* Bilder i flödet */}
+                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+                    <ImageIcon size={17} style={{ color: '#10b981' }} /> Bilder i flödet
+                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.88rem' }}>Visa artikelbilder i händelsekorten</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Välj om nyhetsartiklar ska visa tillhörande bild eller enbart ren text.</div>
+                    </div>
+                    <label className="toggle-switch" style={{ flexShrink: 0, margin: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={showImages}
+                        onChange={toggleImages}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Swipe-gester för mobilkort */}
+                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+                    <Smartphone size={17} style={{ color: 'var(--primary)' }} /> Swipe-gester för mobilkort
+                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.88rem' }}>Svep i sidled för att markera som läst eller oläst</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.45, marginTop: '0.2rem' }}>
+                        Svep kortet horisontellt med realtidshaptik. Vertikal scrollning prioriteras så att flödessurfningen inte störs. Låsning styrs alltid säkert via Lås-knappen.
+                      </div>
+                    </div>
+                    <label className="toggle-switch" style={{ flexShrink: 0, margin: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={swipeGesturesEnabled}
+                        onChange={toggleSwipeGestures}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sektion 3: Klustring och innehållshämtning */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <div 
+              onClick={() => toggleUiSection('clusteringAndAi')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                backgroundColor: expandedUiSections.clusteringAndAi ? 'var(--bg-card)' : 'var(--bg-app)',
+                borderBottom: expandedUiSections.clusteringAndAi ? '1px solid var(--border-color)' : 'none',
+                userSelect: 'none',
+                transition: 'background-color 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(249, 115, 22, 0.12)',
+                  color: '#f97316',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Sparkles size={18} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '1rem' }}>
+                    Klustring och innehållshämtning
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    Gruppering av artiklar om samma händelse samt skrapning av brödtext före AI-analys
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{
+                  fontSize: '0.72rem',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '12px',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border-color)',
+                  fontWeight: 600,
+                  display: 'none',
+                  '@media (min-width: 640px)': { display: 'inline-block' }
+                }}>
+                  {clusterMode ? 'Klustring på' : 'Klustring av'}
+                </span>
+                <motion.div
+                  animate={{ rotate: expandedUiSections.clusteringAndAi ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronDown size={18} />
+                </motion.div>
+              </div>
+            </div>
+
+            {expandedUiSections.clusteringAndAi && (
+              <div style={{ padding: '1.15rem', display: 'flex', flexDirection: 'column', gap: '1rem', backgroundColor: 'var(--bg-card)' }}>
+                {/* Nyhetsklustring */}
+                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+                    <Layers size={17} style={{ color: 'var(--primary)' }} /> Nyhetsklustring (Topic Clustering)
+                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.88rem' }}>Gruppera artiklar som handlar om samma händelse</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>Minskar brus genom att sammanföra rapporter från olika nyhetskällor till en samlad händelse.</div>
+                    </div>
+                    <label className="toggle-switch" style={{ flexShrink: 0, margin: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={clusterMode}
+                        onChange={toggleClusterMode}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Automatisk artikel-skrapning för AI */}
+                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+                    <FileText size={17} style={{ color: 'var(--primary)' }} /> Automatisk artikel-skrapning för AI
+                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.88rem' }}>Hämta fullständig artikeltext före AI-analys</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.45, marginTop: '0.2rem' }}>
+                        Hämtar automatiskt artikelns brödtext från webbkällan innan AI-analysen genereras. Detta gör att AI-modellen kan avslöja vad ClickBait döljer (t.ex. orsaker, namn eller summor) och ger mer informativa sammanfattningar för korta RSS-ingresser.
+                      </div>
+                    </div>
+                    <label className="toggle-switch" style={{ flexShrink: 0, margin: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={aiConfig.auto_scrape_article_text !== false}
+                        onChange={handleToggleAutoScrape}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
         </motion.div>
       )}
 
@@ -2091,13 +2377,13 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       {activeTab === 'database' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          {/* Database Summary & Health Card */}
+          {/* Databasöversikt & Hälsa */}
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.75rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem', paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Database size={20} style={{ color: 'var(--primary)' }} />
                 <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem' }}>
-                  Database Overview & Health
+                  Databasöversikt och hälsa
                 </h3>
               </div>
               <button
@@ -2120,22 +2406,22 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 }}
               >
                 <RefreshCw size={14} className={isLoadingDbStats ? 'spin' : ''} />
-                {isLoadingDbStats ? 'Refreshing...' : 'Refresh Statistics'}
+                {isLoadingDbStats ? 'Uppdaterar...' : 'Uppdatera statistik'}
               </button>
             </div>
             
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.25rem', paddingLeft: '0.25rem', lineHeight: 1.45 }}>
-              Real-time metrics, article lifecycle statistics, and storage health for your database.
+              Realtidsstatistik, artiklarnas livscykel och databasens lagringshälsa.
             </p>
 
-            {/* KPI Cards Grid */}
+            {/* KPI-kort */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
               gap: '0.85rem',
               marginBottom: '1.5rem'
             }}>
-              {/* Card 1: Total Articles */}
+              {/* Kort 1: Totalt antal artiklar */}
               <div style={{
                 backgroundColor: 'var(--bg-app)',
                 borderRadius: '10px',
@@ -2146,18 +2432,18 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 gap: '0.35rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <span>Total Articles</span>
+                  <span>Totalt antal artiklar</span>
                   <Layers size={16} style={{ color: 'var(--primary)' }} />
                 </div>
                 <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  {dbStats ? dbStats.total_articles.toLocaleString('en-US') : (sysInfo?.total_articles?.toLocaleString('en-US') || '0')}
+                  {dbStats ? dbStats.total_articles.toLocaleString('sv-SE') : (sysInfo?.total_articles?.toLocaleString('sv-SE') || '0')}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  {dbStats ? `${dbStats.unread_articles.toLocaleString('en-US')} unread · ${dbStats.read_articles.toLocaleString('en-US')} read` : 'Articles currently indexed'}
+                  {dbStats ? `${dbStats.unread_articles.toLocaleString('sv-SE')} olästa · ${dbStats.read_articles.toLocaleString('sv-SE')} lästa` : 'Artiklar indexerade i databasen'}
                 </div>
               </div>
 
-              {/* Card 2: Database Size */}
+              {/* Kort 2: Databasstorlek */}
               <div style={{
                 backgroundColor: 'var(--bg-app)',
                 borderRadius: '10px',
@@ -2168,18 +2454,18 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 gap: '0.35rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <span>Database Size</span>
+                  <span>Databasstorlek</span>
                   <HardDrive size={16} style={{ color: '#8b5cf6' }} />
                 </div>
                 <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#8b5cf6' }}>
                   {dbStats ? (dbStats.database_size_bytes / 1024 / 1024).toFixed(2) + ' MB' : (sysInfo ? (sysInfo.database_size_bytes / 1024 / 1024).toFixed(2) + ' MB' : '0.00 MB')}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  SQLite persistent disk storage
+                  Beständig disklagring (SQLite)
                 </div>
               </div>
 
-              {/* Card 3: Oldest Article */}
+              {/* Kort 3: Äldsta artikel */}
               <div style={{
                 backgroundColor: 'var(--bg-app)',
                 borderRadius: '10px',
@@ -2190,7 +2476,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 gap: '0.35rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <span>Oldest Article</span>
+                  <span>Äldsta artikel</span>
                   <Calendar size={16} style={{ color: '#f59e0b' }} />
                 </div>
                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.15rem' }}>
@@ -2200,11 +2486,11 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   title={dbStats?.oldest_article?.title || ''}
                   style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                 >
-                  {dbStats?.oldest_article?.title ? `"${dbStats.oldest_article.title}"` : 'No article stored yet'}
+                  {dbStats?.oldest_article?.title ? `"${dbStats.oldest_article.title}"` : 'Inga artiklar sparade ännu'}
                 </div>
               </div>
 
-              {/* Card 4: Newest Article */}
+              {/* Kort 4: Senaste artikel */}
               <div style={{
                 backgroundColor: 'var(--bg-app)',
                 borderRadius: '10px',
@@ -2215,7 +2501,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 gap: '0.35rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <span>Newest Article</span>
+                  <span>Senaste artikel</span>
                   <Clock size={16} style={{ color: '#10b981' }} />
                 </div>
                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.15rem' }}>
@@ -2225,11 +2511,11 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   title={dbStats?.newest_article?.title || ''}
                   style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                 >
-                  {dbStats?.newest_article?.title ? `"${dbStats.newest_article.title}"` : 'Awaiting incoming RSS feeds'}
+                  {dbStats?.newest_article?.title ? `"${dbStats.newest_article.title}"` : 'Väntar på inkommande RSS-flöden'}
                 </div>
               </div>
 
-              {/* Card 5: Saved & Locked */}
+              {/* Kort 5: Låsta och bilder */}
               <div style={{
                 backgroundColor: 'var(--bg-app)',
                 borderRadius: '10px',
@@ -2240,18 +2526,18 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 gap: '0.35rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <span>Locked & Images</span>
+                  <span>Låsta & Bilder</span>
                   <Lock size={16} style={{ color: '#ec4899' }} />
                 </div>
                 <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  {dbStats ? dbStats.locked_articles.toLocaleString('en-US') : '0'} locked
+                  {dbStats ? dbStats.locked_articles.toLocaleString('sv-SE') : '0'} låsta
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Protected from purge · {dbStats ? dbStats.articles_with_image.toLocaleString('en-US') : '0'} with images
+                  Skyddade mot rensning · {dbStats ? dbStats.articles_with_image.toLocaleString('sv-SE') : '0'} med bilder
                 </div>
               </div>
 
-              {/* Card 6: AI Processed */}
+              {/* Kort 6: AI-analyserade */}
               <div style={{
                 backgroundColor: 'var(--bg-app)',
                 borderRadius: '10px',
@@ -2262,19 +2548,19 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 gap: '0.35rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <span>AI Insights</span>
+                  <span>AI-insikter</span>
                   <Sparkles size={16} style={{ color: '#f97316' }} />
                 </div>
                 <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#f97316' }}>
-                  {dbStats ? dbStats.ai_processed_articles.toLocaleString('en-US') : '0'} analyzed
+                  {dbStats ? dbStats.ai_processed_articles.toLocaleString('sv-SE') : '0'} analyserade
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  {dbStats ? `${dbStats.clickbait_articles.toLocaleString('en-US')} clickbaits flagged` : 'Clickbait & PRIO scoring active'}
+                  {dbStats ? `${dbStats.clickbait_articles.toLocaleString('sv-SE')} ClickBait-flaggade` : 'ClickBait- och PRIO-bedömning aktiv'}
                 </div>
               </div>
             </div>
 
-            {/* Top Categories Breakdown */}
+            {/* Största kategorierna i databasen */}
             {dbStats && dbStats.top_categories && dbStats.top_categories.length > 0 && (
               <div style={{
                 backgroundColor: 'var(--bg-app)',
@@ -2284,7 +2570,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 marginBottom: '1rem'
               }}>
                 <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', fontSize: '0.95rem', fontWeight: 600 }}>
-                  Top Categories in Database
+                  Största kategorierna i databasen
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                   {dbStats.top_categories.map((cat, idx) => {
@@ -2295,7 +2581,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
                           <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{cat.name}</span>
-                          <span style={{ color: 'var(--text-muted)' }}>{cat.count.toLocaleString('en-US')} articles ({pct}%)</span>
+                          <span style={{ color: 'var(--text-muted)' }}>{cat.count.toLocaleString('sv-SE')} artiklar ({pct}%)</span>
                         </div>
                         <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-card)', borderRadius: '3px', overflow: 'hidden' }}>
                           <div style={{ width: `${Math.max(2, pct)}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '3px' }} />
@@ -2307,7 +2593,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               </div>
             )}
 
-            {/* Feeds Health Summary */}
+            {/* Flödessammanfattning */}
             <div style={{
               display: 'flex',
               gap: '1rem',
@@ -2320,24 +2606,24 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               color: 'var(--text-muted)'
             }}>
               <div>
-                <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.total_feeds : feeds.length}</strong> total feeds
+                <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.total_feeds : feeds.length}</strong> flöden totalt
               </div>
               <span style={{ color: 'var(--border-color)' }}>•</span>
               <div>
-                <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.active_feeds : feeds.filter(f => f.include_in_dashboard).length}</strong> active in dashboard
+                <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.active_feeds : feeds.filter(f => f.include_in_dashboard).length}</strong> aktiva i översikten
               </div>
               <span style={{ color: 'var(--border-color)' }}>•</span>
               <div>
-                <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.notify_feeds : feeds.filter(f => f.notify_enabled).length}</strong> with notifications enabled
+                <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.notify_feeds : feeds.filter(f => f.notify_enabled).length}</strong> med notiser aktiverade
               </div>
             </div>
           </div>
 
-          {/* Automatic Nightly Purge */}
+          {/* Automatisk nattlig rensning */}
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.75rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem', paddingLeft: '0.25rem' }}>
               <h4 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem' }}>
-                <Clock size={18} style={{ color: 'var(--primary)' }} /> Automatic Nightly Purge
+                <Clock size={18} style={{ color: 'var(--primary)' }} /> Automatisk nattlig rensning
               </h4>
               <span style={{ 
                 fontSize: '0.75rem', 
@@ -2348,12 +2634,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 fontWeight: 600,
                 letterSpacing: '0.04em'
               }}>
-                {aiConfig.auto_purge_enabled !== false ? 'ACTIVE (03:00)' : 'DISABLED'}
+                {aiConfig.auto_purge_enabled !== false ? 'AKTIV (03:00)' : 'INAKTIV'}
               </span>
             </div>
             
             <p style={{ margin: '0 0 1.25rem 0', paddingLeft: '0.25rem', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
-              Automatically purges historical unlocked articles every night at 03:00. Keeps your database fast and prevents storage from growing indefinitely.
+              Rensar automatiskt gamla olåsta artiklar varje natt kl 03:00. Håller databasen snabb och förhindrar att lagringsutrymmet växer i det oändliga.
             </p>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', paddingLeft: '0.25rem', paddingTop: '0.25rem' }}>
@@ -2367,20 +2653,20 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   <span className="toggle-slider"></span>
                 </label>
                 <span style={{ color: 'var(--text-main)', fontSize: '0.9rem', fontWeight: 500 }}>
-                  {aiConfig.auto_purge_enabled !== false ? 'Nightly purge enabled' : 'Nightly purge disabled'}
+                  {aiConfig.auto_purge_enabled !== false ? 'Nattlig rensning aktiverad' : 'Nattlig rensning inaktiverad'}
                 </span>
               </div>
 
               {aiConfig.auto_purge_enabled !== false && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Delete unlocked articles older than</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Ta bort olåsta artiklar äldre än</span>
                   <input 
                     type="number" 
                     value={purgeDays} 
                     onChange={e => handleUpdateAutoPurgeDays(e.target.value)} 
                     style={{ width: '65px', padding: '0.45rem 0.5rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-app)', color: 'var(--text-main)', fontWeight: 600, textAlign: 'center' }} 
                   />
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>days</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>dagar</span>
                 </div>
               )}
             </div>
@@ -2395,7 +2681,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
               <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Bell size={20} /> Pushnotiser i webblasare (PWA)
+                <Bell size={20} /> Pushnotiser i webbläsare (PWA)
               </h3>
               <span style={{
                 fontSize: '0.75rem',
@@ -2406,12 +2692,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 color: pushEnabled ? '#22c55e' : 'var(--text-muted)',
                 border: pushEnabled ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border-color)'
               }}>
-                {pushEnabled ? 'AKTIV PA DENNA ENHET' : 'EJ AKTIV'}
+                {pushEnabled ? 'AKTIV PÅ DENNA ENHET' : 'EJ AKTIV'}
               </span>
             </div>
             
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem', paddingRight: '0.35rem', lineHeight: 1.5 }}>
-              Aktivera pushnotiser i din webblasare for att ta emot handelser direkt i mobilen eller pa datorn nar nya artiklar anlander eller bevakade nyckelord traffar. Notiserna halls nu automatiskt synkroniserade vid appuppdateringar.
+              Aktivera pushnotiser i din webbläsare för att ta emot händelser direkt i mobilen eller på datorn när nya artiklar anländer eller bevakade nyckelord träffar. Notiserna hålls nu automatiskt synkroniserade vid appuppdateringar.
             </p>
 
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
@@ -2454,7 +2740,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               {pushEnabled && (
                 <button 
                   onClick={togglePush}
-                  title="Fornya registreringen mot push-servern manuellt om notiser inte nar fram"
+                  title="Förnya registreringen mot push-servern manuellt om notiser inte når fram"
                   style={{
                     padding: '0.65rem 1.15rem',
                     borderRadius: '8px',
@@ -2469,7 +2755,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     gap: '0.5rem'
                   }}
                 >
-                  <RefreshCw size={15} /> Fornya prenumeration
+                  <RefreshCw size={15} /> Förnya prenumeration
                 </button>
               )}
 
@@ -2509,13 +2795,13 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     gap: '0.5rem'
                   }}
                 >
-                  Avsluta prenumeration pa denna enhet
+                  Avsluta prenumeration på denna enhet
                 </button>
               )}
             </div>
           </div>
 
-          {/* Registrerade enheter for push-notiser */}
+          {/* Registrerade enheter för push-notiser */}
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -2569,18 +2855,18 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             </div>
 
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem', paddingLeft: '0.35rem', paddingRight: '0.35rem', lineHeight: 1.45 }}>
-              Visar anslutna enheter och webblasare for ditt konto. Pushnotiser levereras till alla aktiva enheter i denna lista. Byter du telefon eller har inaktuella sessioner kan du rensa dem har.
+              Visar anslutna enheter och webbläsare för ditt konto. Pushnotiser levereras till alla aktiva enheter i denna lista. Byter du telefon eller har inaktuella sessioner kan du rensa dem här.
             </p>
 
             {pushDevices.length === 0 ? (
               <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
-                Inga enheter ar for narvarande registrerade for pushnotiser. Klicka pa "Aktivera pushnotiser" ovan for att registrera denna enhet.
+                Inga enheter är för närvarande registrerade för pushnotiser. Klicka på "Aktivera pushnotiser" ovan för att registrera denna enhet.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {pushDevices.map(dev => {
                   const isMobile = (dev.device_name || '').toLowerCase().includes('android') || (dev.device_name || '').toLowerCase().includes('iphone');
-                  const updatedDate = dev.updated_at ? formatEuropeanDateTime(dev.updated_at) : (dev.created_at ? formatEuropeanDateTime(dev.created_at) : 'Okant datum');
+                  const updatedDate = dev.updated_at ? formatEuropeanDateTime(dev.updated_at) : (dev.created_at ? formatEuropeanDateTime(dev.created_at) : 'Okänt datum');
                   return (
                     <div
                       key={dev.id}
@@ -2671,7 +2957,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               <div style={{ flex: 1, minWidth: '240px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Flame size={18} style={{ color: '#f97316' }} /> Notifications for PRIO feed only
+                    <Flame size={18} style={{ color: '#f97316' }} /> Endast notiser för PRIO-flödet
                   </h4>
                   <span style={{
                     fontSize: '0.7rem',
@@ -2682,15 +2968,15 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     color: aiConfig.prio_notify_only ? '#f97316' : 'var(--text-muted)',
                     border: aiConfig.prio_notify_only ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid var(--border-color)'
                   }}>
-                    {aiConfig.prio_notify_only ? 'ACTIVE' : 'OFF'}
+                    {aiConfig.prio_notify_only ? 'AKTIV' : 'AV'}
                   </span>
                 </div>
                 <p style={{ margin: '0.4rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.45 }}>
-                  When enabled, notifications are only sent for articles classified as PRIO or matching your monitored keywords. Recommended if you follow high-volume feeds and only want to be alerted about what is truly important.
+                  När detta är aktiverat skickas notiser endast för artiklar som klassificeras som PRIO eller matchar dina bevakade nyckelord. Rekommenderas om du följer nyhetstäta flöden och enbart vill bli aviserad om det som verkligen är viktigt.
                 </p>
                 {!aiConfig.prio_enabled && (
                   <p style={{ margin: '0.4rem 0 0 0', color: '#eab308', fontSize: '0.8rem', fontWeight: 500 }}>
-                    Note: You also need personal PRIO feed enabled under the AI Analysis tab for AI prioritization to run.
+                    Obs: Du behöver även ha personligt PRIO-flöde aktiverat under fliken AI-analys för att AI-prioriteringen ska köras.
                   </p>
                 )}
               </div>
@@ -2716,10 +3002,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)'
           }}>
             <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 600, paddingLeft: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Sliders size={18} style={{ color: 'var(--primary)' }} /> Push Notification Content
+              <Sliders size={18} style={{ color: 'var(--primary)' }} /> Innehåll i pushnotiser
             </h4>
             <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.85rem', paddingLeft: '0.35rem', lineHeight: 1.45 }}>
-              Customize what information is included in your web push notifications. You can toggle headlines, preview images, and AI summaries based on your personal preference.
+              Anpassa vilken information som ska inkluderas i dina webbpushnotiser. Du kan välja att visa eller dölja rubriker, förhandsvisningsbilder och AI-sammanfattningar.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
@@ -2736,17 +3022,17 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.92rem' }}>
-                    <Type size={16} style={{ color: 'var(--primary)' }} /> Include article headline (Title)
+                    <Type size={16} style={{ color: 'var(--primary)' }} /> Inkludera artikelrubrik (Titel)
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                    When active, the full article title is shown in the notification header. When disabled, only event type and source are shown (e.g. PRIO: Aftonbladet).
+                    När detta är aktivt visas hela artikelrubriken i notisens titel. Vid inaktiv visas enbart händelsetyp och källa (t.ex. PRIO: Aftonbladet).
                   </div>
                 </div>
                 <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
                   <input
                     type="checkbox"
                     checked={aiConfig.push_include_title !== false}
-                    onChange={() => handleTogglePushSetting('push_include_title', 'Article headline')}
+                    onChange={() => handleTogglePushSetting('push_include_title', 'Artikelrubrik')}
                     disabled={isSavingAi}
                   />
                   <span className="toggle-slider"></span>
@@ -2766,17 +3052,17 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.92rem' }}>
-                    <ImageIcon size={16} style={{ color: '#10b981' }} /> Include article image
+                    <ImageIcon size={16} style={{ color: '#10b981' }} /> Inkludera artikelbild
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                    Displays a rich preview image in the notification on mobile and desktop when the article contains an image.
+                    Visar en förhandsvisningsbild i notisen på mobil och dator när artikeln har en tillhörande bild.
                   </div>
                 </div>
                 <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
                   <input
                     type="checkbox"
                     checked={aiConfig.push_include_image !== false}
-                    onChange={() => handleTogglePushSetting('push_include_image', 'Article image')}
+                    onChange={() => handleTogglePushSetting('push_include_image', 'Artikelbild')}
                     disabled={isSavingAi}
                   />
                   <span className="toggle-slider"></span>
@@ -2796,17 +3082,17 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.92rem' }}>
-                    <Sparkles size={16} style={{ color: '#f97316' }} /> Include AI summary
+                    <Sparkles size={16} style={{ color: '#f97316' }} /> Inkludera AI-sammanfattning
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                    Includes the 3-sentence informative AI analysis as the notification body so you can immediately see the core event.
+                    Inkluderar den informativa AI-analysen som text i notisen så att du omedelbart ser händelsens kärna.
                   </div>
                 </div>
                 <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
                   <input
                     type="checkbox"
                     checked={aiConfig.push_include_summary !== false}
-                    onChange={() => handleTogglePushSetting('push_include_summary', 'AI summary')}
+                    onChange={() => handleTogglePushSetting('push_include_summary', 'AI-sammanfattning')}
                     disabled={isSavingAi}
                   />
                   <span className="toggle-slider"></span>
@@ -2817,16 +3103,16 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ShieldAlert size={20} /> Monitored Keywords
+              <ShieldAlert size={20} /> Bevakade nyckelord
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem' }}>
-              Enter words you consider important here. When the system finds these in your RSS feeds, it can alert you.
+              Ange ord som du anser vara viktiga här. När systemet hittar dessa i dina RSS-flöden skickas en avisering.
             </p>
 
             <form onSubmit={handleAddKeyword} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.5rem' }}>
               <input 
                 type="text" 
-                placeholder="E.g. Security, Fire..." 
+                placeholder="T.ex. Säkerhet, Brand..." 
                 value={newKeyword}
                 onChange={(e) => setNewKeyword(e.target.value)}
                 style={{
@@ -2855,7 +3141,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   flex: '0 1 auto'
                 }}
               >
-                <Plus size={18} /> Add
+                <Plus size={18} /> Lägg till
               </button>
             </form>
 
@@ -2884,10 +3170,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Hash size={20} /> Feed Notifications
+              <Hash size={20} /> Notiser per flöde
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem' }}>
-              Choose which feeds you want notifications from. Turn off feeds that you don't want the alert words to react to.
+              Välj vilka flöden du vill ta emot notiser från. Stäng av flöden som du inte vill ska generera aviseringar.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
@@ -2951,7 +3237,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem', fontWeight: 700 }}>
-                      Personal PRIO Feed
+                      Personligt PRIO-flöde
                     </h3>
                     <span style={{
                       fontSize: '0.72rem',
@@ -2962,13 +3248,13 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       color: aiConfig.prio_enabled ? '#f97316' : 'var(--text-muted)',
                       border: aiConfig.prio_enabled ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid var(--border-color)'
                     }}>
-                      {aiConfig.prio_enabled ? 'ENABLED' : 'DISABLED'}
+                      {aiConfig.prio_enabled ? 'AKTIVERAT' : 'INAKTIVERAT'}
                     </span>
                   </div>
                   <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
                     {aiConfig.prio_enabled 
-                      ? 'Your personal PRIO feed is active. Incoming articles are scored and filtered against your rules.'
-                      : 'When disabled, the app works as a pure, classic RSS reader without AI analyses and consumes no background resources.'}
+                      ? 'Ditt personliga PRIO-flöde är aktivt. Inkommande artiklar poängsätts och filtreras mot dina regler.'
+                      : 'När det är inaktiverat fungerar appen som en ren, klassisk RSS-läsare utan AI-analyser och förbrukar inga bakgrundsresurser.'}
                   </p>
                 </div>
               </div>
@@ -3028,7 +3314,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 gap: '0.75rem'
               }}>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Want to start prioritizing and tailoring your news feed with AI?
+                  Vill du börja prioritera och skräddarsy ditt nyhetsflöde med AI?
                 </div>
                 <button
                   type="button"
@@ -3048,7 +3334,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     cursor: 'pointer'
                   }}
                 >
-                  <Flame size={16} /> Enable & create feed
+                  <Flame size={16} /> Aktivera och skapa flöde
                 </button>
               </div>
             )}
@@ -3058,7 +3344,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)', opacity: aiConfig.prio_enabled ? 1 : 0.7 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sparkles size={20} style={{ color: '#f97316' }} /> LM Studio Status
+                <Sparkles size={20} style={{ color: '#f97316' }} /> LM Studio-status
               </h3>
               <button 
                 onClick={handleCheckConnection}
@@ -3069,22 +3355,22 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   borderRadius: '6px', cursor: 'pointer', color: 'var(--text-main)', fontSize: '0.8rem'
                 }}
               >
-                <RefreshCw size={14} className={isLoadingAi ? 'spin' : ''} /> Check connection
+                <RefreshCw size={14} className={isLoadingAi ? 'spin' : ''} /> {isLoadingAi ? 'Kontrollerar...' : 'Kontrollera anslutning'}
               </button>
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
               <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Connection Status</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Anslutningsstatus</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: aiConfig.is_healthy ? '#16a34a' : '#ef4444' }}>
                   <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: aiConfig.is_healthy ? '#16a34a' : '#ef4444', display: 'inline-block' }}></span>
-                  {aiConfig.is_healthy ? 'Connected to LM Studio' : 'Offline / No connection'}
+                  {aiConfig.is_healthy ? 'Ansluten till LM Studio' : 'Offline / Ingen anslutning'}
                 </div>
               </div>
 
               <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                  AI Model
+                  AI-modell
                 </div>
                 {aiConfig.available_models && aiConfig.available_models.length > 0 ? (
                   <select
@@ -3102,25 +3388,25 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       cursor: 'pointer'
                     }}
                   >
-                    <option value="">LM Studio Default (Automatic)</option>
+                    <option value="">LM Studio standard (Automatiskt)</option>
                     {aiConfig.available_models.map(m => (
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </select>
                 ) : (
                   <div style={{ fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {aiConfig.lm_studio_model || 'LM Studio Default'}
+                    {aiConfig.lm_studio_model || 'LM Studio standard'}
                   </div>
                 )}
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
                   {aiConfig.available_models?.length 
-                    ? `${aiConfig.available_models.length} models available in LM Studio` 
-                    : 'No models found'}
+                    ? `${aiConfig.available_models.length} modeller tillgängliga i LM Studio` 
+                    : 'Inga modeller hittades'}
                 </div>
               </div>
 
               <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Endpoint URL</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Anslutningsadress (URL)</div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {aiConfig.lm_studio_url}
                 </div>
@@ -3131,10 +3417,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           {/* Prioriterade sökord & orter (Garanterad 100% PRIO) */}
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
             <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Hash size={20} style={{ color: '#f97316' }} /> Prioritized Keywords & Topics (Always 100% PRIO)
+              <Hash size={20} style={{ color: '#f97316' }} /> Prioriterade nyckelord & ämnen (Alltid 100% PRIO)
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-              All articles containing any of your watch words (e.g. your hometown like <strong>Trosa</strong> or favorite topics like <strong>Tesla</strong>) will instantly receive <strong>100 points</strong> and always appear in the PRIO feed regardless of category.
+              Alla artiklar som innehåller något av dina bevakade ord (t.ex. din hemort som <strong>Trosa</strong> eller favoritintressen som <strong>Tesla</strong>) får omedelbart <strong>100 poäng</strong> och visas alltid i PRIO-flödet oavsett kategori.
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '1.25rem' }}>
@@ -3160,7 +3446,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       type="button"
                       onClick={() => handleDeleteKeyword(kw.id)}
                       style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
-                      title={`Remove ${kw.keyword}`}
+                      title={`Ta bort ${kw.keyword}`}
                     >
                       <X size={14} />
                     </button>
@@ -3168,7 +3454,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 ))
               ) : (
                 <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                  No prioritized keywords added yet. Add keywords below for guaranteed 100% PRIO.
+                  Inga prioriterade nyckelord har lagts till ännu. Lägg till sökord nedan för garanterad 100% PRIO.
                 </div>
               )}
             </div>
@@ -3176,7 +3462,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             <form onSubmit={handleAddKeyword} style={{ display: 'flex', gap: '0.5rem', maxWidth: '440px' }}>
               <input 
                 type="text" 
-                placeholder="Add priority keyword (e.g. Tesla, AI)..." 
+                placeholder="Lägg till prioriterat nyckelord (t.ex. Tesla, AI)..." 
                 value={newKeyword} 
                 onChange={(e) => setNewKeyword(e.target.value)}
                 style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.85rem' }}
@@ -3185,7 +3471,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 type="submit"
                 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 1rem', backgroundColor: '#f97316', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
               >
-                <Plus size={15} /> Add
+                <Plus size={15} /> Lägg till
               </button>
             </form>
           </div>
@@ -3194,7 +3480,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sliders size={20} style={{ color: '#f97316' }} /> Category Sliders & Priority (0–10)
+                <Sliders size={20} style={{ color: '#f97316' }} /> Kategoriviktning och prioritet (0–10)
               </h3>
               <button
                 type="button"
@@ -3208,12 +3494,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   textDecoration: 'underline'
                 }}
               >
-                Reset default weights
+                Återställ standardvikter
               </button>
             </div>
             
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-              AI classifies each article into one of these categories. The category weight determines whether the article appears in the PRIO feed or the regular feed:
+              AI klassificerar varje artikel till en av dessa kategorier. Kategoriens viktning avgör om artikeln hamnar i PRIO-flödet eller i det vanliga flödet:
             </p>
 
             <div style={{
@@ -3227,10 +3513,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               marginBottom: '1.25rem',
               fontSize: '0.78rem'
             }}>
-              <div><strong style={{ color: '#16a34a' }}>8–10:</strong> Always PRIO (75–100p)</div>
-              <div><strong style={{ color: '#0284c7' }}>5–7:</strong> Normal feed (50–70p)</div>
-              <div><strong style={{ color: 'var(--text-muted)' }}>1–4:</strong> Low prio (10–40p)</div>
-              <div><strong style={{ color: '#ef4444' }}>0:</strong> Ignored (Never PRIO)</div>
+              <div><strong style={{ color: '#16a34a' }}>8–10:</strong> Alltid PRIO (75–100p)</div>
+              <div><strong style={{ color: '#0284c7' }}>5–7:</strong> Normalt flöde (50–70p)</div>
+              <div><strong style={{ color: 'var(--text-muted)' }}>1–4:</strong> Låg prio (10–40p)</div>
+              <div><strong style={{ color: '#ef4444' }}>0:</strong> Ignoreras (Aldrig PRIO)</div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.25rem' }}>
@@ -3310,7 +3596,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                           display: 'flex',
                           alignItems: 'center'
                         }}
-                        title={`Remove ${name}`}
+                        title={`Ta bort ${name}`}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -3323,7 +3609,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             <form onSubmit={handleAddAiCategory} style={{ display: 'flex', gap: '0.5rem', maxWidth: '400px' }}>
               <input 
                 type="text" 
-                placeholder="New category (e.g. Defense, Research)..." 
+                placeholder="Ny kategori (t.ex. Försvar, Forskning)..." 
                 value={newAiCategory} 
                 onChange={(e) => setNewAiCategory(e.target.value)}
                 style={{ flex: 1, padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.85rem' }}
@@ -3332,7 +3618,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 type="submit"
                 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.9rem', backgroundColor: 'var(--primary)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
               >
-                <Plus size={15} /> Add category
+                <Plus size={15} /> Lägg till kategori
               </button>
             </form>
           </div>
@@ -3344,10 +3630,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
             >
               <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
-                <FileText size={18} style={{ color: '#f97316' }} /> Advanced: Full AI System Prompt
+                <FileText size={18} style={{ color: '#f97316' }} /> Avancerat: Fullständig AI-systemprompt
               </h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                <span>{showAdvancedPrompt ? 'Hide' : 'Show & Edit'}</span>
+                <span>{showAdvancedPrompt ? 'Dölj' : 'Visa och redigera'}</span>
                 {showAdvancedPrompt ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </div>
             </div>
@@ -3356,7 +3642,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
-                    Here you see the raw prompt sent to LM Studio during analysis.
+                    Här ser du den råa systemprompten som skickas till LM Studio vid analys.
                   </p>
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <button 
@@ -3364,14 +3650,14 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       onClick={handleRegeneratePromptFromRules}
                       style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
                     >
-                      Regenerate from my rules
+                      Återskapa från mina regler
                     </button>
                     <button 
                       type="button"
                       onClick={handleResetAiPrompt}
                       style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
                     >
-                      Reset to default
+                      Återställ till standard
                     </button>
                   </div>
                 </div>
@@ -3421,7 +3707,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               }}
             >
               {isSavingAi ? <RefreshCw size={18} className="spin" /> : <Check size={18} />}
-              {isSavingAi ? 'Saving...' : 'Save my AI settings'}
+              {isSavingAi ? 'Sparar...' : 'Spara mina AI-inställningar'}
             </button>
           </div>
 
