@@ -306,21 +306,12 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               />
             )}
           </Link>
-          <Link to="/settings?tab=manage" style={{
-            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
-            borderRadius: '8px', textDecoration: 'none',
-            color: (location.pathname === '/settings' && location.search.includes('tab=manage')) ? 'var(--primary)' : 'var(--text-muted)',
-            backgroundColor: (location.pathname === '/settings' && location.search.includes('tab=manage')) ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-            fontWeight: (location.pathname === '/settings' && location.search.includes('tab=manage')) ? 600 : 400
-          }}>
-            <List size={19} /> {!isCollapsed && "Hantera flöden"}
-          </Link>
           <Link to="/settings" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
             borderRadius: '8px', textDecoration: 'none',
-            color: (location.pathname === '/settings' && !location.search.includes('tab=manage')) ? 'var(--primary)' : 'var(--text-muted)',
-            backgroundColor: (location.pathname === '/settings' && !location.search.includes('tab=manage')) ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-            fontWeight: (location.pathname === '/settings' && !location.search.includes('tab=manage')) ? 600 : 400
+            color: location.pathname === '/settings' ? 'var(--primary)' : 'var(--text-muted)',
+            backgroundColor: location.pathname === '/settings' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+            fontWeight: location.pathname === '/settings' ? 600 : 400
           }}>
             <SettingsIcon size={19} /> {!isCollapsed && "Inställningar"}
           </Link>
@@ -329,7 +320,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           {!isCollapsed && myFeeds.length > 0 && (
             <div style={{ marginTop: '1.25rem' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem', paddingLeft: '0.75rem' }}>
-                My Feeds
+                Mina flöden
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                 {myFeeds.map(feed => {

@@ -1,9 +1,53 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.14.06',
+    date: '2026-09-14',
+    title: 'Expanderbara sektioner för notisinställningar och snabbknapp för flödesnotiser',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Expanderbara och kollapsbara sektioner i Notiser',
+        description: 'Notisinställningarna har grupperats i prydliga dragspelssektioner (PWA-status, Registrerade enheter, Prioritering och innehåll, Bevakade nyckelord samt Notiser per flöde) med snabbknappar för att fälla ut eller ihop samtliga sektioner, och kom-ihåg-läge via webbläsaren.'
+      },
+      {
+        type: 'improvement',
+        title: 'Snabbknappar för att slå på eller slå av samtliga flödesnotiser',
+        description: 'Under sektionen Notiser per flöde finns nu knapparna "Slå på alla" och "Slå av alla". Ett klick aktiverar eller inaktiverar pushnotiser för alla sparade flöden samtidigt. Vid massaktivering spärras befintliga artiklar för att förhindra notis-spam.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.14.05',
+    date: '2026-09-14',
+    title: 'Slumpad hämtning (10-30 min), renodlad katalog, skyddsgräns i inställningar och dold intern URL',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Slumpmässigt hämtningsintervall (10-30 minuter)',
+        description: 'Nya och masstillagda flöden tilldelas nu ett slumpat intervall mellan 10 och 30 minuter istället för 60 minuter, vilket effektivt sprider ut serverbelastningen och förhindrar att många källor anropas simultant.'
+      },
+      {
+        type: 'fix',
+        title: 'Strikt kategoristruktur i flödeskatalogen',
+        description: 'Allmän svensk press i katalogen har nu en explicit kategoriomslutning och renodlad listrendering med unika nycklar, vilket eliminerar felaktig visning av andra flöden i specialiserade ämnesområden.'
+      },
+      {
+        type: 'improvement',
+        title: 'Konfigurerbar skyddsgräns för artikelålder',
+        description: 'Skyddsgränsen för att automatiskt hoppa över äldre artiklar vid AI-analys kan nu ställas in direkt under Inställningar -> AI-analys (mellan 6 timmar och 7 dagar, standard 24 timmar).'
+      },
+      {
+        type: 'improvement',
+        title: 'Dold intern anslutningsadress och städad navigering',
+        description: 'Visningen av den interna IP-adressen för LM Studio har tagits bort från gränssnittet. Duplicerad länk till Hantera flöden i sidomenyn har avlägsnats och behållits enbart under Inställningar.'
+      }
+    ]
+  },
+  {
     version: '2026.09.14.04',
     date: '2026-09-14',
     title: 'Omstrukturerad flödeskatalog med kategorikort, masstillägg och förhandsgranskning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

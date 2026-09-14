@@ -102,6 +102,10 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN auto_scrape_article_text INTEGER DEFAULT 1"))
                     conn.commit()
                     print("[DB] Added auto_scrape_article_text column to user_ai_settings", flush=True)
+                if "max_article_age_hours" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN max_article_age_hours INTEGER DEFAULT 24"))
+                    conn.commit()
+                    print("[DB] Added max_article_age_hours column to user_ai_settings", flush=True)
                 conn.execute(text("UPDATE user_ai_settings SET prio_enabled = 0 WHERE prio_enabled IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET prio_notify_only = 0 WHERE prio_notify_only IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET push_include_title = 1 WHERE push_include_title IS NULL"))
@@ -110,6 +114,7 @@ def ensure_db_migrations():
                 conn.execute(text("UPDATE user_ai_settings SET auto_purge_enabled = 1 WHERE auto_purge_enabled IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET auto_purge_days = 30 WHERE auto_purge_days IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET auto_scrape_article_text = 1 WHERE auto_scrape_article_text IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET max_article_age_hours = 24 WHERE max_article_age_hours IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = NULL WHERE custom_system_prompt IS NOT NULL AND custom_system_prompt NOT LIKE '%SAKLIGA NYHETER%'"))
                 conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = REPLACE(custom_system_prompt, 'Max två korta', 'Max tre korta') WHERE custom_system_prompt LIKE '%Max två korta%'"))
                 conn.commit()
@@ -474,6 +479,12 @@ def run_db_migrations(db_path: str):
         # Migration 18: Add icon_url to feeds
         try:
             cur.execute("ALTER TABLE feeds ADD COLUMN icon_url TEXT DEFAULT '';")
+        except sqlite3.OperationalError:
+            pass
+
+        # Migration 19: Add max_article_age_hours to user_ai_settings
+        try:
+            cur.execute("ALTER TABLE user_ai_settings ADD COLUMN max_article_age_hours INTEGER DEFAULT 24;")
         except sqlite3.OperationalError:
             pass
 
@@ -1100,7 +1111,8 @@ async def ai_processing_loop():
                 
             db = database.SessionLocal()
             try:
-                max_age_hours = int(os.environ.get("AI_MAX_ARTICLE_AGE_HOURS", "24"))
+                user_ai_first = db.query(models.UserAISettings).order_by(models.UserAISettings.id.asc()).first()
+                max_age_hours = int(user_ai_first.max_article_age_hours if (user_ai_first and user_ai_first.max_article_age_hours) else os.environ.get("AI_MAX_ARTICLE_AGE_HOURS", "24"))
                 now = int(time.time())
                 cutoff_ts = now - (max_age_hours * 3600)
 
@@ -1502,10 +1514,16 @@ def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db)
     if not icon_url:
         icon_url = get_feed_icon_url(None, feed.url)
 
+    # Slumpa hämtningsintervall mellan 10 och 30 minuter om 60 minuter eller inget anges, för att sprida ut polling
+    polling_interval = feed.polling_interval
+    if not polling_interval or polling_interval == 60:
+        import random
+        polling_interval = random.randint(10, 30)
+
     db_feed = models.Feed(
         url=feed.url, 
         title=feed.title, 
-        polling_interval=feed.polling_interval, 
+        polling_interval=polling_interval, 
         scrape_enabled=int(feed.scrape_enabled), 
         include_in_dashboard=int(feed.include_in_dashboard), 
         notify_enabled=int(feed.notify_enabled), 
@@ -1520,6 +1538,23 @@ def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db)
     db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
     db_feed.notify_enabled = bool(db_feed.notify_enabled)
     return db_feed
+
+@app.put("/feeds/notifications/toggle-all", response_model=dict)
+def toggle_all_feed_notifications(payload: dict, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    enabled = 1 if payload.get("notify_enabled", True) else 0
+    if enabled == 1:
+        # Om notiser slås på för samtliga: Spärra befintliga artiklar från att skicka retroaktiva notiser
+        user_feed_ids = [f.id for f in db.query(models.Feed.id).filter(models.Feed.user_id == current_user.id).all()]
+        if user_feed_ids:
+            db.query(models.Article).filter(models.Article.feed_id.in_(user_feed_ids)).update({models.Article.allow_push: 0}, synchronize_session=False)
+            print(f"[FEED] Notiser aktiverade för alla flöden (användare #{current_user.id}). Befintliga artiklar spärrades från retroaktiva notiser.", flush=True)
+
+    updated_count = db.query(models.Feed).filter(models.Feed.user_id == current_user.id).update(
+        {models.Feed.notify_enabled: enabled}, 
+        synchronize_session=False
+    )
+    db.commit()
+    return {"status": "ok", "notify_enabled": bool(enabled), "updated_count": updated_count}
 
 @app.put("/feeds/{feed_id}", response_model=schemas.FeedResponse)
 def update_feed(feed_id: int, feed: schemas.FeedCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
@@ -1638,10 +1673,14 @@ def create_feeds_batch(payload: dict, db: Session = Depends(database.get_db), cu
         feed_title = (item.get("title") or "").strip() or feed_url
         icon_url = get_feed_icon_url(None, feed_url)
         
+        # Slumpa intervall mellan 10 och 30 minuter så att inte alla flöden pollas samtidigt
+        import random
+        random_interval = random.randint(10, 30)
+
         db_feed = models.Feed(
             url=feed_url,
             title=feed_title,
-            polling_interval=60,
+            polling_interval=random_interval,
             scrape_enabled=1,
             include_in_dashboard=1,
             notify_enabled=0,
@@ -2165,7 +2204,8 @@ def get_ai_config(
         push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1),
         auto_purge_enabled=bool(user_ai.auto_purge_enabled if user_ai.auto_purge_enabled is not None else 1),
         auto_purge_days=int(user_ai.auto_purge_days or 30),
-        auto_scrape_article_text=bool(user_ai.auto_scrape_article_text if user_ai.auto_scrape_article_text is not None else 1)
+        auto_scrape_article_text=bool(user_ai.auto_scrape_article_text if user_ai.auto_scrape_article_text is not None else 1),
+        max_article_age_hours=int(user_ai.max_article_age_hours or 24)
     )
 
 @app.get("/ai/models")
@@ -2218,6 +2258,8 @@ def update_ai_config(
         user_ai.auto_purge_days = max(1, min(365, config.auto_purge_days))
     if config.auto_scrape_article_text is not None:
         user_ai.auto_scrape_article_text = 1 if config.auto_scrape_article_text else 0
+    if config.max_article_age_hours is not None:
+        user_ai.max_article_age_hours = max(1, min(168, config.max_article_age_hours))
 
     cats = normalize_user_categories(user_ai.categories)
 
@@ -2254,7 +2296,8 @@ def update_ai_config(
         push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1),
         auto_purge_enabled=bool(user_ai.auto_purge_enabled if user_ai.auto_purge_enabled is not None else 1),
         auto_purge_days=int(user_ai.auto_purge_days or 30),
-        auto_scrape_article_text=bool(user_ai.auto_scrape_article_text if user_ai.auto_scrape_article_text is not None else 1)
+        auto_scrape_article_text=bool(user_ai.auto_scrape_article_text if user_ai.auto_scrape_article_text is not None else 1),
+        max_article_age_hours=int(user_ai.max_article_age_hours or 24)
     )
 
 @app.get("/scrape")

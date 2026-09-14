@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, AlertTriangle, ExternalLink, Search } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, BellOff, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, AlertTriangle, ExternalLink, Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
@@ -89,6 +89,42 @@ const Settings = ({ onLogout }) => {
     };
     setExpandedUiSections(next);
     localStorage.setItem('rss_expanded_ui_sections', JSON.stringify(next));
+  };
+
+  const [expandedNotificationSections, setExpandedNotificationSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rss_expanded_notification_sections');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // Ignorera sparade fel
+    }
+    return {
+      pwaStatus: true,
+      devices: false,
+      prioAndContent: true,
+      keywords: true,
+      feedNotifications: true
+    };
+  });
+
+  const toggleNotificationSection = (key) => {
+    setExpandedNotificationSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('rss_expanded_notification_sections', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const setAllNotificationSections = (expand) => {
+    const next = {
+      pwaStatus: expand,
+      devices: expand,
+      prioAndContent: expand,
+      keywords: expand,
+      feedNotifications: expand
+    };
+    setExpandedNotificationSections(next);
+    localStorage.setItem('rss_expanded_notification_sections', JSON.stringify(next));
   };
 
   const toggleSwipeGestures = () => {
@@ -567,6 +603,17 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
   };
 
+  const handleToggleAllFeedNotifications = async (enableAll) => {
+    try {
+      await api.put('/feeds/notifications/toggle-all', { notify_enabled: enableAll });
+      setFeeds(prev => prev.map(f => ({ ...f, notify_enabled: enableAll ? 1 : 0 })));
+      toast.success(enableAll ? 'Notiser aktiverades för samtliga flöden.' : 'Notiser inaktiverades för samtliga flöden.');
+    } catch (err) {
+      console.error("Kunde inte uppdatera alla flödesnotiser:", err);
+      toast.error('Kunde inte uppdatera notiser för samtliga flöden.');
+    }
+  };
+
   const handleCategoryWeightChange = (catName, newWeight) => {
     setAiConfig(prev => {
       const rawCats = prev.categories || [];
@@ -601,7 +648,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         lm_studio_model: aiConfig.lm_studio_model || '',
         push_include_title: aiConfig.push_include_title ?? true,
         push_include_image: aiConfig.push_include_image ?? true,
-        push_include_summary: aiConfig.push_include_summary ?? true
+        push_include_summary: aiConfig.push_include_summary ?? true,
+        max_article_age_hours: aiConfig.max_article_age_hours || 24
       });
       if (res.data) {
         setAiConfig(res.data);
@@ -637,7 +685,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         lm_studio_model: aiConfig.lm_studio_model || '',
         push_include_title: aiConfig.push_include_title ?? true,
         push_include_image: aiConfig.push_include_image ?? true,
-        push_include_summary: aiConfig.push_include_summary ?? true
+        push_include_summary: aiConfig.push_include_summary ?? true,
+        max_article_age_hours: aiConfig.max_article_age_hours || 24
       });
       if (res.data) {
         setAiConfig(res.data);
@@ -675,6 +724,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         push_include_title: aiConfig.push_include_title ?? true,
         push_include_image: aiConfig.push_include_image ?? true,
         push_include_summary: aiConfig.push_include_summary ?? true,
+        max_article_age_hours: aiConfig.max_article_age_hours || 24,
         [key]: nextVal
       };
       const res = await api.put('/ai/config', payload);
@@ -714,7 +764,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         push_include_summary: aiConfig.push_include_summary ?? true,
         auto_purge_enabled: nextVal,
         auto_purge_days: purgeDays,
-        auto_scrape_article_text: aiConfig.auto_scrape_article_text !== false
+        auto_scrape_article_text: aiConfig.auto_scrape_article_text !== false,
+        max_article_age_hours: aiConfig.max_article_age_hours || 24
       });
       if (res.data) setAiConfig(res.data);
       toast.success(nextVal ? 'Automatisk nattlig rensning aktiverad (körs kl 03:00).' : 'Automatisk nattlig rensning inaktiverad.');
@@ -750,7 +801,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         push_include_summary: aiConfig.push_include_summary ?? true,
         auto_purge_enabled: aiConfig.auto_purge_enabled !== false,
         auto_purge_days: purgeDays,
-        auto_scrape_article_text: nextVal
+        auto_scrape_article_text: nextVal,
+        max_article_age_hours: aiConfig.max_article_age_hours || 24
       });
       if (res.data) setAiConfig(res.data);
       toast.success(nextVal ? 'Automatisk artikel-skrapning för AI är nu aktiverad.' : 'Automatisk artikel-skrapning för AI är nu inaktiverad.');
@@ -783,11 +835,46 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         push_include_image: aiConfig.push_include_image ?? true,
         push_include_summary: aiConfig.push_include_summary ?? true,
         auto_purge_enabled: aiConfig.auto_purge_enabled !== false,
-        auto_purge_days: days
+        auto_purge_days: days,
+        max_article_age_hours: aiConfig.max_article_age_hours || 24
       });
       if (res.data) setAiConfig(res.data);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleUpdateMaxArticleAgeHours = async (hours) => {
+    const ageVal = parseInt(hours, 10);
+    setAiConfig(prev => ({ ...prev, max_article_age_hours: ageVal }));
+    try {
+      const formattedCats = (aiConfig.categories || []).map(c => 
+        typeof c === 'object' ? { name: c.name, weight: c.weight ?? 5 } : { name: c, weight: 5 }
+      );
+      const res = await api.put('/ai/config', {
+        prio_rules: aiConfig.prio_rules || '',
+        exclude_rules: aiConfig.exclude_rules || '',
+        categories: formattedCats,
+        prio_threshold: aiConfig.prio_threshold || 75,
+        system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
+        onboarding_completed: true,
+        prio_enabled: aiConfig.prio_enabled ?? false,
+        prio_notify_only: aiConfig.prio_notify_only ?? false,
+        lm_studio_model: aiConfig.lm_studio_model || '',
+        push_include_title: aiConfig.push_include_title ?? true,
+        push_include_image: aiConfig.push_include_image ?? true,
+        push_include_summary: aiConfig.push_include_summary ?? true,
+        auto_purge_enabled: aiConfig.auto_purge_enabled !== false,
+        auto_purge_days: purgeDays,
+        auto_scrape_article_text: aiConfig.auto_scrape_article_text !== false,
+        max_article_age_hours: ageVal
+      });
+      if (res.data) setAiConfig(res.data);
+      toast.success(`Skyddsgräns för artikelålder ändrad till ${ageVal} timmar.`);
+      window.dispatchEvent(new Event('aiConfigUpdated'));
+    } catch (err) {
+      console.error(err);
+      toast.error('Kunde inte spara skyddsgränsen.');
     }
   };
 
@@ -810,7 +897,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         lm_studio_model: aiConfig.lm_studio_model || '',
         push_include_title: aiConfig.push_include_title ?? true,
         push_include_image: aiConfig.push_include_image ?? true,
-        push_include_summary: aiConfig.push_include_summary ?? true
+        push_include_summary: aiConfig.push_include_summary ?? true,
+        max_article_age_hours: aiConfig.max_article_age_hours || 24
       });
       if (res.data) {
         setAiConfig(res.data);
@@ -2664,7 +2752,9 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     type="number" 
                     value={purgeDays} 
                     onChange={e => handleUpdateAutoPurgeDays(e.target.value)} 
-                    style={{ width: '65px', padding: '0.45rem 0.5rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-app)', color: 'var(--text-main)', fontWeight: 600, textAlign: 'center' }} 
+                    style={{ width: '65px', padding: '0.45rem 0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', textAlign: 'center', fontSize: '0.9rem' }}
+                    min="1"
+                    max="365"
                   />
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>dagar</span>
                 </div>
@@ -2674,532 +2764,943 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         </motion.div>
       )}
 
-
+      {/* Notisinställningar Tab */}
       {activeTab === 'notifications' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
-              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Bell size={20} /> Pushnotiser i webbläsare (PWA)
+          {/* Huvudkort för Notiser med expandera/kollapsa-knappar */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.15rem' }}>
+                <Bell size={20} style={{ color: 'var(--primary)' }} /> Notisinställningar
               </h3>
-              <span style={{
-                fontSize: '0.75rem',
-                padding: '0.2rem 0.6rem',
-                borderRadius: '12px',
-                fontWeight: 700,
-                backgroundColor: pushEnabled ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-app)',
-                color: pushEnabled ? '#22c55e' : 'var(--text-muted)',
-                border: pushEnabled ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border-color)'
-              }}>
-                {pushEnabled ? 'AKTIV PÅ DENNA ENHET' : 'EJ AKTIV'}
-              </span>
-            </div>
-            
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem', paddingRight: '0.35rem', lineHeight: 1.5 }}>
-              Aktivera pushnotiser i din webbläsare för att ta emot händelser direkt i mobilen eller på datorn när nya artiklar anländer eller bevakade nyckelord träffar. Notiserna hålls nu automatiskt synkroniserade vid appuppdateringar.
-            </p>
-
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
-              {!pushEnabled ? (
-                <button 
-                  onClick={togglePush}
-                  style={{
-                    padding: '0.65rem 1.25rem',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: 'var(--primary)',
-                    color: 'white',
-                    fontWeight: 600,
-                    fontSize: '0.88rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <Bell size={16} /> Aktivera pushnotiser
-                </button>
-              ) : (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.65rem 1rem',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(34, 197, 94, 0.12)',
-                  color: '#16a34a',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                  fontWeight: 600,
-                  fontSize: '0.88rem'
-                }}>
-                  <Check size={16} /> Aktiv och synkroniserad
-                </div>
-              )}
-
-              {pushEnabled && (
-                <button 
-                  onClick={togglePush}
-                  title="Förnya registreringen mot push-servern manuellt om notiser inte når fram"
-                  style={{
-                    padding: '0.65rem 1.15rem',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-app)',
-                    color: 'var(--text-main)',
-                    fontWeight: 500,
-                    fontSize: '0.88rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <RefreshCw size={15} /> Förnya prenumeration
-                </button>
-              )}
-
-              <button 
-                onClick={handleTestPush}
-                style={{
-                  padding: '0.65rem 1.25rem',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-app)',
-                  color: 'var(--text-main)',
-                  fontWeight: 600,
-                  fontSize: '0.88rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}
-              >
-                <Send size={16} style={{ color: 'var(--primary)' }} /> Skicka testnotis till enhet
-              </button>
-              
-              {pushEnabled && (
-                <button 
-                  onClick={handleUnsubscribe}
-                  style={{
-                    padding: '0.65rem 1.25rem',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(239, 68, 68, 0.4)',
-                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                    color: '#ef4444',
-                    fontWeight: 600,
-                    fontSize: '0.88rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  Avsluta prenumeration på denna enhet
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Registrerade enheter för push-notiser */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Smartphone size={18} style={{ color: 'var(--primary)' }} />
-                <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 600 }}>
-                  Registrerade enheter ({pushDevices.length})
-                </h4>
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
-                  onClick={fetchPushDevices}
-                  disabled={isLoadingDevices}
-                  title="Uppdatera lista"
+                  type="button"
+                  onClick={() => setAllNotificationSections(true)}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.35rem 0.65rem',
+                    padding: '0.35rem 0.75rem',
                     borderRadius: '6px',
                     border: '1px solid var(--border-color)',
                     backgroundColor: 'var(--bg-app)',
                     color: 'var(--text-main)',
                     fontSize: '0.78rem',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontWeight: 500
                   }}
                 >
-                  <RefreshCw size={13} className={isLoadingDevices ? 'animate-spin' : ''} /> Uppdatera
+                  Fäll ut alla
                 </button>
-                {pushDevices.length > 0 && (
-                  <button
-                    onClick={handleClearAllDevices}
-                    title="Rensa alla sparade enheter"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      padding: '0.35rem 0.65rem',
-                      borderRadius: '6px',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                      color: '#ef4444',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <Trash2 size={13} /> Rensa alla enheter
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setAllNotificationSections(false)}
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-app)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    fontWeight: 500
+                  }}
+                >
+                  Fäll ihop alla
+                </button>
+              </div>
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.45 }}>
+              Hantera webbläsarnotiser (PWA), anslutna enheter, anpassning av notisinnehåll, nyckelordsbevakning och individuella flöden. Klicka på sektionerna nedan för att fälla ut eller ihop inställningarna.
+            </p>
+          </div>
+
+          {/* Sektion 1: Pushnotiser i webbläsare (PWA) */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <div 
+              onClick={() => toggleNotificationSection('pwaStatus')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                backgroundColor: expandedNotificationSections.pwaStatus ? 'var(--bg-card)' : 'var(--bg-app)',
+                borderBottom: expandedNotificationSections.pwaStatus ? '1px solid var(--border-color)' : 'none',
+                userSelect: 'none',
+                transition: 'background-color 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  backgroundColor: pushEnabled ? 'rgba(34, 197, 94, 0.12)' : 'rgba(59, 130, 246, 0.12)',
+                  color: pushEnabled ? '#22c55e' : 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Bell size={18} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '1rem' }}>
+                    Pushnotiser i webbläsare (PWA)
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    Status, synkronisering och testnotiser för aktuell enhet
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{
+                  fontSize: '0.72rem',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  backgroundColor: pushEnabled ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-app)',
+                  color: pushEnabled ? '#22c55e' : 'var(--text-muted)',
+                  border: pushEnabled ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border-color)'
+                }}>
+                  {pushEnabled ? 'AKTIV' : 'EJ AKTIV'}
+                </span>
+                <motion.div
+                  animate={{ rotate: expandedNotificationSections.pwaStatus ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronDown size={18} />
+                </motion.div>
               </div>
             </div>
 
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem', paddingLeft: '0.35rem', paddingRight: '0.35rem', lineHeight: 1.45 }}>
-              Visar anslutna enheter och webbläsare för ditt konto. Pushnotiser levereras till alla aktiva enheter i denna lista. Byter du telefon eller har inaktuella sessioner kan du rensa dem här.
-            </p>
+            {expandedNotificationSections.pwaStatus && (
+              <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', backgroundColor: 'var(--bg-card)' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
+                  Aktivera pushnotiser i din webbläsare för att ta emot händelser direkt i mobilen eller på datorn när nya artiklar anländer eller bevakade nyckelord träffar. Notiserna hålls automatiskt synkroniserade vid appuppdateringar.
+                </p>
 
-            {pushDevices.length === 0 ? (
-              <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
-                Inga enheter är för närvarande registrerade för pushnotiser. Klicka på "Aktivera pushnotiser" ovan för att registrera denna enhet.
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {pushDevices.map(dev => {
-                  const isMobile = (dev.device_name || '').toLowerCase().includes('android') || (dev.device_name || '').toLowerCase().includes('iphone');
-                  const updatedDate = dev.updated_at ? formatEuropeanDateTime(dev.updated_at) : (dev.created_at ? formatEuropeanDateTime(dev.created_at) : 'Okänt datum');
-                  return (
-                    <div
-                      key={dev.id}
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  {!pushEnabled ? (
+                    <button 
+                      type="button"
+                      onClick={togglePush}
                       style={{
+                        padding: '0.65rem 1.25rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        backgroundColor: 'var(--primary)',
+                        color: 'white',
+                        fontWeight: 600,
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.75rem 0.9rem',
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--bg-app)',
-                        border: dev.is_current ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid var(--border-color)',
-                        gap: '0.75rem'
+                        gap: '0.5rem'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-                        <div style={{
-                          padding: '0.5rem',
-                          borderRadius: '8px',
-                          backgroundColor: dev.is_current ? 'rgba(34, 197, 94, 0.12)' : 'var(--bg-card)',
-                          color: dev.is_current ? '#22c55e' : 'var(--text-muted)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          {isMobile ? <Smartphone size={18} /> : <Laptop size={18} />}
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.9rem' }}>
-                              {dev.device_name}
-                            </span>
-                            {dev.is_current && (
-                              <span style={{
-                                fontSize: '0.68rem',
-                                padding: '0.1rem 0.45rem',
-                                borderRadius: '10px',
-                                fontWeight: 700,
-                                backgroundColor: 'rgba(34, 197, 94, 0.15)',
-                                color: '#22c55e',
-                                border: '1px solid rgba(34, 197, 94, 0.3)'
-                              }}>
-                                Denna enhet
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            Senast aktiv: {updatedDate} | ID: ...{dev.endpoint_snippet}
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleDeleteDevice(dev.id)}
-                        title="Ta bort enhet"
-                        style={{
-                          padding: '0.4rem',
-                          borderRadius: '6px',
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          color: 'var(--text-muted)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <Bell size={16} /> Aktivera pushnotiser
+                    </button>
+                  ) : (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.65rem 1rem',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                      color: '#16a34a',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      fontWeight: 600,
+                      fontSize: '0.88rem'
+                    }}>
+                      <Check size={16} /> Aktiv och synkroniserad
                     </div>
-                  );
-                })}
+                  )}
+
+                  {pushEnabled && (
+                    <button 
+                      type="button"
+                      onClick={togglePush}
+                      title="Förnya registreringen mot push-servern manuellt om notiser inte når fram"
+                      style={{
+                        padding: '0.65rem 1.15rem',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-app)',
+                        color: 'var(--text-main)',
+                        fontWeight: 500,
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      <RefreshCw size={15} /> Förnya prenumeration
+                    </button>
+                  )}
+
+                  <button 
+                    type="button"
+                    onClick={handleTestPush}
+                    style={{
+                      padding: '0.65rem 1.25rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-main)',
+                      fontWeight: 600,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Send size={16} style={{ color: 'var(--primary)' }} /> Skicka testnotis till enhet
+                  </button>
+                  
+                  {pushEnabled && (
+                    <button 
+                      type="button"
+                      onClick={handleUnsubscribe}
+                      style={{
+                        padding: '0.65rem 1.25rem',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                        color: '#ef4444',
+                        fontWeight: 600,
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      Avsluta prenumeration på denna enhet
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Inställning för att endast få notiser på PRIO-flödet */}
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            padding: '1.25rem 0.6rem',
-            borderRadius: '12px',
-            marginBottom: '1.5rem',
-            border: aiConfig.prio_notify_only ? '1px solid rgba(249, 115, 22, 0.4)' : '1px solid var(--border-color)',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
-              <div style={{ flex: 1, minWidth: '240px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Flame size={18} style={{ color: '#f97316' }} /> Endast notiser för PRIO-flödet
-                  </h4>
-                  <span style={{
-                    fontSize: '0.7rem',
-                    padding: '0.15rem 0.45rem',
-                    borderRadius: '10px',
-                    fontWeight: 700,
-                    backgroundColor: aiConfig.prio_notify_only ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-app)',
-                    color: aiConfig.prio_notify_only ? '#f97316' : 'var(--text-muted)',
-                    border: aiConfig.prio_notify_only ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid var(--border-color)'
-                  }}>
-                    {aiConfig.prio_notify_only ? 'AKTIV' : 'AV'}
-                  </span>
-                </div>
-                <p style={{ margin: '0.4rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.45 }}>
-                  När detta är aktiverat skickas notiser endast för artiklar som klassificeras som PRIO eller matchar dina bevakade nyckelord. Rekommenderas om du följer nyhetstäta flöden och enbart vill bli aviserad om det som verkligen är viktigt.
-                </p>
-                {!aiConfig.prio_enabled && (
-                  <p style={{ margin: '0.4rem 0 0 0', color: '#eab308', fontSize: '0.8rem', fontWeight: 500 }}>
-                    Obs: Du behöver även ha personligt PRIO-flöde aktiverat under fliken AI-analys för att AI-prioriteringen ska köras.
-                  </p>
-                )}
-              </div>
-              <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
-                <input
-                  type="checkbox"
-                  checked={!!aiConfig.prio_notify_only}
-                  onChange={handleTogglePrioNotifyOnly}
-                  disabled={isSavingAi}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-
-          {/* Anpassa innehåll i pushnotiser */}
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            padding: '1.25rem 0.6rem',
-            borderRadius: '12px',
-            marginBottom: '1.5rem',
-            border: '1px solid var(--border-color)',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)'
-          }}>
-            <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 600, paddingLeft: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Sliders size={18} style={{ color: 'var(--primary)' }} /> Innehåll i pushnotiser
-            </h4>
-            <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.85rem', paddingLeft: '0.35rem', lineHeight: 1.45 }}>
-              Anpassa vilken information som ska inkluderas i dina webbpushnotiser. Du kan välja att visa eller dölja rubriker, förhandsvisningsbilder och AI-sammanfattningar.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingLeft: '0.35rem', paddingRight: '0.35rem' }}>
-              {/* Toggle 1: Artikelrubrik */}
-              <div style={{
+          {/* Sektion 2: Registrerade enheter */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <div 
+              onClick={() => toggleNotificationSection('devices')}
+              style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '0.75rem 0.9rem',
-                backgroundColor: 'var(--bg-app)',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                gap: '1rem'
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.92rem' }}>
-                    <Type size={16} style={{ color: 'var(--primary)' }} /> Inkludera artikelrubrik (Titel)
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                    När detta är aktivt visas hela artikelrubriken i notisens titel. Vid inaktiv visas enbart händelsetyp och källa (t.ex. PRIO: Aftonbladet).
-                  </div>
-                </div>
-                <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={aiConfig.push_include_title !== false}
-                    onChange={() => handleTogglePushSetting('push_include_title', 'Artikelrubrik')}
-                    disabled={isSavingAi}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-
-              {/* Toggle 2: Artikelbild */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.75rem 0.9rem',
-                backgroundColor: 'var(--bg-app)',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                gap: '1rem'
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.92rem' }}>
-                    <ImageIcon size={16} style={{ color: '#10b981' }} /> Inkludera artikelbild
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                    Visar en förhandsvisningsbild i notisen på mobil och dator när artikeln har en tillhörande bild.
-                  </div>
-                </div>
-                <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={aiConfig.push_include_image !== false}
-                    onChange={() => handleTogglePushSetting('push_include_image', 'Artikelbild')}
-                    disabled={isSavingAi}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-
-              {/* Toggle 3: AI-sammanfattning */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.75rem 0.9rem',
-                backgroundColor: 'var(--bg-app)',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                gap: '1rem'
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.92rem' }}>
-                    <Sparkles size={16} style={{ color: '#f97316' }} /> Inkludera AI-sammanfattning
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                    Inkluderar den informativa AI-analysen som text i notisen så att du omedelbart ser händelsens kärna.
-                  </div>
-                </div>
-                <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={aiConfig.push_include_summary !== false}
-                    onChange={() => handleTogglePushSetting('push_include_summary', 'AI-sammanfattning')}
-                    disabled={isSavingAi}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
-            <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ShieldAlert size={20} /> Bevakade nyckelord
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem' }}>
-              Ange ord som du anser vara viktiga här. När systemet hittar dessa i dina RSS-flöden skickas en avisering.
-            </p>
-
-            <form onSubmit={handleAddKeyword} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <input 
-                type="text" 
-                placeholder="T.ex. Säkerhet, Brand..." 
-                value={newKeyword}
-                onChange={(e) => setNewKeyword(e.target.value)}
-                style={{
-                  flex: '1 1 200px',
-                  padding: '0.75rem 1rem',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                backgroundColor: expandedNotificationSections.devices ? 'var(--bg-card)' : 'var(--bg-app)',
+                borderBottom: expandedNotificationSections.devices ? '1px solid var(--border-color)' : 'none',
+                userSelect: 'none',
+                transition: 'background-color 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
                   borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-app)',
-                  color: 'var(--text-main)'
-                }}
-              />
-              <button 
-                type="submit" 
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: 'var(--primary)',
-                  color: 'white',
-                  fontWeight: 600,
-                  cursor: 'pointer',
+                  backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                  color: 'var(--primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.5rem',
-                  flex: '0 1 auto'
-                }}
-              >
-                <Plus size={18} /> Lägg till
-              </button>
-            </form>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {keywords.map(kw => (
-                <div key={kw.id} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  backgroundColor: 'var(--bg-app)',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '20px',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-main)'
+                  flexShrink: 0
                 }}>
-                  {kw.keyword}
-                  <Trash2 
-                    size={14} 
-                    style={{ cursor: 'pointer', color: '#ef4444' }} 
-                    onClick={() => handleDeleteKeyword(kw.id)} 
-                  />
+                  <Smartphone size={18} />
                 </div>
-              ))}
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '1rem' }}>
+                    Registrerade enheter ({pushDevices.length})
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    Webbläsare och mobila klienter kopplade till ditt konto
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{
+                  fontSize: '0.72rem',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '12px',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border-color)',
+                  fontWeight: 600
+                }}>
+                  {pushDevices.length} st
+                </span>
+                <motion.div
+                  animate={{ rotate: expandedNotificationSections.devices ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronDown size={18} />
+                </motion.div>
+              </div>
             </div>
+
+            {expandedNotificationSections.devices && (
+              <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', backgroundColor: 'var(--bg-card)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.45, flex: 1, minWidth: '240px' }}>
+                    Visar anslutna enheter för ditt konto. Pushnotiser levereras till alla aktiva enheter i listan.
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={fetchPushDevices}
+                      disabled={isLoadingDevices}
+                      title="Uppdatera lista"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        padding: '0.35rem 0.65rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-app)',
+                        color: 'var(--text-main)',
+                        fontSize: '0.78rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <RefreshCw size={13} className={isLoadingDevices ? 'animate-spin' : ''} /> Uppdatera
+                    </button>
+                    {pushDevices.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllDevices}
+                        title="Rensa alla sparade enheter"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          padding: '0.35rem 0.65rem',
+                          borderRadius: '6px',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                          color: '#ef4444',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Trash2 size={13} /> Rensa alla enheter
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {pushDevices.length === 0 ? (
+                  <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
+                    Inga enheter är för närvarande registrerade för pushnotiser. Klicka på "Aktivera pushnotiser" i sektionen ovan för att registrera denna enhet.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    {pushDevices.map(dev => {
+                      const isMobile = (dev.device_name || '').toLowerCase().includes('android') || (dev.device_name || '').toLowerCase().includes('iphone');
+                      const updatedDate = dev.updated_at ? formatEuropeanDateTime(dev.updated_at) : (dev.created_at ? formatEuropeanDateTime(dev.created_at) : 'Okänt datum');
+                      return (
+                        <div
+                          key={dev.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '0.75rem 0.9rem',
+                            borderRadius: '8px',
+                            backgroundColor: 'var(--bg-app)',
+                            border: dev.is_current ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid var(--border-color)',
+                            gap: '0.75rem'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                            <div style={{
+                              padding: '0.5rem',
+                              borderRadius: '8px',
+                              backgroundColor: dev.is_current ? 'rgba(34, 197, 94, 0.12)' : 'var(--bg-card)',
+                              color: dev.is_current ? '#22c55e' : 'var(--text-muted)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {isMobile ? <Smartphone size={18} /> : <Laptop size={18} />}
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                                  {dev.device_name}
+                                </span>
+                                {dev.is_current && (
+                                  <span style={{
+                                    fontSize: '0.68rem',
+                                    padding: '0.1rem 0.45rem',
+                                    borderRadius: '10px',
+                                    fontWeight: 700,
+                                    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                                    color: '#22c55e',
+                                    border: '1px solid rgba(34, 197, 94, 0.3)'
+                                  }}>
+                                    Denna enhet
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                Senast aktiv: {updatedDate} | ID: ...{dev.endpoint_snippet}
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteDevice(dev.id)}
+                            title="Ta bort enhet"
+                            style={{
+                              padding: '0.4rem',
+                              borderRadius: '6px',
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              color: 'var(--text-muted)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
-            <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Hash size={20} /> Notiser per flöde
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem' }}>
-              Välj vilka flöden du vill ta emot notiser från. Stäng av flöden som du inte vill ska generera aviseringar.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-              {feeds.map((feed, idx) => (
-                <div key={feed.id} style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between', 
-                  padding: '0.75rem 0', 
-                  borderBottom: idx !== feeds.length - 1 ? '1px solid var(--border-color)' : 'none'
+          {/* Sektion 3: Prioritering och notisinnehåll */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <div 
+              onClick={() => toggleNotificationSection('prioAndContent')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                backgroundColor: expandedNotificationSections.prioAndContent ? 'var(--bg-card)' : 'var(--bg-app)',
+                borderBottom: expandedNotificationSections.prioAndContent ? '1px solid var(--border-color)' : 'none',
+                userSelect: 'none',
+                transition: 'background-color 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(249, 115, 22, 0.12)',
+                  color: '#f97316',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)', overflow: 'hidden' }}>
-                    <Hash size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-                    <span style={{ fontWeight: 500, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{feed.title || feed.url}</span>
-                  </div>
-                  <label className="toggle-switch" style={{ transform: 'scale(0.85)', flexShrink: 0, margin: 0 }}>
-                    <input
-                      type="checkbox"
-                      checked={feed.notify_enabled}
-                      onChange={() => toggleFeedNotification(feed)}
-                    />
-                    <span className="toggle-slider"></span>
-                  </label>
+                  <Sliders size={18} />
                 </div>
-              ))}
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '1rem' }}>
+                    Prioritering och notisinnehåll
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    PRIO-filtrering, rubriker, artikelbilder och AI-sammanfattningar
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{
+                  fontSize: '0.72rem',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '12px',
+                  backgroundColor: 'var(--bg-app)',
+                  color: aiConfig.prio_notify_only ? '#f97316' : 'var(--text-muted)',
+                  border: aiConfig.prio_notify_only ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid var(--border-color)',
+                  fontWeight: 600
+                }}>
+                  {aiConfig.prio_notify_only ? 'Endast PRIO' : 'Alla flöden'}
+                </span>
+                <motion.div
+                  animate={{ rotate: expandedNotificationSections.prioAndContent ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronDown size={18} />
+                </motion.div>
+              </div>
             </div>
+
+            {expandedNotificationSections.prioAndContent && (
+              <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', backgroundColor: 'var(--bg-card)' }}>
+                {/* PRIO-filtrering */}
+                <div style={{
+                  backgroundColor: 'var(--bg-app)',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  border: aiConfig.prio_notify_only ? '1px solid rgba(249, 115, 22, 0.4)' : '1px solid var(--border-color)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div style={{ flex: 1, minWidth: '240px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Flame size={17} style={{ color: '#f97316' }} /> Endast notiser för PRIO-flödet
+                        </h4>
+                        <span style={{
+                          fontSize: '0.68rem',
+                          padding: '0.12rem 0.45rem',
+                          borderRadius: '10px',
+                          fontWeight: 700,
+                          backgroundColor: aiConfig.prio_notify_only ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-card)',
+                          color: aiConfig.prio_notify_only ? '#f97316' : 'var(--text-muted)',
+                          border: aiConfig.prio_notify_only ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid var(--border-color)'
+                        }}>
+                          {aiConfig.prio_notify_only ? 'AKTIV' : 'AV'}
+                        </span>
+                      </div>
+                      <p style={{ margin: '0.35rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.84rem', lineHeight: 1.45 }}>
+                        När detta är aktiverat skickas notiser endast för artiklar som klassificeras som PRIO eller matchar dina bevakade nyckelord.
+                      </p>
+                      {!aiConfig.prio_enabled && (
+                        <p style={{ margin: '0.35rem 0 0 0', color: '#eab308', fontSize: '0.8rem', fontWeight: 500 }}>
+                          Obs: Du behöver även ha personligt PRIO-flöde aktiverat under fliken AI-analys för att AI-prioriteringen ska köras.
+                        </p>
+                      )}
+                    </div>
+                    <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={!!aiConfig.prio_notify_only}
+                        onChange={handleTogglePrioNotifyOnly}
+                        disabled={isSavingAi}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Innehållsanpassning */}
+                <div>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '0.95rem', fontWeight: 600 }}>
+                    Innehåll i pushnotiser
+                  </h4>
+                  <p style={{ margin: '0 0 0.75rem 0', color: 'var(--text-muted)', fontSize: '0.84rem', lineHeight: 1.4 }}>
+                    Välj vilken information som ska synas i notiserna när de anländer.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    {/* Toggle 1: Artikelrubrik */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem 0.9rem',
+                      backgroundColor: 'var(--bg-app)',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      gap: '1rem'
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.9rem' }}>
+                          <Type size={16} style={{ color: 'var(--primary)' }} /> Inkludera artikelrubrik (Titel)
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                          Visar hela artikelrubriken i notisens titel istället för enbart källnamn.
+                        </div>
+                      </div>
+                      <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={aiConfig.push_include_title !== false}
+                          onChange={() => handleTogglePushSetting('push_include_title', 'Artikelrubrik')}
+                          disabled={isSavingAi}
+                        />
+                        <span className="toggle-slider"></span>
+                      </label>
+                    </div>
+
+                    {/* Toggle 2: Artikelbild */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem 0.9rem',
+                      backgroundColor: 'var(--bg-app)',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      gap: '1rem'
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.9rem' }}>
+                          <ImageIcon size={16} style={{ color: '#10b981' }} /> Inkludera artikelbild
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                          Bifogar en förhandsvisningsbild i notisen när artikeln har bildmaterial.
+                        </div>
+                      </div>
+                      <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={aiConfig.push_include_image !== false}
+                          onChange={() => handleTogglePushSetting('push_include_image', 'Artikelbild')}
+                          disabled={isSavingAi}
+                        />
+                        <span className="toggle-slider"></span>
+                      </label>
+                    </div>
+
+                    {/* Toggle 3: AI-sammanfattning */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem 0.9rem',
+                      backgroundColor: 'var(--bg-app)',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      gap: '1rem'
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.9rem' }}>
+                          <Sparkles size={16} style={{ color: '#f97316' }} /> Inkludera AI-sammanfattning
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                          Inkluderar kärnfull AI-analystext direkt i notisen.
+                        </div>
+                      </div>
+                      <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={aiConfig.push_include_summary !== false}
+                          onChange={() => handleTogglePushSetting('push_include_summary', 'AI-sammanfattning')}
+                          disabled={isSavingAi}
+                        />
+                        <span className="toggle-slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sektion 4: Bevakade nyckelord */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <div 
+              onClick={() => toggleNotificationSection('keywords')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                backgroundColor: expandedNotificationSections.keywords ? 'var(--bg-card)' : 'var(--bg-app)',
+                borderBottom: expandedNotificationSections.keywords ? '1px solid var(--border-color)' : 'none',
+                userSelect: 'none',
+                transition: 'background-color 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                  color: '#ef4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <ShieldAlert size={18} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '1rem' }}>
+                    Bevakade nyckelord ({keywords.length})
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    Sökord och orter som omedelbart utlöser avisering
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{
+                  fontSize: '0.72rem',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '12px',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border-color)',
+                  fontWeight: 600
+                }}>
+                  {keywords.length} ord
+                </span>
+                <motion.div
+                  animate={{ rotate: expandedNotificationSections.keywords ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronDown size={18} />
+                </motion.div>
+              </div>
+            </div>
+
+            {expandedNotificationSections.keywords && (
+              <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', backgroundColor: 'var(--bg-card)' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.45 }}>
+                  Ange ord och begrepp som du vill övervaka. När systemet upptäcker dessa i dina RSS-flöden skickas en avisering omedelbart.
+                </p>
+
+                <form onSubmit={handleAddKeyword} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <input 
+                    type="text" 
+                    placeholder="T.ex. Säkerhet, Brand, Trosa..." 
+                    value={newKeyword}
+                    onChange={(e) => setNewKeyword(e.target.value)}
+                    style={{
+                      flex: '1 1 200px',
+                      padding: '0.65rem 1rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.9rem'
+                    }}
+                  />
+                  <button 
+                    type="submit" 
+                    style={{
+                      padding: '0.65rem 1.25rem',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: 'var(--primary)',
+                      color: 'white',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.45rem',
+                      fontSize: '0.88rem'
+                    }}
+                  >
+                    <Plus size={17} /> Lägg till
+                  </button>
+                </form>
+
+                {keywords.length === 0 ? (
+                  <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
+                    Inga nyckelord tillagda ännu.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {keywords.map(kw => (
+                      <div key={kw.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        backgroundColor: 'var(--bg-app)',
+                        padding: '0.45rem 0.85rem',
+                        borderRadius: '20px',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-main)',
+                        fontSize: '0.88rem'
+                      }}>
+                        <span>{kw.keyword}</span>
+                        <Trash2 
+                          size={14} 
+                          style={{ cursor: 'pointer', color: '#ef4444' }} 
+                          onClick={() => handleDeleteKeyword(kw.id)} 
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Sektion 5: Notiser per flöde (med snabbknapp för att slå på/av alla) */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <div 
+              onClick={() => toggleNotificationSection('feedNotifications')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                backgroundColor: expandedNotificationSections.feedNotifications ? 'var(--bg-card)' : 'var(--bg-app)',
+                borderBottom: expandedNotificationSections.feedNotifications ? '1px solid var(--border-color)' : 'none',
+                userSelect: 'none',
+                transition: 'background-color 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                  color: 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Hash size={18} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '1rem' }}>
+                    Notiser per flöde ({feeds.length})
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    Välj vilka enskilda källor som ska tillåtas skicka notiser
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{
+                  fontSize: '0.72rem',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '12px',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border-color)',
+                  fontWeight: 600
+                }}>
+                  {feeds.filter(f => !!f.notify_enabled).length} av {feeds.length} aktiva
+                </span>
+                <motion.div
+                  animate={{ rotate: expandedNotificationSections.feedNotifications ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+                >
+                  <ChevronDown size={18} />
+                </motion.div>
+              </div>
+            </div>
+
+            {expandedNotificationSections.feedNotifications && (
+              <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', backgroundColor: 'var(--bg-card)' }}>
+                {/* Snabbknappar för att slå på / av alla flöden */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: 'var(--bg-app)',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)'
+                }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Snabbåtgärd för samtliga <strong>{feeds.length}</strong> flöden:
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAllFeedNotifications(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        padding: '0.4rem 0.85rem',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(34, 197, 94, 0.4)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        color: '#16a34a',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <Bell size={13} /> Slå på alla
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAllFeedNotifications(false)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        padding: '0.4rem 0.85rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-muted)',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <BellOff size={13} /> Slå av alla
+                    </button>
+                  </div>
+                </div>
+
+                {feeds.length === 0 ? (
+                  <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                    Inga flöden finns sparade än.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                    {feeds.map((feed, idx) => (
+                      <div key={feed.id} style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between', 
+                        padding: '0.75rem 0.5rem', 
+                        borderBottom: idx !== feeds.length - 1 ? '1px solid var(--border-color)' : 'none'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text-main)', overflow: 'hidden' }}>
+                          <Hash size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                          <span style={{ fontWeight: 500, fontSize: '0.92rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {feed.title || feed.url}
+                          </span>
+                        </div>
+                        <label className="toggle-switch" style={{ transform: 'scale(0.85)', flexShrink: 0, margin: 0 }}>
+                          <input
+                            type="checkbox"
+                            checked={!!feed.notify_enabled}
+                            onChange={() => toggleFeedNotification(feed)}
+                          />
+                          <span className="toggle-slider"></span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </motion.div>
       )}
@@ -3406,9 +3907,31 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               </div>
 
               <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Anslutningsadress (URL)</div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {aiConfig.lm_studio_url}
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Skyddsgräns (artikelålder)</div>
+                <select
+                  value={aiConfig.max_article_age_hours || 24}
+                  onChange={(e) => handleUpdateMaxArticleAgeHours(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.4rem 0.5rem',
+                    borderRadius: '6px',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value={6}>6 timmar</option>
+                  <option value={12}>12 timmar</option>
+                  <option value={24}>24 timmar (1 dygn)</option>
+                  <option value={48}>48 timmar (2 dygn)</option>
+                  <option value={72}>72 timmar (3 dygn)</option>
+                  <option value={168}>7 dagar (1 vecka)</option>
+                </select>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                  Äldre artiklar hoppas över vid AI-analys
                 </div>
               </div>
             </div>

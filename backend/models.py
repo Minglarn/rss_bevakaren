@@ -119,6 +119,7 @@ class UserAISettings(Base):
     auto_purge_enabled = Column(Integer, default=1) # 1 = automatisk nattlig rensning aktiv, 0 = avstängd
     auto_purge_days = Column(Integer, default=30) # Antal dagar att spara olåsta artiklar innan rensning
     auto_scrape_article_text = Column(Integer, default=1) # 1 = skrapa brödtext före AI-analys, 0 = enbart RSS-ingress
+    max_article_age_hours = Column(Integer, default=24) # Maximal ålder i timmar för AI-analys av artiklar (default 24h)
 
     owner = relationship("User", back_populates="ai_settings")
 

@@ -137,6 +137,7 @@ class AIConfigUpdate(BaseModel):
     auto_purge_enabled: Optional[bool] = None
     auto_purge_days: Optional[int] = None
     auto_scrape_article_text: Optional[bool] = None
+    max_article_age_hours: Optional[int] = None
 
 class AIConfigResponse(BaseModel):
     prio_rules: str = ""
@@ -157,6 +158,7 @@ class AIConfigResponse(BaseModel):
     auto_purge_enabled: bool = True
     auto_purge_days: int = 30
     auto_scrape_article_text: bool = True
+    max_article_age_hours: int = 24
 
 class ArticlePrioritizeRequest(BaseModel):
     topic: Optional[str] = None

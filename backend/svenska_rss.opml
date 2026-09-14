@@ -6,6 +6,7 @@
     <docs>http://opml.org/spec2.opml</docs>
   </head>
   <body>
+    <outline text="Svensk press" title="Svensk press">
     <outline text="8 Sidor" type="rss" created="Tue, 05 May 2026 22:05:12 +0200" xmlUrl="https://8sidor.se/feed" description="Myndigheten för tillgängliga medier" htmlUrl="https://8sidor.se" version="RSS2" />
     <outline text="Accent Magasin" type="rss" created="Tue, 05 May 2026 22:05:12 +0200" xmlUrl="https://accentmagasin.se/feed" description="IOGT-NTO" htmlUrl="http://www.accentmagasin.se" version="RSS2" />
     <outline text="Aftonbladet" type="rss" created="Tue, 05 May 2026 22:05:12 +0200" xmlUrl="https://rss.aftonbladet.se/rss2/small/pages/sections/senastenytt" description="Aftonbladet Hierta AB" htmlUrl="https://www.aftonbladet.se" version="RSS2" />
@@ -278,6 +279,7 @@
     <outline text="Ölandsbladet" type="rss" created="Tue, 05 May 2026 22:05:25 +0200" xmlUrl="https://www.olandsbladet.se/feed.xml" description="Gota Media AB" htmlUrl="https://www.olandsbladet.se" version="RSS2" />
     <outline text="Øresund News" type="rss" created="Tue, 05 May 2026 22:05:25 +0200" xmlUrl="https://www.newsoresund.se/feed" description="Øresundsinstituttet" htmlUrl="https://www.newsoresund.se" version="RSS2" />
     <outline text="Örnsköldsviks Allehanda" type="rss" created="Tue, 05 May 2026 22:05:25 +0200" xmlUrl="https://www.allehanda.se/feed.xml" description="Bonnier News Local AB" htmlUrl="https://www.allehanda.se" version="RSS2" />
+    </outline>
     <outline text="Teknik &amp; IT" title="Teknik &amp; IT">
       <outline type="rss" text="Ars Technica" title="Ars Technica" xmlUrl="https://feeds.arstechnica.com/arstechnica/index" description="Djupgående teknik- och vetenskapsartiklar" htmlUrl="https://arstechnica.com"/>
       <outline type="rss" text="The Verge" title="The Verge" xmlUrl="https://www.theverge.com/rss/index.xml" description="Teknik, prylar och digital kultur" htmlUrl="https://www.theverge.com"/>

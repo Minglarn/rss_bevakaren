@@ -14,11 +14,14 @@ const RssManager = ({ embedded = false }) => {
   const [opmlFeeds, setOpmlFeeds] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Slumpmässigt intervall mellan 10 och 30 minuter för att inte polla alla flöden samtidigt
+  const getRandomInterval = () => Math.floor(Math.random() * (30 - 10 + 1)) + 10;
+
   // Manuellt formulär
   const [showAddForm, setShowAddForm] = useState(false);
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
-  const [pollingInterval, setPollingInterval] = useState(60);
+  const [pollingInterval, setPollingInterval] = useState(getRandomInterval);
   const [scrapeEnabled, setScrapeEnabled] = useState(true);
   const [includeInDashboard, setIncludeInDashboard] = useState(true);
 
@@ -72,11 +75,12 @@ const RssManager = ({ embedded = false }) => {
   // Snabb enskild prenumeration
   const handleQuickAdd = async (feedUrl, feedTitle) => {
     setAddingFeedUrl(feedUrl);
+    const randomInterval = getRandomInterval();
     try {
       await api.post('/feeds', { 
         url: feedUrl, 
         title: feedTitle, 
-        polling_interval: 60, 
+        polling_interval: randomInterval, 
         scrape_enabled: true, 
         include_in_dashboard: true 
       });
@@ -121,7 +125,7 @@ const RssManager = ({ embedded = false }) => {
       });
       setUrl('');
       setTitle('');
-      setPollingInterval(60);
+      setPollingInterval(getRandomInterval());
       setScrapeEnabled(true);
       setIncludeInDashboard(true);
       setShowAddForm(false);
@@ -202,7 +206,9 @@ const RssManager = ({ embedded = false }) => {
       const isAlreadyAdded = existingUrlSet.has(f.url);
       if (hideAlreadyAdded && isAlreadyAdded) return false;
 
-      const matchesCategory = catalogCategory === 'Alla' || f.category === catalogCategory;
+      const matchesCategory = catalogCategory === 'Alla' 
+        ? true 
+        : ((f.category || '').trim().toLowerCase() === catalogCategory.trim().toLowerCase());
       const matchesSearch = !term ||
         (f.title && f.title.toLowerCase().includes(term)) ||
         (f.description && f.description.toLowerCase().includes(term)) ||
@@ -395,6 +401,7 @@ const RssManager = ({ embedded = false }) => {
                   <input 
                     type="number" 
                     min="1"
+                    title="Slumpas som standard mellan 10-30 min för att sprida ut hämtningen"
                     value={pollingInterval}
                     onChange={(e) => setPollingInterval(e.target.value)}
                     style={{ width: '100%', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
@@ -689,7 +696,7 @@ const RssManager = ({ embedded = false }) => {
                 {searchTerm ? `Inga källor matchade "${searchTerm}".` : 'Inga källor att visa i denna vy.'}
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div key={catalogCategory} style={{ display: 'flex', flexDirection: 'column' }}>
                 {filteredCatalogFeeds.map((feed, idx) => {
                   const isAlreadyAdded = feeds.some(existing => existing.url === feed.url);
                   const isAdding = addingFeedUrl === feed.url;
@@ -697,7 +704,7 @@ const RssManager = ({ embedded = false }) => {
 
                   return (
                     <div 
-                      key={feed.url || idx}
+                      key={`${catalogCategory}_${feed.url || idx}`}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
