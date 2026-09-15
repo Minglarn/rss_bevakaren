@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.15.06',
+    date: '2026-09-15',
+    title: 'Omedelbar filtrering av lästa artiklar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Omedelbart dolt läge vid markering som läst',
+        description: 'När artiklar markeras som lästa filtreras de nu bort omedelbart i gränssnittet utan krav på sidomladdning. Den tidigare felaktiga logiken som enbart gjorde korten svartvita i standardläget har åtgärdats.'
+      },
+      {
+        type: 'improvement',
+        title: 'Korrekt gråskala i "Visa lästa"-läget',
+        description: 'Lästa artiklar visas nu med gråskala och dämpad opacitet enbart när användaren aktivt har aktiverat "Visa lästa".'
+      }
+    ]
+  },
+  {
     version: '2026.09.15.05',
     date: '2026-09-15',
     title: 'Renare TopBar och isolerad kortexpandering vid notiser',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

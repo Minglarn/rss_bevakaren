@@ -457,6 +457,19 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [unreadItems, setUnreadItems] = useState(new Set());
   const [lockedItems, setLockedItems] = useState(new Set());
   const [unlockedItems, setUnlockedItems] = useState(new Set());
+
+  const isArticleRead = useCallback((id, serverIsRead) => {
+    if (readItems.has(id)) return true;
+    if (unreadItems.has(id)) return false;
+    return serverIsRead === 1;
+  }, [readItems, unreadItems]);
+
+  const isArticleLocked = useCallback((id, serverIsLocked) => {
+    if (lockedItems.has(id)) return true;
+    if (unlockedItems.has(id)) return false;
+    return serverIsLocked === 1;
+  }, [lockedItems, unlockedItems]);
+
   const longPressTimers = useRef({});
   const isDraggingCard = useRef(false);
   const [showRead, setShowRead] = useState(() => {
@@ -553,12 +566,18 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Filtrera bort lästa artiklar om användaren inte valt att visa lästa (showRead = false)
+  const visibleFeeds = useMemo(() => {
+    if (showRead) return displayedFeeds;
+    return displayedFeeds.filter(item => !isArticleRead(item.id, item.is_read));
+  }, [displayedFeeds, showRead, isArticleRead]);
+
   // Gruppera artiklar per dag för snygga datumavgränsare och oberoende masonry-kolumner
   const dayGroups = useMemo(() => {
     const groups = [];
     let currentGroup = null;
 
-    displayedFeeds.forEach((item, index) => {
+    visibleFeeds.forEach((item, index) => {
       const currentD = getArticlePublishedDate(item);
       let dateLabel = '';
       let dayKey = 'all';
@@ -581,7 +600,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     });
 
     return groups;
-  }, [displayedFeeds]);
+  }, [visibleFeeds]);
 
   // Hjälpfunktion för att fördela artiklar jämnt över kolumner (Masonry / Vattenfall)
   const partitionIntoColumns = useCallback((items, colCount) => {
@@ -1068,18 +1087,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     } catch (error) {
       console.error("Could not mark all as read:", error);
     }
-  };
-
-  const isArticleRead = (id, serverIsRead) => {
-    if (readItems.has(id)) return true;
-    if (unreadItems.has(id)) return false;
-    return serverIsRead === 1;
-  };
-
-  const isArticleLocked = (id, serverIsLocked) => {
-    if (lockedItems.has(id)) return true;
-    if (unlockedItems.has(id)) return false;
-    return serverIsLocked === 1;
   };
 
   const handleExpand = async (index, link, id) => {
@@ -1679,7 +1686,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         </div>
       ) : loading && allFeeds.length === 0 ? (
         <p style={{ color: 'var(--text-muted)' }}>Laddar nyheter...</p>
-      ) : allFeeds.length === 0 ? (
+      ) : visibleFeeds.length === 0 ? (
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', textAlign: 'center' }}>
           <p style={{ color: 'var(--text-muted)' }}>
             {showLockedOnly 
@@ -1694,23 +1701,25 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               const isItemExpanded = Boolean(expandedItems[item.id]);
               const isClickbait = Boolean(shouldShowAi && item.is_clickbait);
               const color = isClickbait ? '#ef4444' : getBorderColor(item.feed_id || 1);
-              const isLast = index === displayedFeeds.length - 1;
+              const isLast = index === visibleFeeds.length - 1;
               const pubDate = getArticlePublishedDate(item);
               const recDate = getArticleReceivedDate(item);
               const hasDistinctReceivedTime = recDate && Math.abs(recDate.getTime() - pubDate.getTime()) > 120000;
+              const isReadNow = Boolean(isArticleRead(item.id, item.is_read));
 
               return (
                 <SwipeableArticleCard
                   key={item.id}
                   itemId={item.id}
-                  isRead={Boolean(isArticleRead(item.id, item.is_read))}
+                  isRead={isReadNow}
                   swipeEnabled={swipeEnabled}
                   onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
                   onMarkAsUnread={() => markAsUnread(item.id, item.cluster_id, item.similar_articles)}
                   onExpand={() => handleExpand(index, item.link, item.id)}
-                  className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(!showRead && isArticleRead(item.id, item.is_read)) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
+                  className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                   style={{ 
-                    filter: (!showRead && isArticleRead(item.id, item.is_read)) ? 'grayscale(100%)' : 'none', 
+                    filter: (showRead && isReadNow) ? 'grayscale(100%)' : 'none', 
+                    opacity: (showRead && isReadNow) ? 0.72 : 1,
                     userSelect: 'none', 
                     WebkitUserSelect: 'none',
                     border: isClickbait ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border-color)',
