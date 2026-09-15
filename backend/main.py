@@ -1458,6 +1458,15 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+ 
+@app.post("/auth/refresh", response_model=schemas.Token)
+def refresh_access_token(current_user: models.User = Depends(auth.get_current_user)):
+    """Förlänger sessionen (sliding session) för en aktiv inloggad användare."""
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": current_user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/users/me", response_model=schemas.UserResponse)
 def read_users_me(current_user: models.User = Depends(auth.get_current_user)):

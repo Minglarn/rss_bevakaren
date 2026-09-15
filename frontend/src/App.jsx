@@ -11,7 +11,7 @@ import BriefingView from './components/BriefingView';
 import { AiChatProvider, useAiChat } from './context/AiChatContext';
 import PWABadge from './components/PWABadge';
 import WhatsNewModal from './components/WhatsNewModal';
-import api from './api';
+import api, { isTokenExpired, shouldRefreshToken } from './api';
 import { autoSyncPushSubscription } from './utils/notifications';
 import packageJson from '../package.json';
 import './App.css';
@@ -569,10 +569,63 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
 };
 
 const App = () => {
-  const [token, setToken] = useState(localStorage.getItem('token'));
-  const [username, setUsername] = useState(localStorage.getItem('username'));
+  const [token, setToken] = useState(() => {
+    const savedToken = localStorage.getItem('token');
+    if (savedToken && isTokenExpired(savedToken)) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      localStorage.removeItem('rss_prio_enabled');
+      return null;
+    }
+    return savedToken;
+  });
+  const [username, setUsername] = useState(() => {
+    const savedToken = localStorage.getItem('token');
+    if (!savedToken || isTokenExpired(savedToken)) {
+      return null;
+    }
+    return localStorage.getItem('username');
+  });
 
   const [prioEnabled, setPrioEnabled] = useState(() => localStorage.getItem('rss_prio_enabled') === 'true');
+
+  // Lyssna på globalt sessionExpired-event från 401-interceptorn
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setToken(null);
+      setUsername(null);
+      setPrioEnabled(false);
+      toast.error('Din inloggningssession har löpt ut. Vänligen logga in igen.');
+    };
+    window.addEventListener('sessionExpired', handleSessionExpired);
+    return () => window.removeEventListener('sessionExpired', handleSessionExpired);
+  }, []);
+
+  // Automatisk förlängning av aktiv session (Sliding session)
+  useEffect(() => {
+    if (!token) return;
+
+    const checkAndRefreshToken = async () => {
+      if (shouldRefreshToken(token)) {
+        try {
+          const res = await api.post('/auth/refresh');
+          if (res.data && res.data.access_token) {
+            localStorage.setItem('token', res.data.access_token);
+            setToken(res.data.access_token);
+          }
+        } catch (e) {
+          // Om refresh misslyckas hanterar 401-interceptorn det om sessionen redan ogiltigförklarats
+          console.warn('Kunde inte förnya sessionen automatiskt', e);
+        }
+      }
+    };
+
+    checkAndRefreshToken();
+
+    // Kontrollera även periodiskt var 30:e minut när appen är öppen
+    const interval = setInterval(checkAndRefreshToken, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [token]);
 
   const handleLogin = (newToken, newUsername) => {
     localStorage.setItem('token', newToken);

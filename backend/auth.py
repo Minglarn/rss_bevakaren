@@ -10,7 +10,7 @@ import models, schemas, database
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "supersecretkey_change_in_production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30 # 30 dagar (förlängs rullande via sliding session)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 

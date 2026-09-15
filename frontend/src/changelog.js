@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.15.01',
+    date: '2026-09-15',
+    title: 'Robust sessionshantering: 30 dagars giltighet, rullande session och global 401-avlyssnare',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Global 401-avlyssnare mot zombiesessioner',
+        description: 'En global interceptor känner nu av om backend svarar med 401 Unauthorized vid utgångna säkerhetsnycklar. Istället för att användaren fastnar i ett tomt läge där inga artiklar läses in, rensas sessionen säkert och inloggningsskärmen visas med ett tydligt meddelande.'
+      },
+      {
+        type: 'improvement',
+        title: 'Automatisk förlängning (Sliding session) och 30 dagars livslängd',
+        description: 'Livslängden på inloggningsnycklar har utökats från 7 till 30 dagar. Dessutom förlängs sessionen automatiskt i bakgrunden vid regelbunden användning via en ny refresh-endpoint, så att aktiva användare slipper bli utloggade stup i kvarten.'
+      },
+      {
+        type: 'fix',
+        title: 'Verifiering av säkerhetsnyckel vid appstart',
+        description: 'Applikationen kontrollerar nu JWT-nyckelns bäst-före-datum direkt när den öppnas i webbläsaren. Utgångna sessioner fångas omedelbart innan trasiga API-förfrågningar skickas.'
+      }
+    ]
+  },
+  {
     version: '2026.09.14.06',
     date: '2026-09-14',
     title: 'Expanderbara sektioner för notisinställningar och snabbknapp för flödesnotiser',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
