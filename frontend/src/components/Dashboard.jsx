@@ -327,6 +327,51 @@ const SwipeableArticleCard = ({
   );
 };
 
+// Hjälpfunktioner för tidsformatering och separering av publicerings- och hämtningsdatum
+const formatTime = (dateString) => {
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return 'N/A';
+  return d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+};
+
+const formatDateLabel = (dateString) => {
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return 'IDAG';
+  const today = new Date();
+  if (d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()) {
+    return 'IDAG';
+  }
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
+};
+
+const formatFullDateTime = (dateString) => {
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+};
+
+const getArticlePublishedDate = (item) => {
+  if (item.published_ts && item.published_ts > 0) {
+    return new Date(item.published_ts * 1000);
+  }
+  if (item.published) {
+    const d = new Date(item.published);
+    if (!isNaN(d.getTime())) return d;
+  }
+  if (item.received_ts && item.received_ts > 0) {
+    return new Date(item.received_ts * 1000);
+  }
+  return new Date();
+};
+
+const getArticleReceivedDate = (item) => {
+  if (item.received_ts && item.received_ts > 0) {
+    return new Date(item.received_ts * 1000);
+  }
+  return null;
+};
+
 const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const location = useLocation();
@@ -514,8 +559,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     let currentGroup = null;
 
     displayedFeeds.forEach((item, index) => {
-      const currentTs = item.received_ts ? item.received_ts * 1000 : new Date(item.published).getTime();
-      const currentD = new Date(currentTs);
+      const currentD = getArticlePublishedDate(item);
       let dateLabel = '';
       let dayKey = 'all';
 
@@ -917,31 +961,29 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     if (node) observer.current.observe(node);
   }, [loading, allFeeds]);
 
-  // Helper to format date
-  const formatTime = (dateString) => {
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return 'N/A';
-    return d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatDateLabel = (dateString) => {
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return 'IDAG';
-    const today = new Date();
-    if (d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()) {
-      return 'IDAG';
-    }
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'];
-    return `${d.getDate()} ${months[d.getMonth()]}`;
-  };
-
-  const markAsRead = async (id) => {
+  const markAsRead = async (id, clusterId = null, similarArticles = []) => {
     try {
-      await api.post(`/articles/${id}/read`);
-      setReadItems(prev => new Set(prev).add(id));
+      const idsToMark = [id];
+      if (Array.isArray(similarArticles)) {
+        similarArticles.forEach(s => {
+          if (s && s.id && !idsToMark.includes(s.id)) idsToMark.push(s.id);
+        });
+      }
+
+      if (clusterId && idsToMark.length > 1) {
+        await api.post(`/articles/cluster/${clusterId}/read`);
+      } else {
+        await Promise.all(idsToMark.map(artId => api.post(`/articles/${artId}/read`)));
+      }
+
+      setReadItems(prev => {
+        const next = new Set(prev);
+        idsToMark.forEach(artId => next.add(artId));
+        return next;
+      });
       setUnreadItems(prev => {
         const next = new Set(prev);
-        next.delete(id);
+        idsToMark.forEach(artId => next.delete(artId));
         return next;
       });
       window.dispatchEvent(new Event('feedsUpdated'));
@@ -953,13 +995,25 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     }
   };
 
-  const markAsUnread = async (id) => {
+  const markAsUnread = async (id, clusterId = null, similarArticles = []) => {
     try {
-      await api.post(`/articles/${id}/unread`);
-      setUnreadItems(prev => new Set(prev).add(id));
+      const idsToMark = [id];
+      if (Array.isArray(similarArticles)) {
+        similarArticles.forEach(s => {
+          if (s && s.id && !idsToMark.includes(s.id)) idsToMark.push(s.id);
+        });
+      }
+
+      await Promise.all(idsToMark.map(artId => api.post(`/articles/${artId}/unread`)));
+
+      setUnreadItems(prev => {
+        const next = new Set(prev);
+        idsToMark.forEach(artId => next.add(artId));
+        return next;
+      });
       setReadItems(prev => {
         const next = new Set(prev);
-        next.delete(id);
+        idsToMark.forEach(artId => next.delete(artId));
         return next;
       });
       window.dispatchEvent(new Event('feedsUpdated'));
@@ -1640,6 +1694,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               const isClickbait = Boolean(shouldShowAi && item.is_clickbait);
               const color = isClickbait ? '#ef4444' : getBorderColor(item.feed_id || 1);
               const isLast = index === displayedFeeds.length - 1;
+              const pubDate = getArticlePublishedDate(item);
+              const recDate = getArticleReceivedDate(item);
+              const hasDistinctReceivedTime = recDate && Math.abs(recDate.getTime() - pubDate.getTime()) > 120000;
 
               return (
                 <SwipeableArticleCard
@@ -1647,8 +1704,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   itemId={item.id}
                   isRead={Boolean(isArticleRead(item.id, item.is_read))}
                   swipeEnabled={swipeEnabled}
-                  onMarkAsRead={() => markAsRead(item.id)}
-                  onMarkAsUnread={() => markAsUnread(item.id)}
+                  onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
+                  onMarkAsUnread={() => markAsUnread(item.id, item.cluster_id, item.similar_articles)}
                   onExpand={() => handleExpand(index, item.link, item.id)}
                   className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(!showRead && isArticleRead(item.id, item.is_read)) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                   style={{ 
@@ -1669,19 +1726,27 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       backgroundColor: color 
                     }}
                   >
-                    <div className="feed-card-time">
-                      {formatTime(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
+                    <div className="feed-card-time" title={`Publicerad av källan: ${formatFullDateTime(pubDate)}`}>
+                      {formatTime(pubDate)}
                     </div>
                     <div className="feed-card-date">
-                      {formatDateLabel(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
+                      {formatDateLabel(pubDate)}
                     </div>
+                    {hasDistinctReceivedTime && (
+                      <div 
+                        style={{ fontSize: '0.62rem', color: 'rgba(255, 255, 255, 0.85)', marginTop: '0.25rem', textAlign: 'center', lineHeight: 1.15 }}
+                        title={`Hämtades in till RSS-Bevakaren: ${formatFullDateTime(recDate)}`}
+                      >
+                        Hämtad {formatTime(recDate)}
+                      </div>
+                    )}
                     
                     {/* Actions: Lock/Read buttons */}
                     <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
                       {/* Read button */}
                       {isArticleRead(item.id, item.is_read) ? (
                         <button 
-                          onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
+                          onClick={(e) => { e.stopPropagation(); markAsUnread(item.id, item.cluster_id, item.similar_articles); }}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
                           title="Markera som oläst"
                         >
@@ -1689,7 +1754,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         </button>
                       ) : (
                         <button 
-                          onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
+                          onClick={(e) => { e.stopPropagation(); markAsRead(item.id, item.cluster_id, item.similar_articles); }}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
                           title="Markera som läst"
                         >
@@ -1738,10 +1803,28 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
-                        {/* Tidsbricka */}
-                        <span className="modern-time-pill">
-                          {formatTime(item.received_ts ? new Date(item.received_ts * 1000) : item.published)} {formatDateLabel(item.received_ts ? new Date(item.received_ts * 1000) : item.published)}
+                        {/* Tidsbricka: Publiceringstid samt hämtningstid om de skiljer sig */}
+                        <span 
+                          className="modern-time-pill" 
+                          title={`Publicerad av källan: ${formatFullDateTime(pubDate)}`}
+                          style={{ cursor: 'help' }}
+                        >
+                          Publ: {formatTime(pubDate)} {formatDateLabel(pubDate)}
                         </span>
+                        {hasDistinctReceivedTime && (
+                          <span 
+                            className="modern-time-pill" 
+                            title={`Hämtades in till RSS-Bevakaren: ${formatFullDateTime(recDate)}`}
+                            style={{ 
+                              cursor: 'help', 
+                              backgroundColor: 'rgba(0, 0, 0, 0.28)',
+                              fontSize: '0.73rem',
+                              opacity: 0.95
+                            }}
+                          >
+                            Hämtad {formatTime(recDate)}
+                          </span>
+                        )}
 
                         {/* Källnamn med flödesikon */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#ffffff', fontWeight: 700, fontSize: '0.84rem', minWidth: 0 }}>
@@ -2266,6 +2349,29 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         }}
                       >
                         <div style={{ padding: '1rem' }}>
+                          {/* Datum- och tidsdetaljer */}
+                          <div style={{ 
+                            display: 'flex', 
+                            flexWrap: 'wrap', 
+                            gap: '1rem', 
+                            fontSize: '0.8rem', 
+                            color: 'var(--text-muted)', 
+                            marginBottom: '0.85rem',
+                            paddingBottom: '0.65rem',
+                            borderBottom: '1px solid var(--border-color)'
+                          }}>
+                            <div>
+                              <strong style={{ color: 'var(--text-main)' }}>Publicerad:</strong>{' '}
+                              {formatFullDateTime(pubDate)}
+                            </div>
+                            {recDate && (
+                              <div>
+                                <strong style={{ color: 'var(--text-main)' }}>Hämtad till applikationen:</strong>{' '}
+                                {formatFullDateTime(recDate)}
+                              </div>
+                            )}
+                          </div>
+
                           {item.ai_summary && item.summary && (
                             <div style={{ marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
                               <strong style={{ display: 'block', color: 'var(--text-main)', marginBottom: '0.25rem' }}>RSS-ingress:</strong>
@@ -2439,7 +2545,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       {isArticleRead(item.id, item.is_read) ? (
                         <button
                           className="modern-bottombar-btn active"
-                          onClick={(e) => { e.stopPropagation(); markAsUnread(item.id); }}
+                          onClick={(e) => { e.stopPropagation(); markAsUnread(item.id, item.cluster_id, item.similar_articles); }}
                           title="Markera som oläst"
                         >
                           <EyeOff size={13} />
@@ -2448,7 +2554,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       ) : (
                         <button
                           className="modern-bottombar-btn"
-                          onClick={(e) => { e.stopPropagation(); markAsRead(item.id); }}
+                          onClick={(e) => { e.stopPropagation(); markAsRead(item.id, item.cluster_id, item.similar_articles); }}
                           title="Markera som läst"
                         >
                           <CheckCheck size={13} />

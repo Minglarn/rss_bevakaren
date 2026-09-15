@@ -1883,9 +1883,16 @@ def get_dashboard_feeds(
         head_locs = ai_service.extract_article_locations(head.get("title", ""), head.get("ai_summary", ""), head.get("tags"))
 
         valid_c_items = [head]
+        seen_feed_ids = {head.get("feed_id")}
         for other in c_items[1:]:
             other_locs = ai_service.extract_article_locations(other.get("title", ""), other.get("ai_summary", ""), other.get("tags"))
-            if ai_service.has_location_conflict(head_locs, other_locs):
+            if other.get("feed_id") in seen_feed_ids:
+                # Samma källa har flera artiklar: bryt ut till eget kort så att de inte döljs bakom varandra
+                other["cluster_id"] = None
+                other["cluster_size"] = 1
+                other["similar_articles"] = []
+                unclustered.append(other)
+            elif ai_service.has_location_conflict(head_locs, other_locs):
                 # Geografisk konflikt: Bryt ut artikeln till separat händelse direkt i UI
                 other["cluster_id"] = None
                 other["cluster_size"] = 1
@@ -1893,6 +1900,7 @@ def get_dashboard_feeds(
                 unclustered.append(other)
             else:
                 valid_c_items.append(other)
+                seen_feed_ids.add(other.get("feed_id"))
 
         head["cluster_size"] = len(valid_c_items)
         similar = []

@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.15.04',
+    date: '2026-09-15',
+    title: 'Publiceringstider och förfinad händelseklustring',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Tydlig visning av ursprunglig publiceringstid',
+        description: 'Korten visar nu källans faktiska publiceringstid (Publ: TT:MM) som primär tidsangivelse. Om artikeln hämtades in vid en senare tidpunkt visas även en kompletterande bricka för hämtad tid. Även i det expanderade läget presenteras båda tidsstämplarna tydligt.'
+      },
+      {
+        type: 'fix',
+        title: 'Självständiga kort för artiklar från samma källa',
+        description: 'Klustringsalgoritmen har korrigerats så att artiklar från samma nyhetskälla inte längre klumpas ihop bakom ett enda kort. Varje artikel visas som sitt eget kort så att alla inkomna händelser förblir synliga i PRIO-flödet.'
+      },
+      {
+        type: 'fix',
+        title: 'Korrekt klustermarkering vid Läst-klick',
+        description: 'När ett kort med sammanförda källor markeras som läst sätts samtliga relaterade artiklar i samma händelsekluster som lästa. Detta förhindrar att en underliggande artikel dyker upp som ett nytt separat kort efter klicket.'
+      }
+    ]
+  },
+  {
     version: '2026.09.15.03',
     date: '2026-09-15',
     title: 'Realtidssynkronisering av olästa artiklar för PRIO och samtliga flöden',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

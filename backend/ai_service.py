@@ -1365,6 +1365,7 @@ def find_or_create_article_cluster(article_id: int, db: Any, similarity_threshol
 
         candidates = db.query(models.Article).filter(
             models.Article.id != article_id,
+            models.Article.feed_id != art.feed_id,
             models.Article.received_ts >= min_ts,
             models.Article.received_ts <= max_ts
         ).order_by(models.Article.received_ts.desc()).limit(150).all()
