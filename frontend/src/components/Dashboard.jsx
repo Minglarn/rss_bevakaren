@@ -1718,8 +1718,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   onExpand={() => handleExpand(index, item.link, item.id)}
                   className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                   style={{ 
-                    filter: (showRead && isReadNow) ? 'grayscale(100%)' : 'none', 
-                    opacity: (showRead && isReadNow) ? 0.72 : 1,
+                    filter: 'none', 
+                    opacity: (showRead && isReadNow) ? 0.85 : 1,
                     userSelect: 'none', 
                     WebkitUserSelect: 'none',
                     border: isClickbait ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border-color)',

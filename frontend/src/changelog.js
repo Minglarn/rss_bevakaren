@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.15.08',
+    date: '2026-09-15',
+    title: 'Bevarad färgprofil för lästa artiklar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Full färgprofil utan gråskalefilter',
+        description: 'Tog bort det gråa filtret helt från lästa artiklar. När "Visa lästa" är aktiverat visas artiklarna nu med fulla temafärger, källikoner och bilder, vilket bevarar applikationens visuella identitet och estetik.'
+      }
+    ]
+  },
+  {
     version: '2026.09.15.07',
     date: '2026-09-15',
     title: 'Strikt kontroll av publiceringstid vid inläsning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
