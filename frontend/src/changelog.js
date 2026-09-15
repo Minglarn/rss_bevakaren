@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.15.02',
+    date: '2026-09-15',
+    title: 'Källspecifika ikoner i pushnotiser',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Flödets ikon i pushnotiser',
+        description: 'Webbpush-notiser skickar nu automatiskt med respektive nyhetskällas egen logotyp eller högupplösta favicon (128px) som notisikon. Detta ersätter den tidigare dubblerade RSS-bevakaren-ikonen och gör att källor som SVT, SweClockers, TechCrunch m.fl. känns igen direkt vid en snabb anblick.'
+      }
+    ]
+  },
+  {
     version: '2026.09.15.01',
     date: '2026-09-15',
     title: 'Robust sessionshantering: 30 dagars giltighet, rullande session och global 401-avlyssnare',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

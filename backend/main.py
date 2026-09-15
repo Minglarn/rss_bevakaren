@@ -702,7 +702,7 @@ def get_feed_icon_url(feed: Optional[models.Feed], link: Optional[str] = None) -
             from urllib.parse import urlparse
             domain = urlparse(target_url).netloc
             if domain:
-                return f"https://www.google.com/s2/favicons?domain={domain}&sz=64"
+                return f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
         except Exception:
             pass
     return ""
@@ -716,7 +716,8 @@ def send_push_notification_to_user(
     article_id: Optional[int] = None,
     image_url: Optional[str] = None,
     context: str = "Push",
-    silent: bool = False
+    silent: bool = False,
+    icon_url: Optional[str] = None
 ) -> dict:
     """
     Skickar web-push till samtliga registrerade enheter för en användare med hög prioritet (Urgency: high) och TTL.
@@ -739,6 +740,9 @@ def send_push_notification_to_user(
     last_status_code = None
     errors = []
 
+    default_icon = "/pwa-192x192.png?v=2026.09.15.02"
+    resolved_icon = icon_url.strip() if (icon_url and icon_url.strip()) else default_icon
+
     for idx, sub in enumerate(subs, 1):
         dev_desc = parse_device_name(sub.user_agent)
         endpoint_snippet = sub.endpoint[-28:] if sub.endpoint else "okänd"
@@ -749,8 +753,8 @@ def send_push_notification_to_user(
                 "body": body,
                 "url": url or "/",
                 "article_id": article_id,
-                "icon": "/pwa-192x192.png?v=2026.09.14.01",
-                "badge": "/badge.png?v=2026.09.14.01"
+                "icon": resolved_icon,
+                "badge": "/badge.png?v=2026.09.15.02"
             }
             if image_url:
                 payload["image"] = image_url
@@ -1051,6 +1055,7 @@ async def polling_loop():
                                             notify_body = art.summary or art.title
                                             
                                     if should_notify:
+                                        feed_icon = get_feed_icon_url(feed, art.link)
                                         send_push_notification_to_user(
                                             db=db,
                                             user_id=feed.user_id,
@@ -1059,7 +1064,8 @@ async def polling_loop():
                                             url=art.link or "/",
                                             article_id=art.id,
                                             image_url=art.image_url,
-                                            context="Rå-Push"
+                                            context="Rå-Push",
+                                            icon_url=feed_icon
                                         )
                     else:
                         print(f"[POLL: {feed_username}] {feed_title}: 0 nya artiklar", flush=True)
@@ -1323,6 +1329,7 @@ async def ai_processing_loop():
                             if should_send_push and user_id:
                                 push_body = (art.ai_summary or art.summary or art.title or "Ny artikel") if inc_summary else (art.summary or art.title or "Ny artikel")
                                 push_img = art.image_url if inc_image else None
+                                push_feed_icon = get_feed_icon_url(feed_obj, art.link)
                                 push_info = send_push_notification_to_user(
                                     db=db,
                                     user_id=user_id,
@@ -1332,7 +1339,8 @@ async def ai_processing_loop():
                                     article_id=art.id,
                                     image_url=push_img,
                                     context=context_tag,
-                                    silent=True
+                                    silent=True,
+                                    icon_url=push_feed_icon
                                 )
                         except Exception as push_err:
                             print(f"[Push: {u_display}] Fel vid hantering av push-notis för artikel {art.id}: {push_err}", flush=True)

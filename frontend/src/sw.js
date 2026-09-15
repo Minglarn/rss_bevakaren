@@ -63,8 +63,8 @@ self.addEventListener('push', function(event) {
     let title = 'RSS Bevakaren';
     let options = {
       body: 'Ny notis mottagen',
-      icon: '/pwa-192x192.png?v=2026.09.14.01',
-      badge: '/badge.png?v=2026.09.14.01',
+      icon: '/pwa-192x192.png?v=2026.09.15.02',
+      badge: '/badge.png?v=2026.09.15.02',
       vibrate: [200, 100, 200],
       renotify: true,
       data: {
@@ -101,8 +101,8 @@ self.addEventListener('push', function(event) {
         console.warn('SW showNotification with full options failed, attempting minimal fallback:', err);
         const fallbackOptions = {
           body: options.body,
-          icon: options.icon || '/pwa-192x192.png?v=2026.09.14.01',
-          badge: '/badge.png?v=2026.09.14.01',
+          icon: options.icon || '/pwa-192x192.png?v=2026.09.15.02',
+          badge: '/badge.png?v=2026.09.15.02',
           data: options.data
         };
         if (options.image) {
