@@ -7,6 +7,7 @@ import ShareModal from './ShareModal';
 import PrioOnboardingModal from './PrioOnboardingModal';
 import PrioritizeModal from './PrioritizeModal';
 import { decodeHtmlEntities } from '../utils/textUtils';
+import { useFeeds } from '../App';
 
 const DEFAULT_CATEGORIES = ['All', 'Technology', 'Politics', 'Emergency', 'Local', 'Economy', 'Entertainment', 'Other'];
 
@@ -373,6 +374,7 @@ const getArticleReceivedDate = (item) => {
 };
 
 const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
+  const { myFeeds = [] } = useFeeds();
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const location = useLocation();
   const [allFeeds, setAllFeeds] = useState([]);
@@ -566,11 +568,24 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Nollställ artiklar omedelbart vid byte av aktivt flöde så att föregående flödes artiklar inte ligger kvar
+  useEffect(() => {
+    setDisplayedFeeds([]);
+    setAllFeeds([]);
+    setPage(1);
+    setLoading(true);
+  }, [feedId]);
+
   // Filtrera bort lästa artiklar om användaren inte valt att visa lästa (showRead = false)
+  // Samt strikt isolering till det aktiva flödet om ett specifikt flöde är valt (feedId)
   const visibleFeeds = useMemo(() => {
-    if (showRead) return displayedFeeds;
-    return displayedFeeds.filter(item => !isArticleRead(item.id, item.is_read));
-  }, [displayedFeeds, showRead, isArticleRead]);
+    let list = displayedFeeds;
+    if (feedId) {
+      list = list.filter(item => String(item.feed_id) === String(feedId));
+    }
+    if (showRead) return list;
+    return list.filter(item => !isArticleRead(item.id, item.is_read));
+  }, [displayedFeeds, feedId, showRead, isArticleRead]);
 
   // Gruppera artiklar per dag för snygga datumavgränsare och oberoende masonry-kolumner
   const dayGroups = useMemo(() => {
@@ -716,7 +731,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     clusterMode
   };
 
+  const fetchCounter = useRef(0);
+
   const fetchFeeds = useCallback(async (isBackground = false) => {
+    const currentFetchId = ++fetchCounter.current;
     const {
       isPrioMode: pMode,
       feedMode: fMode,
@@ -755,16 +773,22 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
       const url = '/dashboard-feeds' + (queryParts.length > 0 ? '?' + queryParts.join('&') : '');
       const res = await api.get(url);
-      setAllFeeds(res.data);
+
+      // Skydd mot race condition: Om ett senare anrop startats, ignorera detta förlegade svar
+      if (fetchCounter.current !== currentFetchId) return;
+
+      // Strikt källisolering: Om fId är satt får endast artiklar från det flödet sparas i state
+      const cleanData = fId ? res.data.filter(item => String(item.feed_id) === String(fId)) : res.data;
+
+      setAllFeeds(cleanData);
       if (!isBackground) {
-        setDisplayedFeeds(res.data.slice(0, itemsPerPage));
-        if (aId && res.data.length > 0) {
-          const targetItem = res.data.find(d => String(d.id) === String(aId)) || res.data[0];
+        setDisplayedFeeds(cleanData.slice(0, itemsPerPage));
+        if (aId && cleanData.length > 0) {
+          const targetItem = cleanData.find(d => String(d.id) === String(aId)) || cleanData[0];
           setExpandedItems({ [targetItem.id]: true });
         }
       } else {
-        // Update without changing scroll or overwriting with wrong feed
-        setDisplayedFeeds(prev => res.data.slice(0, Math.max(prev.length, itemsPerPage)));
+        setDisplayedFeeds(prev => cleanData.slice(0, Math.max(prev.length, itemsPerPage)));
       }
       if (fId) {
         try {
@@ -777,97 +801,46 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     } catch (err) {
       console.error(err);
     } finally {
-      if (!isBackground) setLoading(false);
+      if (!isBackground && fetchCounter.current === currentFetchId) {
+        setLoading(false);
+      }
     }
   }, [itemsPerPage]);
 
-  // 1. WebSocket useEffect (Runs ONCE)
+  // Lyssnare för AI-framsteg och bakgrundsuppdateringar som distribueras via global WebSocket i App.jsx
   useEffect(() => {
-    let ws;
-    let isCleaningUp = false;
-    let reconnectTimeout;
-    
-    const connectWebSocket = () => {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/api/ws`;
-      
-      ws = new WebSocket(wsUrl);
-      
-      ws.onopen = () => {
-        console.log("WebSocket connected!");
-        ws.send(token);
-        window.dispatchEvent(new Event('feedsUpdated')); // Always fetch on reconnect to catch missed items
-      };
-      
-      ws.onmessage = (event) => {
-        if (event.data.startsWith("NEW_ARTICLES")) {
-          const parts = event.data.split(":");
-          if (parts.length > 2) {
-            const feedId = parseInt(parts[1]);
-            const count = parseInt(parts[2]);
-            window.dispatchEvent(new CustomEvent('feedsUpdated', { detail: { feedId, count } }));
-          } else {
-            window.dispatchEvent(new Event('feedsUpdated')); // Fallback for old clients
-          }
-          console.log("New articles received via WebSocket! Updating UI...");
-        } else if (event.data.startsWith("AI_PROGRESS:")) {
-          const parts = event.data.split(":");
-          if (parts.length >= 3) {
-            const articleId = parseInt(parts[1]);
-            const pct = parseInt(parts[2]);
-            setAiProgress(prev => ({ ...prev, [articleId]: pct }));
-          }
-        } else if (event.data.startsWith("AI_UPDATED:")) {
-          const parts = event.data.split(":");
-          const articleId = parts.length > 1 ? parseInt(parts[1]) : null;
-          if (articleId) {
-            setAiProgress(prev => {
-              const next = { ...prev };
-              delete next[articleId];
-              return next;
-            });
-          }
-          // Update dashboard silently in background when AI enrichment happens
-          fetchFeeds(true);
-          window.dispatchEvent(new CustomEvent('feedsUpdated', { detail: { fromAiUpdated: true } }));
-        } else if (event.data.startsWith("POLLING_START:")) {
-          const feedId = parseInt(event.data.split(":")[1]);
-          window.dispatchEvent(new CustomEvent('pollingStart', { detail: feedId }));
-        } else if (event.data.startsWith("POLLING_END:")) {
-          const feedId = parseInt(event.data.split(":")[1]);
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('pollingEnd', { detail: feedId }));
-          }, 2000);
-        } else if (event.data === "DIGEST_UPDATED") {
-          fetchLatestDigest();
-          window.dispatchEvent(new Event('digestUpdated'));
-        }
-      };
-      
-      ws.onclose = () => {
-        if (!isCleaningUp) {
-          console.log("WebSocket disconnected. Retrying in 5 seconds...");
-          reconnectTimeout = setTimeout(connectWebSocket, 5000);
-        }
-      };
-      
-      ws.onerror = (err) => {
-        console.error("WebSocket error:", err);
-        ws.close();
-      };
+    const handleAiProgress = (e) => {
+      if (e && e.detail) {
+        const { articleId, pct } = e.detail;
+        setAiProgress(prev => ({ ...prev, [articleId]: pct }));
+      }
     };
-    
-    connectWebSocket();
-    
+
+    const handleAiUpdated = (e) => {
+      if (e && e.detail && e.detail.articleId) {
+        setAiProgress(prev => {
+          const next = { ...prev };
+          delete next[e.detail.articleId];
+          return next;
+        });
+      }
+      fetchFeeds(true);
+    };
+
+    const handleDigestUpdated = () => {
+      fetchLatestDigest();
+    };
+
+    window.addEventListener('aiProgress', handleAiProgress);
+    window.addEventListener('aiUpdated', handleAiUpdated);
+    window.addEventListener('digestUpdated', handleDigestUpdated);
+
     return () => {
-      isCleaningUp = true;
-      clearTimeout(reconnectTimeout);
-      if (ws) ws.close();
+      window.removeEventListener('aiProgress', handleAiProgress);
+      window.removeEventListener('aiUpdated', handleAiUpdated);
+      window.removeEventListener('digestUpdated', handleDigestUpdated);
     };
-  }, []);
+  }, [fetchLatestDigest, fetchFeeds]);
 
   // 2. Fetch Feeds & Event Listeners
   useEffect(() => {
@@ -1322,7 +1295,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                 {isPrioMode && <Flame size={20} style={{ color: '#f97316', flexShrink: 0 }} />}
                 {isPrioMode 
                   ? 'PRIO-FLÖDE' 
-                  : (feedId && allFeeds.length > 0 ? allFeeds[0].source_title.toUpperCase() : '')}
+                  : (feedId 
+                      ? (myFeeds.find(f => String(f.id) === String(feedId))?.title || (allFeeds.length > 0 ? allFeeds[0].source_title : '')).toUpperCase() 
+                      : '')}
               </h1>
             {isPrioMode && (
               <span className="desktop-only" style={{ 

@@ -1787,7 +1787,7 @@ def get_dashboard_feeds(
         query = query.filter(models.Article.id == article_id)
     else:
         if feed_id:
-            query = query.filter(models.Feed.id == feed_id)
+            query = query.filter(models.Article.feed_id == feed_id)
         else:
             query = query.filter(models.Feed.include_in_dashboard == 1)
             

@@ -18,6 +18,14 @@ import './App.css';
 import './index.css';
 
 // Layout Component with Sidebar
+export const FeedsContext = React.createContext({
+  myFeeds: [],
+  prioUnreadCount: 0,
+  refreshFeeds: () => {}
+});
+
+export const useFeeds = () => React.useContext(FeedsContext);
+
 const AppLayout = ({ children, onLogout, prioEnabled }) => {
   const location = useLocation();
   const { isLoading: isAiChatLoading } = useAiChat();
@@ -28,27 +36,114 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   const [pollingFeeds, setPollingFeeds] = useState(new Set());
 
+  const fetchMyFeeds = async () => {
+    try {
+      const res = await api.get('/feeds');
+      const sortedFeeds = res.data.sort((a, b) => a.title.localeCompare(b.title, 'sv'));
+      setMyFeeds(sortedFeeds);
+      myFeedsRef.current = sortedFeeds;
+    } catch (err) {
+      console.error("Could not fetch feeds for the sidebar", err);
+    }
+  };
+
+  const fetchPrioUnread = async () => {
+    try {
+      const res = await api.get('/prio/unread-count');
+      setPrioUnreadCount(res.data.unread_count || 0);
+    } catch (err) {
+      console.error("Could not fetch prio unread count", err);
+    }
+  };
+
+  // Permanent WebSocket-anslutning på applikationsnivå för omedelbar realtidsräknare
   useEffect(() => {
-    const fetchMyFeeds = async () => {
-      try {
-        const res = await api.get('/feeds');
-        const sortedFeeds = res.data.sort((a, b) => a.title.localeCompare(b.title, 'sv'));
-        setMyFeeds(sortedFeeds);
-        myFeedsRef.current = sortedFeeds;
-      } catch (err) {
-        console.error("Could not fetch feeds for the sidebar", err);
-      }
+    let ws;
+    let isCleaningUp = false;
+    let reconnectTimeout;
+
+    const connectWebSocket = () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/api/ws`;
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log("Global WebSocket ansluten!");
+        ws.send(token);
+        fetchMyFeeds();
+        fetchPrioUnread();
+        window.dispatchEvent(new Event('feedsUpdated'));
+      };
+
+      ws.onmessage = (event) => {
+        if (event.data.startsWith("NEW_ARTICLES") || event.data.startsWith("INITIAL_ARTICLES")) {
+          const parts = event.data.split(":");
+          const feedId = parts.length > 1 ? parseInt(parts[1]) : null;
+          const count = parts.length > 2 ? parseInt(parts[2]) : null;
+          const isInitial = event.data.startsWith("INITIAL_ARTICLES");
+
+          // Uppdatera flöden och olästräknare omedelbart i realtid
+          fetchMyFeeds();
+          fetchPrioUnread();
+
+          window.dispatchEvent(new CustomEvent('feedsUpdated', { 
+            detail: { feedId, count, isInitial } 
+          }));
+        } else if (event.data.startsWith("AI_PROGRESS:")) {
+          const parts = event.data.split(":");
+          if (parts.length >= 3) {
+            window.dispatchEvent(new CustomEvent('aiProgress', { 
+              detail: { articleId: parseInt(parts[1]), pct: parseInt(parts[2]) } 
+            }));
+          }
+        } else if (event.data.startsWith("AI_UPDATED:")) {
+          const parts = event.data.split(":");
+          const articleId = parts.length > 1 ? parseInt(parts[1]) : null;
+          fetchMyFeeds();
+          fetchPrioUnread();
+          window.dispatchEvent(new CustomEvent('aiUpdated', { detail: { articleId } }));
+          window.dispatchEvent(new CustomEvent('feedsUpdated', { detail: { fromAiUpdated: true } }));
+        } else if (event.data.startsWith("POLLING_START:")) {
+          const feedId = parseInt(event.data.split(":")[1]);
+          window.dispatchEvent(new CustomEvent('pollingStart', { detail: feedId }));
+        } else if (event.data.startsWith("POLLING_END:")) {
+          const feedId = parseInt(event.data.split(":")[1]);
+          fetchMyFeeds();
+          fetchPrioUnread();
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('pollingEnd', { detail: feedId }));
+          }, 2000);
+        } else if (event.data === "DIGEST_UPDATED") {
+          window.dispatchEvent(new Event('digestUpdated'));
+        }
+      };
+
+      ws.onclose = () => {
+        if (!isCleaningUp) {
+          reconnectTimeout = setTimeout(connectWebSocket, 4000);
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.error("Global WebSocket fel:", err);
+        ws.close();
+      };
     };
 
-    const fetchPrioUnread = async () => {
-      try {
-        const res = await api.get('/prio/unread-count');
-        setPrioUnreadCount(res.data.unread_count || 0);
-      } catch (err) {
-        console.error("Could not fetch prio unread count", err);
-      }
-    };
+    connectWebSocket();
 
+    return () => {
+      isCleaningUp = true;
+      clearTimeout(reconnectTimeout);
+      if (ws) ws.close();
+    };
+  }, []);
+
+  useEffect(() => {
     fetchMyFeeds();
     fetchPrioUnread();
     
@@ -58,8 +153,8 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       debounceTimer = setTimeout(() => {
         fetchMyFeeds();
         fetchPrioUnread();
-      }, 300);
-      if (e && e.detail && e.detail.feedId) {
+      }, 200);
+      if (e && e.detail && e.detail.feedId && !e.detail.isInitial) {
         const { feedId, count } = e.detail;
         const feed = myFeedsRef.current.find(f => f.id === feedId);
         if (feed) {
@@ -107,7 +202,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       window.removeEventListener('pollingEnd', handleEnd);
       window.removeEventListener('aiConfigUpdated', fetchPrioUnread);
     };
-  }, [location, prioEnabled]);
+  }, [prioEnabled]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -150,7 +245,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
   }, []);
 
   return (
-    <>
+    <FeedsContext.Provider value={{ myFeeds, prioUnreadCount, refreshFeeds: fetchMyFeeds }}>
       <div className="app-container" style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-app)', transition: 'all 0.3s' }}>
       {/* Desktop Sidebar */}
       <div 
@@ -569,7 +664,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
         </div>
       </div>
       <PWABadge />
-    </>
+    </FeedsContext.Provider>
   );
 };
 

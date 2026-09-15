@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.15.09',
+    date: '2026-09-15',
+    title: 'Strikt flödesisolering och realtidsräknare för olästa',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Fullständig källisolering vid byte av flöde',
+        description: 'Åtgärdat buggen där artiklar från föregående flöde låg kvar vid flödesbyte i läget "Visa lästa". Korten nollställs nu omedelbart vid flikbyte, race conditions mellan asynkrona anrop har eliminerats och flödesvyn garanterar att endast artiklar från det aktiva flödet visas.'
+      },
+      {
+        type: 'fix',
+        title: 'Realtidsuppdatering av olästa i sidopanelen',
+        description: 'Flyttat WebSocket-uppkopplingen till applikationens toppnivå så att den alltid är aktiv. Sidopanelens och bottenmenyns räknare för olästa artiklar uppdateras nu omedelbart i realtid så fort nya artiklar anländer från bakgrundspollning eller initial inläsning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.15.08',
     date: '2026-09-15',
     title: 'Bevarad färgprofil för lästa artiklar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
