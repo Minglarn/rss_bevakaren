@@ -612,6 +612,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         }
         return item;
       }));
+      window.dispatchEvent(new Event('feedsUpdated'));
     } catch (err) {
       console.error("Kunde inte markera kluster som läst:", err);
     }
@@ -767,6 +768,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           }
           // Update dashboard silently in background when AI enrichment happens
           fetchFeeds(true);
+          window.dispatchEvent(new CustomEvent('feedsUpdated', { detail: { fromAiUpdated: true } }));
         } else if (event.data.startsWith("POLLING_START:")) {
           const feedId = parseInt(event.data.split(":")[1]);
           window.dispatchEvent(new CustomEvent('pollingStart', { detail: feedId }));
@@ -808,7 +810,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     fetchFeeds();
     
     const handleFeedsUpdated = (e) => {
-      if (e && e.detail && e.detail.fromDashboardFetch) return;
+      if (e && e.detail && (e.detail.fromDashboardFetch || e.detail.fromAiUpdated)) return;
       fetchFeeds(true);
     };
 
@@ -998,7 +1000,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
   const markAllAsRead = async () => {
     try {
-      const url = feedId ? `/articles/read-all?feed_id=${feedId}` : '/articles/read-all';
+      const url = feedId 
+        ? `/articles/read-all?feed_id=${feedId}` 
+        : (isPrioMode ? '/articles/read-all?prio_only=true' : '/articles/read-all');
       await api.post(url);
       // Mark all currently loaded items as read visually
       const allIds = new Set(readItems);

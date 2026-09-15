@@ -1487,7 +1487,6 @@ def get_feeds(db: Session = Depends(database.get_db), current_user: models.User 
     for feed in feeds:
         unread_count = db.query(models.Article).filter(
             models.Article.feed_id == feed.id,
-            models.Article.received_ts > feed.last_viewed_ts,
             (models.Article.is_read == 0) | (models.Article.is_read == None)
         ).count()
         
@@ -2969,13 +2968,26 @@ def mark_article_read(article_id: int, db: Session = Depends(database.get_db), c
     return {"status": "ok"}
 
 @app.post("/articles/read-all")
-def mark_all_articles_read(feed_id: Optional[int] = None, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+def mark_all_articles_read(
+    feed_id: Optional[int] = None, 
+    prio_only: Optional[bool] = False, 
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
     query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == current_user.id)
     if feed_id:
         query = query.filter(models.Feed.id == feed_id)
     else:
         query = query.filter(models.Feed.include_in_dashboard == 1)
         
+    if prio_only:
+        user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+        user_threshold = (user_ai.prio_threshold if (user_ai and user_ai.prio_threshold) else 75)
+        query = query.filter(
+            models.Article.ai_processed == 1,
+            or_(models.Article.priority == 'high', models.Article.prio_score >= user_threshold)
+        )
+
     articles = query.filter((models.Article.is_read == 0) | (models.Article.is_read == None)).all()
     for article in articles:
         article.is_read = 1

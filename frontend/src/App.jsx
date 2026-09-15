@@ -52,9 +52,13 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
     fetchMyFeeds();
     fetchPrioUnread();
     
+    let debounceTimer = null;
     const handleFeedsUpdated = (e) => {
-      fetchMyFeeds();
-      fetchPrioUnread();
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        fetchMyFeeds();
+        fetchPrioUnread();
+      }, 300);
       if (e && e.detail && e.detail.feedId) {
         const { feedId, count } = e.detail;
         const feed = myFeedsRef.current.find(f => f.id === feedId);
@@ -97,6 +101,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
     window.addEventListener('aiConfigUpdated', fetchPrioUnread);
     
     return () => {
+      clearTimeout(debounceTimer);
       window.removeEventListener('feedsUpdated', handleFeedsUpdated);
       window.removeEventListener('pollingStart', handleStart);
       window.removeEventListener('pollingEnd', handleEnd);

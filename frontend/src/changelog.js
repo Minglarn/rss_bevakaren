@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.15.03',
+    date: '2026-09-15',
+    title: 'Realtidssynkronisering av olästa artiklar för PRIO och samtliga flöden',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Realtidsuppdatering av PRIO-räknaren vid AI-bearbetning',
+        description: 'När artiklar analyseras av AI och klassificeras som PRIO skickas nu en omedelbar synkroniseringssignal till gränssnittet. Antalet olästa på PRIO-flödet uppdateras direkt i realtid utan att användaren behöver ladda om sidan.'
+      },
+      {
+        type: 'fix',
+        title: 'Konsekvent räkning av faktiskt olästa artiklar i samtliga flöden',
+        description: 'Räknarna för samtliga flöden i sidomenyn baseras nu konsekvent på faktiskt olästa artiklar (is_read = 0). Flöden nollställs inte längre felaktigt enbart för att man öppnar dem, och synkroniseras omedelbart vid nya artiklar, AI-berikning samt när artiklar markeras som lästa.'
+      },
+      {
+        type: 'improvement',
+        title: 'Selektiv "Markera alla som lästa" i PRIO-flödet',
+        description: 'Knappen "Markera alla som lästa" i PRIO-fliken begränsar nu åtgärden till enbart de visade PRIO-artiklarna istället för att oavsiktligt markera samtliga artiklar i hela databasen som lästa.'
+      }
+    ]
+  },
+  {
     version: '2026.09.15.02',
     date: '2026-09-15',
     title: 'Källspecifika ikoner i pushnotiser',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
