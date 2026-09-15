@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.15.05',
+    date: '2026-09-15',
+    title: 'Renare TopBar och isolerad kortexpandering vid notiser',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Flytt av PRIO-brickan till tagg- och kategoriraden',
+        description: 'PRIO-brickan har flyttats från artikelkortets övre list (TopBar) ner till raden för kategorier och taggar. Detta ger en ren och sammanhållen övre list på en enda rad med publiceringstid, hämtningstid och källans namn.'
+      },
+      {
+        type: 'fix',
+        title: 'Isolerad kortexpandering vid klick på notis',
+        description: 'Korrigerade hanteringen av expanderade kort vid direktöppning från notiser. Expandering binds nu uteslutande till artikelns unika ID istället för listpositionen, vilket eliminerar buggen där efterföljande artiklar i flödet öppnades i expanderat läge.'
+      }
+    ]
+  },
+  {
     version: '2026.09.15.04',
     date: '2026-09-15',
     title: 'Publiceringstider och förfinad händelseklustring',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

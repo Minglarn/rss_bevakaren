@@ -740,7 +740,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       if (!isBackground) {
         setDisplayedFeeds(res.data.slice(0, itemsPerPage));
         if (aId && res.data.length > 0) {
-          setExpandedItems({ 0: true });
+          const targetItem = res.data.find(d => String(d.id) === String(aId)) || res.data[0];
+          setExpandedItems({ [targetItem.id]: true });
         }
       } else {
         // Update without changing scroll or overwriting with wrong feed
@@ -1690,7 +1691,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         <div className="events-flow-wrapper">
           {(() => {
             const renderArticleCard = (item, index) => {
-              const isItemExpanded = Boolean(expandedItems[item.id] !== undefined ? expandedItems[item.id] : expandedItems[index]);
+              const isItemExpanded = Boolean(expandedItems[item.id]);
               const isClickbait = Boolean(shouldShowAi && item.is_clickbait);
               const color = isClickbait ? '#ef4444' : getBorderColor(item.feed_id || 1);
               const isLast = index === displayedFeeds.length - 1;
@@ -1851,23 +1852,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             {decodeHtmlEntities(item.source_title)}
                           </span>
                         </div>
-
-                        {/* PRIO Badge */}
-                        {shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.2rem',
-                            backgroundColor: 'rgba(249, 115, 22, 0.95)',
-                            color: '#ffffff',
-                            padding: '0.12rem 0.45rem',
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            fontWeight: 700
-                          }} title={formatCategoryPrioReason(item.prio_reason, item.category) || "Hög prioritet av AI"}>
-                            <Flame size={12} /> PRIO {item.prio_score ? `${item.prio_score}p` : ''}
-                          </span>
-                        )}
 
                         {/* Clickbait-varning */}
                         {shouldShowAi && Boolean(item.is_clickbait) && (
@@ -2257,11 +2241,32 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     return null;
                   })()}
 
-                  {/* Taggar från AI-analys inklusive kategori */}
-                  {shouldShowAi && (item.category || (item.tags && item.tags.length > 0)) && (
+                  {/* Taggar från AI-analys inklusive kategori samt PRIO-märke */}
+                  {shouldShowAi && (item.category || (item.tags && item.tags.length > 0) || item.priority === 'high' || (item.prio_score || 0) >= 75) && (
                     <div className="card-tags-section">
                       <div className="card-tags-divider" />
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem', alignItems: 'center' }}>
+                        {/* PRIO-piller flyttad från TopBar för en renare layout */}
+                        {shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (
+                          <span 
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              backgroundColor: 'rgba(249, 115, 22, 0.95)',
+                              color: '#ffffff',
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              boxShadow: '0 1px 3px rgba(249, 115, 22, 0.25)'
+                            }} 
+                            title={formatCategoryPrioReason(item.prio_reason, item.category) || "Hög prioritet av AI"}
+                          >
+                            <Flame size={12} /> PRIO {item.prio_score ? `${item.prio_score}p` : ''}
+                          </span>
+                        )}
+
                         {item.category && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleSelectCategory(item.category); }}
