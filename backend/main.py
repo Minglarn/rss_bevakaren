@@ -935,7 +935,24 @@ async def polling_loop():
                             feed.icon_url = first_icon
                             db.commit()
                     
-                    for item in items:
+                    # Hämta användarens maxålder för artiklar (t.ex. 48h från AI_MAX_ARTICLE_AGE_HOURS)
+                    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == feed.user_id).first()
+                    max_age_hours = int(user_ai.max_article_age_hours if (user_ai and user_ai.max_article_age_hours) else os.environ.get("AI_MAX_ARTICLE_AGE_HOURS", "48"))
+                    cutoff_pub_ts = current_time - (max_age_hours * 3600)
+
+                    # Om flödet saknar tidsstämplar begränsar vi initial import till max 25 nyaste
+                    parsed_items = items
+                    if is_initial_poll and parsed_items and all((it.get("published_ts") or 0) == 0 for it in parsed_items[:5]):
+                        parsed_items = parsed_items[:25]
+
+                    for item in parsed_items:
+                        pub_ts = item.get("published_ts") or 0
+
+                        # Strikt kontroll av verklig publiceringstid:
+                        # Ignorera historiska artiklar som är äldre än max_age_hours (t.ex. 48h)
+                        if pub_ts > 0 and pub_ts < cutoff_pub_ts:
+                            continue
+
                         # Use link or title as GUID if GUID is missing
                         guid = item.get("link") or item.get("title")
                         
@@ -947,7 +964,6 @@ async def polling_loop():
                         
                         if not existing:
                             cat_str = ",".join(item.get("categories", []))
-                            pub_ts = item.get("published_ts") or 0
                             
                             # Tyst initial inläsning och tidsfilter (> 2 timmar gammal = ingen push)
                             art_allow_push = 1
@@ -1139,12 +1155,13 @@ async def ai_processing_loop():
                 except Exception:
                     pass
 
-                # 1. Arkivera/hoppa automatiskt över gamla artiklar (> max_age_hours) och artiklar som redan är lästa
+                # 1. Arkivera/hoppa automatiskt över gamla artiklar (> max_age_hours baserat på published_ts eller received_ts) och artiklar som redan är lästa
                 # så att LM Studio inte slösar tid och resurser på historisk backlog
                 db.query(models.Article).filter(
                     or_(models.Article.ai_processed == 0, models.Article.ai_processed == None),
                     or_(
-                        models.Article.received_ts < cutoff_ts,
+                        and_(models.Article.published_ts > 0, models.Article.published_ts < cutoff_ts),
+                        and_(or_(models.Article.published_ts == 0, models.Article.published_ts == None), models.Article.received_ts < cutoff_ts),
                         models.Article.is_read == 1
                     )
                 ).update({models.Article.ai_processed: 2}, synchronize_session=False)

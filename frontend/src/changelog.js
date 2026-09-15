@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.15.07',
+    date: '2026-09-15',
+    title: 'Strikt kontroll av publiceringstid vid inläsning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Strikt tidsfilter mot verklig publiceringstid',
+        description: 'Vid avläsning av RSS-flöden ignoreras nu artiklar vars faktiska publiceringstid är äldre än det inställda tidsfönstret (t.ex. 48 timmar). Detta förhindrar att över 100 historiska artiklar väller in i databasen när ett nytt flöde registreras.'
+      },
+      {
+        type: 'improvement',
+        title: 'Fokuserad AI-analys på aktuella artiklar',
+        description: 'Bakgrundsjobbet för AI bearbetar uteslutande färska artiklar inom tidsfönstret, vilket avlastar den lokala AI-modellen och säkerställer att inkommande nyheter snabbt sammanfattas, taggas och blir sökbara.'
+      }
+    ]
+  },
+  {
     version: '2026.09.15.06',
     date: '2026-09-15',
     title: 'Omedelbar filtrering av lästa artiklar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
