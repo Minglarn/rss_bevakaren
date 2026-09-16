@@ -33,43 +33,58 @@ RSS-Bevakaren är ett modernt, självhostat system för att övervaka, filtrera,
 
 RSS-Bevakaren har en inbyggd AI-pipeline som ansluter till lokala språkmodeller (såsom LM Studio, Ollama eller LocalAI) eller valfria OpenAI-kompatibla API-slutpunkter.
 
-### Vad AI-motorn gör
+### Hur poängsystemet och prioriteringen fungerar
 
-Varje inkommande artikel bearbetas automatiskt i bakgrunden:
+Prioriteringen i RSS-Bevakaren styrs inte enbart av en enskild kategori, utan av en **sammansatt poängmatris (0–100 poäng)**. Detta förhindrar att vardagliga smånotiser i dina favoritkategorier felaktigt blir högprioriterade, samtidigt som stora och bekräftade nyheter alltid lyfts fram.
 
-1. **Koncisa sammanfattningar:** Skapar en informativ sammanfattning på 1-2 meningar som gör att du förstår kärnan i händelsen på några sekunder.
-2. **Clickbait-detektering (Anti-Clickbait):**
-   - Identifierar sensationalism, överdrifter och avsiktliga kunskapsluckor i rubriker.
-   - Flaggar artikeln med en tydlig varningsbricka: `Clickbait-varning`.
-   - Visar förklaringen direkt i sammanfattningsblocket (*Clickbait-notis: ...*), vilket gör den lättläst även på mobil.
-   - **Avslöjar hemlighållandet:** Sammanfattningen instrueras att omedelbart lyfta fram fakta och besvara rubrikens gåta i den allra första meningen.
-   - **Rensar prio-flödet:** Clickbait-artiklar begränsas automatiskt till låg prioritet (maximalt 25 poäng) för att undvika skräp i ditt prio-flöde.
-3. **Kategorisering:** Klassificerar artiklar i dina valda kategorier (Teknik, Politik, Blåljus, Ekonomi, Lokalt, Motor, etc.).
-4. **Relevanspoäng & Prioritering:** Poängsätter artiklar från 0 till 100 baserat på dina personliga vikter och sökordsregler.
-5. **Automatiska taggar:** Extraherar relevanta ämnestaggar för direkt filtrering via hashtaggar.
+Varje inkommande artikel poängsätts enligt tre huvudkomponenter:
+
+1. **Ditt kategori-intresse (30 % av poängen):**
+   - Styrs av ditt personliga reglage (0–10) för artiklarnas kategori.
+   - En kategori med vikt 8 ger 24 poäng som grundplatta ($8 \times 10 \times 0.30$).
+2. **Händelsens akuthet och nyhetsvärde (40 % av poängen):**
+   - Bedöms av AI:n i realtid (`urgency_score`, 1–10).
+   - Skiljer vardagliga händelser (1–3) från stora samhällshändelser eller extraordinära brytpunkter (8–10).
+3. **Innehållets faktasubstans och djup (30 % av poängen):**
+   - Bedöms av AI:n (`substance_score`, 1–10).
+   - Skiljer ytliga notiser och rykten (1–3) från faktatäta rapporter och genomarbetade analyser (7–10).
+
+$$\text{Grundpoäng} = (\text{Kategorivikt} \times 10 \times 0.30) + (\text{Akuthet} \times 10 \times 0.40) + (\text{Substans} \times 10 \times 0.30)$$
+
+#### Specialregler och bonusar
+- **PRIO-tröskel ($\ge 75$ poäng):** Artiklar som når 75 poäng eller mer får status `HIGH` och visas i det dedikerade PRIO-flödet med orange märkning.
+- **Flerkällsbekräftelse (Kluster):** Om samma händelse rapporteras av **2 oberoende källor** läggs **+10 poäng** till. Om **3 eller fler källor** rapporterar läggs **+15 poäng** till. Detta lyfter automatiskt bekräftade stora händelser.
+- **ClickBait-avdrag (-25 poäng):** Artiklar med sensationella eller undanhållande rubriker får ett automatiskt avdrag på 25 poäng för att hålla PRIO-flödet rent från skräp.
+- **Bevakningsord (Garanterad 100 % PRIO):** Om artikeln matchar ett av dina egna bevakningsord får den omedelbart **100 poäng och Hög prioritet**, oavsett kategori.
+- **Ignorerad kategori (Vikt 0):** Om du sätter en kategoris vikt till 0 (t.ex. Nöje eller Sport) blockeras den alltid (0 poäng) och når aldrig PRIO.
 
 ---
 
-### Hantera AI i Inställningar
+### Hur kategorier definieras (Standard och Egna)
 
-Alla AI-alternativ anpassas individuellt per användare under **Inställningar -> AI-analys & Prompt**:
+Under **Inställningar -> AI-analys & Prompt -> Kategoriviktning och prioritet**:
 
-#### 1. Anslutning till LLM / LM Studio
-- **API-basadress:** Ange adressen till din lokala LLM-server (t.ex. `http://192.168.1.50:1234/v1`).
-- **Anslutningstest & Modellväljare:** Klicka på "Kontrollera anslutning" för att verifiera status. Applikationen hämtar automatiskt alla installerade modeller till en rullgardinsmeny.
-- **Självläkande bakgrundskö:** Om LM Studio är upptaget eller avstängt pausar kön automatiskt och utför hälsokontroller var 30:e sekund. När LM Studio åter blir tillgängligt återupptas analysen automatiskt, och artiklarna uppdateras på skärmen i realtid via WebSockets.
+1. **Standardkategorier:**
+   Systemet levereras med en genomtänkt uppsättning standardkategorier med förvalda intressevikter:
+   - *Blåljus* (10/10)
+   - *Teknik* (9/10)
+   - *Lokalt* (8/10)
+   - *Motor* (7/10)
+   - *Inrikes* (6/10)
+   - *Vetenskap & Hälsa* (6/10)
+   - *Ekonomi* (5/10)
+   - *Utrikes* (5/10)
+   - *Politik* (4/10)
+   - *Övrigt* (3/10)
+   - *Sport* (1/10)
+   - *Nöje & Kultur* (0/10)
 
-#### 2. Kategorivikter (0 - 10)
-Under *Kategoriregreglage & Prioritet*, justera prioriteringen för varje ämne:
-- Höga värden (8-10) kvalificerar inkommande artiklar direkt till **PRIO-flödet**.
-- Lägre värden behåller artiklarna i standardtidslinjen utan att belasta prio-vyn.
-
-#### 3. Bevakade sökord (Garanterad 100% prioritet)
-Lägg till viktiga sökord eller platser i *Prioriterade sökord & ämnen* (t.ex. `Stockholm, Nvidia, Försvarsmakten, Riksbanken`).
-- Alla artiklar som matchar ett bevakat sökord får **omedelbart 100 poäng och Hög prioritet**, oavsett kategori.
-
-#### 4. Anpassad systemprompt
-Granska och redigera den aktiva systemprompten direkt i webbgränssnittet. Du kan justera ton, kategoridefinitioner, Clickbait-kriterier eller språkinställningar direkt.
+2. **Lägga till helt egna kategorier:**
+   - Du kan när som helst lägga till egna kategorier via formuläret *"Lägg till kategori"* (t.ex. `Försvar`, `Klimat`, `Fastigheter`, `AI & Rymd`).
+   - När du lägger till en kategori uppdateras språkmodellens systemprompt automatiskt i bakgrunden, vilket gör att AI:n omedelbart börjar klassificera nya artiklar mot dina egna kategorier.
+   - Du ställer in din önskade vikt (0–10) med reglaget för din nya kategori.
+   - Du kan även ta bort kategorier du inte vill ha eller när som helst klicka *"Återställ standardvikter"*.
+   - **Anpassad systemprompt:** Granska och redigera den aktiva systemprompten direkt i webbgränssnittet. Du kan justera ton, kategoridefinitioner, Clickbait-kriterier eller språkinställningar direkt.
 
 ---
 

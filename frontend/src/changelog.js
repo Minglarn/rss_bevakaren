@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.07',
+    date: '2026-09-16',
+    title: 'Tydliggörande av poängmatris och kategoriviktning i gränssnitt och dokumentation',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Uppdaterade etiketter och förklaringar i inställningar',
+        description: 'Kategorireglagens etiketter har uppdaterats för att tydligt återspegla deras roll i den nya poängmatrisen (Kategoriintresse 0–30p), vilket förhindrar missförstånd om att reglaget ensamt styrde 100 % av slutpoängen.'
+      },
+      {
+        type: 'improvement',
+        title: 'Omfattande dokumentation i README',
+        description: 'Enkel och pedagogisk sammanfattning av poängmodellen, hur totalpoäng 0–100 beräknas, hur standardkategorier fungerar och hur användaren lägger till egna skräddarsydda kategorier.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.06',
     date: '2026-09-16',
     title: 'Sammansatt poängmatris för smart artikelprioritering (Steg 1)',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

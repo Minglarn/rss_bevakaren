@@ -227,7 +227,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
   const getWeightBadge = (weight) => {
     if (weight >= 8) {
       return {
-        label: 'Alltid PRIO (75–100p)',
+        label: 'Högt intresse (24–30p)',
         color: '#16a34a',
         bg: 'rgba(22, 163, 74, 0.12)',
         border: '1px solid rgba(22, 163, 74, 0.3)'
@@ -235,7 +235,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
     if (weight >= 5) {
       return {
-        label: 'Standardflöde (50–70p)',
+        label: 'Normalt intresse (15–21p)',
         color: '#0284c7',
         bg: 'rgba(2, 132, 199, 0.12)',
         border: '1px solid rgba(2, 132, 199, 0.25)'
@@ -243,7 +243,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
     if (weight >= 1) {
       return {
-        label: 'Låg prio (10–40p)',
+        label: 'Lågt intresse (3–12p)',
         color: 'var(--text-muted)',
         bg: 'rgba(100, 116, 139, 0.1)',
         border: '1px solid var(--border-color)'
@@ -4097,7 +4097,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             </div>
             
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-              AI klassificerar varje artikel till en av dessa kategorier. Kategoriens viktning avgör om artikeln hamnar i PRIO-flödet eller i det vanliga flödet:
+              AI klassificerar varje artikel till en kategori. Kategorins viktning bidrar med upp till 30 % av artikelns totalpoäng (0–100p), och vägs samman med händelsens akuthet (40 %) och faktasubstans (30 %):
             </p>
 
             <div style={{
@@ -4111,10 +4111,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               marginBottom: '1.25rem',
               fontSize: '0.78rem'
             }}>
-              <div><strong style={{ color: '#16a34a' }}>8–10:</strong> Alltid PRIO (75–100p)</div>
-              <div><strong style={{ color: '#0284c7' }}>5–7:</strong> Normalt flöde (50–70p)</div>
-              <div><strong style={{ color: 'var(--text-muted)' }}>1–4:</strong> Låg prio (10–40p)</div>
-              <div><strong style={{ color: '#ef4444' }}>0:</strong> Ignoreras (Aldrig PRIO)</div>
+              <div><strong style={{ color: '#16a34a' }}>8–10:</strong> Högt intresse (24–30p)</div>
+              <div><strong style={{ color: '#0284c7' }}>5–7:</strong> Normalt intresse (15–21p)</div>
+              <div><strong style={{ color: 'var(--text-muted)' }}>1–4:</strong> Lågt intresse (3–12p)</div>
+              <div><strong style={{ color: '#ef4444' }}>0:</strong> Ignoreras (0p - Aldrig PRIO)</div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.25rem' }}>
