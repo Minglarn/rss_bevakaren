@@ -1,9 +1,22 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.14',
+    date: '2026-09-16',
+    title: 'Rättning av källikonsvisning i AI-resonemangsdialogen',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Åtgärdat fel med createElement vid öppning av AI-info',
+        description: 'Rättat en bugg där källnamnet av misstag behandlades som en React-komponent istället för en källikon-URL, vilket orsakade ett InvalidCharacterError i webbläsaren.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.13',
     date: '2026-09-16',
     title: 'Korrekt isolering av huvudkategorier från ogillade ämnen',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'fix',

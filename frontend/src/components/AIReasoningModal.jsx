@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Info, X, Clock, Tag, Flame, Sparkles, Layers, CheckCircle2, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
+import { Info, X, Clock, Tag, Flame, Sparkles, Layers, CheckCircle2, AlertTriangle, RefreshCw, ExternalLink, Rss } from 'lucide-react';
 import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
 import './AIReasoningModal.css';
 
@@ -57,7 +57,6 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
   };
 
   const prioInfo = getPriorityInfo();
-  const FeedIcon = resolveFeedIcon(item.source_title || item.feed_title || '');
 
   return (
     <AnimatePresence>
@@ -84,7 +83,26 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
               <div style={{ minWidth: 0 }}>
                 <h3 className="ai-modal-title">AI-analys & Resonemang</h3>
                 <div className="ai-modal-subtitle">
-                  {FeedIcon && <FeedIcon size={13} style={{ flexShrink: 0 }} />}
+                  {item.feed_icon ? (
+                    <img
+                      src={resolveFeedIcon(item.feed_icon)}
+                      alt=""
+                      style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: '3px',
+                        objectFit: 'contain',
+                        flexShrink: 0,
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        padding: '1px'
+                      }}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <Rss size={13} style={{ flexShrink: 0 }} />
+                  )}
                   <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                     {source}
                   </span>
