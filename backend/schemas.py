@@ -124,7 +124,7 @@ class CategoryItem(BaseModel):
 class AIConfigUpdate(BaseModel):
     prio_rules: Optional[str] = ""
     exclude_rules: Optional[str] = ""
-    categories: Optional[List[Union[str, CategoryItem]]] = None
+    categories: Optional[List[Union[CategoryItem, Dict[str, Any], str]]] = None
     prio_threshold: Optional[int] = 75
     system_prompt: Optional[str] = ""
     onboarding_completed: Optional[bool] = None

@@ -246,17 +246,19 @@ LAST_UPDATE = "2026-09-08"
 
 def normalize_user_categories(cats_raw: Any) -> List[Dict[str, Any]]:
     """Säkerställer att kategorier returneras som en lista av dicts: [{'name': '...', 'weight': X}, ...]."""
-    if not cats_raw:
+    if cats_raw is None:
         return list(ai_service.DEFAULT_CATEGORIES_WITH_WEIGHTS)
     
     parsed = cats_raw
     if isinstance(cats_raw, str):
+        if not cats_raw.strip():
+            return list(ai_service.DEFAULT_CATEGORIES_WITH_WEIGHTS)
         try:
             parsed = json.loads(cats_raw)
         except Exception:
             parsed = []
             
-    if not parsed:
+    if not parsed and parsed != []:
         return list(ai_service.DEFAULT_CATEGORIES_WITH_WEIGHTS)
         
     result = []
@@ -264,10 +266,32 @@ def normalize_user_categories(cats_raw: Any) -> List[Dict[str, Any]]:
     
     if isinstance(parsed, list):
         for item in parsed:
-            if isinstance(item, dict) and "name" in item:
-                name = str(item["name"]).strip()
+            # Extrahera ordbok från Pydantic-modeller eller använd direkt
+            item_dict = None
+            if hasattr(item, "model_dump") and callable(getattr(item, "model_dump")):
                 try:
-                    w = int(item.get("weight", default_map.get(name.lower(), 5)))
+                    item_dict = item.model_dump()
+                except Exception:
+                    pass
+            elif hasattr(item, "dict") and callable(getattr(item, "dict")):
+                try:
+                    item_dict = item.dict()
+                except Exception:
+                    pass
+            elif isinstance(item, dict):
+                item_dict = item
+
+            if item_dict is not None and "name" in item_dict:
+                name = str(item_dict["name"]).strip()
+                try:
+                    w = int(item_dict.get("weight", default_map.get(name.lower(), 5)))
+                except Exception:
+                    w = 5
+                result.append({"name": name, "weight": max(0, min(10, w))})
+            elif hasattr(item, "name"):
+                name = str(getattr(item, "name")).strip()
+                try:
+                    w = int(getattr(item, "weight", default_map.get(name.lower(), 5)))
                 except Exception:
                     w = 5
                 result.append({"name": name, "weight": max(0, min(10, w))})

@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.05',
+    date: '2026-09-16',
+    title: 'Korrigerad sparning och autosynk av kategoriviktningar i AI-analys',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Korrekt serialisering av kategorier och vikter i backend',
+        description: 'Åtgärdat en bugg där kategoriobjekt från Pydantic inte tolkades som ordlistor av normaliseringsfunktionen, vilket ledde till att anpassade vikter rensades och återställdes till standard. Backend hanterar nu alla modellformat utan förlust.'
+      },
+      {
+        type: 'improvement',
+        title: 'Direkt sparning och autosynk vid reglagejustering',
+        description: 'Kategoriviktningar sparas nu automatiskt när reglaget släpps (på desktop och mobil), vid tillägg, borttagning eller återställning. Dessutom har en direkt "Spara viktningar"-knapp lagts till i sektionens rubrik.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.04',
     date: '2026-09-16',
     title: 'Garanterad ikonvisning för flöden och push-notiser',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

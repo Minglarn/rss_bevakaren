@@ -615,6 +615,44 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
   };
 
+  const saveCategoryWeights = async (catsToSave) => {
+    try {
+      setIsSavingAi(true);
+      const targetCats = catsToSave || aiConfig.categories || [];
+      const formattedCats = targetCats.map(c => 
+        typeof c === 'object' ? { name: c.name, weight: c.weight ?? 5 } : { name: c, weight: 5 }
+      );
+      const res = await api.put('/ai/config', {
+        prio_rules: aiConfig.prio_rules || '',
+        exclude_rules: aiConfig.exclude_rules || '',
+        categories: formattedCats,
+        prio_threshold: aiConfig.prio_threshold || 75,
+        system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
+        onboarding_completed: true,
+        prio_enabled: aiConfig.prio_enabled ?? false,
+        prio_notify_only: aiConfig.prio_notify_only ?? false,
+        lm_studio_model: aiConfig.lm_studio_model || '',
+        push_include_title: aiConfig.push_include_title ?? true,
+        push_include_image: aiConfig.push_include_image ?? true,
+        push_include_summary: aiConfig.push_include_summary ?? true,
+        auto_purge_enabled: aiConfig.auto_purge_enabled !== false,
+        auto_purge_days: purgeDays,
+        auto_scrape_article_text: aiConfig.auto_scrape_article_text !== false,
+        max_article_age_hours: aiConfig.max_article_age_hours || 24
+      });
+      if (res.data) {
+        setAiConfig(res.data);
+      }
+      toast.success('Kategoriviktning sparades.');
+      window.dispatchEvent(new Event('aiConfigUpdated'));
+    } catch (err) {
+      console.error("Kunde inte spara kategoriviktning:", err);
+      toast.error('Kunde inte spara kategoriviktning.');
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
+
   const handleCategoryWeightChange = (catName, newWeight) => {
     setAiConfig(prev => {
       const rawCats = prev.categories || [];
@@ -915,7 +953,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     }
   };
 
-  const handleAddAiCategory = (e) => {
+  const handleAddAiCategory = async (e) => {
     e.preventDefault();
     const cat = newAiCategory.trim();
     if (!cat) return;
@@ -937,9 +975,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       return updated;
     });
     setNewAiCategory('');
+    await saveCategoryWeights(updatedCats);
   };
 
-  const handleRemoveAiCategory = (catToRemove) => {
+  const handleRemoveAiCategory = async (catToRemove) => {
     const currentCats = aiConfig.categories || [];
     const updatedCats = currentCats.filter(c => (typeof c === 'object' ? c.name : c).toLowerCase() !== catToRemove.toLowerCase());
     setAiConfig(prev => {
@@ -949,9 +988,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       }
       return updated;
     });
+    await saveCategoryWeights(updatedCats);
   };
 
-  const handleResetAiCategories = () => {
+  const handleResetAiCategories = async () => {
     if (!window.confirm("Vill du återställa alla kategorier och vikter till standard?")) return;
     setAiConfig(prev => {
       const updated = { ...prev, categories: DEFAULT_CATS_WEIGHTS };
@@ -960,7 +1000,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       }
       return updated;
     });
-    toast.success('Kategorier och standardvikter har återställts');
+    await saveCategoryWeights(DEFAULT_CATS_WEIGHTS);
   };
 
   const handleRegeneratePromptFromRules = () => {
@@ -4013,24 +4053,47 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 
           {/* Kategori-viktning (0–10) */}
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
               <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Sliders size={20} style={{ color: '#f97316' }} /> Kategoriviktning och prioritet (0–10)
               </h3>
-              <button
-                type="button"
-                onClick={handleResetAiCategories}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontSize: '0.8rem',
-                  textDecoration: 'underline'
-                }}
-              >
-                Återställ standardvikter
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => saveCategoryWeights()}
+                  disabled={isSavingAi}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.35rem 0.85rem',
+                    backgroundColor: 'rgba(249, 115, 22, 0.12)',
+                    color: '#f97316',
+                    border: '1px solid rgba(249, 115, 22, 0.35)',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: isSavingAi ? 'not-allowed' : 'pointer'
+                  }}
+                  title="Spara aktuella kategoriviktningar direkt"
+                >
+                  <Check size={14} /> {isSavingAi ? 'Sparar...' : 'Spara viktningar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetAiCategories}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Återställ standardvikter
+                </button>
+              </div>
             </div>
             
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.5 }}>
@@ -4087,6 +4150,9 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                         step="1"
                         value={weight}
                         onChange={(e) => handleCategoryWeightChange(name, parseInt(e.target.value))}
+                        onPointerUp={() => saveCategoryWeights()}
+                        onTouchEnd={() => saveCategoryWeights()}
+                        onKeyUp={() => saveCategoryWeights()}
                         style={{
                           flex: 1,
                           cursor: 'pointer',
