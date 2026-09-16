@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.09',
+    date: '2026-09-16',
+    title: 'Produktionslansering av ny prioriteringsmodell och Gilla-system (Main)',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Borttagning av statisk PRIO-knapp på händelsekort',
+        description: 'Den tidigare statiska PRIO-knappen med eldsflamma och dess separata dialog har avlägsnats från artikelkorten till förmån för det nya dynamiska Gilla- och Ogilla-systemet.'
+      },
+      {
+        type: 'release',
+        title: 'Lansering till Main-grenen',
+        description: 'Hela paketet med sammansatt poängmatris (Kategori 30%, Akuthet 40%, Substans 30%), adaptiv intresseprofil och favoritfilter är nu produktionssatt på huvudgrenen.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.08',
     date: '2026-09-16',
     title: 'Gilla- och Ogilla-system med adaptiv intresseprofil och favoritsamling (Steg 2)',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',
