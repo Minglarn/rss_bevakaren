@@ -151,6 +151,10 @@ def ensure_db_migrations():
                     except Exception:
                         pass
                     print("[DB] Added user_vote column to articles", flush=True)
+                if "ai_duration_s" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN ai_duration_s REAL DEFAULT 0.0"))
+                    conn.commit()
+                    print("[DB] Added ai_duration_s column to articles", flush=True)
                 conn.execute(text("UPDATE articles SET allow_push = 1 WHERE allow_push IS NULL"))
                 conn.commit()
         except Exception as e:
@@ -535,6 +539,12 @@ def run_db_migrations(db_path: str):
         try:
             cur.execute("ALTER TABLE articles ADD COLUMN user_vote INTEGER DEFAULT 0;")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_articles_user_vote ON articles(user_vote);")
+        except sqlite3.OperationalError:
+            pass
+
+        # Migration 22: Add ai_duration_s to articles (float)
+        try:
+            cur.execute("ALTER TABLE articles ADD COLUMN ai_duration_s REAL DEFAULT 0.0;")
         except sqlite3.OperationalError:
             pass
 
@@ -1482,6 +1492,7 @@ async def ai_processing_loop():
                             save_art.tags = tags_json
                             save_art.is_clickbait = is_clickbait
                             save_art.clickbait_reason = clickbait_reason
+                            save_art.ai_duration_s = dur
                             db_save.commit()
 
                         # Notishantering
@@ -2053,6 +2064,7 @@ def get_dashboard_feeds(
             "prio_reason": art.prio_reason or "" if include_ai else "",
             "urgency_score": art.urgency_score if (include_ai and art.urgency_score is not None) else 5,
             "substance_score": art.substance_score if (include_ai and art.substance_score is not None) else 5,
+            "ai_duration_s": round(art.ai_duration_s, 2) if (include_ai and art.ai_duration_s) else None,
             "ai_summary": art.ai_summary if include_ai else None,
             "tags": parsed_tags if include_ai else [],
             "is_clickbait": art.is_clickbait or 0 if include_ai else 0,
@@ -2267,6 +2279,7 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
     art.is_clickbait = analysis.get("is_clickbait", 0)
     art.clickbait_reason = analysis.get("clickbait_reason", "")
+    art.ai_duration_s = analysis.get("duration_s", 0.0)
 
     # STEG 1: Specifika bevakningsord (trumfar allt -> 100p & HIGH)
     user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == current_user.id).all()

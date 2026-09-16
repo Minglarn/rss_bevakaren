@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
-import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText, Smartphone, Calendar, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText, Smartphone, Calendar, ThumbsUp, ThumbsDown, Info } from 'lucide-react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import ShareModal from './ShareModal';
 import PrioOnboardingModal from './PrioOnboardingModal';
+import AIReasoningModal from './AIReasoningModal';
 import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
 import { useFeeds } from '../App';
 
@@ -507,6 +508,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [scrapingUrls, setScrapingUrls] = useState({});
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [shareItem, setShareItem] = useState(null);
+  const [reasoningItem, setReasoningItem] = useState(null);
 
   // Topic Clustering & Dubletthantering
   const [clusterMode, setClusterMode] = useState(() => {
@@ -953,11 +955,14 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   };
 
   const triggerAnalysis = async (e, id) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
     if (analyzingIds.has(id)) return;
     setAnalyzingIds(prev => new Set(prev).add(id));
     try {
-      await api.post(`/articles/${id}/analyze`);
+      const res = await api.post(`/articles/${id}/analyze`);
+      if (res && res.data) {
+        setReasoningItem(prev => (prev && prev.id === id ? { ...prev, ...res.data } : prev));
+      }
       fetchFeeds(true);
     } catch (err) {
       console.error("Fel vid AI-analys:", err);
@@ -2020,19 +2025,24 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         </div>
 
                         {shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            backgroundColor: 'rgba(249, 115, 22, 0.15)',
-                            color: '#f97316',
-                            border: '1px solid rgba(249, 115, 22, 0.35)',
-                            padding: '0.15rem 0.5rem',
-                            borderRadius: '6px',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.5px'
-                          }} title={formatCategoryPrioReason(item.prio_reason, item.category) || "Hög prioritet av AI"}>
+                          <span 
+                            onClick={(e) => { e.stopPropagation(); setReasoningItem(item); }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              backgroundColor: 'rgba(249, 115, 22, 0.15)',
+                              color: '#f97316',
+                              border: '1px solid rgba(249, 115, 22, 0.35)',
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              letterSpacing: '0.5px',
+                              cursor: 'pointer'
+                            }} 
+                            title="Klicka för att se fullt AI-resonemang och poängfördelning"
+                          >
                             <Flame size={13} /> PRIO {item.prio_score ? `${item.prio_score}p` : ''}
                           </span>
                         )}
@@ -2091,6 +2101,20 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <button
+                          className="feed-card-share-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setReasoningItem(item);
+                          }}
+                          title="Visa AI-resonemang och poäng (I)"
+                          style={{
+                            color: item.ai_summary ? '#6366f1' : undefined
+                          }}
+                        >
+                          <Info size={16} />
+                        </button>
+
                         {prioEnabled && (!item.ai_summary || isPrioMode) && (
                           <button
                             className="feed-card-share-btn"
@@ -2303,6 +2327,33 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                                 <span style={{ padding: '0.1rem 0.4rem', borderRadius: '4px', backgroundColor: 'var(--bg-card-hover, rgba(255,255,255,0.06))', border: '1px solid var(--border-color, rgba(255,255,255,0.1))' }} title="Faktatäthet och substans bedömt av AI (1-10)">
                                   Substans: {item.substance_score}/10
                                 </span>
+                                {item.ai_duration_s ? (
+                                  <span style={{ padding: '0.1rem 0.4rem', borderRadius: '4px', backgroundColor: 'var(--bg-card-hover, rgba(255,255,255,0.06))', border: '1px solid var(--border-color, rgba(255,255,255,0.1))' }} title="Analystid">
+                                    {item.ai_duration_s}s
+                                  </span>
+                                ) : null}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setReasoningItem(item);
+                                  }}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.2rem',
+                                    padding: '0.1rem 0.45rem',
+                                    borderRadius: '4px',
+                                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                                    color: '#818cf8',
+                                    cursor: 'pointer',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 600
+                                  }}
+                                  title="Se detaljerat AI-resonemang och poängfördelning"
+                                >
+                                  <Info size={11} /> Resonemang
+                                </button>
                               </div>
                             )}
                           </div>
@@ -2369,6 +2420,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         {/* PRIO-piller flyttad från TopBar för en renare layout */}
                         {shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (
                           <span 
+                            onClick={(e) => { e.stopPropagation(); setReasoningItem(item); }}
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -2379,9 +2431,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                               borderRadius: '12px',
                               fontSize: '0.75rem',
                               fontWeight: 700,
-                              boxShadow: '0 1px 3px rgba(249, 115, 22, 0.25)'
+                              boxShadow: '0 1px 3px rgba(249, 115, 22, 0.25)',
+                              cursor: 'pointer'
                             }} 
-                            title={formatCategoryPrioReason(item.prio_reason, item.category) || "Hög prioritet av AI"}
+                            title="Klicka för att se fullt AI-resonemang och poängfördelning"
                           >
                             <Flame size={12} /> PRIO {item.prio_score ? `${item.prio_score}p` : ''}
                           </span>
@@ -2732,6 +2785,16 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         </button>
                       )}
 
+                      {/* AI-analys / Info (I) */}
+                      <button
+                        className="modern-bottombar-btn"
+                        onClick={(e) => { e.stopPropagation(); setReasoningItem(item); }}
+                        title="Visa AI-resonemang och poänginformation (I)"
+                      >
+                        <Info size={13} />
+                        <span>AI</span>
+                      </button>
+
                       {/* Dela */}
                       <button
                         className="modern-bottombar-btn"
@@ -2840,6 +2903,15 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           onClose={() => setShareItem(null)} 
         />
       )}
+
+      {/* AI Resonemang och Poäng dialog */}
+      <AIReasoningModal
+        item={reasoningItem}
+        isOpen={Boolean(reasoningItem)}
+        onClose={() => setReasoningItem(null)}
+        onReanalyze={(id) => triggerAnalysis(null, id)}
+        isAnalyzing={reasoningItem ? analyzingIds.has(reasoningItem.id) : false}
+      />
 
 
       {/* Onboarding för Prio Flöde */}

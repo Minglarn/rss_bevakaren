@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.11',
+    date: '2026-09-16',
+    title: 'AI-transparens och detaljerat resonemang via (I)-knapp',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Ny informationsdialog för AI-resonemang och poäng',
+        description: 'En ny (I)-knapp på alla händelsekort öppnar en utförlig diagnostikvy som förklarar exakt hur AI-modellen har poängsatt artikeln: uppdelning av kategori, akuthet, substans, eventuella bonusar/avdrag samt modellens motivering.'
+      },
+      {
+        type: 'feature',
+        title: 'Visning av analystid och AI-metadata',
+        description: 'Dialogen visar nu även tidsåtgång för analysen (i sekunder), ClickBait-granskning och genererade ämnestaggar.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.10',
     date: '2026-09-16',
     title: 'Automatisk sparning vid val av AI-modell i inställningar',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'fix',

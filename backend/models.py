@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, LargeBinary
+from sqlalchemy import Column, Integer, String, ForeignKey, LargeBinary, Float
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -80,6 +80,7 @@ class Article(Base):
     prio_reason = Column(String, default="")
     urgency_score = Column(Integer, default=5)
     substance_score = Column(Integer, default=5)
+    ai_duration_s = Column(Float, default=0.0) # Tid i sekunder för AI-analysen
     user_vote = Column(Integer, default=0, index=True) # 1 = Gilla, -1 = Ogilla, 0 = Neutral
     ai_summary = Column(String, nullable=True)
     tags = Column(String, default="[]")
