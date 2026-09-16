@@ -291,33 +291,54 @@ def batch_embed_articles(articles: List[Any], db: Any, model: Optional[str] = No
             
     return saved_count
 
-def check_lm_studio_health() -> bool:
-    """Kontrollerar snabbt om LM Studio svarar."""
+_health_cache: Dict[str, Any] = {"status": False, "ts": 0.0}
+_models_cache: Dict[str, Any] = {"models": [], "ts": 0.0}
+HEALTH_CACHE_TTL = 15.0  # sekunder
+MODELS_CACHE_TTL = 30.0  # sekunder
+
+def check_lm_studio_health(force_refresh: bool = False) -> bool:
+    """Kontrollerar snabbt om LM Studio svarar med TTL-cachning för att undvika trådblockering vid offline eller hög last."""
+    global _health_cache
+    now = time.time()
+    if not force_refresh and (now - _health_cache["ts"]) < HEALTH_CACHE_TTL:
+        return _health_cache["status"]
+
     try:
         endpoint = get_models_endpoint()
-        res = requests.get(endpoint, timeout=3)
-        return res.status_code == 200
+        res = requests.get(endpoint, timeout=2.5)
+        healthy = (res.status_code == 200)
+        _health_cache = {"status": healthy, "ts": now}
+        return healthy
     except Exception:
+        _health_cache = {"status": False, "ts": now}
         return False
 
-def get_available_models() -> List[str]:
-    """Hämtar alla tillgängliga chatt-/textmodeller från LM Studio."""
+def get_available_models(force_refresh: bool = False) -> List[str]:
+    """Hämtar alla tillgängliga chatt-/textmodeller från LM Studio med TTL-cachning."""
+    global _models_cache, _health_cache
+    now = time.time()
+    if not force_refresh and (now - _models_cache["ts"]) < MODELS_CACHE_TTL:
+        return list(_models_cache["models"])
+
     try:
         endpoint = get_models_endpoint()
-        res = requests.get(endpoint, timeout=4)
+        res = requests.get(endpoint, timeout=3.0)
         if res.status_code == 200:
             data = res.json()
             models_list = data.get("data", [])
-            # Filtrera bort embedding-modeller och returnera unika modell-id:n
             result = []
             for m in models_list:
                 m_id = m.get("id", "")
                 if m_id and "embedding" not in m_id.lower() and m_id not in result:
                     result.append(m_id)
+            _models_cache = {"models": result, "ts": now}
+            _health_cache = {"status": True, "ts": now}
             return result
     except Exception as e:
         print(f"[AI Service] Kunde inte hämta modeller från LM Studio: {e}", flush=True)
-    return []
+
+    _models_cache["ts"] = now
+    return list(_models_cache["models"]) if _models_cache["models"] else []
 
 def get_active_model() -> str:
     """Hämtar konfigurerad modell eller läser in aktiv modell från LM Studio."""

@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.01',
+    date: '2026-09-16',
+    title: 'Prestandalyft för AI-kö och oberoende databashantering',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Asynkron frånkoppling av databassessioner under AI-analys',
+        description: 'Databassessionen hålls inte längre öppen under nätverksanrop mot LM Studio eller vid skrapning av brödtext. Detta eliminerar helt att databasen låses när en stor kö av artiklar ska analyseras efter att lokal AI varit offline.'
+      },
+      {
+        type: 'improvement',
+        title: 'SQLite WAL-läge (Write-Ahead Logging) och utökad busy-timeout',
+        description: 'Aktiverat SQLite WAL-läge och 30 sekunders busy-timeout. Frontend kan nu läsa och hämta artiklar i realtid utan att någonsin blockeras av pågående AI-skrivningar eller bakgrundsjobb.'
+      },
+      {
+        type: 'improvement',
+        title: 'TTL-cachning av LM Studio-status och modeller',
+        description: 'Hälsokontroller och modellhämtning mot LM Studio cachas med en kort TTL så att konfigurationsanrop från gränssnittet svarar på under en millisekund även om LM Studio är offline eller hårt belastad.'
+      }
+    ]
+  },
+  {
     version: '2026.09.15.09',
     date: '2026-09-15',
     title: 'Strikt flödesisolering och realtidsräknare för olästa',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

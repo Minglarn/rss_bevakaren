@@ -1124,23 +1124,26 @@ async def ai_processing_loop():
     
     while True:
         try:
-            # Kontrollera om LM Studio är nåbart innan vi hämtar artiklar
+            # Kontrollera om LM Studio är nåbart innan vi hämtar artiklar (TTL-cachad, snabb)
             is_healthy = await asyncio.to_thread(ai_service.check_lm_studio_health)
             if not is_healthy:
-                # Sov 30 sekunder om LM Studio är offline för att inte spamma loggar
-                await asyncio.sleep(30)
+                # Sov 15 sekunder om LM Studio är offline för att inte spamma loggar
+                await asyncio.sleep(15)
                 continue
                 
-            db = database.SessionLocal()
+            # 1. Hämta inställningar och utför underhåll i en kort, omedelbart stängd DB-session
+            cutoff_ts = int(time.time()) - (24 * 3600)
+            candidate_ids = []
+            db_init = database.SessionLocal()
             try:
-                user_ai_first = db.query(models.UserAISettings).order_by(models.UserAISettings.id.asc()).first()
+                user_ai_first = db_init.query(models.UserAISettings).order_by(models.UserAISettings.id.asc()).first()
                 max_age_hours = int(user_ai_first.max_article_age_hours if (user_ai_first and user_ai_first.max_article_age_hours) else os.environ.get("AI_MAX_ARTICLE_AGE_HOURS", "24"))
                 now = int(time.time())
                 cutoff_ts = now - (max_age_hours * 3600)
 
                 # 0. Återställ automatiskt tidigare artiklar med tillfälligt analysfel så att de får en ny chans
                 try:
-                    resets = db.query(models.Article).filter(
+                    resets = db_init.query(models.Article).filter(
                         models.Article.prio_reason.like("%Standardprioritering (AI-analys kunde inte slutföras)%"),
                         models.Article.received_ts >= cutoff_ts,
                         or_(models.Article.is_read == 0, models.Article.is_read == None)
@@ -1150,14 +1153,13 @@ async def ai_processing_loop():
                         models.Article.ai_summary: None
                     }, synchronize_session=False)
                     if resets > 0:
-                        db.commit()
+                        db_init.commit()
                         print(f"[AI] Återställde {resets} tidigare misslyckade artiklar för ny AI-analys.", flush=True)
                 except Exception:
                     pass
 
                 # 1. Arkivera/hoppa automatiskt över gamla artiklar (> max_age_hours baserat på published_ts eller received_ts) och artiklar som redan är lästa
-                # så att LM Studio inte slösar tid och resurser på historisk backlog
-                db.query(models.Article).filter(
+                db_init.query(models.Article).filter(
                     or_(models.Article.ai_processed == 0, models.Article.ai_processed == None),
                     or_(
                         and_(models.Article.published_ts > 0, models.Article.published_ts < cutoff_ts),
@@ -1165,11 +1167,11 @@ async def ai_processing_loop():
                         models.Article.is_read == 1
                     )
                 ).update({models.Article.ai_processed: 2}, synchronize_session=False)
-                db.commit()
+                db_init.commit()
 
                 # 2. Hämta färska, olästa artiklar från aktiva flöden som inkommit inom tidsfönstret
                 cur_time = time.time()
-                raw_unprocessed = db.query(models.Article).join(models.Feed).filter(
+                raw_articles = db_init.query(models.Article.id).join(models.Feed).filter(
                     or_(models.Article.ai_processed == 0, models.Article.ai_processed == None),
                     models.Article.received_ts >= cutoff_ts,
                     or_(models.Article.is_read == 0, models.Article.is_read == None),
@@ -1177,296 +1179,374 @@ async def ai_processing_loop():
                 ).order_by(models.Article.received_ts.desc()).limit(12).all()
                 
                 # Filtrera bort artiklar som har en aktiv retry-fördröjning
-                unprocessed = [art for art in raw_unprocessed if ai_retry_after.get(art.id, 0) <= cur_time][:3]
-                
-                if not unprocessed:
-                    db.close()
-                    try:
-                        await asyncio.wait_for(ai_wake_event.wait(), timeout=10.0)
-                    except asyncio.TimeoutError:
-                        pass
-                    finally:
-                        ai_wake_event.clear()
-                    continue
+                candidate_ids = [row[0] for row in raw_articles if ai_retry_after.get(row[0], 0) <= cur_time][:3]
+            finally:
+                db_init.close()
+            
+            if not candidate_ids:
+                try:
+                    await asyncio.wait_for(ai_wake_event.wait(), timeout=10.0)
+                except asyncio.TimeoutError:
+                    pass
+                finally:
+                    ai_wake_event.clear()
+                continue
 
-                for art in unprocessed:
-                    cats = art.categories.split(",") if art.categories else []
-                    
-                    # Hämta feed säkert och ta reda på användare och källa
+            for art_id in candidate_ids:
+                # 2a. Hämta artikeldata och användarinställningar i en snabb session (stängs direkt)
+                item = None
+                db_item = database.SessionLocal()
+                try:
+                    art = db_item.query(models.Article).filter(models.Article.id == art_id).first()
+                    if not art or art.ai_processed in (1, 2):
+                        continue
+
                     feed_id = art.feed_id
-                    feed_obj = db.query(models.Feed).filter(models.Feed.id == feed_id).first() if feed_id else None
+                    feed_obj = db_item.query(models.Feed).filter(models.Feed.id == feed_id).first() if feed_id else None
                     source = feed_obj.title if (feed_obj and feed_obj.title) else ""
                     user_id = feed_obj.user_id if feed_obj else None
-                    
+
                     user_prompt = None
                     user_cats = None
                     user_ai = None
+                    user_model = None
+                    auto_scrape_active = True
+                    feed_allows_scrape = True
+                    threshold = 75
+                    prio_enabled = False
+                    prio_notify_only = False
+                    feed_notifs_on = True
+                    inc_title = True
+                    inc_image = True
+                    inc_summary = True
+                    matched_kw_candidates = []
+
+                    if feed_obj:
+                        if feed_obj.notify_enabled is not None:
+                            feed_notifs_on = (feed_obj.notify_enabled == 1)
+                        if feed_obj.scrape_enabled is not None:
+                            feed_allows_scrape = (feed_obj.scrape_enabled != 0)
+
                     if user_id:
-                        user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == user_id).first()
-                        # Om användaren inte har aktiverat PRIO-flödet, skippa AI-analys och spara resurser
+                        user_ai = db_item.query(models.UserAISettings).filter(models.UserAISettings.user_id == user_id).first()
                         if not user_ai or not user_ai.prio_enabled:
                             art.ai_processed = 1
-                            db.commit()
+                            db_item.commit()
                             continue
 
-                        if user_ai:
-                            user_cats = normalize_user_categories(user_ai.categories)
-                            user_prompt = ai_service.ensure_clickbait_in_prompt(user_ai.custom_system_prompt, categories=user_cats)
+                        user_cats = normalize_user_categories(user_ai.categories)
+                        user_prompt = ai_service.ensure_clickbait_in_prompt(user_ai.custom_system_prompt, categories=user_cats)
+                        user_model = user_ai.selected_model if user_ai.selected_model else None
+                        if user_ai.auto_scrape_article_text is not None:
+                            auto_scrape_active = (user_ai.auto_scrape_article_text != 0)
+                        threshold = user_ai.prio_threshold if user_ai.prio_threshold else 75
+                        prio_enabled = bool(user_ai.prio_enabled)
+                        prio_notify_only = bool(user_ai.prio_notify_only)
+                        inc_title = bool(user_ai.push_include_title if user_ai.push_include_title is not None else 1)
+                        inc_image = bool(user_ai.push_include_image if user_ai.push_include_image is not None else 1)
+                        inc_summary = bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1)
 
-                    user_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
-                    u_rec = db.query(models.User).filter(models.User.id == user_id).first() if user_id else None
+                        kws = db_item.query(models.Keyword).filter(models.Keyword.user_id == user_id).all()
+                        matched_kw_candidates = [k.keyword for k in kws if k.keyword]
+
+                    u_rec = db_item.query(models.User).filter(models.User.id == user_id).first() if user_id else None
                     u_display = u_rec.username if u_rec else f"user_{user_id}"
-                    
-                    loop = asyncio.get_running_loop()
-                    last_reported_pct = -1
 
-                    def on_progress_sync(pct: int):
-                        nonlocal last_reported_pct
-                        if pct != last_reported_pct:
-                            last_reported_pct = pct
-                            if user_id:
-                                asyncio.run_coroutine_threadsafe(
-                                    manager.send_personal_message(f"AI_PROGRESS:{art.id}:{pct}", user_id),
-                                    loop
-                                )
+                    feed_icon_url = get_feed_icon_url(feed_obj, art.link)
 
-                    # Skicka start-progress (0%) direkt så UI visar aktiv progress
-                    if user_id:
-                        await manager.send_personal_message(f"AI_PROGRESS:{art.id}:0", user_id)
+                    item = {
+                        "id": art.id,
+                        "title": art.title or "",
+                        "summary": art.summary or "",
+                        "content": art.content or "",
+                        "link": art.link or "",
+                        "image_url": art.image_url,
+                        "published_ts": art.published_ts,
+                        "allow_push": getattr(art, 'allow_push', 1),
+                        "categories": art.categories.split(",") if art.categories else [],
+                        "feed_id": feed_id,
+                        "source": source,
+                        "user_id": user_id,
+                        "u_display": u_display,
+                        "feed_icon_url": feed_icon_url,
+                        "user_prompt": user_prompt,
+                        "user_cats": user_cats,
+                        "user_model": user_model,
+                        "auto_scrape_active": auto_scrape_active,
+                        "feed_allows_scrape": feed_allows_scrape,
+                        "matched_kw_candidates": matched_kw_candidates,
+                        "threshold": threshold,
+                        "prio_enabled": prio_enabled,
+                        "prio_notify_only": prio_notify_only,
+                        "feed_notifs_on": feed_notifs_on,
+                        "inc_title": inc_title,
+                        "inc_image": inc_image,
+                        "inc_summary": inc_summary
+                    }
+                finally:
+                    db_item.close()
 
-                    # Avgör om vi ska hämta och använda skrapad brödtext för djup AI-analys
-                    article_text_for_ai = art.summary or ""
-                    auto_scrape_active = (user_ai.auto_scrape_article_text != 0) if (user_ai and user_ai.auto_scrape_article_text is not None) else True
-                    feed_allows_scrape = (feed_obj.scrape_enabled != 0) if (feed_obj and feed_obj.scrape_enabled is not None) else True
+                if not item:
+                    continue
 
-                    if auto_scrape_active and feed_allows_scrape and art.link:
-                        scraped_text = art.content
-                        if not scraped_text or len(scraped_text.strip()) < 30:
-                            scraped_text = await asyncio.to_thread(extract_clean_article_text, art.link, 8)
-                            if scraped_text and len(scraped_text.strip()) > 30:
-                                art.content = scraped_text
-                                db.commit()
-                        if scraped_text and len(scraped_text.strip()) > 30:
-                            # Använd de första 2500 tecknen så AI får hela händelsekontexten och fakta
-                            article_text_for_ai = scraped_text[:2500]
+                user_id = item["user_id"]
+                u_display = item["u_display"]
 
-                    analysis = await asyncio.to_thread(
-                        ai_service.analyze_article,
-                        title=art.title,
-                        summary=article_text_for_ai,
-                        source_title=source,
-                        categories=cats,
-                        custom_prompt=user_prompt,
-                        user_categories=user_cats,
-                        model_override=user_model,
-                        on_progress=on_progress_sync
-                    )
-                    
-                    if analysis:
-                        art.ai_processed = 1
-                        art.category = analysis.get("category", "Övrigt")
-                        art.priority = analysis.get("priority", "low")
-                        art.prio_score = analysis.get("prio_score", 10)
-                        art.prio_reason = analysis.get("prio_reason", "")
-                        art.ai_summary = analysis.get("ai_summary", "")
-                        art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
-                        art.is_clickbait = analysis.get("is_clickbait", 0)
-                        art.clickbait_reason = analysis.get("clickbait_reason", "")
-                        dur = analysis.get("duration_s", 0.0)
-                        
-                        # STEG 1: Specifika bevakningsord (trumfar allt -> 100p & HIGH)
-                        matched_kw = []
+                loop = asyncio.get_running_loop()
+                last_reported_pct = -1
+
+                def on_progress_sync(pct: int):
+                    nonlocal last_reported_pct
+                    if pct != last_reported_pct:
+                        last_reported_pct = pct
                         if user_id:
-                            user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == user_id).all()
-                            text_to_check = f"{art.title or ''} {art.summary or ''}".lower()
-                            matched_kw = [kw.keyword for kw in user_keywords if kw.keyword and kw.keyword.lower() in text_to_check]
-                            if matched_kw:
-                                art.priority = "high"
-                                art.prio_score = 100
-                                kw_str = ", ".join(matched_kw)
-                                art.prio_reason = f"Träff på bevakningsord: {kw_str}"
+                            asyncio.run_coroutine_threadsafe(
+                                manager.send_personal_message(f"AI_PROGRESS:{item['id']}:{pct}", user_id),
+                                loop
+                            )
 
-                        db.commit()
+                # Skicka start-progress (0%) direkt så UI visar aktiv progress
+                if user_id:
+                    await manager.send_personal_message(f"AI_PROGRESS:{item['id']}:0", user_id)
 
-                        # Generera semantisk embedding och utför Topic-klustring direkt så artikeln är klustrad i realtid
-                        cluster_info_str = ""
-                        try:
-                            summary_text = art.ai_summary or art.summary or ""
-                            await asyncio.to_thread(ai_service.save_article_embedding, art.id, art.title, summary_text, db)
-                            cid, sim = await asyncio.to_thread(ai_service.find_or_create_article_cluster, art.id, db)
-                            if cid and cid != art.id:
-                                pct = int(round(sim * 100)) if sim else 100
-                                cluster_info_str = f" | Kluster #{cid} ({pct}%)"
-                        except Exception:
-                            pass
+                # Avgör om vi ska hämta och använda skrapad brödtext för djup AI-analys (utan öppen DB-session)
+                article_text_for_ai = item["summary"]
+                if item["auto_scrape_active"] and item["feed_allows_scrape"] and item["link"]:
+                    scraped_text = item["content"]
+                    if not scraped_text or len(scraped_text.strip()) < 30:
+                        scraped_text = await asyncio.to_thread(extract_clean_article_text, item["link"], 8)
+                        if scraped_text and len(scraped_text.strip()) > 30:
+                            item["content"] = scraped_text
+                            # Spara skrapad text i en snabb databastransaktion
+                            db_scrape = database.SessionLocal()
+                            try:
+                                db_scrape.query(models.Article).filter(models.Article.id == item["id"]).update(
+                                    {models.Article.content: scraped_text}, synchronize_session=False
+                                )
+                                db_scrape.commit()
+                            except Exception:
+                                pass
+                            finally:
+                                db_scrape.close()
 
-                        # Avgör om pushnotis ska skickas för PRIO, bevakningsord eller flöde
+                    if scraped_text and len(scraped_text.strip()) > 30:
+                        article_text_for_ai = scraped_text[:2500]
+
+                # LM STUDIO-ANROP (Helt utan öppen DB-session! Databasen är 100% fri för frontend)
+                analysis = await asyncio.to_thread(
+                    ai_service.analyze_article,
+                    title=item["title"],
+                    summary=article_text_for_ai,
+                    source_title=item["source"],
+                    categories=item["categories"],
+                    custom_prompt=item["user_prompt"],
+                    user_categories=item["user_cats"],
+                    model_override=item["user_model"],
+                    on_progress=on_progress_sync
+                )
+
+                if analysis:
+                    category = analysis.get("category", "Övrigt")
+                    priority = analysis.get("priority", "low")
+                    prio_score = analysis.get("prio_score", 10)
+                    prio_reason = analysis.get("prio_reason", "")
+                    ai_summary = analysis.get("ai_summary", "")
+                    tags_json = json.dumps(analysis.get("tags", []), ensure_ascii=False)
+                    is_clickbait = analysis.get("is_clickbait", 0)
+                    clickbait_reason = analysis.get("clickbait_reason", "")
+                    dur = analysis.get("duration_s", 0.0)
+
+                    # Bevakningsord-kontroll
+                    matched_kw = []
+                    text_to_check = f"{item['title']} {item['summary']}".lower()
+                    matched_kw = [kw for kw in item["matched_kw_candidates"] if kw and kw.lower() in text_to_check]
+                    if matched_kw:
+                        priority = "high"
+                        prio_score = 100
+                        kw_str = ", ".join(matched_kw)
+                        prio_reason = f"Träff på bevakningsord: {kw_str}"
+
+                    # Spara i databasen i en snabb, isolerad session
+                    db_save = database.SessionLocal()
+                    try:
+                        save_art = db_save.query(models.Article).filter(models.Article.id == item["id"]).first()
+                        feed_obj_save = db_save.query(models.Feed).filter(models.Feed.id == item["feed_id"]).first() if item["feed_id"] else None
+                        if save_art:
+                            save_art.ai_processed = 1
+                            save_art.category = category
+                            save_art.priority = priority
+                            save_art.prio_score = prio_score
+                            save_art.prio_reason = prio_reason
+                            save_art.ai_summary = ai_summary
+                            save_art.tags = tags_json
+                            save_art.is_clickbait = is_clickbait
+                            save_art.clickbait_reason = clickbait_reason
+                            db_save.commit()
+
+                        # Notishantering
+                        is_prio = (priority and str(priority).lower() == "high") or ((prio_score or 0) >= item["threshold"])
                         should_send_push = False
                         push_title = ""
                         context_tag = "Push"
                         push_info = None
 
                         try:
-                            feed_notify_setting = feed_obj.notify_enabled if (feed_obj and feed_obj.notify_enabled is not None) else 1
-                            feed_notifs_on = (feed_notify_setting == 1)
-
-                            threshold = (user_ai.prio_threshold if (user_ai and user_ai.prio_threshold) else 75)
-                            is_prio = (art.priority and str(art.priority).lower() == "high") or ((art.prio_score or 0) >= threshold)
-
-                            # Om notiser är avstängda för flödet eller artikeln är markerad som tyst/initial/gammal skickas inga notiser
-                            if not feed_notifs_on:
+                            if not item["feed_notifs_on"] or item["allow_push"] == 0:
                                 should_send_push = False
-                            elif getattr(art, 'allow_push', 1) == 0:
-                                should_send_push = False
-                            elif art.published_ts and (now - art.published_ts > 7200):
+                            elif item["published_ts"] and (time.time() - item["published_ts"] > 7200):
                                 should_send_push = False
                             else:
-                                inc_title = bool(user_ai.push_include_title if (user_ai and user_ai.push_include_title is not None) else 1)
-                                inc_image = bool(user_ai.push_include_image if (user_ai and user_ai.push_include_image is not None) else 1)
-                                inc_summary = bool(user_ai.push_include_summary if (user_ai and user_ai.push_include_summary is not None) else 1)
-
                                 if matched_kw:
                                     should_send_push = True
                                     kw_str = ", ".join(matched_kw)
-                                    push_title = f"Bevakningsord ({kw_str}): {art.title}" if inc_title else f"Bevakningsord ({kw_str})"
+                                    push_title = f"Bevakningsord ({kw_str}): {item['title']}" if item["inc_title"] else f"Bevakningsord ({kw_str})"
                                     context_tag = "Bevakningsord-Push"
-                                elif user_ai and user_ai.prio_enabled and is_prio:
+                                elif item["prio_enabled"] and is_prio:
                                     should_send_push = True
-                                    push_title = f"PRIO ({source or 'RSS'}): {art.title}" if inc_title else f"PRIO ({source or 'RSS'})"
+                                    push_title = f"PRIO ({item['source'] or 'RSS'}): {item['title']}" if item["inc_title"] else f"PRIO ({item['source'] or 'RSS'})"
                                     context_tag = "PRIO-Push"
-                                elif user_ai and user_ai.prio_enabled and not user_ai.prio_notify_only:
+                                elif item["prio_enabled"] and not item["prio_notify_only"]:
                                     should_send_push = True
-                                    push_title = f"{source or 'RSS'}: {art.title}" if inc_title else f"{source or 'RSS'}"
+                                    push_title = f"{item['source'] or 'RSS'}: {item['title']}" if item["inc_title"] else f"{item['source'] or 'RSS'}"
                                     context_tag = "Flöde-Push"
-                                elif not user_ai or not user_ai.prio_enabled:
+                                elif not item["prio_enabled"]:
                                     should_send_push = True
-                                    push_title = f"{source or 'RSS'}: {art.title}" if inc_title else f"{source or 'RSS'}"
+                                    push_title = f"{item['source'] or 'RSS'}: {item['title']}" if item["inc_title"] else f"{item['source'] or 'RSS'}"
                                     context_tag = "Flöde-Push"
 
                             if should_send_push and user_id:
-                                push_body = (art.ai_summary or art.summary or art.title or "Ny artikel") if inc_summary else (art.summary or art.title or "Ny artikel")
-                                push_img = art.image_url if inc_image else None
-                                push_feed_icon = get_feed_icon_url(feed_obj, art.link)
+                                push_body = (ai_summary or item["summary"] or item["title"] or "Ny artikel") if item["inc_summary"] else (item["summary"] or item["title"] or "Ny artikel")
+                                push_img = item["image_url"] if item["inc_image"] else None
                                 push_info = send_push_notification_to_user(
-                                    db=db,
+                                    db=db_save,
                                     user_id=user_id,
                                     title=push_title,
                                     body=push_body,
-                                    url=art.link or "/",
-                                    article_id=art.id,
+                                    url=item["link"] or "/",
+                                    article_id=item["id"],
                                     image_url=push_img,
                                     context=context_tag,
                                     silent=True,
-                                    icon_url=push_feed_icon
+                                    icon_url=item["feed_icon_url"]
                                 )
                         except Exception as push_err:
-                            print(f"[Push: {u_display}] Fel vid hantering av push-notis för artikel {art.id}: {push_err}", flush=True)
+                            print(f"[Push: {u_display}] Fel vid hantering av push-notis för artikel {item['id']}: {push_err}", flush=True)
 
-                        # LOGGNING FÖR AI-ANALYS
-                        prio_tag = " [PRIO]" if is_prio else ""
-                        if should_send_push:
-                            tag_name = "BEVAKNINGSORD" if matched_kw else "PRIO-NOTIS"
-                            kw_info = f": {', '.join(matched_kw)}" if matched_kw else ""
-                            
-                            if push_info:
-                                deliv_cnt = push_info.get("delivered", 0)
-                                total_devs = push_info.get("total", 0)
-                                sc = push_info.get("status_code", 200)
-                                img_str = ", med bild" if art.image_url else ""
-                                if total_devs == 0:
-                                    deliv_str = "Inga aktiva enheter registrerade"
-                                elif deliv_cnt > 0:
-                                    deliv_str = f"Skickad till {deliv_cnt} enhet(er) (HTTP {sc}{img_str})"
-                                else:
-                                    err_summary = f" ({'; '.join(push_info.get('errors', []))})" if push_info.get("errors") else ""
-                                    deliv_str = f"Misslyckades skicka till {total_devs} enhet(er){err_summary}"
+                        # MQTT-publicering
+                        if save_art:
+                            try:
+                                mqtt_service.publish_article(
+                                    article=save_art,
+                                    feed=feed_obj_save,
+                                    username=u_display,
+                                    user_id=user_id,
+                                    is_prio=is_prio,
+                                    matched_keywords=matched_kw,
+                                    is_update=True
+                                )
+                            except Exception as mqtt_err:
+                                print(f"[MQTT: {u_display}] Fel vid publicering av berikad artikel {item['id']}: {mqtt_err}", flush=True)
+                    finally:
+                        db_save.close()
+
+                    # Generera semantisk embedding och utför Topic-klustring säkert i bakgrundstråd
+                    cluster_info_str = ""
+                    try:
+                        summary_text = ai_summary or item["summary"] or ""
+                        await asyncio.to_thread(safe_bg_save_embedding, item["id"], item["title"], summary_text)
+                    except Exception:
+                        pass
+
+                    # Loggning
+                    prio_tag = " [PRIO]" if is_prio else ""
+                    if should_send_push:
+                        tag_name = "BEVAKNINGSORD" if matched_kw else "PRIO-NOTIS"
+                        kw_info = f": {', '.join(matched_kw)}" if matched_kw else ""
+                        deliv_str = "Kunde inte skicka notis"
+                        if push_info:
+                            deliv_cnt = push_info.get("delivered", 0)
+                            total_devs = push_info.get("total", 0)
+                            sc = push_info.get("status_code", 200)
+                            img_str = ", med bild" if item["image_url"] else ""
+                            if total_devs == 0:
+                                deliv_str = "Inga aktiva enheter registrerade"
+                            elif deliv_cnt > 0:
+                                deliv_str = f"Skickad till {deliv_cnt} enhet(er) (HTTP {sc}{img_str})"
                             else:
-                                deliv_str = "Kunde inte skicka notis (användare saknas eller fel uppstod)"
+                                err_summary = f" ({'; '.join(push_info.get('errors', []))})" if push_info.get("errors") else ""
+                                deliv_str = f"Misslyckades skicka till {total_devs} enhet(er){err_summary}"
 
-                            print(
-                                f"====================================================================\n"
-                                f"[{tag_name}{kw_info}] Användare: {u_display} | Källa: {source or 'RSS'} | #{art.id}\n"
-                                f"  Titel:    \"{art.title}\"\n"
-                                f"  Analys:   {art.category} | {art.priority.upper()} ({art.prio_score}p){cluster_info_str} | Svarstid: {dur}s\n"
-                                f"  Leverans: {deliv_str}\n"
-                                f"====================================================================",
-                                flush=True
-                            )
-                        else:
-                            # Kompakt 1-raders format för vanliga artiklar
-                            print(
-                                f"[AI: {u_display}] {source or 'RSS'} #{art.id} | {art.category} | {art.priority.upper()} ({art.prio_score}p){prio_tag}{cluster_info_str} | {dur}s | \"{art.title}\"",
-                                flush=True
-                            )
-
-                        # Publicera till MQTT (uppdaterar användarens flödestopic med AI-data och vid prio även användarens prio-topic)
-                        try:
-                            mqtt_service.publish_article(
-                                article=art,
-                                feed=feed_obj,
-                                username=u_display,
-                                user_id=user_id,
-                                is_prio=is_prio,
-                                matched_keywords=matched_kw,
-                                is_update=True
-                            )
-                        except Exception as mqtt_err:
-                            print(f"[MQTT: {u_display}] Fel vid publicering av berikad artikel {art.id}: {mqtt_err}", flush=True)
-
-                        # Rensa eventuella tidigare felaktiga försök vid framgång
-                        ai_failed_attempts.pop(art.id, None)
-                        ai_retry_after.pop(art.id, None)
-
-                        # Skicka WS-signal om AI-uppdatering till användaren
-                        if user_id:
-                            await manager.send_personal_message(f"AI_UPDATED:{art.id}", user_id)
+                        print(
+                            f"====================================================================\n"
+                            f"[{tag_name}{kw_info}] Användare: {u_display} | Källa: {item['source'] or 'RSS'} | #{item['id']}\n"
+                            f"  Titel:    \"{item['title']}\"\n"
+                            f"  Analys:   {category} | {priority.upper()} ({prio_score}p){cluster_info_str} | Svarstid: {dur}s\n"
+                            f"  Leverans: {deliv_str}\n"
+                            f"====================================================================",
+                            flush=True
+                        )
                     else:
-                        # Kontrollera om LM Studio är offline eller om det var fel på just denna artikel
-                        is_online = await asyncio.to_thread(ai_service.check_lm_studio_health)
-                        if not is_online:
-                            print(f"[AI] LM Studio svarar inte (offline/pausar). Försöker igen senare för artikel {art.id}", flush=True)
-                            await asyncio.sleep(10)
-                            break
-                        else:
-                            # LM Studio är online men analysen kunde inte slutföras för denna artikel
-                            attempts = ai_failed_attempts.get(art.id, 0) + 1
-                            ai_failed_attempts[art.id] = attempts
+                        print(
+                            f"[AI: {u_display}] {item['source'] or 'RSS'} #{item['id']} | {category} | {priority.upper()} ({prio_score}p){prio_tag}{cluster_info_str} | {dur}s | \"{item['title']}\"",
+                            flush=True
+                        )
 
-                            if attempts < 3:
-                                # Skjut upp artikeln 45 sekunder så att kön kan fortsätta med andra artiklar
-                                ai_retry_after[art.id] = time.time() + 45
-                                print(f"[AI] Artikel #{art.id} ('{art.title[:45]}...') misslyckades vid försök {attempts}/3. Schemalägger automatiskt återförsök om 45 sekunder.", flush=True)
-                            else:
-                                # 3 försök har misslyckats. Tilldela standardvärden så att inte kön blockeras permanent
-                                print(f"[AI] Varning: 3 automatiska försök misslyckades för artikel #{art.id}. Tilldelar standardvärden så kön inte blockeras.", flush=True)
-                                art.ai_processed = 1
-                                art.category = "Övrigt"
-                                art.priority = "medium"
-                                art.prio_score = 50
-                                art.prio_reason = "Standardprioritering (AI-analys kunde inte slutföras)"
-                                art.tags = "[]"
-                                db.commit()
-                                ai_failed_attempts.pop(art.id, None)
-                                ai_retry_after.pop(art.id, None)
-                        
-                # 3. Bakgrundsvektorisering: Vektorisera färska artiklar som saknar embedding
+                    ai_failed_attempts.pop(item["id"], None)
+                    ai_retry_after.pop(item["id"], None)
+
+                    if user_id:
+                        await manager.send_personal_message(f"AI_UPDATED:{item['id']}", user_id)
+                else:
+                    # LM Studio svarade inte för denna artikel
+                    is_online = await asyncio.to_thread(ai_service.check_lm_studio_health)
+                    if not is_online:
+                        print(f"[AI] LM Studio svarar inte (offline/pausar). Försöker igen senare för artikel {item['id']}", flush=True)
+                        await asyncio.sleep(10)
+                        break
+                    else:
+                        attempts = ai_failed_attempts.get(item["id"], 0) + 1
+                        ai_failed_attempts[item["id"]] = attempts
+
+                        if attempts < 3:
+                            ai_retry_after[item["id"]] = time.time() + 45
+                            print(f"[AI] Artikel #{item['id']} ('{item['title'][:45]}...') misslyckades vid försök {attempts}/3. Schemalägger automatiskt återförsök om 45 sekunder.", flush=True)
+                        else:
+                            print(f"[AI] Varning: 3 automatiska försök misslyckades för artikel #{item['id']}. Tilldelar standardvärden så kön inte blockeras.", flush=True)
+                            db_fallback = database.SessionLocal()
+                            try:
+                                db_fallback.query(models.Article).filter(models.Article.id == item["id"]).update({
+                                    models.Article.ai_processed: 1,
+                                    models.Article.category: "Övrigt",
+                                    models.Article.priority: "medium",
+                                    models.Article.prio_score: 50,
+                                    models.Article.prio_reason: "Standardprioritering (AI-analys kunde inte slutföras)",
+                                    models.Article.tags: "[]"
+                                }, synchronize_session=False)
+                                db_fallback.commit()
+                            finally:
+                                db_fallback.close()
+                            ai_failed_attempts.pop(item["id"], None)
+                            ai_retry_after.pop(item["id"], None)
+
+            # 3. Bakgrundsvektorisering i isolerad session (begränsad batch så den inte blockerar)
+            try:
+                db_emb = database.SessionLocal()
                 try:
-                    missing_embs = db.query(models.Article).outerjoin(models.ArticleEmbedding).filter(
+                    missing_embs = db_emb.query(models.Article).outerjoin(models.ArticleEmbedding).filter(
                         models.ArticleEmbedding.article_id == None,
                         models.Article.received_ts >= cutoff_ts
-                    ).order_by(desc(models.Article.received_ts)).limit(15).all()
+                    ).order_by(desc(models.Article.received_ts)).limit(5).all()
                     if missing_embs:
-                        await asyncio.to_thread(ai_service.batch_embed_articles, missing_embs, db)
-                except Exception as emb_err:
-                    print(f"[AI Embeddings] Fel vid bakgrundsvektorisering: {emb_err}", flush=True)
+                        await asyncio.to_thread(ai_service.batch_embed_articles, missing_embs, db_emb)
+                finally:
+                    db_emb.close()
+            except Exception as emb_err:
+                print(f"[AI Embeddings] Fel vid bakgrundsvektorisering: {emb_err}", flush=True)
 
-            finally:
-                db.close()
-                
         except Exception as e:
             print(f"[AI] Fel i ai_processing_loop: {e}", flush=True)
             
-        await asyncio.sleep(10)
+        await asyncio.sleep(5)
 
 
 @app.post("/token", response_model=schemas.Token)
@@ -2250,12 +2330,12 @@ def get_ai_config(
     )
 
 @app.get("/ai/models")
-def get_ai_models(current_user: models.User = Depends(auth.get_current_user)):
-    models_list = ai_service.get_available_models()
+def get_ai_models(refresh: bool = False, current_user: models.User = Depends(auth.get_current_user)):
+    models_list = ai_service.get_available_models(force_refresh=refresh)
     return {
         "models": models_list,
         "active_model": ai_service.get_active_model(),
-        "is_healthy": ai_service.check_lm_studio_health()
+        "is_healthy": ai_service.check_lm_studio_health(force_refresh=refresh)
     }
 
 @app.put("/ai/config", response_model=schemas.AIConfigResponse)
