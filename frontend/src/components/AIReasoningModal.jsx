@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Info, X, Clock, Tag, Flame, ShieldAlert, Sparkles, Layers, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
-import { decodeHtmlEntities } from '../utils/textUtils';
+import { Info, X, Clock, Tag, Flame, Sparkles, Layers, CheckCircle2, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
+import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
+import './AIReasoningModal.css';
 
 const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = false }) => {
   useEffect(() => {
@@ -30,273 +31,265 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
   const clusterSize = item.cluster_size || 1;
   const tags = Array.isArray(item.tags) ? item.tags : [];
 
-  const getPriorityBadge = () => {
+  const getPriorityInfo = () => {
     if (priority === 'high' || score >= 75) {
-      return { label: 'Hög prioritet (PRIO)', color: '#f97316', bg: 'rgba(249, 115, 22, 0.14)' };
+      return {
+        className: 'is-prio',
+        label: 'Hög prioritet (PRIO)',
+        color: '#f97316',
+        badgeBg: 'rgba(249, 115, 22, 0.16)'
+      };
     }
     if (priority === 'medium' || score >= 45) {
-      return { label: 'Normal prioritet', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.14)' };
+      return {
+        className: 'is-normal',
+        label: 'Normal prioritet',
+        color: '#3b82f6',
+        badgeBg: 'rgba(59, 130, 246, 0.16)'
+      };
     }
-    return { label: 'Låg prioritet', color: 'var(--text-muted)', bg: 'rgba(255, 255, 255, 0.06)' };
+    return {
+      className: 'is-low',
+      label: 'Låg prioritet',
+      color: 'var(--text-muted)',
+      badgeBg: 'rgba(148, 163, 184, 0.14)'
+    };
   };
 
-  const badge = getPriorityBadge();
+  const prioInfo = getPriorityInfo();
+  const FeedIcon = resolveFeedIcon(item.source_title || item.feed_title || '');
 
   return (
     <AnimatePresence>
-      <div 
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.72)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '1rem'
-        }}
-        onClick={onClose}
-      >
+      <div className="ai-modal-overlay" onClick={onClose}>
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          className="ai-modal-container"
+          initial={{ opacity: 0, scale: 0.96, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ duration: 0.2 }}
+          exit={{ opacity: 0, scale: 0.96, y: 15 }}
+          transition={{ duration: 0.18 }}
           onClick={(e) => e.stopPropagation()}
-          style={{
-            backgroundColor: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '16px',
-            width: '100%',
-            maxWidth: '620px',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.45)',
-            display: 'flex',
-            flexDirection: 'column'
-          }}
         >
+          {/* Mobil drag-handle */}
+          <div className="ai-modal-drag-handle-container">
+            <div className="ai-modal-drag-handle" />
+          </div>
+
           {/* Header */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '1.25rem 1.5rem',
-            borderBottom: '1px solid var(--border-color)',
-            backgroundColor: 'var(--bg-card)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                color: '#3b82f6',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
+          <div className="ai-modal-header">
+            <div className="ai-modal-header-left">
+              <div className="ai-modal-icon-box">
                 <Info size={20} />
               </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  AI-analys & Resonemang
-                </h3>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  {source}
+              <div style={{ minWidth: 0 }}>
+                <h3 className="ai-modal-title">AI-analys & Resonemang</h3>
+                <div className="ai-modal-subtitle">
+                  {FeedIcon && <FeedIcon size={13} style={{ flexShrink: 0 }} />}
+                  <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    {source}
+                  </span>
                 </div>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                padding: '0.4rem',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Stäng"
+              className="ai-modal-close-btn"
+              title="Stäng fönster (Esc)"
+              aria-label="Stäng"
             >
               <X size={20} />
             </button>
           </div>
 
-          {/* Innehåll */}
-          <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Artikelrubrik */}
-            <div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+          {/* Body */}
+          <div className="ai-modal-body">
+            {/* Granskad artikelrubrik */}
+            <div className="ai-modal-article-section">
+              <div className="ai-modal-section-label">
                 Granskad artikel
               </div>
-              <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', lineHeight: 1.4 }}>
+              <div className="ai-modal-article-title">
                 {title}
               </div>
+              {item.link && (
+                <a
+                  href={item.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    fontSize: '0.78rem',
+                    color: 'var(--primary, #3b82f6)',
+                    textDecoration: 'none',
+                    marginTop: '0.2rem',
+                    width: 'fit-content'
+                  }}
+                >
+                  <span>Öppna originalartikel</span>
+                  <ExternalLink size={12} />
+                </a>
+              )}
             </div>
 
-            {/* Totalpoäng och statuskort */}
-            <div style={{
-              backgroundColor: 'var(--bg-app)',
-              border: `1px solid ${badge.color}40`,
-              borderRadius: '12px',
-              padding: '1.15rem 1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem',
-              flexWrap: 'wrap'
-            }}>
+            {/* Total prioritetspoäng (Hero-kort) */}
+            <div className={`ai-modal-score-card ${prioInfo.className}`}>
               <div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>
                   Total prioritetspoäng
                 </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
-                  <span style={{ fontSize: '2.2rem', fontWeight: 800, color: badge.color, lineHeight: 1 }}>
+                <div className="ai-modal-score-number-group">
+                  <span className="ai-modal-score-big" style={{ color: prioInfo.color }}>
                     {score}
                   </span>
-                  <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                  <span className="ai-modal-score-max">
                     / 100 poäng
                   </span>
                 </div>
               </div>
 
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                padding: '6px 14px',
-                borderRadius: '999px',
-                backgroundColor: badge.bg,
-                color: badge.color,
-                fontWeight: 700,
-                fontSize: '0.85rem'
-              }}>
+              <div
+                className="ai-modal-prio-badge"
+                style={{
+                  backgroundColor: prioInfo.badgeBg,
+                  color: prioInfo.color
+                }}
+              >
                 <Flame size={15} />
-                <span>{badge.label}</span>
+                <span>{prioInfo.label}</span>
               </div>
             </div>
 
-            {/* Poängmatrisens tre pelare */}
+            {/* Sammansatt poängmatris - 3 Pelare */}
             <div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.65rem' }}>
+              <div className="ai-modal-section-label" style={{ marginBottom: '0.55rem' }}>
                 Sammansatt poängmatris (Grundpoäng)
               </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem' }}>
-                {/* Kategori */}
-                <div style={{ backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '0.9rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                    Kategori (30 %)
+
+              <div className="ai-modal-pillars-grid">
+                {/* Pelare 1: Kategori */}
+                <div className="ai-modal-pillar-card">
+                  <div className="ai-modal-pillar-name">Kategori (30 %)</div>
+                  <div className="ai-modal-pillar-val">{category}</div>
+                  <div className="ai-modal-pillar-bar-bg">
+                    <div
+                      className="ai-modal-pillar-bar-fill"
+                      style={{
+                        width: '100%',
+                        backgroundColor: 'var(--primary, #3b82f6)'
+                      }}
+                    />
                   </div>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                    {category}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                  <div className="ai-modal-pillar-desc">
                     Styrs av dina inställningar
                   </div>
                 </div>
 
-                {/* Akuthet */}
-                <div style={{ backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '0.9rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                    Akuthet (40 %)
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
-                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: urgency >= 8 ? '#f97316' : 'var(--text-main)' }}>
+                {/* Pelare 2: Akuthet */}
+                <div className="ai-modal-pillar-card">
+                  <div className="ai-modal-pillar-name">Akuthet (40 %)</div>
+                  <div className="ai-modal-pillar-val">
+                    <span style={{ color: urgency >= 8 ? '#f97316' : undefined }}>
                       {urgency}
                     </span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>/ 10</span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500, marginLeft: '3px' }}>
+                      / 10
+                    </span>
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                  <div className="ai-modal-pillar-bar-bg">
+                    <div
+                      className="ai-modal-pillar-bar-fill"
+                      style={{
+                        width: `${Math.min(100, urgency * 10)}%`,
+                        backgroundColor: urgency >= 8 ? '#f97316' : (urgency >= 5 ? '#3b82f6' : '#94a3b8')
+                      }}
+                    />
+                  </div>
+                  <div className="ai-modal-pillar-desc">
                     {urgency >= 8 ? 'Mycket brådskande händelse' : (urgency >= 5 ? 'Väsentligt nyhetsvärde' : 'Vardaglig händelse')}
                   </div>
                 </div>
 
-                {/* Substans */}
-                <div style={{ backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '0.9rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                    Faktasubstans (30 %)
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
-                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: substance >= 7 ? '#10b981' : 'var(--text-main)' }}>
+                {/* Pelare 3: Faktasubstans */}
+                <div className="ai-modal-pillar-card">
+                  <div className="ai-modal-pillar-name">Faktasubstans (30 %)</div>
+                  <div className="ai-modal-pillar-val">
+                    <span style={{ color: substance >= 7 ? '#10b981' : undefined }}>
                       {substance}
                     </span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>/ 10</span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500, marginLeft: '3px' }}>
+                      / 10
+                    </span>
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                    {substance >= 7 ? 'Genomarbetat faktainnehåll' : (substance >= 4 ? 'Måttligt informationsdjup' : 'Kortfattad notis')}
+                  <div className="ai-modal-pillar-bar-bg">
+                    <div
+                      className="ai-modal-pillar-bar-fill"
+                      style={{
+                        width: `${Math.min(100, substance * 10)}%`,
+                        backgroundColor: substance >= 7 ? '#10b981' : (substance >= 4 ? '#3b82f6' : '#94a3b8')
+                      }}
+                    />
+                  </div>
+                  <div className="ai-modal-pillar-desc">
+                    {substance >= 7 ? 'Genomarbetat faktainnehåll' : (substance >= 4 ? 'Måttligt faktainnehåll' : 'Kortfattad notis')}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* AI-modellens motivering */}
+            {/* Modellens motivering och beräkning */}
             <div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.45rem' }}>
-                Modellens motivering & Beräkning
+              <div className="ai-modal-section-label" style={{ marginBottom: '0.45rem' }}>
+                <Sparkles size={13} style={{ color: 'var(--primary, #6366f1)' }} />
+                <span>Modellens motivering & Beräkning</span>
               </div>
-              <div style={{
-                backgroundColor: 'var(--bg-app)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '10px',
-                padding: '0.9rem 1rem',
-                fontSize: '0.88rem',
-                color: 'var(--text-main)',
-                lineHeight: 1.5
-              }}>
+              <div className="ai-modal-reason-box">
                 {reason}
               </div>
             </div>
 
-            {/* Diagnostik & Prestanda */}
+            {/* Diagnostik & Metadata */}
             <div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.55rem' }}>
+              <div className="ai-modal-section-label" style={{ marginBottom: '0.5rem' }}>
                 Diagnostik & Metadata
               </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.65rem' }}>
-                {/* Analystid */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.65rem 0.85rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <Clock size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+
+              <div className="ai-modal-diagnostics-grid">
+                {/* Analystid i sekunder */}
+                <div className="ai-modal-diagnostic-chip">
+                  <Clock size={16} className="ai-modal-diagnostic-icon" style={{ color: 'var(--text-muted)' }} />
                   <div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Analystid i LLM</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                    <div className="ai-modal-diagnostic-label">Analystid i LLM</div>
+                    <div className="ai-modal-diagnostic-val">
                       {duration ? `${duration} sekunder` : 'Bakgrundsbearbetad'}
                     </div>
                   </div>
                 </div>
 
-                {/* ClickBait-status */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.65rem 0.85rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                {/* ClickBait-granskning */}
+                <div className="ai-modal-diagnostic-chip">
                   {isClickbait ? (
-                    <AlertTriangle size={16} style={{ color: '#ef4444', flexShrink: 0 }} />
+                    <AlertTriangle size={16} className="ai-modal-diagnostic-icon" style={{ color: '#ef4444' }} />
                   ) : (
-                    <CheckCircle2 size={16} style={{ color: '#10b981', flexShrink: 0 }} />
+                    <CheckCircle2 size={16} className="ai-modal-diagnostic-icon" style={{ color: '#10b981' }} />
                   )}
                   <div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>ClickBait-analys</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: isClickbait ? '#ef4444' : 'var(--text-main)' }}>
+                    <div className="ai-modal-diagnostic-label">ClickBait-analys</div>
+                    <div className="ai-modal-diagnostic-val" style={{ color: isClickbait ? '#ef4444' : undefined }}>
                       {isClickbait ? (clickbaitReason || 'ClickBait upptäckt (-25p)') : 'Ingen ClickBait'}
                     </div>
                   </div>
                 </div>
 
-                {/* Kluster */}
+                {/* Kluster och bekräftelse */}
                 {clusterSize > 1 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.65rem 0.85rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                    <Layers size={16} style={{ color: '#3b82f6', flexShrink: 0 }} />
+                  <div className="ai-modal-diagnostic-chip">
+                    <Layers size={16} className="ai-modal-diagnostic-icon" style={{ color: '#3b82f6' }} />
                     <div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Flerkällsbekräftelse</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                      <div className="ai-modal-diagnostic-label">Flerkällsbekräftelse</div>
+                      <div className="ai-modal-diagnostic-val">
                         {clusterSize} oberoende källor
                       </div>
                     </div>
@@ -305,26 +298,16 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
               </div>
             </div>
 
-            {/* Taggar */}
+            {/* Identifierade ämnestaggar */}
             {tags.length > 0 && (
               <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <div className="ai-modal-section-label" style={{ marginBottom: '0.45rem' }}>
                   <Tag size={13} />
                   <span>Identifierade ämnestaggar</span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                <div className="ai-modal-tags-wrap">
                   {tags.map((t, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        padding: '4px 10px',
-                        backgroundColor: 'var(--bg-app)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        color: 'var(--text-main)'
-                      }}
-                    >
+                    <span key={i} className="ai-modal-tag-chip">
                       #{t}
                     </span>
                   ))}
@@ -334,31 +317,13 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
           </div>
 
           {/* Footer */}
-          <div style={{
-            padding: '1rem 1.5rem',
-            borderTop: '1px solid var(--border-color)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backgroundColor: 'var(--bg-card)'
-          }}>
+          <div className="ai-modal-footer">
             {onReanalyze && (
               <button
+                type="button"
                 onClick={() => onReanalyze(item.id)}
                 disabled={isAnalyzing}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '8px 16px',
-                  backgroundColor: 'var(--bg-app)',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-main)',
-                  borderRadius: '8px',
-                  cursor: isAnalyzing ? 'not-allowed' : 'pointer',
-                  fontWeight: 600,
-                  fontSize: '0.85rem'
-                }}
+                className="ai-modal-btn-secondary"
               >
                 <RefreshCw size={15} className={isAnalyzing ? 'spin' : ''} />
                 <span>{isAnalyzing ? 'Analyserar om...' : 'Kör om AI-analys'}</span>
@@ -366,18 +331,9 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
             )}
 
             <button
+              type="button"
               onClick={onClose}
-              style={{
-                padding: '8px 20px',
-                backgroundColor: 'var(--primary)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                marginLeft: 'auto'
-              }}
+              className="ai-modal-btn-primary"
             >
               Stäng
             </button>

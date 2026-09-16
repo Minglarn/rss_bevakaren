@@ -1,0 +1,481 @@
+/* ==========================================================================
+   AI REASONING MODAL - Full tema-integration, responsiv och modern design
+   ========================================================================== */
+
+/* Bakgrund / Overlay */
+.ai-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  animation: aiModalFadeIn 0.2s ease-out;
+}
+
+/* Modalbox */
+.ai-modal-container {
+  background-color: var(--bg-card, #ffffff);
+  color: var(--text-main, #0f172a);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+  border-radius: 18px;
+  width: 100%;
+  max-width: 620px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Drag-handtag för mobilt bottenark */
+.ai-modal-drag-handle-container {
+  display: none;
+  justify-content: center;
+  padding: 0.6rem 0 0.2rem 0;
+  background-color: var(--bg-card, #ffffff);
+}
+
+.ai-modal-drag-handle {
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background-color: var(--border-color, #cbd5e1);
+  opacity: 0.8;
+}
+
+/* Header */
+.ai-modal-header {
+  padding: 1.15rem 1.4rem;
+  border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-card, #ffffff);
+  flex-shrink: 0;
+}
+
+.ai-modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.ai-modal-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary, #6366f1);
+  flex-shrink: 0;
+}
+
+.ai-modal-title {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  letter-spacing: -0.01em;
+}
+
+.ai-modal-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 2px;
+}
+
+.ai-modal-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.ai-modal-close-btn:hover {
+  background-color: var(--bg-card-hover, rgba(0, 0, 0, 0.05));
+  color: var(--text-main, #0f172a);
+}
+
+/* Rullningsbart innehåll */
+.ai-modal-body {
+  padding: 1.25rem 1.4rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex: 1;
+}
+
+/* Artikelrubrik */
+.ai-modal-article-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ai-modal-section-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ai-modal-article-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+}
+
+/* Poängkort (Hero) */
+.ai-modal-score-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.35rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-modal-score-card.is-prio {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.14) 0%, rgba(234, 88, 12, 0.04) 100%);
+  border-color: rgba(249, 115, 22, 0.35);
+}
+
+.ai-modal-score-card.is-normal {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.04) 100%);
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
+.ai-modal-score-card.is-low {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.08) 0%, rgba(100, 116, 139, 0.03) 100%);
+  border-color: var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+.ai-modal-score-number-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.ai-modal-score-big {
+  font-size: 2.35rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.ai-modal-score-max {
+  font-size: 0.95rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 600;
+}
+
+.ai-modal-prio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* Poängpelare */
+.ai-modal-pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.ai-modal-pillar-card {
+  background-color: var(--bg-app, rgba(0, 0, 0, 0.02));
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  border-radius: 12px;
+  padding: 0.85rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ai-modal-pillar-name {
+  font-size: 0.76rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 600;
+}
+
+.ai-modal-pillar-val {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main, #0f172a);
+}
+
+.ai-modal-pillar-bar-bg {
+  height: 4px;
+  border-radius: 999px;
+  background-color: var(--border-color, rgba(0, 0, 0, 0.1));
+  overflow: hidden;
+  margin: 3px 0;
+}
+
+.ai-modal-pillar-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.ai-modal-pillar-desc {
+  font-size: 0.73rem;
+  color: var(--text-muted, #64748b);
+  line-height: 1.35;
+}
+
+/* Resonemangsruta */
+.ai-modal-reason-box {
+  background-color: var(--bg-app, rgba(0, 0, 0, 0.02));
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  border-left: 3.5px solid var(--primary, #6366f1);
+  border-radius: 10px;
+  padding: 0.95rem 1.15rem;
+  font-size: 0.9rem;
+  color: var(--text-main, #0f172a);
+  line-height: 1.55;
+}
+
+/* Diagnostik & Metadata */
+.ai-modal-diagnostics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.65rem;
+}
+
+.ai-modal-diagnostic-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.7rem 0.9rem;
+  background-color: var(--bg-app, rgba(0, 0, 0, 0.02));
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  border-radius: 10px;
+}
+
+.ai-modal-diagnostic-icon {
+  flex-shrink: 0;
+}
+
+.ai-modal-diagnostic-label {
+  font-size: 0.72rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 500;
+}
+
+.ai-modal-diagnostic-val {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+
+/* Taggar */
+.ai-modal-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ai-modal-tag-chip {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  background-color: var(--bg-app, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  color: var(--text-main, #0f172a);
+  font-weight: 500;
+}
+
+/* Footer */
+.ai-modal-footer {
+  padding: 0.9rem 1.4rem;
+  border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background-color: var(--bg-card, #ffffff);
+  flex-shrink: 0;
+}
+
+.ai-modal-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  background-color: var(--bg-app, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  color: var(--text-main, #0f172a);
+  border-radius: 8px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ai-modal-btn-secondary:hover:not(:disabled) {
+  background-color: var(--bg-card-hover, rgba(0, 0, 0, 0.08));
+}
+
+.ai-modal-btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ai-modal-btn-primary {
+  padding: 0.55rem 1.6rem;
+  background-color: var(--primary, #2563eb);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.ai-modal-btn-primary:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   TEMASTÖD FÖR MÖRKT TEMA (.theme-dark)
+   ========================================================================== */
+.theme-dark .ai-modal-overlay {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.theme-dark .ai-modal-container {
+  background-color: var(--bg-card, #1e293b);
+  border-color: var(--border-color, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}
+
+.theme-dark .ai-modal-header,
+.theme-dark .ai-modal-footer,
+.theme-dark .ai-modal-drag-handle-container {
+  background-color: var(--bg-card, #1e293b);
+  border-color: var(--border-color, rgba(255, 255, 255, 0.08));
+}
+
+.theme-dark .ai-modal-pillar-card,
+.theme-dark .ai-modal-reason-box,
+.theme-dark .ai-modal-diagnostic-chip,
+.theme-dark .ai-modal-tag-chip,
+.theme-dark .ai-modal-btn-secondary {
+  background-color: rgba(15, 23, 42, 0.6);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.theme-dark .ai-modal-pillar-bar-bg {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .ai-modal-score-card.is-prio {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(234, 88, 12, 0.06) 100%);
+  border-color: rgba(249, 115, 22, 0.45);
+}
+
+.theme-dark .ai-modal-score-card.is-normal {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(37, 99, 235, 0.05) 100%);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.theme-dark .ai-modal-score-card.is-low {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.12) 0%, rgba(100, 116, 139, 0.04) 100%);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================================================
+   MOBILANPASSNING (Bottom Sheet)
+   ========================================================================== */
+@media (max-width: 640px) {
+  .ai-modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .ai-modal-container {
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 20px 20px 0 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    animation: aiModalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .ai-modal-drag-handle-container {
+    display: flex;
+  }
+
+  .ai-modal-pillars-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .ai-modal-footer {
+    padding-bottom: max(0.9rem, env(safe-area-inset-bottom, 0.9rem));
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .ai-modal-btn-primary,
+  .ai-modal-btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@keyframes aiModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes aiModalSlideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

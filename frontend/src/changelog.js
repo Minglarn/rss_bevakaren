@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.12',
+    date: '2026-09-16',
+    title: 'Visuell temaanpassning för AI-resonemangsdialogen',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Fullständig temaintegration och luftig layout',
+        description: 'AI-resonemangsdialogen har byggts om för att följa applikationens formspråk till 100 %. Klumpiga inkapslade rutor har ersatts av rena sektioner, mjuka gradienter, progress-staplar och fullt stöd för mörkt tema och mobilens bottenark.'
+      },
+      {
+        type: 'improvement',
+        title: 'Dedikerad CSS och globala färgvariabler',
+        description: 'Skapat AIReasoningModal.css och säkerställt att CSS-variabler som bakgrund och hovringsfärger är definierade över samtliga färgteman.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.11',
     date: '2026-09-16',
     title: 'AI-transparens och detaljerat resonemang via (I)-knapp',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

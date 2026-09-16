@@ -1,6 +1,8 @@
 :root {
   --bg-main: #f8fafc;
+  --bg-app: #f1f5f9;
   --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-card-hover: rgba(0, 0, 0, 0.04);
   --text-main: #0f172a;
   --text-muted: #475569;
   --primary: #2563eb;
@@ -852,6 +854,7 @@ select:focus, input:focus {
   --bg-main: #0f172a;
   --bg-app: #0f172a;
   --bg-card: #1e293b;
+  --bg-card-hover: rgba(255, 255, 255, 0.06);
   --border-color: rgba(255, 255, 255, 0.1);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
