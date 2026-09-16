@@ -237,7 +237,6 @@ const SwipeableArticleCard = ({
 
   return (
     <motion.div 
-      layout="position"
       className="feed-card-swipe-container"
       style={{
         position: 'relative',
@@ -246,7 +245,6 @@ const SwipeableArticleCard = ({
       }}
       animate={isDismissing ? { opacity: 0, scale: 0.96 } : { opacity: 1, scale: 1 }}
       transition={{
-        layout: { duration: 0.25, ease: "easeOut" },
         opacity: { duration: 0.22, ease: "easeOut" },
         scale: { duration: 0.22, ease: "easeOut" }
       }}
@@ -393,7 +391,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [displayedFeeds, setDisplayedFeeds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = 30;
   const observer = useRef();
   const [searchParams, setSearchParams] = useSearchParams();
   const feedId = searchParams.get('feedId');
@@ -1008,7 +1006,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           return nextPage;
         });
       }
-    });
+    }, { rootMargin: '400px' });
     
     if (node) observer.current.observe(node);
   }, [loading, allFeeds]);
@@ -2466,7 +2464,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   {shouldShowAi && (item.category || (item.tags && item.tags.length > 0) || item.priority === 'high' || (item.prio_score || 0) >= 75) && (
                     <div className="card-tags-section">
                       <div className="card-tags-divider" />
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.85rem', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.15rem', alignItems: 'center' }}>
                         {/* PRIO-piller flyttad från TopBar för en renare layout */}
                         {shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (
                           <span 

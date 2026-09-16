@@ -1,9 +1,37 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.19',
+    date: '2026-09-16',
+    title: 'Minskade kortmarginaler, stabiliserad scroll och nytt fliknamn',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Halverade marginaler och tightare kortlayout',
+        description: 'Minskat padding i toppbaren och bottenbaren med 50% samt reducerat marginalen under taggarna för en renare och mer kompakt presentation.'
+      },
+      {
+        type: 'ui',
+        title: 'Eliminerat tomt glapp under taggar',
+        description: 'Justerat rutnätslayouten så att kort anpassar sig naturligt efter sitt eget innehåll istället för att tvingas till onödig höjd av grannkort.'
+      },
+      {
+        type: 'fix',
+        title: 'Stabiliserad oändlig scrollning utan ryck',
+        description: 'Tagit bort positioneringsanimering från korten under scroll, ökat sidomfånget till 30 artiklar och lagt till mjuk förladdning (rootMargin: 400px) så att flödet inte hoppar till när du scrollar.'
+      },
+      {
+        type: 'ui',
+        title: 'Döpt om fliken till Nyhetsflöde',
+        description: 'Ersatt det engelska namnet "Dashboard" med det naturliga svenska namnet "Nyhetsflöde" i sidomenyn.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.18',
     date: '2026-09-16',
     title: 'Datumspärr, solid vy för ogillade och renare knapprad',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'fix',

@@ -334,7 +334,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             backgroundColor: location.pathname === '/' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             fontWeight: location.pathname === '/' ? 600 : 400
           }}>
-            <Rss size={19} /> {!isCollapsed && "Dashboard"}
+            <Rss size={19} /> {!isCollapsed && "Nyhetsflöde"}
             {!isCollapsed && myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
               <span style={{ 
                 marginLeft: 'auto', 
