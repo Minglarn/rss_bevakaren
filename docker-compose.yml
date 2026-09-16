@@ -26,6 +26,7 @@ services:
       - MQTT_USERNAME=
       - MQTT_PASSWORD=
       - MQTT_TOPIC_PREFIX=rss_bevakaren
+      - MQTT_RETAIN=true       # Behåll senaste meddelandet i brokern (persistent över omstarter)
     restart: unless-stopped
 
   frontend:

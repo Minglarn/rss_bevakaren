@@ -190,18 +190,18 @@ const Settings = ({ onLogout }) => {
   const [isLoadingAi, setIsLoadingAi] = useState(false);
 
   const DEFAULT_CATS_WEIGHTS = [
-    { name: 'Blåljus', weight: 10 },
+    { name: 'Blåljus', weight: 7 },
     { name: 'Lokalt', weight: 8 },
     { name: 'Teknik', weight: 9 },
     { name: 'Motor', weight: 7 },
     { name: 'Inrikes', weight: 6 },
-    { name: 'Vetenskap & Hälsa', weight: 6 },
+    { name: 'Vetenskap & Hälsa', weight: 7 },
     { name: 'Utrikes', weight: 5 },
     { name: 'Ekonomi', weight: 5 },
     { name: 'Politik', weight: 4 },
     { name: 'Övrigt', weight: 3 },
     { name: 'Sport', weight: 1 },
-    { name: 'Nöje & Kultur', weight: 0 }
+    { name: 'Nöje & Kultur', weight: 5 }
   ];
 
   const updatePromptFromRules = (cats) => {

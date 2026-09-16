@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.17',
+    date: '2026-09-16',
+    title: 'Nya standardvikter, persistent MQTT och modelldokumentation',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Uppdaterade standardvikter för kategorier',
+        description: 'Justerat standardvikterna i backend och inställningar: Blåljus (7/10), Lokalt (8/10), Inrikes (6/10), Utrikes (5/10), Politik (4/10), Ekonomi (5/10), Teknik (9/10), Motor (7/10), Vetenskap & Hälsa (7/10), Sport (1/10), Nöje & Kultur (5/10) samt Övrigt (3/10).'
+      },
+      {
+        type: 'feature',
+        title: 'Persistent MQTT med retain som standard',
+        description: 'MQTT_RETAIN är nu aktiverat som standard (true), vilket innebär att publicerade artikelhändelser ligger kvar i MQTT-brokern över omstarter. Vid omstart/stopp rapporteras status automatiskt som offline via LWT (Last Will and Testament).'
+      },
+      {
+        type: 'docs',
+        title: 'Dokumentation av testade AI-modeller',
+        description: 'Tydliggörande i dokumentationen kring modeller för eget bruk och test: google/gemma-4-12b-qat för textanalys samt text-embedding-nomic-embed-text-v1.5 för vektorembeddings.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.16',
     date: '2026-09-16',
     title: 'Snabbfilter för ogillade artiklar',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

@@ -15,7 +15,7 @@ MQTT_USERNAME = os.environ.get("MQTT_USERNAME", "").strip()
 MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD", "").strip()
 MQTT_TOPIC_PREFIX = os.environ.get("MQTT_TOPIC_PREFIX", "rss_bevakaren").strip().strip("/")
 MQTT_CLIENT_ID = os.environ.get("MQTT_CLIENT_ID", f"rss_bevakaren_{int(time.time())}")
-MQTT_RETAIN = os.environ.get("MQTT_RETAIN", "false").strip().lower() in ("true", "1", "yes", "on")
+MQTT_RETAIN = os.environ.get("MQTT_RETAIN", "true").strip().lower() in ("true", "1", "yes", "on")
 MQTT_QOS = int(os.environ.get("MQTT_QOS", "1").strip() or 1)
 
 # Global MQTT-klient

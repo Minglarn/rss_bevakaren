@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.16.16-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.16.17-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -35,6 +35,15 @@ RSS-Bevakaren är ett modernt, självhostat system för att övervaka, filtrera,
 
 RSS-Bevakaren har en inbyggd AI-pipeline som ansluter till lokala språkmodeller (såsom LM Studio, Ollama eller LocalAI) eller valfria OpenAI-kompatibla API-slutpunkter.
 
+### Rekommenderade modeller (eget bruk och verifierat test)
+
+Systemet är anpassat och optimerat för följande lokala modeller:
+
+- **Språkmodell (LLM för analys, sammanfattning och ClickBait-detektering):** `google/gemma-4-12b-qat`  
+  Ger snabb inferens och god förståelse för svenskt nyhetsspråk samt ClickBait-identifiering.
+- **Embeddingsmodell (Semantisk vektorsökning och hybrid-RAG):** `text-embedding-nomic-embed-text-v1.5`  
+  Levererar 768-dimensionella vektorer med stark förmåga att matcha användarfrågor mot artikelinnehåll.
+
 ### Hur poängsystemet och prioriteringen fungerar
 
 Prioriteringen i RSS-Bevakaren styrs inte enbart av en enskild kategori, utan av en **sammansatt poängmatris (0–100 poäng)**. Detta förhindrar att vardagliga smånotiser i dina favoritkategorier felaktigt blir högprioriterade, samtidigt som stora och bekräftade nyheter alltid lyfts fram.
@@ -60,7 +69,7 @@ $$\text{Grundpoäng} = (\text{Kategorivikt} \times 10 \times 0.30) + (\text{Akut
 - **Flerkällsbekräftelse (Kluster):** Om samma händelse rapporteras av **2 oberoende källor** läggs **+10 poäng** till. Om **3 eller fler källor** rapporterar läggs **+15 poäng** till. Detta lyfter automatiskt bekräftade stora händelser.
 - **ClickBait-avdrag (-25 poäng):** Artiklar med sensationella eller undanhållande rubriker får ett automatiskt avdrag på 25 poäng för att hålla PRIO-flödet rent från skräp.
 - **Bevakningsord (Garanterad 100 % PRIO):** Om artikeln matchar ett av dina egna bevakningsord får den omedelbart **100 poäng och Hög prioritet**, oavsett kategori.
-- **Ignorerad kategori (Vikt 0):** Om du sätter en kategoris vikt till 0 (t.ex. Nöje eller Sport) blockeras den alltid (0 poäng) och når aldrig PRIO.
+- **Ignorerad kategori (Vikt 0):** Om du sätter en kategoris vikt till 0 blockeras den alltid (0 poäng) och når aldrig PRIO.
 
 #### Konkret exempel: Egen kategori "Elpriser" vs Bevakningsord
 Om du till exempel lägger till den egna kategorin **Elpriser** med intressevikt **9**:
@@ -86,18 +95,18 @@ Under **Inställningar -> AI-analys & Prompt -> Kategoriviktning och prioritet**
 
 1. **Standardkategorier:**
    Systemet levereras med en genomtänkt uppsättning standardkategorier med förvalda intressevikter:
-   - *Blåljus* (10/10)
    - *Teknik* (9/10)
    - *Lokalt* (8/10)
+   - *Blåljus* (7/10)
    - *Motor* (7/10)
+   - *Vetenskap & Hälsa* (7/10)
    - *Inrikes* (6/10)
-   - *Vetenskap & Hälsa* (6/10)
    - *Ekonomi* (5/10)
    - *Utrikes* (5/10)
+   - *Nöje & Kultur* (5/10)
    - *Politik* (4/10)
    - *Övrigt* (3/10)
    - *Sport* (1/10)
-   - *Nöje & Kultur* (0/10)
 
 2. **Lägga till helt egna kategorier:**
    - Du kan när som helst lägga till egna kategorier via formuläret *"Lägg till kategori"* (t.ex. `Försvar`, `Klimat`, `Fastigheter`, `AI & Rymd`).
@@ -180,7 +189,7 @@ services:
       - MQTT_PASSWORD=ditt_lösenord       # Valfritt: lämna tomt om brokern tillåter anonym anslutning
       - MQTT_TOPIC_PREFIX=rss_bevakaren
       - MQTT_CLIENT_ID=rss_bevakaren_backend
-      - MQTT_RETAIN=false
+      - MQTT_RETAIN=true                  # Behåll senaste meddelandet i brokern (persistent över omstarter)
       - MQTT_QOS=0
 ```
 
@@ -190,9 +199,11 @@ MQTT-tjänsten använder en ren och förutsägbar hierarki uppdelad per använda
 
 | Ämne (Topic) | Beskrivning | Retained |
 |---|---|---|
-| `{prefix}/status` | Systemets globala anslutningsstatus via LWT (Last Will and Testament). Skickar `"online"` vid anslutning och `"offline"` om backend avslutas. | Ja |
-| `{prefix}/{användare}/feeds/{feed_slug}` | Individuell ström för varje användares bevakade flöden (t.ex. `rss_bevakaren/admin/feeds/polisen_skane_lan` eller `rss_bevakaren/wife/feeds/svt_nyheter`). Specialtecken saneras automatiskt. | Konfigurerbart |
-| `{prefix}/{användare}/prio` | Dedikerad kanal för användarens högprioriterade händelser. Artiklar med hög prioritet eller som matchar användarens egna bevakningsord publiceras här. | Konfigurerbart |
+| `{prefix}/status` | Systemets globala anslutningsstatus via LWT (Last Will and Testament). Skickar `"online"` vid anslutning och `"offline"` om backend avslutas eller startar om. | Ja |
+| `{prefix}/{användare}/feeds/{feed_slug}` | Individuell ström för varje användares bevakade flöden (t.ex. `rss_bevakaren/admin/feeds/polisen_skane_lan` eller `rss_bevakaren/wife/feeds/svt_nyheter`). Specialtecken saneras automatiskt. | Ja (standard: true) |
+| `{prefix}/{användare}/prio` | Dedikerad kanal för användarens högprioriterade händelser. Artiklar med hög prioritet eller som matchar användarens egna bevakningsord publiceras här. | Ja (standard: true) |
+
+När `MQTT_RETAIN=true` är aktiverat ligger de senaste artikelhändelserna kvar i MQTT-brokern över omstarter, vilket gör att anslutna system (såsom Home Assistant) omedelbart har tillgång till det senaste meddelandet utan att vänta på nya artiklar. Vid avstängning eller omstart skickar LWT-mekanismen automatiskt `"offline"` till `{prefix}/status`.
 
 #### Rekommenderade prenumerationsmönster
 - **Allt för specifik användare:** `rss_bevakaren/admin/#`
@@ -321,6 +332,7 @@ services:
       - MQTT_BROKER=192.168.1.50
       - MQTT_PORT=1883
       - MQTT_TOPIC_PREFIX=rss_bevakaren
+      - MQTT_RETAIN=true
     restart: unless-stopped
 
   frontend:

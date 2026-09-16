@@ -13,7 +13,7 @@ LM_STUDIO_TIMEOUT = int(os.environ.get("LM_STUDIO_TIMEOUT", "120"))
 LM_STUDIO_MAX_TOKENS = int(os.environ.get("LM_STUDIO_MAX_TOKENS", "8192"))
 
 DEFAULT_CATEGORIES_WITH_WEIGHTS = [
-    {"name": "Blåljus", "weight": 10},
+    {"name": "Blåljus", "weight": 7},
     {"name": "Lokalt", "weight": 8},
     {"name": "Inrikes", "weight": 6},
     {"name": "Utrikes", "weight": 5},
@@ -21,9 +21,9 @@ DEFAULT_CATEGORIES_WITH_WEIGHTS = [
     {"name": "Ekonomi", "weight": 5},
     {"name": "Teknik", "weight": 9},
     {"name": "Motor", "weight": 7},
-    {"name": "Vetenskap & Hälsa", "weight": 6},
+    {"name": "Vetenskap & Hälsa", "weight": 7},
     {"name": "Sport", "weight": 1},
-    {"name": "Nöje & Kultur", "weight": 0},
+    {"name": "Nöje & Kultur", "weight": 5},
     {"name": "Övrigt", "weight": 3}
 ]
 
