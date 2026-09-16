@@ -1182,36 +1182,43 @@ def safe_bg_save_embedding(art_id: int, title: str, summary: str):
 
 def get_user_interest_profile(db: Session, user_id: int):
     """
-    Hämtar unika taggar och kategorier från användarens gillade och ogillade artiklar
+    Hämtar unika ämnestaggar från användarens gillade och ogillade artiklar
     för att skapa en adaptiv intresseprofil för AI-prioritering.
+    OBS: Huvudkategorier inkluderas INTE här då de styrs explicit av användarens
+    kategorireglage i Inställningar.
     """
-    liked_rows = db.query(models.Article.tags, models.Article.category).join(models.Feed).filter(
+    liked_rows = db.query(models.Article.tags).join(models.Feed).filter(
         models.Feed.user_id == user_id,
         models.Article.user_vote == 1
     ).order_by(models.Article.id.desc()).limit(100).all()
 
-    disliked_rows = db.query(models.Article.tags, models.Article.category).join(models.Feed).filter(
+    disliked_rows = db.query(models.Article.tags).join(models.Feed).filter(
         models.Feed.user_id == user_id,
         models.Article.user_vote == -1
     ).order_by(models.Article.id.desc()).limit(100).all()
 
-    def _extract_terms(rows):
+    def _extract_tags(rows):
         terms = set()
-        for r_tags, r_cat in rows:
-            if r_cat and r_cat.strip():
-                terms.add(r_cat.strip().lower())
+        for (r_tags,) in rows:
             if r_tags:
                 try:
                     parsed = json.loads(r_tags) if isinstance(r_tags, str) else r_tags
                     if isinstance(parsed, list):
                         for t in parsed:
-                            if t and str(t).strip():
-                                terms.add(str(t).strip().lower())
+                            clean_t = str(t).strip().lower()
+                            if clean_t and len(clean_t) >= 2:
+                                terms.add(clean_t)
                 except Exception:
                     pass
-        return list(terms)
+        return terms
 
-    return _extract_terms(liked_rows), _extract_terms(disliked_rows)
+    liked_set = _extract_tags(liked_rows)
+    disliked_set = _extract_tags(disliked_rows)
+
+    # Gillade ämnen har alltid företräde; ett ämne man gillat kan aldrig ge ett ogillat-avdrag
+    disliked_set = disliked_set - liked_set
+
+    return list(liked_set), list(disliked_set)
 
 ai_wake_event = asyncio.Event()
 ai_failed_attempts: dict[int, int] = {}

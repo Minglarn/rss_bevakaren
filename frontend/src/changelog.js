@@ -1,9 +1,22 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.13',
+    date: '2026-09-16',
+    title: 'Korrekt isolering av huvudkategorier från ogillade ämnen',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Huvudkategorier skyddas mot felaktigt ogillat-avdrag',
+        description: 'Huvudkategorier som användaren har valt (t.ex. Teknik 9/10) kan inte längre felaktigt straffas med "-15p ogillat ämne". Gilla- och Ogilla-systemet baseras nu strikt på specifika ämnestaggar, och gillade taggar har alltid företräde framför ogillade.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.12',
     date: '2026-09-16',
     title: 'Visuell temaanpassning för AI-resonemangsdialogen',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'ui',

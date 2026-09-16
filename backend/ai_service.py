@@ -635,17 +635,21 @@ def calculate_priority(
         reasons.append("+10p flerkällsbekräftelse (2 källor)")
 
     # Adaptiv intresseprofil (baserat på Gilla / Ogilla)
-    article_terms = set()
-    if clean_cat:
-        article_terms.add(clean_cat.lower())
+    # OBS: Endast specifika ämnestaggar används här, inte huvudkategorin,
+    # eftersom kategorivikten redan appliceras i grundpoängen.
+    article_tag_terms = set()
     if tags:
         for t in tags:
             if t and str(t).strip():
-                article_terms.add(str(t).strip().lower())
+                article_tag_terms.add(str(t).strip().lower())
 
+    liked_set = set()
     if liked_tags:
         liked_set = {str(lt).strip().lower() for lt in liked_tags if lt and str(lt).strip()}
-        liked_matches = [t for t in article_terms if t in liked_set]
+        # Uteslut allmänna kategorinamn så intresseprofilen fokuserar på specifika ämnen
+        if clean_cat:
+            liked_set.discard(clean_cat.lower())
+        liked_matches = [t for t in article_tag_terms if t in liked_set]
         if liked_matches:
             bonus = min(20, len(liked_matches) * 10)
             score += bonus
@@ -653,7 +657,13 @@ def calculate_priority(
 
     if disliked_tags:
         disliked_set = {str(dt).strip().lower() for dt in disliked_tags if dt and str(dt).strip()}
-        disliked_matches = [t for t in article_terms if t in disliked_set]
+        # 1. Ett ämne som användaren har gillat kan ALDRIG straffas som ogillat
+        disliked_set = disliked_set - liked_set
+        # 2. Artikelns huvudkategori eller användarens inställda kategorier kan ALDRIG straffas
+        if clean_cat:
+            disliked_set.discard(clean_cat.lower())
+
+        disliked_matches = [t for t in article_tag_terms if t in disliked_set]
         if disliked_matches:
             penalty = 15
             score -= penalty
