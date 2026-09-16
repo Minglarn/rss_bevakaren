@@ -33,11 +33,24 @@ DEFAULT_CATEGORIES_STR = " | ".join(DEFAULT_CATEGORIES)
 DEFAULT_SYSTEM_PROMPT = f"""Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {{
   "category": "Välj den mest passande av följande kategorier: {DEFAULT_CATEGORIES_STR}",
+  "urgency_score": 5,
+  "substance_score": 5,
   "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. OBLIGATORISKT: 1. Ange ALLTID geografisk plats (ort, kommun, stad eller land) om det framgår i artikeln (t.ex. 'i Lekebergs kommun' eller 'i centrala Malmö'). 2. Undvik helt metasnack som 'rapporterar Expressen' eller 'enligt tidningen' – fokusera enbart på själva händelsen. 3. Om rubriken är Clickbait eller undanhåller vem, vad eller var, ska svaret och de faktiska detaljerna avslöjas rakt på sak i första meningen.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
   "clickbait_reason": "Om is_clickbait är true: Beskriv kortfattat vad rubriken undanhåller och bekräfta att fakta har lyfts fram i sammanfattningen (t.ex. 'Rubriken undanhåller vad de nya priserna är för att locka klick. Fakta har lyfts fram i sammanfattningen ovan.'). Lämna tomt om false."
 }}
+Riktlinjer för poängsättning:
+- urgency_score (Heltal 1-10): Hur akut, omvälvande eller brådskande är händelsen/nyhetsvärdet?
+  1-3: Vardaglig händelse, liten lokal notis, kuriosa eller tidlös artikel.
+  4-6: Normal nyhet eller standardhändelse.
+  7-8: Stor/betydande händelse med stor samhällspåverkan eller snabb utveckling.
+  9-10: Mycket akut, extraordinär eller historisk händelse (t.ex. krigshandling, allvarlig katastrof, regeringskris).
+- substance_score (Heltal 1-10): Faktatäthet, informationsdjup och trovärdighet kontra ytlighet.
+  1-3: Ytlig notis, lösryckt rykte, ren åsiktspuff eller ClickBait med minimal substans.
+  4-6: Normal nyhetsartikel med grundläggande fakta och sammanhang.
+  7-8: Genomarbetad analys, granskning, officiell rapport eller faktaspäckad rapportering.
+  9-10: Mycket omfattande och grundlig rapport eller unik förstahandsgranskning.
 Riktlinjer för is_clickbait (Var mycket restriktiv):
 - Sätt ENDAST is_clickbait till true vid uppenbara Clickbaits där rubriken avsiktligt döljer själva händelsen eller ämnet med vaga formuleringar eller pronomen (t.ex. "Här slår han till", "Det här ska du aldrig göra", "Chockbeskedet", "Du anar inte vad som hände", "Här är nya priserna").
 - Om is_clickbait sätts till true: Beskriv i clickbait_reason kortfattat vad rubriken döljer och bekräfta att fakta har lyfts fram i sammanfattningen ovan.
@@ -77,6 +90,9 @@ def load_ai_config() -> Dict[str, Any]:
             cats = data.get("categories", DEFAULT_CATEGORIES)
             if "Max två korta" in prompt:
                 prompt = prompt.replace("Max två korta", "Max tre korta")
+                save_ai_config(prompt, cats)
+            if "urgency_score" not in prompt:
+                prompt = DEFAULT_SYSTEM_PROMPT
                 save_ai_config(prompt, cats)
             _cached_prompt = prompt
             _cached_categories = cats
@@ -402,6 +418,20 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
         except Exception:
             pass
 
+    urg_m = re.search(r'"urgency_score"\s*:\s*(\d+)', text)
+    if urg_m:
+        try:
+            result["urgency_score"] = int(urg_m.group(1))
+        except Exception:
+            pass
+
+    sub_m = re.search(r'"substance_score"\s*:\s*(\d+)', text)
+    if sub_m:
+        try:
+            result["substance_score"] = int(sub_m.group(1))
+        except Exception:
+            pass
+
     # Extrahera prio_reason (hanterar även ev citat inuti texten)
     reason_m = re.search(r'"prio_reason"\s*:\s*"(.*?)(?:"\s*,\s*"\w+"\s*:|"$|"[\r\n])', text, re.DOTALL)
     if reason_m:
@@ -469,11 +499,24 @@ def build_user_prompt(categories: Optional[Any] = None, prio_rules: Optional[str
     prompt = f"""Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {{
   "category": "Välj den mest passande av följande kategorier: {cats_str}",
+  "urgency_score": 5,
+  "substance_score": 5,
   "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. OBLIGATORISKT: 1. Ange ALLTID geografisk plats (ort, kommun, stad eller land) om det framgår i artikeln (t.ex. 'i Lekebergs kommun' eller 'i centrala Malmö'). 2. Undvik helt metasnack som 'rapporterar Expressen' eller 'enligt tidningen' – fokusera enbart på själva händelsen. 3. Om rubriken är Clickbait eller undanhåller vem, vad eller var, ska svaret och de faktiska detaljerna avslöjas rakt på sak i första meningen.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
   "clickbait_reason": "Om is_clickbait är true: Beskriv kortfattat vad rubriken undanhåller och bekräfta att fakta har lyfts fram i sammanfattningen (t.ex. 'Rubriken undanhåller vad de nya priserna är för att locka klick. Fakta har lyfts fram i sammanfattningen ovan.'). Lämna tomt om false."
 }}
+Riktlinjer för poängsättning:
+- urgency_score (Heltal 1-10): Hur akut, omvälvande eller brådskande är händelsen/nyhetsvärdet?
+  1-3: Vardaglig händelse, liten lokal notis, kuriosa eller tidlös artikel.
+  4-6: Normal nyhet eller standardhändelse.
+  7-8: Stor/betydande händelse med stor samhällspåverkan eller snabb utveckling.
+  9-10: Mycket akut, extraordinär eller historisk händelse (t.ex. krigshandling, allvarlig katastrof, regeringskris).
+- substance_score (Heltal 1-10): Faktatäthet, informationsdjup och trovärdighet kontra ytlighet.
+  1-3: Ytlig notis, lösryckt rykte, ren åsiktspuff eller ClickBait med minimal substans.
+  4-6: Normal nyhetsartikel med grundläggande fakta och sammanhang.
+  7-8: Genomarbetad analys, granskning, officiell rapport eller faktaspäckad rapportering.
+  9-10: Mycket omfattande och grundlig rapport eller unik förstahandsgranskning.
 Riktlinjer för is_clickbait (Var mycket restriktiv):
 - Sätt ENDAST is_clickbait till true vid uppenbara Clickbaits där rubriken avsiktligt döljer själva händelsen eller ämnet med vaga formuleringar eller pronomen (t.ex. "Här slår han till", "Det här ska du aldrig göra", "Chockbeskedet", "Du anar inte vad som hände", "Här är nya priserna").
 - Om is_clickbait sätts till true: Beskriv i clickbait_reason kortfattat vad rubriken döljer och bekräfta att fakta har lyfts fram i sammanfattningen ovan.
@@ -484,7 +527,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 def ensure_clickbait_in_prompt(prompt: Optional[str], categories: Optional[Any] = None) -> str:
     """
     Säkerställer att prompten innehåller de moderna, balanserade klickbete-instruktionerna,
-    krav på geografisk plats, 3 meningars sammanfattning samt förtydligande i clickbait_reason.
+    poängmatris för urgency/substance, krav på geografisk plats, 3 meningars sammanfattning.
     Om prompten är tom eller saknar de senaste reglerna, genereras en uppdaterad prompt.
     """
     if not prompt or not prompt.strip():
@@ -496,6 +539,8 @@ def ensure_clickbait_in_prompt(prompt: Optional[str], categories: Optional[Any] 
         return build_user_prompt(categories=categories)
     if "fakta har lyfts fram" not in cleaned.lower():
         return build_user_prompt(categories=categories)
+    if "urgency_score" not in cleaned:
+        return build_user_prompt(categories=categories)
     if "SAKLIGA NYHETER" in cleaned:
         return cleaned
     return build_user_prompt(categories=categories)
@@ -503,23 +548,39 @@ def ensure_clickbait_in_prompt(prompt: Optional[str], categories: Optional[Any] 
 def calculate_priority(
     category: str,
     categories_config: Any,
-    matched_keywords: Optional[List[str]] = None
+    matched_keywords: Optional[List[str]] = None,
+    urgency_score: Optional[int] = 5,
+    substance_score: Optional[int] = 5,
+    is_clickbait: bool = False,
+    cluster_size: int = 1
 ) -> Dict[str, Any]:
     """
-    Beräknar deterministisk prioritet och poäng:
-    1. Träff på specifika bevakningsord ger ALLTID högsta prioritet (100 poäng).
-    2. Kategori-vikt (0-10) styr grundpoäng:
-       - 8-10: high (80-100p) -> Direkt till PRIO-flödet
-       - 5-7: medium (50-70p) -> Ordinarie flöde
-       - 1-4: low (10-40p) -> Ordinarie flöde
-       - 0: low (0p) -> Ignoreras helt från PRIO
+    Beräknar deterministisk prioritet och poäng baserat på en flerdimensionell poängmatris:
+    1. Träff på specifika bevakningsord ger ALLTID högsta prioritet (100 poäng, HIGH).
+    2. Kategori med vikt 0 ger ALLTID 0 poäng (LOW, ignoreras).
+    3. Sammansatt grundpoäng (0-100):
+       - Kategorivikt: 30 %
+       - Urgency (akuthet / omvälvande nyhetsvärde): 40 %
+       - Substance (faktatäthet / informationsdjup): 30 %
+    4. Bonus & Avdrag:
+       - Flerkällsbekräftelse (kluster): +10p vid 2 källor, +15p vid 3+ källor.
+       - ClickBait-avdrag: -25p vid ClickBait (max 35p om inte bekräftat blåljus med hög akuthet).
+    5. Prioritetsnivå:
+       - >= 75: high (PRIO-flödet)
+       - >= 45: medium (Ordinarie flöde)
+       - < 45: low (Bakgrundsflöde)
     """
+    u_val = max(1, min(10, int(urgency_score if urgency_score is not None else 5)))
+    s_val = max(1, min(10, int(substance_score if substance_score is not None else 5)))
+
     if matched_keywords and len(matched_keywords) > 0:
         kw_str = ", ".join(matched_keywords)
         return {
             "priority": "high",
             "prio_score": 100,
-            "prio_reason": f"Träff på bevakningsord: {kw_str}"
+            "prio_reason": f"Träff på bevakningsord: {kw_str}",
+            "urgency_score": u_val,
+            "substance_score": s_val
         }
     
     weights_map = {c["name"].lower(): c["weight"] for c in DEFAULT_CATEGORIES_WITH_WEIGHTS}
@@ -542,32 +603,57 @@ def calculate_priority(
     clean_cat = str(category or "Övrigt").strip()
     weight = weights_map.get(clean_cat.lower(), weights_map.get("övrigt", 3))
     weight = max(0, min(10, weight))
-    score = weight * 10
-    
-    if weight >= 8:
-        return {
-            "priority": "high",
-            "prio_score": max(75, score),
-            "prio_reason": f"Högprioriterad kategori: {clean_cat} ({weight}/10)"
-        }
-    elif weight >= 5:
-        return {
-            "priority": "medium",
-            "prio_score": score,
-            "prio_reason": f"Normalprioriterad kategori: {clean_cat} ({weight}/10)"
-        }
-    elif weight >= 1:
-        return {
-            "priority": "low",
-            "prio_score": score,
-            "prio_reason": f"Lågprioriterad kategori: {clean_cat} ({weight}/10)"
-        }
-    else:
+
+    # Kategori med vikt 0 ignoreras helt
+    if weight == 0:
         return {
             "priority": "low",
             "prio_score": 0,
-            "prio_reason": f"Ignorerad kategori: {clean_cat} (0/10)"
+            "prio_reason": f"Ignorerad kategori: {clean_cat} (0/10)",
+            "urgency_score": u_val,
+            "substance_score": s_val
         }
+
+    # Grundpoäng från matrisen: Kategori 30%, Akuthet 40%, Substans 30%
+    base_score = (weight * 10 * 0.30) + (u_val * 10 * 0.40) + (s_val * 10 * 0.30)
+    score = base_score
+
+    reasons = [f"Kategori {weight}/10", f"Akuthet {u_val}/10", f"Substans {s_val}/10"]
+
+    # Flerkällsbekräftelse (klusterbonus)
+    c_size = int(cluster_size or 1)
+    if c_size >= 3:
+        score += 15
+        reasons.append(f"+15p flerkällsbekräftelse ({c_size} källor)")
+    elif c_size == 2:
+        score += 10
+        reasons.append("+10p flerkällsbekräftelse (2 källor)")
+
+    # ClickBait-avdrag
+    if is_clickbait:
+        score -= 25
+        if not (clean_cat.lower() == "blåljus" and u_val >= 8):
+            score = min(score, 35)
+        reasons.append("ClickBait-avdrag (-25p)")
+
+    final_score = int(round(max(0, min(100, score))))
+
+    if final_score >= 75:
+        prio_level = "high"
+    elif final_score >= 45:
+        prio_level = "medium"
+    else:
+        prio_level = "low"
+
+    reason_str = f"Poängmatris {final_score}p ({', '.join(reasons)})"
+
+    return {
+        "priority": prio_level,
+        "prio_score": final_score,
+        "prio_reason": reason_str,
+        "urgency_score": u_val,
+        "substance_score": s_val
+    }
 
 def analyze_article(
     title: str, 
@@ -707,8 +793,31 @@ def analyze_article(
         if category == "Övrigt" and raw_cat and raw_cat.lower() != "övrigt" and len(raw_cat) < 30:
             category = raw_cat
 
-        # Beräkna deterministisk prioritet och poäng baserat på kategori-vikt
-        prio_calc = calculate_priority(category, user_categories)
+        # Klickbete-hantering
+        raw_cb = parsed.get("is_clickbait", False)
+        is_clickbait = bool(raw_cb) if isinstance(raw_cb, bool) else (str(raw_cb).lower() in ("true", "1"))
+        clickbait_reason = str(parsed.get("clickbait_reason", "")).strip()
+
+        # Extrahera mätvärden för poängmatrisen (urgency och substance)
+        raw_u = parsed.get("urgency_score", 5)
+        raw_s = parsed.get("substance_score", 5)
+        try:
+            urgency_score = int(raw_u)
+        except Exception:
+            urgency_score = 5
+        try:
+            substance_score = int(raw_s)
+        except Exception:
+            substance_score = 5
+
+        # Beräkna deterministisk prioritet och poäng baserat på sammansatt poängmatris
+        prio_calc = calculate_priority(
+            category=category,
+            categories_config=user_categories,
+            urgency_score=urgency_score,
+            substance_score=substance_score,
+            is_clickbait=is_clickbait
+        )
         priority = prio_calc["priority"]
         prio_score = prio_calc["prio_score"]
         prio_reason = prio_calc["prio_reason"]
@@ -720,26 +829,14 @@ def analyze_article(
             tags = [str(t).strip() for t in raw_tags if t and str(t).strip()]
         else:
             tags = []
-            
-        # Klickbete-hantering
-        raw_cb = parsed.get("is_clickbait", False)
-        is_clickbait = bool(raw_cb) if isinstance(raw_cb, bool) else (str(raw_cb).lower() in ("true", "1"))
-        clickbait_reason = str(parsed.get("clickbait_reason", "")).strip()
-
-        if is_clickbait:
-            is_critical = (category.lower() == "blåljus" or prio_score >= 75)
-            if is_critical:
-                priority = "high"
-                prio_score = max(75, prio_score)
-            else:
-                prio_score = min(prio_score, 25)
-                priority = "low"
 
         return {
             "category": category,
             "priority": priority,
             "prio_score": prio_score,
             "prio_reason": prio_reason,
+            "urgency_score": urgency_score,
+            "substance_score": substance_score,
             "ai_summary": ai_summary,
             "tags": tags,
             "is_clickbait": 1 if is_clickbait else 0,

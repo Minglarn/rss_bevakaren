@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.06',
+    date: '2026-09-16',
+    title: 'Sammansatt poängmatris för smart artikelprioritering (Steg 1)',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Flerdimensionell poängmatris i AI-analysen',
+        description: 'Övergång från ensidig kategoriviktning till en sammansatt matris som väger samman ämneskategori (30 %), händelsens akuthet/nyhetsvärde (40 %) och innehållets faktasubstans (30 %). Förhindrar att ytliga notiser i högt prioriterade kategorier blir felaktigt prioriterade.'
+      },
+      {
+        type: 'feature',
+        title: 'Flerkällsbekräftelse och ClickBait-filtrering',
+        description: 'Artiklar som ingår i bekräftade kluster från 2 eller fler oberoende källor tilldelas automatisk klusterbonus (+10 till +15 poäng). Artiklar som flaggas som ClickBait får automatiskt poängavdrag (-25 poäng).'
+      },
+      {
+        type: 'improvement',
+        title: 'Detaljerad prioritetsredovisning och mätvärden',
+        description: 'Både backend och frontend sparar och visualiserar nu akuthet (1-10) och substans (1-10) transparent i artikelns analysinformation.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.05',
     date: '2026-09-16',
     title: 'Korrigerad sparning och autosynk av kategoriviktningar i AI-analys',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

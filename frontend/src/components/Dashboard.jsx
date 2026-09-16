@@ -2206,8 +2206,20 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           transition={{ duration: 0.25 }}
                           style={{ marginBottom: '1rem' }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                            <Sparkles size={13} /> AI-sammanfattning
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600 }}>
+                              <Sparkles size={13} /> AI-sammanfattning
+                            </div>
+                            {item.urgency_score !== undefined && item.substance_score !== undefined && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                <span style={{ padding: '0.1rem 0.4rem', borderRadius: '4px', backgroundColor: 'var(--bg-card-hover, rgba(255,255,255,0.06))', border: '1px solid var(--border-color, rgba(255,255,255,0.1))' }} title="Akuthet och nyhetsvärde bedömt av AI (1-10)">
+                                  Akuthet: {item.urgency_score}/10
+                                </span>
+                                <span style={{ padding: '0.1rem 0.4rem', borderRadius: '4px', backgroundColor: 'var(--bg-card-hover, rgba(255,255,255,0.06))', border: '1px solid var(--border-color, rgba(255,255,255,0.1))' }} title="Faktatäthet och substans bedömt av AI (1-10)">
+                                  Substans: {item.substance_score}/10
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <div style={{ 
                             color: 'var(--text-main)', 

@@ -104,6 +104,8 @@ class ArticleResponse(BaseModel):
     priority: Optional[str] = "low"
     prio_score: Optional[int] = 0
     prio_reason: Optional[str] = ""
+    urgency_score: Optional[int] = 5
+    substance_score: Optional[int] = 5
     ai_summary: Optional[str] = None
     tags: Optional[List[str]] = []
     is_clickbait: Optional[int] = 0

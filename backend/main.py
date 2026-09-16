@@ -512,6 +512,16 @@ def run_db_migrations(db_path: str):
         except sqlite3.OperationalError:
             pass
 
+        # Migration 20: Add urgency_score and substance_score to articles for scoring matrix
+        for col_def in [
+            ("urgency_score", "INTEGER DEFAULT 5"),
+            ("substance_score", "INTEGER DEFAULT 5")
+        ]:
+            try:
+                cur.execute(f"ALTER TABLE articles ADD COLUMN {col_def[0]} {col_def[1]};")
+            except sqlite3.OperationalError:
+                pass
+
         conn.commit()
         conn.close()
         size_kb = os.path.getsize(db_path) / 1024
@@ -1385,6 +1395,8 @@ async def ai_processing_loop():
                     tags_json = json.dumps(analysis.get("tags", []), ensure_ascii=False)
                     is_clickbait = analysis.get("is_clickbait", 0)
                     clickbait_reason = analysis.get("clickbait_reason", "")
+                    urgency_score = analysis.get("urgency_score", 5)
+                    substance_score = analysis.get("substance_score", 5)
                     dur = analysis.get("duration_s", 0.0)
 
                     # Bevakningsord-kontroll
@@ -1408,6 +1420,8 @@ async def ai_processing_loop():
                             save_art.priority = priority
                             save_art.prio_score = prio_score
                             save_art.prio_reason = prio_reason
+                            save_art.urgency_score = urgency_score
+                            save_art.substance_score = substance_score
                             save_art.ai_summary = ai_summary
                             save_art.tags = tags_json
                             save_art.is_clickbait = is_clickbait
@@ -1977,6 +1991,8 @@ def get_dashboard_feeds(
             "priority": art.priority if include_ai else None,
             "prio_score": art.prio_score or 0 if include_ai else 0,
             "prio_reason": art.prio_reason or "" if include_ai else "",
+            "urgency_score": art.urgency_score if (include_ai and art.urgency_score is not None) else 5,
+            "substance_score": art.substance_score if (include_ai and art.substance_score is not None) else 5,
             "ai_summary": art.ai_summary if include_ai else None,
             "tags": parsed_tags if include_ai else [],
             "is_clickbait": art.is_clickbait or 0 if include_ai else 0,
@@ -2032,6 +2048,19 @@ def get_dashboard_feeds(
                 seen_feed_ids.add(other.get("feed_id"))
 
         head["cluster_size"] = len(valid_c_items)
+
+        # Flerkällsbekräftelse på klusterhuvudet: om 2+ oberoende källor rapporterar
+        if len(valid_c_items) >= 2 and head.get("prio_score", 0) < 100:
+            c_bonus = 15 if len(valid_c_items) >= 3 else 10
+            cur_reason = str(head.get("prio_reason", "") or "")
+            if "flerkällsbekräftelse" not in cur_reason.lower() and "bevakningsord" not in cur_reason.lower():
+                old_sc = head.get("prio_score", 0)
+                new_sc = min(100, old_sc + c_bonus)
+                head["prio_score"] = new_sc
+                if new_sc >= 75:
+                    head["priority"] = "high"
+                sep = " | " if cur_reason else ""
+                head["prio_reason"] = f"{cur_reason}{sep}+{c_bonus}p flerkällsbekräftelse ({len(valid_c_items)} källor)"
         similar = []
         for other in valid_c_items[1:]:
             similar.append({
@@ -2168,6 +2197,8 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     art.priority = analysis.get("priority", "low")
     art.prio_score = analysis.get("prio_score", 10)
     art.prio_reason = analysis.get("prio_reason", "")
+    art.urgency_score = analysis.get("urgency_score", 5)
+    art.substance_score = analysis.get("substance_score", 5)
     art.ai_summary = analysis.get("ai_summary", "")
     art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
     art.is_clickbait = analysis.get("is_clickbait", 0)
