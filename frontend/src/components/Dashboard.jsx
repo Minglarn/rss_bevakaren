@@ -485,6 +485,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   });
   const [showLockedOnly, setShowLockedOnly] = useState(false);
   const [showLikedOnly, setShowLikedOnly] = useState(false);
+  const [showDislikedOnly, setShowDislikedOnly] = useState(false);
   const [showImages, setShowImages] = useState(() => {
     return localStorage.getItem('rss_show_images') !== 'false';
   });
@@ -761,6 +762,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     showRead,
     showLockedOnly,
     showLikedOnly,
+    showDislikedOnly,
     debouncedSearch,
     selectedCategory,
     selectedTag,
@@ -779,6 +781,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       showRead: sRead,
       showLockedOnly: sLocked,
       showLikedOnly: sLiked,
+      showDislikedOnly: sDisliked,
       debouncedSearch: dSearch,
       selectedCategory: sCat,
       selectedTag: sTag,
@@ -797,6 +800,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         queryParts.push('locked_only=true');
       } else if (sLiked) {
         queryParts.push('liked_only=true');
+      } else if (sDisliked) {
+        queryParts.push('disliked_only=true');
       } else if (sRead) {
         queryParts.push('show_read=true');
       }
@@ -916,7 +921,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
       }
     };
-  }, [feedId, articleId, showRead, showLockedOnly, showLikedOnly, debouncedSearch, isPrioMode, selectedCategory, selectedTag, clusterMode]);
+  }, [feedId, articleId, showRead, showLockedOnly, showLikedOnly, showDislikedOnly, debouncedSearch, isPrioMode, selectedCategory, selectedTag, clusterMode]);
 
   const handleSelectCategory = (cat) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -1246,7 +1251,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           </button>
           <button
             onClick={() => {
-              if (!showLikedOnly) setShowLockedOnly(false);
+              if (!showLikedOnly) {
+                setShowLockedOnly(false);
+                setShowDislikedOnly(false);
+              }
               setShowLikedOnly(!showLikedOnly);
             }}
             style={{
@@ -1268,6 +1276,34 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           >
             <ThumbsUp size={16} />
             <span className="desktop-only">{showLikedOnly ? "Alla artiklar" : "Gillade"}</span>
+          </button>
+          <button
+            onClick={() => {
+              if (!showDislikedOnly) {
+                setShowLockedOnly(false);
+                setShowLikedOnly(false);
+              }
+              setShowDislikedOnly(!showDislikedOnly);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '6px 12px',
+              border: showDislikedOnly ? '1px solid #ef4444' : '1px solid var(--border-color)',
+              backgroundColor: showDislikedOnly ? '#ef4444' : 'var(--bg-card)',
+              color: showDislikedOnly ? 'white' : 'var(--text-muted)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+              height: '36px'
+            }}
+            title={showDislikedOnly ? "Visa alla artiklar i flödet" : "Visa endast artiklar du har ogillat"}
+          >
+            <ThumbsDown size={16} />
+            <span className="desktop-only">{showDislikedOnly ? "Alla artiklar" : "Ogillade"}</span>
           </button>
           <button
             onClick={() => setShowRead(!showRead)}
@@ -1759,6 +1795,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               ? "Inga låsta artiklar hittades. Du kan spara artiklar med lås-ikonen på artikelkorten." 
               : showLikedOnly
               ? "Inga gillade artiklar hittades. Du kan gilla artiklar med tumme upp på artikelkorten för att spara dem och lära AI vad du gillar."
+              : showDislikedOnly
+              ? "Inga ogillade artiklar hittades. Här visas artiklar du röstat ner med tumme ner."
               : "Inga olästa nyheter just nu. Byt till 'Visa lästa' eller uppdatera flödena."}
           </p>
         </div>

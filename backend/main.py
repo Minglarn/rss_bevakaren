@@ -1978,6 +1978,7 @@ def get_dashboard_feeds(
     cluster_mode: Optional[bool] = True,
     locked_only: Optional[bool] = False,
     liked_only: Optional[bool] = False,
+    disliked_only: Optional[bool] = False,
     db: Session = Depends(database.get_db), 
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -1995,6 +1996,8 @@ def get_dashboard_feeds(
             query = query.filter(models.Article.is_locked == 1)
         elif liked_only:
             query = query.filter(models.Article.user_vote == 1)
+        elif disliked_only:
+            query = query.filter(models.Article.user_vote == -1)
         elif not show_read:
             query = query.filter((models.Article.is_read == 0) | (models.Article.is_read == None))
             

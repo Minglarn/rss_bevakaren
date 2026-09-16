@@ -1,9 +1,35 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.16',
+    date: '2026-09-16',
+    title: 'Snabbfilter för ogillade artiklar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Nytt snabbfilter "Ogillade" i toppmenyn',
+        description: 'Lagt till en röd filterknapp "Ogillade" bredvid "Gillade" och "Låsta". Gör det enkelt att direkt filtrera fram alla artiklar du röstat ner, granska dem och återställa eller ändra rösten med ett klick.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.16.15',
+    date: '2026-09-16',
+    title: 'Solid bakgrund i AI-resonemangsdialogen',
+    badge: '',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Helt solid och ogenomskinlig modalbakgrund',
+        description: 'AI-resonemangsdialogen har nu en 100 % solid och ogenomskinlig bakgrund (#ffffff i ljust läge, #1e293b / #0f172a i mörkt läge) så att underliggande sidinnehåll inte lyser igenom.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.14',
     date: '2026-09-16',
     title: 'Rättning av källikonsvisning i AI-resonemangsdialogen',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'fix',

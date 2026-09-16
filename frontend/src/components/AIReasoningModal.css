@@ -1,14 +1,14 @@
 /* ==========================================================================
-   AI REASONING MODAL - Full tema-integration, responsiv och modern design
+   AI REASONING MODAL - Full tema-integration, solid bakgrund & modern design
    ========================================================================== */
 
 /* Bakgrund / Overlay */
 .ai-modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.72);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background-color: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -17,18 +17,18 @@
   animation: aiModalFadeIn 0.2s ease-out;
 }
 
-/* Modalbox */
+/* Modalbox - Helt solid bakgrund utan genomskinlighet */
 .ai-modal-container {
-  background-color: var(--bg-card, #ffffff);
+  background-color: #ffffff;
   color: var(--text-main, #0f172a);
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
   border-radius: 18px;
   width: 100%;
   max-width: 620px;
   max-height: 88vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   position: relative;
 }
@@ -38,7 +38,7 @@
   display: none;
   justify-content: center;
   padding: 0.6rem 0 0.2rem 0;
-  background-color: var(--bg-card, #ffffff);
+  background-color: #ffffff;
 }
 
 .ai-modal-drag-handle {
@@ -49,14 +49,14 @@
   opacity: 0.8;
 }
 
-/* Header */
+/* Header - Solid */
 .ai-modal-header {
   padding: 1.15rem 1.4rem;
   border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: var(--bg-card, #ffffff);
+  background-color: #ffffff;
   flex-shrink: 0;
 }
 
@@ -116,7 +116,7 @@
   color: var(--text-main, #0f172a);
 }
 
-/* Rullningsbart innehåll */
+/* Rullningsbart innehåll - Solid */
 .ai-modal-body {
   padding: 1.25rem 1.4rem;
   overflow-y: auto;
@@ -125,6 +125,7 @@
   flex-direction: column;
   gap: 1.25rem;
   flex: 1;
+  background-color: #ffffff;
 }
 
 /* Artikelrubrik */
@@ -161,26 +162,26 @@
   gap: 1rem;
   padding: 1.15rem 1.35rem;
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(59, 130, 246, 0.04) 100%);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
   flex-wrap: wrap;
   position: relative;
   overflow: hidden;
 }
 
 .ai-modal-score-card.is-prio {
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.14) 0%, rgba(234, 88, 12, 0.04) 100%);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.14) 0%, rgba(234, 88, 12, 0.05) 100%);
   border-color: rgba(249, 115, 22, 0.35);
 }
 
 .ai-modal-score-card.is-normal {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.04) 100%);
-  border-color: rgba(59, 130, 246, 0.28);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.05) 100%);
+  border-color: rgba(59, 130, 246, 0.3);
 }
 
 .ai-modal-score-card.is-low {
-  background: linear-gradient(135deg, rgba(148, 163, 184, 0.08) 0%, rgba(100, 116, 139, 0.03) 100%);
-  border-color: var(--border-color, rgba(0, 0, 0, 0.08));
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.1) 0%, rgba(100, 116, 139, 0.04) 100%);
+  border-color: var(--border-color, rgba(0, 0, 0, 0.1));
 }
 
 .ai-modal-score-number-group {
@@ -221,8 +222,8 @@
 }
 
 .ai-modal-pillar-card {
-  background-color: var(--bg-app, rgba(0, 0, 0, 0.02));
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 0.85rem 0.95rem;
   display: flex;
@@ -245,7 +246,7 @@
 .ai-modal-pillar-bar-bg {
   height: 4px;
   border-radius: 999px;
-  background-color: var(--border-color, rgba(0, 0, 0, 0.1));
+  background-color: #e2e8f0;
   overflow: hidden;
   margin: 3px 0;
 }
@@ -264,8 +265,8 @@
 
 /* Resonemangsruta */
 .ai-modal-reason-box {
-  background-color: var(--bg-app, rgba(0, 0, 0, 0.02));
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-left: 3.5px solid var(--primary, #6366f1);
   border-radius: 10px;
   padding: 0.95rem 1.15rem;
@@ -286,8 +287,8 @@
   align-items: center;
   gap: 0.65rem;
   padding: 0.7rem 0.9rem;
-  background-color: var(--bg-app, rgba(0, 0, 0, 0.02));
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
 }
 
@@ -318,13 +319,13 @@
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 0.78rem;
-  background-color: var(--bg-app, rgba(0, 0, 0, 0.03));
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
   color: var(--text-main, #0f172a);
   font-weight: 500;
 }
 
-/* Footer */
+/* Footer - Solid */
 .ai-modal-footer {
   padding: 0.9rem 1.4rem;
   border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
@@ -332,7 +333,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  background-color: var(--bg-card, #ffffff);
+  background-color: #ffffff;
   flex-shrink: 0;
 }
 
@@ -341,8 +342,8 @@
   align-items: center;
   gap: 0.45rem;
   padding: 0.55rem 1.1rem;
-  background-color: var(--bg-app, rgba(0, 0, 0, 0.04));
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
   color: var(--text-main, #0f172a);
   border-radius: 8px;
   font-size: 0.86rem;
@@ -352,7 +353,7 @@
 }
 
 .ai-modal-btn-secondary:hover:not(:disabled) {
-  background-color: var(--bg-card-hover, rgba(0, 0, 0, 0.08));
+  background-color: #f1f5f9;
 }
 
 .ai-modal-btn-secondary:disabled {
@@ -381,23 +382,24 @@
 }
 
 /* ==========================================================================
-   TEMASTÖD FÖR MÖRKT TEMA (.theme-dark)
+   TEMASTÖD FÖR MÖRKT TEMA (.theme-dark) - 100% Solid mörk bakgrund
    ========================================================================== */
 .theme-dark .ai-modal-overlay {
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.85);
 }
 
 .theme-dark .ai-modal-container {
-  background-color: var(--bg-card, #1e293b);
-  border-color: var(--border-color, rgba(255, 255, 255, 0.1));
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  background-color: #1e293b !important;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .theme-dark .ai-modal-header,
+.theme-dark .ai-modal-body,
 .theme-dark .ai-modal-footer,
 .theme-dark .ai-modal-drag-handle-container {
-  background-color: var(--bg-card, #1e293b);
-  border-color: var(--border-color, rgba(255, 255, 255, 0.08));
+  background-color: #1e293b !important;
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .theme-dark .ai-modal-pillar-card,
@@ -405,27 +407,31 @@
 .theme-dark .ai-modal-diagnostic-chip,
 .theme-dark .ai-modal-tag-chip,
 .theme-dark .ai-modal-btn-secondary {
-  background-color: rgba(15, 23, 42, 0.6);
-  border-color: rgba(255, 255, 255, 0.08);
+  background-color: #0f172a !important;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .ai-modal-btn-secondary:hover:not(:disabled) {
+  background-color: #1a2744 !important;
 }
 
 .theme-dark .ai-modal-pillar-bar-bg {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.12);
 }
 
 .theme-dark .ai-modal-score-card.is-prio {
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(234, 88, 12, 0.06) 100%);
-  border-color: rgba(249, 115, 22, 0.45);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.22) 0%, rgba(234, 88, 12, 0.08) 100%);
+  border-color: rgba(249, 115, 22, 0.5);
 }
 
 .theme-dark .ai-modal-score-card.is-normal {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(37, 99, 235, 0.05) 100%);
-  border-color: rgba(59, 130, 246, 0.35);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.06) 100%);
+  border-color: rgba(59, 130, 246, 0.4);
 }
 
 .theme-dark .ai-modal-score-card.is-low {
-  background: linear-gradient(135deg, rgba(148, 163, 184, 0.12) 0%, rgba(100, 116, 139, 0.04) 100%);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.14) 0%, rgba(100, 116, 139, 0.05) 100%);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 /* ==========================================================================
