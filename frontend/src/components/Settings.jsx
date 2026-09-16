@@ -291,13 +291,13 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       const res = await api.get('/ai/config');
       setAiConfig(res.data);
       if (res.data.is_healthy) {
-        toast.success(`Connected to LM Studio! ${res.data.available_models?.length || 0} models available.`);
+        toast.success(`Ansluten till LM Studio! ${res.data.available_models?.length || 0} modeller tillgängliga.`);
       } else {
-        toast.error('Could not reach LM Studio.');
+        toast.error('Kunde inte nå LM Studio.');
       }
     } catch (err) {
-      console.error("Could not fetch AI config", err);
-      toast.error('Error testing connection.');
+      console.error("Kunde inte hämta AI-konfiguration", err);
+      toast.error('Fel vid test av anslutning till LM Studio.');
     } finally {
       setIsLoadingAi(false);
     }
@@ -914,6 +914,40 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     } catch (err) {
       console.error(err);
       toast.error('Kunde inte spara skyddsgränsen.');
+    }
+  };
+
+  const handleUpdateModel = async (modelName) => {
+    const cleanModel = modelName || '';
+    setAiConfig(prev => ({ ...prev, lm_studio_model: cleanModel }));
+    try {
+      const formattedCats = (aiConfig.categories || []).map(c => 
+        typeof c === 'object' ? { name: c.name, weight: c.weight ?? 5 } : { name: c, weight: 5 }
+      );
+      const res = await api.put('/ai/config', {
+        prio_rules: aiConfig.prio_rules || '',
+        exclude_rules: aiConfig.exclude_rules || '',
+        categories: formattedCats,
+        prio_threshold: aiConfig.prio_threshold || 75,
+        system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
+        onboarding_completed: true,
+        prio_enabled: aiConfig.prio_enabled ?? false,
+        prio_notify_only: aiConfig.prio_notify_only ?? false,
+        lm_studio_model: cleanModel,
+        push_include_title: aiConfig.push_include_title ?? true,
+        push_include_image: aiConfig.push_include_image ?? true,
+        push_include_summary: aiConfig.push_include_summary ?? true,
+        auto_purge_enabled: aiConfig.auto_purge_enabled !== false,
+        auto_purge_days: purgeDays,
+        auto_scrape_article_text: aiConfig.auto_scrape_article_text !== false,
+        max_article_age_hours: aiConfig.max_article_age_hours || 24
+      });
+      if (res.data) setAiConfig(res.data);
+      toast.success(cleanModel ? `AI-modell sparad: ${cleanModel}` : 'AI-modell återställd till LM Studio standard.');
+      window.dispatchEvent(new Event('aiConfigUpdated'));
+    } catch (err) {
+      console.error("Kunde inte spara AI-modell:", err);
+      toast.error('Kunde inte spara vald AI-modell.');
     }
   };
 
@@ -3928,7 +3962,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 {aiConfig.available_models && aiConfig.available_models.length > 0 ? (
                   <select
                     value={aiConfig.lm_studio_model || ''}
-                    onChange={(e) => setAiConfig(prev => ({ ...prev, lm_studio_model: e.target.value }))}
+                    onChange={(e) => handleUpdateModel(e.target.value)}
                     style={{
                       width: '100%',
                       padding: '0.4rem 0.5rem',

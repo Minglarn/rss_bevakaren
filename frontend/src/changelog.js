@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.10',
+    date: '2026-09-16',
+    title: 'Automatisk sparning vid val av AI-modell i inställningar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Direkt sparning av vald AI-modell',
+        description: 'Att välja en LM Studio-modell i dropdownen under AI-analys sparar nu inställningen omedelbart till databasen och ger visuell bekräftelse, istället för att endast ändra lokalt gränssnittstillstånd.'
+      },
+      {
+        type: 'improvement',
+        title: 'Svenska statusmeddelanden för LM Studio-anslutning',
+        description: 'Samtliga status- och felmeddelanden vid kontroll av anslutning till LM Studio har översatts till svenska.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.09',
     date: '2026-09-16',
     title: 'Produktionslansering av ny prioriteringsmodell och Gilla-system (Main)',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',
