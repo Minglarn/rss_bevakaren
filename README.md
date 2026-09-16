@@ -58,6 +58,22 @@ $$\text{Grundpoäng} = (\text{Kategorivikt} \times 10 \times 0.30) + (\text{Akut
 - **Bevakningsord (Garanterad 100 % PRIO):** Om artikeln matchar ett av dina egna bevakningsord får den omedelbart **100 poäng och Hög prioritet**, oavsett kategori.
 - **Ignorerad kategori (Vikt 0):** Om du sätter en kategoris vikt till 0 (t.ex. Nöje eller Sport) blockeras den alltid (0 poäng) och når aldrig PRIO.
 
+#### Konkret exempel: Egen kategori "Elpriser" vs Bevakningsord
+Om du till exempel lägger till den egna kategorin **Elpriser** med intressevikt **9**:
+
+1. **Hur AI vet att den ska kontrollera detta:**
+   - Kategorin *Elpriser* skickas med i systemprompten till språkmodellen.
+   - När en artikel om spotpriser, elskatt eller reaktorstopp anländer förstår AI:n innebörden och tilldelar artikeln kategorin `Elpriser`.
+2. **Hur poängen räknas ut:**
+   - **Kategorivikt:** 9 ger $9 \times 10 \times 0.30 = \mathbf{27\text{ poäng}}$.
+   - **Akuthet:** Om det är en stor händelse med akuthet 8 får den $8 \times 10 \times 0.40 = \mathbf{32\text{ poäng}}$.
+   - **Substans:** En faktatät artikel med substans 8 ger $8 \times 10 \times 0.30 = \mathbf{24\text{ poäng}}$.
+   - **Resultat:** $27 + 32 + 24 = \mathbf{83\text{ poäng}}$ -> Artikeln passerar tröskeln ($\ge 75$) och får orange **PRIO**-bricka.
+   - Är det däremot bara en liten vardagsnotis om elpriser (Akuthet 2, Substans 3) blir poängen $27 + 8 + 9 = \mathbf{44\text{ poäng}}$ och hamnar i det normala flödet.
+3. **Kategori vs Bevakningsord:**
+   - **Kategori (Elpriser):** Semantisk förståelse. Artikeln behöver inte innehålla det exakta ordet "elpriser" för att fångas upp.
+   - **Bevakningsord (Elpriser):** Hård regel. Om ordet "elpriser" bokstavligen förekommer i texten får artikeln **100 poäng och direkt pushnotis** utan att ens behöva invänta AI-bedömning.
+
 ---
 
 ### Hur kategorier definieras (Standard och Egna)
