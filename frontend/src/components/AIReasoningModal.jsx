@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Info, X, Clock, Tag, Flame, Sparkles, Layers, CheckCircle2, AlertTriangle, RefreshCw, ExternalLink, Rss } from 'lucide-react';
+import { Info, X, Clock, Tag, Flame, Sparkles, Layers, CheckCircle2, AlertTriangle, RefreshCw, ExternalLink, Rss, Cpu } from 'lucide-react';
 import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
 import './AIReasoningModal.css';
 
@@ -275,6 +275,17 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
               </div>
 
               <div className="ai-modal-diagnostics-grid">
+                {/* AI-modell */}
+                <div className="ai-modal-diagnostic-chip">
+                  <Cpu size={16} className="ai-modal-diagnostic-icon" style={{ color: '#8b5cf6' }} />
+                  <div>
+                    <div className="ai-modal-diagnostic-label">AI-modell</div>
+                    <div className="ai-modal-diagnostic-val" style={{ wordBreak: 'break-all' }}>
+                      {item.ai_model || 'google/gemma-4-12b-qat'}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Analystid i sekunder */}
                 <div className="ai-modal-diagnostic-chip">
                   <Clock size={16} className="ai-modal-diagnostic-icon" style={{ color: 'var(--text-muted)' }} />

@@ -2361,7 +2361,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           initial={{ opacity: 0, y: 3 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.25 }}
-                          style={{ marginBottom: '1rem' }}
+                          className="ai-summary-well"
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600 }}>
@@ -2463,7 +2463,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   {/* Taggar från AI-analys inklusive kategori samt PRIO-märke */}
                   {shouldShowAi && (item.category || (item.tags && item.tags.length > 0) || item.priority === 'high' || (item.prio_score || 0) >= 75) && (
                     <div className="card-tags-section">
-                      <div className="card-tags-divider" />
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.15rem', alignItems: 'center' }}>
                         {/* PRIO-piller flyttad från TopBar för en renare layout */}
                         {shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (

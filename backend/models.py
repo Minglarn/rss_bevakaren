@@ -81,6 +81,7 @@ class Article(Base):
     urgency_score = Column(Integer, default=5)
     substance_score = Column(Integer, default=5)
     ai_duration_s = Column(Float, default=0.0) # Tid i sekunder för AI-analysen
+    ai_model = Column(String, default="") # Modellnamn som utförde analysen (t.ex. google/gemma-4-12b-qat)
     user_vote = Column(Integer, default=0, index=True) # 1 = Gilla, -1 = Ogilla, 0 = Neutral
     ai_summary = Column(String, nullable=True)
     tags = Column(String, default="[]")

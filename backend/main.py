@@ -155,6 +155,10 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE articles ADD COLUMN ai_duration_s REAL DEFAULT 0.0"))
                     conn.commit()
                     print("[DB] Added ai_duration_s column to articles", flush=True)
+                if "ai_model" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN ai_model TEXT DEFAULT ''"))
+                    conn.commit()
+                    print("[DB] Added ai_model column to articles", flush=True)
                 conn.execute(text("UPDATE articles SET allow_push = 1 WHERE allow_push IS NULL"))
                 conn.commit()
         except Exception as e:
@@ -1504,6 +1508,7 @@ async def ai_processing_loop():
                             save_art.is_clickbait = is_clickbait
                             save_art.clickbait_reason = clickbait_reason
                             save_art.ai_duration_s = dur
+                            save_art.ai_model = analysis.get("ai_model") or item.get("user_model") or ai_service.get_active_model()
                             db_save.commit()
 
                         # Notishantering
@@ -2079,6 +2084,7 @@ def get_dashboard_feeds(
             "urgency_score": art.urgency_score if (include_ai and art.urgency_score is not None) else 5,
             "substance_score": art.substance_score if (include_ai and art.substance_score is not None) else 5,
             "ai_duration_s": round(art.ai_duration_s, 2) if (include_ai and art.ai_duration_s) else None,
+            "ai_model": (getattr(art, "ai_model", "") or "google/gemma-4-12b-qat") if (include_ai and art.ai_processed) else "",
             "ai_summary": art.ai_summary if include_ai else None,
             "tags": parsed_tags if include_ai else [],
             "is_clickbait": art.is_clickbait or 0 if include_ai else 0,
@@ -2294,6 +2300,7 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     art.is_clickbait = analysis.get("is_clickbait", 0)
     art.clickbait_reason = analysis.get("clickbait_reason", "")
     art.ai_duration_s = analysis.get("duration_s", 0.0)
+    art.ai_model = analysis.get("ai_model") or user_model or ai_service.get_active_model()
 
     # STEG 1: Specifika bevakningsord (trumfar allt -> 100p & HIGH)
     user_keywords = db.query(models.Keyword).filter(models.Keyword.user_id == current_user.id).all()

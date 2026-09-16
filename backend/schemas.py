@@ -108,6 +108,7 @@ class ArticleResponse(BaseModel):
     substance_score: Optional[int] = 5
     user_vote: Optional[int] = 0
     ai_duration_s: Optional[float] = None
+    ai_model: Optional[str] = ""
     ai_summary: Optional[str] = None
     tags: Optional[List[str]] = []
     is_clickbait: Optional[int] = 0

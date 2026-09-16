@@ -149,44 +149,262 @@ export default function AiChat() {
     }
   };
 
-  // Enkel och säker formatering av AI-svar med stöd för stycken, punktlistor och fetstil
-  const renderFormattedText = (text) => {
-    if (!text) return null;
-    const paragraphs = text.split('\n');
-    return paragraphs.map((para, pIdx) => {
-      const trimmed = para.trim();
-      if (!trimmed) {
-        return <div key={pIdx} style={{ height: '0.5rem' }} />;
-      }
+  // Fullständig och säker formatering av AI-svar med stöd för rubriker, avdelare, listor, kod och fetstil
+  const renderInlineFormatting = (str) => {
+    if (!str) return '';
+    const tokenRegex = /(`[^`]+`|\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/g;
+    const parts = str.split(tokenRegex);
 
-      // Punktlista
-      if (trimmed.startsWith('* ') || trimmed.startsWith('- ') || /^\d+\.\s/.test(trimmed)) {
-        const bulletText = trimmed.replace(/^(\*|-|\d+\.)\s*/, '');
+    return parts.map((part, i) => {
+      if (!part) return null;
+
+      // Inline-kod
+      if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
         return (
-          <div key={pIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', marginBottom: '0.35rem', paddingLeft: '0.5rem' }}>
-            <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>•</span>
-            <span>{renderInlineFormatting(bulletText)}</span>
-          </div>
+          <code
+            key={i}
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.07)',
+              padding: '0.12rem 0.35rem',
+              borderRadius: '4px',
+              fontFamily: 'monospace',
+              fontSize: '0.88em',
+              color: 'var(--primary)'
+            }}
+          >
+            {part.slice(1, -1)}
+          </code>
         );
       }
 
-      return (
-        <p key={pIdx} style={{ margin: '0 0 0.6rem 0', lineHeight: '1.6' }}>
-          {renderInlineFormatting(trimmed)}
-        </p>
-      );
+      // Länk [text](url)
+      if (part.startsWith('[') && part.includes('](') && part.endsWith(')')) {
+        const match = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        if (match) {
+          return (
+            <a
+              key={i}
+              href={match[2]}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--primary)', textDecoration: 'underline' }}
+            >
+              {match[1]}
+            </a>
+          );
+        }
+      }
+
+      // Fetstil **text** eller __text__
+      if ((part.startsWith('**') && part.endsWith('**') && part.length >= 4) ||
+          (part.startsWith('__') && part.endsWith('__') && part.length >= 4)) {
+        return <strong key={i} style={{ fontWeight: 650 }}>{part.slice(2, -2)}</strong>;
+      }
+
+      // Kursiv *text* eller _text_
+      if ((part.startsWith('*') && part.endsWith('*') && part.length >= 2) ||
+          (part.startsWith('_') && part.endsWith('_') && part.length >= 2)) {
+        return <em key={i}>{part.slice(1, -1)}</em>;
+      }
+
+      return part;
     });
   };
 
-  const renderInlineFormatting = (str) => {
-    // Ersätt **fetstil**
-    const parts = str.split(/(\*\*.*?\*\*)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={i}>{part.slice(2, -2)}</strong>;
+  const renderFormattedText = (text) => {
+    if (!text) return null;
+    const lines = text.split('\n');
+    const elements = [];
+    let inCodeBlock = false;
+    let codeBlockLines = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Fenced kodblock (```)
+      if (trimmed.startsWith('```')) {
+        if (inCodeBlock) {
+          elements.push(
+            <pre
+              key={`code-${i}`}
+              style={{
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                color: '#e2e8f0',
+                padding: '0.75rem 1rem',
+                borderRadius: '8px',
+                overflowX: 'auto',
+                fontSize: '0.85rem',
+                fontFamily: 'monospace',
+                margin: '0.65rem 0',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}
+            >
+              <code>{codeBlockLines.join('\n')}</code>
+            </pre>
+          );
+          inCodeBlock = false;
+          codeBlockLines = [];
+        } else {
+          inCodeBlock = true;
+          codeBlockLines = [];
+        }
+        continue;
       }
-      return part;
-    });
+
+      if (inCodeBlock) {
+        codeBlockLines.push(line);
+        continue;
+      }
+
+      // Tom rad
+      if (!trimmed) {
+        elements.push(<div key={`blank-${i}`} style={{ height: '0.45rem' }} />);
+        continue;
+      }
+
+      // Horisontell avdelare (---, ***, ___)
+      if (/^[-*_]{3,}$/.test(trimmed)) {
+        elements.push(
+          <hr
+            key={`hr-${i}`}
+            style={{
+              border: 'none',
+              height: '1px',
+              backgroundColor: 'var(--border-color)',
+              margin: '0.75rem 0',
+              opacity: 0.8
+            }}
+          />
+        );
+        continue;
+      }
+
+      // Rubriker (# till ######)
+      const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const headingText = headingMatch[2];
+        const headingStyles = [
+          { fontSize: '1.25rem', fontWeight: 700, margin: '0.9rem 0 0.4rem 0' },
+          { fontSize: '1.15rem', fontWeight: 700, margin: '0.8rem 0 0.35rem 0' },
+          { fontSize: '1.05rem', fontWeight: 650, margin: '0.75rem 0 0.3rem 0' },
+          { fontSize: '0.96rem', fontWeight: 650, margin: '0.65rem 0 0.25rem 0' },
+          { fontSize: '0.9rem', fontWeight: 600, margin: '0.55rem 0 0.2rem 0' },
+          { fontSize: '0.85rem', fontWeight: 600, margin: '0.5rem 0 0.2rem 0' }
+        ];
+        const style = {
+          ...headingStyles[level - 1],
+          color: 'var(--text-main)',
+          lineHeight: '1.35'
+        };
+        elements.push(
+          <div key={`h-${i}`} style={style}>
+            {renderInlineFormatting(headingText)}
+          </div>
+        );
+        continue;
+      }
+
+      // Citat / Blockquote (> text)
+      if (trimmed.startsWith('> ') || trimmed === '>') {
+        const quoteText = trimmed.replace(/^>\s*/, '');
+        elements.push(
+          <blockquote
+            key={`quote-${i}`}
+            style={{
+              borderLeft: '3px solid var(--primary)',
+              paddingLeft: '0.75rem',
+              margin: '0.5rem 0',
+              color: 'var(--text-muted)',
+              fontStyle: 'italic',
+              lineHeight: '1.5'
+            }}
+          >
+            {renderInlineFormatting(quoteText)}
+          </blockquote>
+        );
+        continue;
+      }
+
+      // Punktlista (•, *, -, +)
+      if (/^[•*-]\s+/.test(trimmed) || /^\+\s+/.test(trimmed)) {
+        const bulletText = trimmed.replace(/^[•*+-]\s*/, '');
+        elements.push(
+          <div
+            key={`bullet-${i}`}
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.45rem',
+              marginBottom: '0.35rem',
+              paddingLeft: '0.35rem',
+              lineHeight: '1.55'
+            }}
+          >
+            <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.1em', lineHeight: '1.3', flexShrink: 0 }}>•</span>
+            <span style={{ flex: 1 }}>{renderInlineFormatting(bulletText)}</span>
+          </div>
+        );
+        continue;
+      }
+
+      // Numrerad lista (1., 2., osv.)
+      const numMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+      if (numMatch) {
+        const num = numMatch[1];
+        const numText = numMatch[2];
+        elements.push(
+          <div
+            key={`num-${i}`}
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.45rem',
+              marginBottom: '0.35rem',
+              paddingLeft: '0.35rem',
+              lineHeight: '1.55'
+            }}
+          >
+            <span style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.88em', minWidth: '1.3rem', flexShrink: 0, textAlign: 'right' }}>
+              {num}.
+            </span>
+            <span style={{ flex: 1 }}>{renderInlineFormatting(numText)}</span>
+          </div>
+        );
+        continue;
+      }
+
+      // Vanligt stycke
+      elements.push(
+        <p key={`p-${i}`} style={{ margin: '0 0 0.6rem 0', lineHeight: '1.6', color: 'var(--text-main)' }}>
+          {renderInlineFormatting(trimmed)}
+        </p>
+      );
+    }
+
+    if (inCodeBlock && codeBlockLines.length > 0) {
+      elements.push(
+        <pre
+          key="code-unclosed"
+          style={{
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            color: '#e2e8f0',
+            padding: '0.75rem 1rem',
+            borderRadius: '8px',
+            overflowX: 'auto',
+            fontSize: '0.85rem',
+            fontFamily: 'monospace',
+            margin: '0.65rem 0',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}
+        >
+          <code>{codeBlockLines.join('\n')}</code>
+        </pre>
+      );
+    }
+
+    return elements;
   };
 
   return (

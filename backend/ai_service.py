@@ -886,7 +886,8 @@ def analyze_article(
             "tags": tags,
             "is_clickbait": 1 if is_clickbait else 0,
             "clickbait_reason": clickbait_reason,
-            "duration_s": dur
+            "duration_s": dur,
+            "ai_model": model
         }
     except requests.exceptions.ConnectTimeout:
         dur = round(time.time() - t0, 2)

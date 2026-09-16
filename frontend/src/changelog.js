@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.20',
+    date: '2026-09-16',
+    title: 'AI-chatt Markdown-stöd, insjunken AI-ruta och modellvisning i resonemang',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Fullständigt Markdown-stöd i AI-chatten',
+        description: 'Implementerat stöd för alla rubriknivåer (#, ##, ###, ####), horisontella avdelare (---), punktlistor, numrerade listor, inline-kod, kodblock och fetstil så att AI-svar visas strukturerat istället för råtext.'
+      },
+      {
+        type: 'ui',
+        title: 'Insjunken ruta (Well) för AI-sammanfattningen',
+        description: 'Givit artikelkortet mer djup genom att placera AI-sammanfattningen i en mjukt insjunken ruta med mikroskugga och små marginaler. Ersatt den tidigare linjeavdelaren mot taggarna.'
+      },
+      {
+        type: 'feature',
+        title: 'AI-modell i resonemangsmodalen',
+        description: 'Lagt till visning av vilken AI-modell som utfört analysen direkt i modalen för resonemang och diagnostik, samt sparat modellinformation i databasen.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.19',
     date: '2026-09-16',
     title: 'Minskade kortmarginaler, stabiliserad scroll och nytt fliknamn',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'ui',
