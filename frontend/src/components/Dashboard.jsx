@@ -353,17 +353,29 @@ const formatFullDateTime = (dateString) => {
 };
 
 const getArticlePublishedDate = (item) => {
+  let dateObj = null;
   if (item.published_ts && item.published_ts > 0) {
-    return new Date(item.published_ts * 1000);
-  }
-  if (item.published) {
+    dateObj = new Date(item.published_ts * 1000);
+  } else if (item.published) {
     const d = new Date(item.published);
-    if (!isNaN(d.getTime())) return d;
+    if (!isNaN(d.getTime())) dateObj = d;
   }
+  
+  const now = new Date();
+  // Spärr mot felaktiga framtida datum (mer än 5 minuter framåt): använd received_ts eller nu
+  if (dateObj && dateObj.getTime() > now.getTime() + 300000) {
+    if (item.received_ts && item.received_ts > 0) {
+      return new Date(item.received_ts * 1000);
+    }
+    return now;
+  }
+
+  if (dateObj) return dateObj;
+
   if (item.received_ts && item.received_ts > 0) {
     return new Date(item.received_ts * 1000);
   }
-  return new Date();
+  return now;
 };
 
 const getArticleReceivedDate = (item) => {
@@ -1826,7 +1838,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                   style={{ 
                     filter: 'none', 
-                    opacity: currentVote === -1 ? 0.55 : ((showRead && isReadNow) ? 0.85 : 1),
+                    opacity: (showRead && isReadNow) ? 0.85 : 1,
                     userSelect: 'none', 
                     WebkitUserSelect: 'none',
                     border: isClickbait ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border-color)',
@@ -2765,7 +2777,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         title={currentVote === 1 ? "Ta bort gilla" : "Gilla händelse (lär AI dina intressen och sparar händelsen)"}
                         style={currentVote === 1 ? { backgroundColor: 'rgba(16, 185, 129, 0.38)', color: '#34d399' } : {}}
                       >
-                        <ThumbsUp size={13} />
+                        <ThumbsUp size={14} />
                         <span>{currentVote === 1 ? 'Gillad' : 'Gilla'}</span>
                       </button>
 
@@ -2776,7 +2788,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         title={currentVote === -1 ? "Ta bort ogilla" : "Ogilla händelse (minska liknande ämnen)"}
                         style={currentVote === -1 ? { backgroundColor: 'rgba(239, 68, 68, 0.38)', color: '#f87171' } : {}}
                       >
-                        <ThumbsDown size={13} />
+                        <ThumbsDown size={14} />
                         <span>{currentVote === -1 ? 'Ogillad' : 'Ogilla'}</span>
                       </button>
 
@@ -2787,7 +2799,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           onClick={(e) => { e.stopPropagation(); markAsUnread(item.id, item.cluster_id, item.similar_articles); }}
                           title="Markera som oläst"
                         >
-                          <EyeOff size={13} />
+                          <EyeOff size={14} />
                           <span>Oläst</span>
                         </button>
                       ) : (
@@ -2796,7 +2808,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           onClick={(e) => { e.stopPropagation(); markAsRead(item.id, item.cluster_id, item.similar_articles); }}
                           title="Markera som läst"
                         >
-                          <CheckCheck size={13} />
+                          <CheckCheck size={14} />
                           <span>Läst</span>
                         </button>
                       )}
@@ -2809,7 +2821,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           title="Lås upp händelse"
                           style={{ backgroundColor: 'rgba(0, 0, 0, 0.38)' }}
                         >
-                          <Lock size={13} />
+                          <Lock size={14} />
                           <span>Låst</span>
                         </button>
                       ) : (
@@ -2818,20 +2830,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
                           title="Lås händelse"
                         >
-                          <Unlock size={13} />
+                          <Unlock size={14} />
                           <span>Lås</span>
                         </button>
                       )}
-
-                      {/* AI-analys / Info (I) */}
-                      <button
-                        className="modern-bottombar-btn"
-                        onClick={(e) => { e.stopPropagation(); setReasoningItem(item); }}
-                        title="Visa AI-resonemang och poänginformation (I)"
-                      >
-                        <Info size={13} />
-                        <span>AI</span>
-                      </button>
 
                       {/* Dela */}
                       <button
@@ -2839,19 +2841,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         onClick={(e) => { e.stopPropagation(); setShareItem(item); }}
                         title="Dela händelse"
                       >
-                        <Share2 size={13} />
+                        <Share2 size={14} />
                         <span>Dela</span>
-                      </button>
-
-                      {/* Läs hela / Dölj */}
-                      <button
-                        className="modern-bottombar-btn"
-                        onClick={(e) => { e.stopPropagation(); handleExpand(index, item.link, item.id); }}
-                        title={isItemExpanded ? "Dölj händelsedetaljer" : "Läs hela händelsen"}
-                        style={{ flex: 1.2 }}
-                      >
-                        <span>{isItemExpanded ? 'Dölj' : 'Läs hela'}</span>
-                        <ChevronRight size={13} style={{ transform: isItemExpanded ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
                       </button>
                     </div>
                   )}

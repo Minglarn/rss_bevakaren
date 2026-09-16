@@ -1,9 +1,37 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.18',
+    date: '2026-09-16',
+    title: 'Datumspärr, solid vy för ogillade och renare knapprad',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Sanitetsspärr för framtida datum',
+        description: 'Implementerat automatisk spärr i både backend och frontend som klämmer artiklars publiceringstid till aktuell tidpunkt om källans flöde anger ett framtida datum (t.ex. vid felaktig tidszon eller schemalagda artiklar).'
+      },
+      {
+        type: 'ui',
+        title: 'Solid bakgrund för ogillade artiklar',
+        description: 'Tagit bort den dämpande 0.55-transparensen på ogillade artiklar så att korten förblir helt solida och lättlästa även vid visning av lästa nyheter.'
+      },
+      {
+        type: 'ui',
+        title: 'Förenklad bottenrad med 5 tydliga knappar',
+        description: 'Rensat bort de redundanta valen "AI" (finns redan i sammanfattningen) och "Läs hela" (kortet expanderas vid klick på kortkroppen), vilket ger mer plats åt Gilla, Ogilla, Läst, Lås och Dela.'
+      },
+      {
+        type: 'ui',
+        title: 'Symmetrisk höjd och större knappar',
+        description: 'Bottenraden är nu symmetriskt lika hög som toppraden (42px desktop / 38px mobil) med större touch-targets (32-34px knappar) för bekvämare klickning på mobila enheter.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.17',
     date: '2026-09-16',
     title: 'Nya standardvikter, persistent MQTT och modelldokumentation',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

@@ -1015,6 +1015,10 @@ async def polling_loop():
                     for item in parsed_items:
                         pub_ts = item.get("published_ts") or 0
 
+                        # Sanitetskontroll mot källor med framtida datum
+                        if pub_ts > current_time + 300:
+                            pub_ts = current_time
+
                         # Strikt kontroll av verklig publiceringstid:
                         # Ignorera historiska artiklar som är äldre än max_age_hours (t.ex. 48h)
                         if pub_ts > 0 and pub_ts < cutoff_pub_ts:

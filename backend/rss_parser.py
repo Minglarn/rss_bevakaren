@@ -54,6 +54,10 @@ def fetch_feed_items(url: str, title: str = None):
             published_ts = 0
             if hasattr(entry, 'published_parsed') and entry.published_parsed:
                 published_ts = calendar.timegm(entry.published_parsed)
+                # Spärr mot felaktiga framtida datum från källor med fel tidszon eller schemaläggning
+                now_ts = int(time.time())
+                if published_ts > now_ts + 300:
+                    published_ts = now_ts
                 
             summary_html = entry.get("summary", "")
             image_url = ""
