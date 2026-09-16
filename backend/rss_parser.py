@@ -3,7 +3,7 @@ import time
 import calendar
 import requests
 import html
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 def extract_feed_icon(parsed_feed, feed_url: str) -> str:
     """Extraherar ikon eller logotyp ur flödesmetadata med automatisk favicon-fallback."""
@@ -19,16 +19,23 @@ def extract_feed_icon(parsed_feed, feed_url: str) -> str:
                 elif isinstance(img, str):
                     icon_url = img
 
+    # Säkerställ absolut URL om flödet angav en relativ sökväg
+    if icon_url and feed_url and not icon_url.startswith(("http://", "https://", "/default-feed-icon")):
+        try:
+            icon_url = urljoin(feed_url, icon_url)
+        except Exception:
+            pass
+
     # Fallback till domänens favicon
     if not icon_url and feed_url:
         try:
             domain = urlparse(feed_url).netloc
             if domain:
-                icon_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=64"
+                icon_url = f"https://icons.duckduckgo.com/ip3/{domain}.ico"
         except Exception:
             pass
 
-    return icon_url or ""
+    return icon_url or "/default-feed-icon.png"
 
 def fetch_feed_items(url: str, title: str = None):
     """Fetches and parses an RSS feed, returning a list of items."""

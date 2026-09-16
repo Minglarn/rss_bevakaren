@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
 import packageJson from '../../package.json';
+import { resolveFeedIcon } from '../utils/textUtils';
 import RssManager from './RssManager';
 
 const formatEuropeanDateTime = (timestamp) => {
@@ -2350,16 +2351,17 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       {/* Rad 1: Header med källa, länk och inaktivitetsstatus */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
-                          {source.icon_url ? (
-                            <img 
-                              src={source.icon_url} 
-                              alt="" 
-                              style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'contain', backgroundColor: '#ffffff', padding: '1px' }} 
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          ) : (
-                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', backgroundColor: 'var(--primary)', opacity: 0.8 }} />
-                          )}
+                          <img 
+                            src={resolveFeedIcon(source.icon_url)} 
+                            alt="" 
+                            style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'contain', backgroundColor: 'transparent', padding: '1px' }} 
+                            onError={(e) => { 
+                              if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = '/default-feed-icon.png';
+                              }
+                            }}
+                          />
                           <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {source.title}
                           </span>
@@ -3682,7 +3684,17 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                         borderBottom: idx !== feeds.length - 1 ? '1px solid var(--border-color)' : 'none'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text-main)', overflow: 'hidden' }}>
-                          <Hash size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                          <img 
+                            src={resolveFeedIcon(feed.icon_url)} 
+                            alt="" 
+                            style={{ width: 18, height: 18, borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }} 
+                            onError={(e) => { 
+                              if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = '/default-feed-icon.png';
+                              }
+                            }} 
+                          />
                           <span style={{ fontWeight: 500, fontSize: '0.92rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {feed.title || feed.url}
                           </span>

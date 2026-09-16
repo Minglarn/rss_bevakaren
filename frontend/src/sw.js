@@ -59,12 +59,17 @@ async function setToken(token) {
 
 // Handle Push Events
 self.addEventListener('push', function(event) {
-  if (event.data) {
+  if (!event.data) return;
+
+  const defaultPngIcon = new URL('/default-feed-icon.png?v=2026.09.16.04', self.location.origin).href;
+  const defaultBadge = new URL('/badge.png?v=2026.09.16.04', self.location.origin).href;
+
+  event.waitUntil((async () => {
     let title = 'RSS Bevakaren';
     let options = {
       body: 'Ny notis mottagen',
-      icon: '/pwa-192x192.png?v=2026.09.15.02',
-      badge: '/badge.png?v=2026.09.15.02',
+      icon: defaultPngIcon,
+      badge: defaultBadge,
       vibrate: [200, 100, 200],
       renotify: true,
       data: {
@@ -77,13 +82,31 @@ self.addEventListener('push', function(event) {
       title = data.title || title;
       options.body = data.body || options.body;
       options.tag = data.article_id ? `rss-art-${data.article_id}` : `rss-${Date.now()}`;
-      if (data.icon) options.icon = data.icon;
-      if (data.badge) options.badge = data.badge;
+      if (data.badge) options.badge = new URL(data.badge, self.location.origin).href;
       if (data.url) options.data.url = data.url;
       if (data.article_id) options.data.article_id = data.article_id;
       if (data.image) {
         options.image = data.image;
       }
+
+      let candidateIcon = data.icon;
+      if (!candidateIcon || candidateIcon.endsWith('.svg') || candidateIcon.includes('.svg')) {
+        candidateIcon = defaultPngIcon;
+      } else if (!candidateIcon.startsWith('http')) {
+        candidateIcon = new URL(candidateIcon, self.location.origin).href;
+      } else {
+        // Kontrollera om extern favicon (t.ex. DuckDuckGo) svarar med 200 OK
+        try {
+          const resp = await fetch(candidateIcon, { method: 'HEAD' });
+          if (!resp.ok) {
+            candidateIcon = defaultPngIcon;
+          }
+        } catch (_err) {
+          candidateIcon = defaultPngIcon;
+        }
+      }
+      options.icon = candidateIcon;
+
       if (data.actions && Array.isArray(data.actions)) {
         options.actions = data.actions;
       } else if (data.article_id) {
@@ -96,24 +119,26 @@ self.addEventListener('push', function(event) {
       options.body = event.data.text();
     }
 
-    event.waitUntil(
-      self.registration.showNotification(title, options).catch(err => {
-        console.warn('SW showNotification with full options failed, attempting minimal fallback:', err);
-        const fallbackOptions = {
-          body: options.body,
-          icon: options.icon || '/pwa-192x192.png?v=2026.09.15.02',
-          badge: '/badge.png?v=2026.09.15.02',
-          data: options.data
-        };
-        if (options.image) {
-          fallbackOptions.image = options.image;
-        }
-        return self.registration.showNotification(title, fallbackOptions);
-      }).catch(fallbackErr => {
+    try {
+      await self.registration.showNotification(title, options);
+    } catch (err) {
+      console.warn('SW showNotification with full options failed, attempting minimal fallback:', err);
+      const fallbackOptions = {
+        body: options.body,
+        icon: defaultPngIcon,
+        badge: defaultBadge,
+        data: options.data
+      };
+      if (options.image) {
+        fallbackOptions.image = options.image;
+      }
+      try {
+        await self.registration.showNotification(title, fallbackOptions);
+      } catch (fallbackErr) {
         console.error('SW showNotification fallback also failed:', fallbackErr);
-      })
-    );
-  }
+      }
+    }
+  })());
 });
 
 // Handle Notification Clicks

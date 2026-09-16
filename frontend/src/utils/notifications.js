@@ -216,12 +216,16 @@ export const sendNotification = (title, options = {}) => {
   }
 
   if (Notification.permission === 'granted') {
+    const defaultPng = '/default-feed-icon.png?v=2026.09.16.04';
     const defaultOptions = {
-      icon: '/pwa-192x192.png?v=2026.09.14.01',
-      badge: '/badge.png?v=2026.09.14.01'
+      icon: defaultPng,
+      badge: '/badge.png?v=2026.09.16.04'
     };
     
     const finalOptions = { ...defaultOptions, ...options };
+    if (!finalOptions.icon || finalOptions.icon.endsWith('.svg') || finalOptions.icon.includes('.svg')) {
+      finalOptions.icon = defaultPng;
+    }
     if (finalOptions.data && finalOptions.data.article_id && !finalOptions.actions) {
       finalOptions.actions = [
         { action: 'mark_read', title: 'Markera som läst' },

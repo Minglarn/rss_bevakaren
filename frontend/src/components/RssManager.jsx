@@ -6,6 +6,7 @@ import {
   Square, Filter, FolderPlus, EyeOff, Layers
 } from 'lucide-react';
 import api from '../api';
+import { resolveFeedIcon } from '../utils/textUtils';
 
 const RssManager = ({ embedded = false }) => {
   // Huvudtillstånd
@@ -919,14 +920,17 @@ const RssManager = ({ embedded = false }) => {
                     ) : (
                       <>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          {feed.icon_url ? (
-                            <img 
-                              src={feed.icon_url} 
-                              alt="" 
-                              style={{ width: 18, height: 18, borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }} 
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }} 
-                            />
-                          ) : null}
+                          <img 
+                            src={resolveFeedIcon(feed.icon_url)} 
+                            alt="" 
+                            style={{ width: 18, height: 18, borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }} 
+                            onError={(e) => { 
+                              if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = '/default-feed-icon.png';
+                              }
+                            }} 
+                          />
                           <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {feed.title || '[Ingen titel angiven]'}
                           </h3>

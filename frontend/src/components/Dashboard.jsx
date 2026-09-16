@@ -6,7 +6,7 @@ import api from '../api';
 import ShareModal from './ShareModal';
 import PrioOnboardingModal from './PrioOnboardingModal';
 import PrioritizeModal from './PrioritizeModal';
-import { decodeHtmlEntities } from '../utils/textUtils';
+import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
 import { useFeeds } from '../App';
 
 const DEFAULT_CATEGORIES = ['All', 'Technology', 'Politics', 'Emergency', 'Local', 'Economy', 'Entertainment', 'Other'];
@@ -1840,25 +1840,26 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
                         {/* Källnamn med flödesikon */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#ffffff', fontWeight: 700, fontSize: '0.84rem', minWidth: 0 }}>
-                          {item.feed_icon ? (
-                            <img 
-                              src={item.feed_icon} 
-                              alt="" 
-                              style={{ 
-                                width: 22, 
-                                height: 22, 
-                                borderRadius: '4px', 
-                                objectFit: 'contain', 
-                                flexShrink: 0, 
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-                                padding: '1px',
-                                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)' 
-                              }} 
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          ) : (
-                            <Rss size={16} style={{ color: '#ffffff', flexShrink: 0 }} />
-                          )}
+                          <img 
+                            src={resolveFeedIcon(item.feed_icon)} 
+                            alt="" 
+                            style={{ 
+                              width: 22, 
+                              height: 22, 
+                              borderRadius: '5px', 
+                              objectFit: 'contain', 
+                              flexShrink: 0, 
+                              backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                              padding: '1px',
+                              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)' 
+                            }} 
+                            onError={(e) => { 
+                              if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = '/default-feed-icon.png';
+                              }
+                            }}
+                          />
                           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {decodeHtmlEntities(item.source_title)}
                           </span>
@@ -1889,24 +1890,25 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     <div className="feed-card-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0, gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--primary)', fontWeight: 600 }}>
-                          {item.feed_icon ? (
-                            <img 
-                              src={item.feed_icon} 
-                              alt="" 
-                              style={{ 
-                                width: 20, 
-                                height: 20, 
-                                borderRadius: '4px', 
-                                objectFit: 'contain', 
-                                flexShrink: 0,
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                padding: '1px'
-                              }} 
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          ) : (
-                            <Rss size={16} style={{ flexShrink: 0 }} />
-                          )}
+                          <img 
+                            src={resolveFeedIcon(item.feed_icon)} 
+                            alt="" 
+                            style={{ 
+                              width: 20, 
+                              height: 20, 
+                              borderRadius: '4px', 
+                              objectFit: 'contain', 
+                              flexShrink: 0,
+                              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                              padding: '1px'
+                            }} 
+                            onError={(e) => { 
+                              if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = '/default-feed-icon.png';
+                              }
+                            }}
+                          />
                           {decodeHtmlEntities(item.source_title)}
                           {item.published && (
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.35rem' }} title="Ursprunglig publiceringstid">
@@ -2073,22 +2075,32 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       
                       {showImages && item.image_url && (
                         <motion.div 
-                          initial={flowLayout === 'compact' ? { opacity: 0, height: 0 } : false}
-                          animate={{ opacity: 1, height: flowLayout === 'stretch' ? 200 : 230 }}
+                          initial={flowLayout === 'compact' ? { opacity: 0 } : false}
+                          animate={{ opacity: 1 }}
                           transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
                           style={{ 
                             width: '100%', 
+                            aspectRatio: '16 / 9',
+                            maxHeight: '440px',
+                            minHeight: '160px',
                             marginBottom: '1rem', 
                             borderRadius: '8px', 
                             overflow: 'hidden',
                             backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                            position: 'relative'
                           }}
                         >
                           <img 
                             src={item.image_url} 
                             alt="" 
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            style={{ 
+                              width: '100%', 
+                              height: '100%', 
+                              objectFit: 'cover',
+                              objectPosition: 'center',
+                              display: 'block'
+                            }} 
                             onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
                           />
                         </motion.div>
@@ -2481,16 +2493,17 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             {item.similar_articles.map((sim) => (
                               <div key={sim.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', fontSize: '0.78rem' }}>
                                 <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                  {sim.feed_icon ? (
-                                    <img 
-                                      src={sim.feed_icon} 
-                                      alt="" 
-                                      style={{ width: 16, height: 16, borderRadius: '3px', objectFit: 'contain', flexShrink: 0, backgroundColor: '#ffffff', padding: '1px' }} 
-                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                    />
-                                  ) : (
-                                    <Rss size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-                                  )}
+                                  <img 
+                                    src={resolveFeedIcon(sim.feed_icon)} 
+                                    alt="" 
+                                    style={{ width: 16, height: 16, borderRadius: '3px', objectFit: 'contain', flexShrink: 0, backgroundColor: '#ffffff', padding: '1px' }} 
+                                    onError={(e) => { 
+                                      if (!e.currentTarget.src.endsWith('/default-feed-icon.svg')) {
+                                        e.currentTarget.onerror = null;
+                                        e.currentTarget.src = '/default-feed-icon.svg';
+                                      }
+                                    }}
+                                  />
                                   <span style={{ fontWeight: 600, color: 'var(--text-main)', flexShrink: 0 }}>{sim.source_title}:</span>
                                   <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{decodeHtmlEntities(sim.title)}</span>
                                 </div>

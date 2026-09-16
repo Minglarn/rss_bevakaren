@@ -1,9 +1,43 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.04',
+    date: '2026-09-16',
+    title: 'Garanterad ikonvisning för flöden och push-notiser',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Säkrad ikonvisning i webbpush och systemnotiser',
+        description: 'Webbläsare och operativsystem stöder inte SVG i notiser. Systemet har nu försetts med en högupplöst PNG-standardikon samt automatisk fallback i Service Worker vid brutna externa ikonlänkar så att notiser aldrig blir utan ikon.'
+      },
+      {
+        type: 'improvement',
+        title: 'Universell fallback och absolut URL-hantering',
+        description: 'Flöden vars källor anger relativa ikonsökvägar eller saknar fungerande favicon mappas nu korrekt till källans domän eller standardikonen i såväl kort, sidomeny som notisinställningar.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.16.03',
+    date: '2026-09-16',
+    title: 'Ny modern flödesikon och responsiva bildproportioner',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Ny modern standardikon för flöden och källor',
+        description: 'Ersatt den gamla generiska globen med en ny, modern och krispig vektorikon i SVG med mjuk gradient. Automatiska favicons hämtas nu via DuckDuckGo vilket ger korrekta ikoner för bland annat Polisen och svenska myndigheter.'
+      },
+      {
+        type: 'fix',
+        title: 'Responsiva 16:9-proportioner för bilder i artikelkort',
+        description: 'Åtgärdat problemet där bilder i breda layouter (t.ex. 2 kort i bredd på stor skärm) tvingades in i en fast höjd och klipptes av på toppen och botten. Bilderna anpassar sig nu dynamiskt i fullt 16:9-widescreenformat.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.02',
     date: '2026-09-16',
     title: 'Strikt kronologisk sortering och deduplicerade datumgrupper',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

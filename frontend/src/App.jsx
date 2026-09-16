@@ -13,6 +13,7 @@ import PWABadge from './components/PWABadge';
 import WhatsNewModal from './components/WhatsNewModal';
 import api, { isTokenExpired, shouldRefreshToken } from './api';
 import { autoSyncPushSubscription } from './utils/notifications';
+import { resolveFeedIcon } from './utils/textUtils';
 import packageJson from '../package.json';
 import './App.css';
 import './index.css';
@@ -440,16 +441,17 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
                       fontWeight: isActive ? 600 : 400
                     }}
                   >
-                    {feed.icon_url ? (
-                      <img 
-                        src={feed.icon_url} 
-                        alt="" 
-                        style={{ width: 14, height: 14, borderRadius: '3px', objectFit: 'contain', flexShrink: 0 }} 
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <Hash size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} /> 
-                    )}
+                    <img 
+                      src={resolveFeedIcon(feed.icon_url)} 
+                      alt="" 
+                      style={{ width: 15, height: 15, borderRadius: '3px', objectFit: 'contain', flexShrink: 0 }} 
+                      onError={(e) => { 
+                        if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/default-feed-icon.png';
+                        }
+                      }}
+                    />
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       {feed.title}
                       {pollingFeeds.has(feed.id) && <RefreshCw size={11} className="spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />}
@@ -627,16 +629,17 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               }}
               onClick={() => setIsMobileSheetOpen(false)}
             >
-              {feed.icon_url ? (
                 <img 
-                  src={feed.icon_url} 
+                  src={resolveFeedIcon(feed.icon_url)} 
                   alt="" 
                   style={{ width: 18, height: 18, borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }} 
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-              ) : (
-                <Hash size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} /> 
-              )} 
+                  onError={(e) => { 
+                    if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/default-feed-icon.png';
+                    }
+                  }}
+                /> 
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {feed.title}
                 {pollingFeeds.has(feed.id) && <RefreshCw size={14} className="spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />}

@@ -693,19 +693,23 @@ def parse_device_name(ua: Optional[str]) -> str:
     return f"{os_name} ({browser_name})"
 
 def get_feed_icon_url(feed: Optional[models.Feed], link: Optional[str] = None) -> str:
-    """Returnerar flödets sparade ikon eller genererar en automatisk favicon via Google service."""
+    """Returnerar flödets sparade ikon eller genererar en automatisk favicon via DuckDuckGo service."""
     if feed and getattr(feed, "icon_url", None) and feed.icon_url.strip():
-        return feed.icon_url.strip()
+        raw_icon = feed.icon_url.strip()
+        if "google.com/s2/favicons" not in raw_icon:
+            if raw_icon in ("/default-feed-icon.svg", "/default-feed-icon.png"):
+                return "/default-feed-icon.png"
+            return raw_icon
     target_url = (feed.url if feed and feed.url else "") or (link or "")
     if target_url:
         try:
             from urllib.parse import urlparse
             domain = urlparse(target_url).netloc
             if domain:
-                return f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
+                return f"https://icons.duckduckgo.com/ip3/{domain}.ico"
         except Exception:
             pass
-    return ""
+    return "/default-feed-icon.png"
 
 def send_push_notification_to_user(
     db: Session,
@@ -740,8 +744,11 @@ def send_push_notification_to_user(
     last_status_code = None
     errors = []
 
-    default_icon = "/pwa-192x192.png?v=2026.09.15.02"
-    resolved_icon = icon_url.strip() if (icon_url and icon_url.strip()) else default_icon
+    default_icon = "/default-feed-icon.png?v=2026.09.16.04"
+    if not icon_url or not icon_url.strip() or icon_url.strip().endswith(".svg") or "/default-feed-icon" in icon_url:
+        resolved_icon = default_icon
+    else:
+        resolved_icon = icon_url.strip()
 
     for idx, sub in enumerate(subs, 1):
         dev_desc = parse_device_name(sub.user_agent)
@@ -754,7 +761,7 @@ def send_push_notification_to_user(
                 "url": url or "/",
                 "article_id": article_id,
                 "icon": resolved_icon,
-                "badge": "/badge.png?v=2026.09.15.02"
+                "badge": "/badge.png?v=2026.09.16.04"
             }
             if image_url:
                 payload["image"] = image_url
