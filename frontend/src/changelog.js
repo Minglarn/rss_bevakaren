@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.02',
+    date: '2026-09-16',
+    title: 'Strikt kronologisk sortering och deduplicerade datumgrupper',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Strikt kronologisk sortering efter publiceringstid',
+        description: 'Artiklar sorteras nu konsekvent efter sin faktiska publiceringstid (både i backend och frontend) istället för enbart hämtningstidpunkt. Detta förhindrar att nyheter i samma flöde eller i läget "Visa lästa" visas huller om buller.'
+      },
+      {
+        type: 'fix',
+        title: 'Deduplicering av datumrubriker',
+        description: 'Datumgrupperingen i flödesvyn samlar nu samtliga artiklar för samma dygn under en och samma sammanhållna datumavgränsare i strikt fallande ordning, vilket eliminerar att samma dag (t.ex. Tisdag 15 september) skapas och visas flera gånger.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.01',
     date: '2026-09-16',
     title: 'Prestandalyft för AI-kö och oberoende databashantering',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

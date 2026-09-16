@@ -1908,7 +1908,8 @@ def get_dashboard_feeds(
                     models.Article.summary.ilike(f"%{search}%")
                 ))
         
-    articles = query.order_by(models.Article.received_ts.desc()).limit(150).all()
+    effective_ts = func.coalesce(func.nullif(models.Article.published_ts, 0), models.Article.received_ts)
+    articles = query.order_by(effective_ts.desc(), models.Article.id.desc()).limit(150).all()
     
     # Bygg respons-artiklar
     response_items = []
@@ -2017,7 +2018,7 @@ def get_dashboard_feeds(
         final_items.append(head)
 
     final_items.extend(unclustered)
-    final_items.sort(key=lambda x: x.get("received_ts", 0), reverse=True)
+    final_items.sort(key=lambda x: (x.get("published_ts") or x.get("received_ts") or 0, x.get("id", 0)), reverse=True)
     return final_items
 
 @app.post("/articles/cluster/{cluster_id}/read")

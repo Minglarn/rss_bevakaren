@@ -578,40 +578,67 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
   // Filtrera bort lästa artiklar om användaren inte valt att visa lästa (showRead = false)
   // Samt strikt isolering till det aktiva flödet om ett specifikt flöde är valt (feedId)
+  // Sortera artiklarna strikt i fallande kronologisk ordning baserat på faktisk publiceringstid
   const visibleFeeds = useMemo(() => {
     let list = displayedFeeds;
     if (feedId) {
       list = list.filter(item => String(item.feed_id) === String(feedId));
     }
-    if (showRead) return list;
-    return list.filter(item => !isArticleRead(item.id, item.is_read));
+    if (!showRead) {
+      list = list.filter(item => !isArticleRead(item.id, item.is_read));
+    }
+    return [...list].sort((a, b) => {
+      const timeA = getArticlePublishedDate(a).getTime();
+      const timeB = getArticlePublishedDate(b).getTime();
+      if (timeA !== timeB) {
+        return timeB - timeA;
+      }
+      return (b.id || 0) - (a.id || 0);
+    });
   }, [displayedFeeds, feedId, showRead, isArticleRead]);
 
-  // Gruppera artiklar per dag för snygga datumavgränsare och oberoende masonry-kolumner
+  // Gruppera artiklar per dag med strikt datumdeduplicering och kronologisk sortering
   const dayGroups = useMemo(() => {
-    const groups = [];
-    let currentGroup = null;
+    const groupsMap = new Map();
 
     visibleFeeds.forEach((item, index) => {
       const currentD = getArticlePublishedDate(item);
       let dateLabel = '';
       let dayKey = 'all';
+      let sortTimestamp = 0;
 
       if (!isNaN(currentD.getTime())) {
         const text = currentD.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
         dateLabel = text.charAt(0).toUpperCase() + text.slice(1);
-        dayKey = `${currentD.getFullYear()}-${currentD.getMonth()}-${currentD.getDate()}`;
+        dayKey = `${currentD.getFullYear()}-${String(currentD.getMonth() + 1).padStart(2, '0')}-${String(currentD.getDate()).padStart(2, '0')}`;
+        sortTimestamp = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate()).getTime();
       }
 
-      if (!currentGroup || currentGroup.dayKey !== dayKey) {
-        currentGroup = {
+      if (!groupsMap.has(dayKey)) {
+        groupsMap.set(dayKey, {
           dayKey,
           dateLabel,
+          sortTimestamp,
           items: []
-        };
-        groups.push(currentGroup);
+        });
       }
-      currentGroup.items.push({ item, index });
+      groupsMap.get(dayKey).items.push({ item, index });
+    });
+
+    // Sortera dagarna fallande så att senaste dagen alltid kommer överst
+    const groups = Array.from(groupsMap.values());
+    groups.sort((a, b) => b.sortTimestamp - a.sortTimestamp);
+
+    // Säkerställ att artiklarna inom varje dag är sorterade efter publiceringstid fallande
+    groups.forEach(group => {
+      group.items.sort((a, b) => {
+        const timeA = getArticlePublishedDate(a.item).getTime();
+        const timeB = getArticlePublishedDate(b.item).getTime();
+        if (timeA !== timeB) {
+          return timeB - timeA;
+        }
+        return (b.item.id || 0) - (a.item.id || 0);
+      });
     });
 
     return groups;
