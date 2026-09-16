@@ -106,6 +106,7 @@ class ArticleResponse(BaseModel):
     prio_reason: Optional[str] = ""
     urgency_score: Optional[int] = 5
     substance_score: Optional[int] = 5
+    user_vote: Optional[int] = 0
     ai_summary: Optional[str] = None
     tags: Optional[List[str]] = []
     is_clickbait: Optional[int] = 0
@@ -215,4 +216,7 @@ class DigestGenerateRequest(BaseModel):
 
 class ClusterBulkReadRequest(BaseModel):
     cluster_id: int
+
+class ArticleVoteRequest(BaseModel):
+    vote: int # 1 = Gilla, -1 = Ogilla, 0 = Nollställ
 

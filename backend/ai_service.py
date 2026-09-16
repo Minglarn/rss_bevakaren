@@ -552,7 +552,10 @@ def calculate_priority(
     urgency_score: Optional[int] = 5,
     substance_score: Optional[int] = 5,
     is_clickbait: bool = False,
-    cluster_size: int = 1
+    cluster_size: int = 1,
+    tags: Optional[List[str]] = None,
+    liked_tags: Optional[List[str]] = None,
+    disliked_tags: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
     Beräknar deterministisk prioritet och poäng baserat på en flerdimensionell poängmatris:
@@ -564,6 +567,8 @@ def calculate_priority(
        - Substance (faktatäthet / informationsdjup): 30 %
     4. Bonus & Avdrag:
        - Flerkällsbekräftelse (kluster): +10p vid 2 källor, +15p vid 3+ källor.
+       - Intresseprofil (Gilla): +10p per matchad tagg/kategori (max +20p).
+       - Ogillade ämnen (Ogilla): -15p vid match.
        - ClickBait-avdrag: -25p vid ClickBait (max 35p om inte bekräftat blåljus med hög akuthet).
     5. Prioritetsnivå:
        - >= 75: high (PRIO-flödet)
@@ -629,6 +634,31 @@ def calculate_priority(
         score += 10
         reasons.append("+10p flerkällsbekräftelse (2 källor)")
 
+    # Adaptiv intresseprofil (baserat på Gilla / Ogilla)
+    article_terms = set()
+    if clean_cat:
+        article_terms.add(clean_cat.lower())
+    if tags:
+        for t in tags:
+            if t and str(t).strip():
+                article_terms.add(str(t).strip().lower())
+
+    if liked_tags:
+        liked_set = {str(lt).strip().lower() for lt in liked_tags if lt and str(lt).strip()}
+        liked_matches = [t for t in article_terms if t in liked_set]
+        if liked_matches:
+            bonus = min(20, len(liked_matches) * 10)
+            score += bonus
+            reasons.append(f"+{bonus}p intresseprofil ({', '.join(liked_matches[:2])})")
+
+    if disliked_tags:
+        disliked_set = {str(dt).strip().lower() for dt in disliked_tags if dt and str(dt).strip()}
+        disliked_matches = [t for t in article_terms if t in disliked_set]
+        if disliked_matches:
+            penalty = 15
+            score -= penalty
+            reasons.append(f"-{penalty}p ogillat ämne ({', '.join(disliked_matches[:2])})")
+
     # ClickBait-avdrag
     if is_clickbait:
         score -= 25
@@ -663,7 +693,9 @@ def analyze_article(
     custom_prompt: Optional[str] = None,
     user_categories: Optional[List[str]] = None,
     model_override: Optional[str] = None,
-    on_progress: Optional[Callable[[int], None]] = None
+    on_progress: Optional[Callable[[int], None]] = None,
+    liked_tags: Optional[List[str]] = None,
+    disliked_tags: Optional[List[str]] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Anropar LM Studio och returnerar ett berikat artikelobjekt.
@@ -810,25 +842,28 @@ def analyze_article(
         except Exception:
             substance_score = 5
 
-        # Beräkna deterministisk prioritet och poäng baserat på sammansatt poängmatris
+        raw_tags = parsed.get("tags", [])
+        if isinstance(raw_tags, list):
+            tags = [str(t).strip() for t in raw_tags if t and str(t).strip()]
+        else:
+            tags = []
+
+        # Beräkna deterministisk prioritet och poäng baserat på sammansatt poängmatris och intresseprofil
         prio_calc = calculate_priority(
             category=category,
             categories_config=user_categories,
             urgency_score=urgency_score,
             substance_score=substance_score,
-            is_clickbait=is_clickbait
+            is_clickbait=is_clickbait,
+            tags=tags,
+            liked_tags=liked_tags,
+            disliked_tags=disliked_tags
         )
         priority = prio_calc["priority"]
         prio_score = prio_calc["prio_score"]
         prio_reason = prio_calc["prio_reason"]
             
         ai_summary = str(parsed.get("summary", "")).strip()
-        
-        raw_tags = parsed.get("tags", [])
-        if isinstance(raw_tags, list):
-            tags = [str(t).strip() for t in raw_tags if t and str(t).strip()]
-        else:
-            tags = []
 
         return {
             "category": category,

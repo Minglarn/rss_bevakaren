@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.16.06-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.16.08-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -13,6 +13,8 @@ RSS-Bevakaren är ett modernt, självhostat system för att övervaka, filtrera,
 
 ## Huvudfunktioner
 
+- **Gilla- & Ogilla-system (Adaptiv intresseprofil):** Interaktiv röstning direkt på händelsekorten (Tumme upp / Tumme ner). Att gilla en artikel låser den automatiskt mot rensning och tränar upp en personlig intresseprofil som prioriterar upp framtida liknande ämnen (+10p bonus per matchande tagg). Att ogilla en artikel dämpar den visuellt och sänker poängen (-15p) för liknande ämnen.
+- **Favoritfilter ("Gillade"):** Ett dedikerat filter i navigeringsfältet för att omedelbart visa alla dina gillade och sparade artiklar.
 - **Nyhetsklustring och dubletthantering (Topic Clustering):** Intelligent semantisk och heuristisk gruppering av artiklar från olika redaktioner som rapporterar om samma händelse (t.ex. SVT, DN, Aftonbladet). Visar länkade källbrickor och gör det möjligt att markera hela händelser som lästa med ett klick. Styrs centralt via Inställningar -> Utseende och är aktiv som standard.
 - **Dagens Briefing & Historikarkiv (AI Digest):** Automatisk morgon- och kvällsrapport (kl 07:00 och 18:00) av nyhetsläget sammanställd via lokal AI. Har en dedikerad flik på desktop med fullständigt historikarkiv, samt ett ultrakompakt expanderbart toppkort i mobilflödet.
 - **Interaktiv AI-nyhetschatt & Hybrid RAG:** Fullskärms konversationsgränssnitt som drivs av en lokal LM Studio-instans eller valfritt OpenAI-kompatibelt API. Ställ frågor på naturligt språk ("Vilka allvarliga olyckor har rapporterats senaste dygnet?", "Sammanfatta nyheter inom politik") och få svar med källhänvisningar och direktlänkar.
@@ -53,6 +55,8 @@ $$\text{Grundpoäng} = (\text{Kategorivikt} \times 10 \times 0.30) + (\text{Akut
 
 #### Specialregler och bonusar
 - **PRIO-tröskel ($\ge 75$ poäng):** Artiklar som når 75 poäng eller mer får status `HIGH` och visas i det dedikerade PRIO-flödet med orange märkning.
+- **Intresseprofil (Gilla):** Om du har gillat tidigare artiklar inom samma ämne/tagg läggs en personlig intressebonus på **+10 poäng** till (upp till **+20 poäng** vid flera träffar).
+- **Oönskade ämnen (Ogilla):** Om artikeln matchar ett ämne/tagg du tidigare har ogillat görs ett avdrag på **-15 poäng**.
 - **Flerkällsbekräftelse (Kluster):** Om samma händelse rapporteras av **2 oberoende källor** läggs **+10 poäng** till. Om **3 eller fler källor** rapporterar läggs **+15 poäng** till. Detta lyfter automatiskt bekräftade stora händelser.
 - **ClickBait-avdrag (-25 poäng):** Artiklar med sensationella eller undanhållande rubriker får ett automatiskt avdrag på 25 poäng för att hålla PRIO-flödet rent från skräp.
 - **Bevakningsord (Garanterad 100 % PRIO):** Om artikeln matchar ett av dina egna bevakningsord får den omedelbart **100 poäng och Hög prioritet**, oavsett kategori.

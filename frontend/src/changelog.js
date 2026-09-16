@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.16.08',
+    date: '2026-09-16',
+    title: 'Gilla- och Ogilla-system med adaptiv intresseprofil och favoritsamling (Steg 2)',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Direkt röstning med Gilla och Ogilla på artikelkort',
+        description: 'Varje artikelkort har nu diskreta knappar för Gilla och Ogilla. När du gillar en artikel sparas och låses den automatiskt mot nattlig rensning, medan ogillade artiklar dämpas i flödet.'
+      },
+      {
+        type: 'feature',
+        title: 'Adaptiv intresseprofil i AI-prioriteringen',
+        description: 'Artiklar du gillar skapar automatiskt en positiv intresseprofil. Framtida inkommande artiklar som matchar taggar från dina gillade artiklar tilldelas en personlig intressebonus (+10 poäng), medan taggar från ogillade artiklar dämpas (-15 poäng).'
+      },
+      {
+        type: 'feature',
+        title: 'Nytt snabbfilter för Gillade artiklar i översikten',
+        description: 'Ett nytt dedikerat filter i menyn låter dig snabbt visa alla dina sparade favoriter med ett klick.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.07',
     date: '2026-09-16',
     title: 'Tydliggörande av poängmatris och kategoriviktning i gränssnitt och dokumentation',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

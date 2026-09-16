@@ -142,6 +142,15 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE articles ADD COLUMN content TEXT"))
                     conn.commit()
                     print("[DB] Added content column to articles", flush=True)
+                if "user_vote" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN user_vote INTEGER DEFAULT 0"))
+                    conn.commit()
+                    try:
+                        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_articles_user_vote ON articles(user_vote)"))
+                        conn.commit()
+                    except Exception:
+                        pass
+                    print("[DB] Added user_vote column to articles", flush=True)
                 conn.execute(text("UPDATE articles SET allow_push = 1 WHERE allow_push IS NULL"))
                 conn.commit()
         except Exception as e:
@@ -521,6 +530,13 @@ def run_db_migrations(db_path: str):
                 cur.execute(f"ALTER TABLE articles ADD COLUMN {col_def[0]} {col_def[1]};")
             except sqlite3.OperationalError:
                 pass
+
+        # Migration 21: Add user_vote to articles (-1 = Ogilla, 0 = Neutral, 1 = Gilla)
+        try:
+            cur.execute("ALTER TABLE articles ADD COLUMN user_vote INTEGER DEFAULT 0;")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_articles_user_vote ON articles(user_vote);")
+        except sqlite3.OperationalError:
+            pass
 
         conn.commit()
         conn.close()
@@ -1154,6 +1170,39 @@ def safe_bg_save_embedding(art_id: int, title: str, summary: str):
     finally:
         sess.close()
 
+def get_user_interest_profile(db: Session, user_id: int):
+    """
+    Hämtar unika taggar och kategorier från användarens gillade och ogillade artiklar
+    för att skapa en adaptiv intresseprofil för AI-prioritering.
+    """
+    liked_rows = db.query(models.Article.tags, models.Article.category).join(models.Feed).filter(
+        models.Feed.user_id == user_id,
+        models.Article.user_vote == 1
+    ).order_by(models.Article.id.desc()).limit(100).all()
+
+    disliked_rows = db.query(models.Article.tags, models.Article.category).join(models.Feed).filter(
+        models.Feed.user_id == user_id,
+        models.Article.user_vote == -1
+    ).order_by(models.Article.id.desc()).limit(100).all()
+
+    def _extract_terms(rows):
+        terms = set()
+        for r_tags, r_cat in rows:
+            if r_cat and r_cat.strip():
+                terms.add(r_cat.strip().lower())
+            if r_tags:
+                try:
+                    parsed = json.loads(r_tags) if isinstance(r_tags, str) else r_tags
+                    if isinstance(parsed, list):
+                        for t in parsed:
+                            if t and str(t).strip():
+                                terms.add(str(t).strip().lower())
+                except Exception:
+                    pass
+        return list(terms)
+
+    return _extract_terms(liked_rows), _extract_terms(disliked_rows)
+
 ai_wake_event = asyncio.Event()
 ai_failed_attempts: dict[int, int] = {}
 ai_retry_after: dict[int, float] = {}
@@ -1289,6 +1338,9 @@ async def ai_processing_loop():
 
                         kws = db_item.query(models.Keyword).filter(models.Keyword.user_id == user_id).all()
                         matched_kw_candidates = [k.keyword for k in kws if k.keyword]
+                        liked_tags, disliked_tags = get_user_interest_profile(db_item, user_id)
+                    else:
+                        liked_tags, disliked_tags = [], []
 
                     u_rec = db_item.query(models.User).filter(models.User.id == user_id).first() if user_id else None
                     u_display = u_rec.username if u_rec else f"user_{user_id}"
@@ -1316,6 +1368,8 @@ async def ai_processing_loop():
                         "auto_scrape_active": auto_scrape_active,
                         "feed_allows_scrape": feed_allows_scrape,
                         "matched_kw_candidates": matched_kw_candidates,
+                        "liked_tags": liked_tags,
+                        "disliked_tags": disliked_tags,
                         "threshold": threshold,
                         "prio_enabled": prio_enabled,
                         "prio_notify_only": prio_notify_only,
@@ -1383,7 +1437,9 @@ async def ai_processing_loop():
                     custom_prompt=item["user_prompt"],
                     user_categories=item["user_cats"],
                     model_override=item["user_model"],
-                    on_progress=on_progress_sync
+                    on_progress=on_progress_sync,
+                    liked_tags=item.get("liked_tags"),
+                    disliked_tags=item.get("disliked_tags")
                 )
 
                 if analysis:
@@ -1903,6 +1959,7 @@ def get_dashboard_feeds(
     tag: Optional[str] = None,
     cluster_mode: Optional[bool] = True,
     locked_only: Optional[bool] = False,
+    liked_only: Optional[bool] = False,
     db: Session = Depends(database.get_db), 
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -1918,6 +1975,8 @@ def get_dashboard_feeds(
             
         if locked_only:
             query = query.filter(models.Article.is_locked == 1)
+        elif liked_only:
+            query = query.filter(models.Article.user_vote == 1)
         elif not show_read:
             query = query.filter((models.Article.is_read == 0) | (models.Article.is_read == None))
             
@@ -1985,6 +2044,7 @@ def get_dashboard_feeds(
             "received_ts": art.received_ts,
             "is_read": art.is_read or 0,
             "is_locked": art.is_locked or 0,
+            "user_vote": art.user_vote or 0,
             # AI-fält levereras i AI-läget och PRIO-läget - Klassiskt läge förblir 100% rått och snabbt
             "ai_processed": art.ai_processed or 0 if include_ai else 0,
             "category": art.category if include_ai else None,
@@ -2178,6 +2238,8 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
 
     await manager.send_personal_message(f"AI_PROGRESS:{art.id}:0", current_user.id)
 
+    liked_tags, disliked_tags = get_user_interest_profile(db, current_user.id)
+
     analysis = await asyncio.to_thread(
         ai_service.analyze_article,
         title=art.title,
@@ -2187,7 +2249,9 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
         custom_prompt=user_prompt,
         user_categories=user_cats,
         model_override=user_model,
-        on_progress=on_progress_sync
+        on_progress=on_progress_sync,
+        liked_tags=liked_tags,
+        disliked_tags=disliked_tags
     )
     if not analysis:
         raise HTTPException(status_code=502, detail="LM Studio svarade inte eller kunde inte analysera artikeln.")
@@ -3185,6 +3249,30 @@ def unlock_article(article_id: int, db: Session = Depends(database.get_db), curr
         article.is_locked = 0
         db.commit()
     return {"status": "ok"}
+
+@app.post("/articles/{article_id}/vote")
+def vote_article(
+    article_id: int, 
+    payload: schemas.ArticleVoteRequest, 
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    article = db.query(models.Article).join(models.Feed).filter(models.Article.id == article_id, models.Feed.user_id == current_user.id).first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Artikeln hittades inte")
+    
+    vote_val = 1 if payload.vote > 0 else (-1 if payload.vote < 0 else 0)
+    article.user_vote = vote_val
+    if vote_val == 1:
+        # Gilla skyddar automatiskt artikeln från automatisk rensning
+        article.is_locked = 1
+    db.commit()
+    return {
+        "status": "ok", 
+        "article_id": article.id, 
+        "user_vote": article.user_vote, 
+        "is_locked": article.is_locked
+    }
 
 @app.post("/system/purge")
 def purge_system(days: int = 30, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):

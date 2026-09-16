@@ -80,6 +80,7 @@ class Article(Base):
     prio_reason = Column(String, default="")
     urgency_score = Column(Integer, default=5)
     substance_score = Column(Integer, default=5)
+    user_vote = Column(Integer, default=0, index=True) # 1 = Gilla, -1 = Ogilla, 0 = Neutral
     ai_summary = Column(String, nullable=True)
     tags = Column(String, default="[]")
     is_clickbait = Column(Integer, default=0)

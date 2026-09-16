@@ -1,11 +1,10 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
-import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText, Smartphone, Calendar } from 'lucide-react';
+import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText, Smartphone, Calendar, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import ShareModal from './ShareModal';
 import PrioOnboardingModal from './PrioOnboardingModal';
-import PrioritizeModal from './PrioritizeModal';
 import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
 import { useFeeds } from '../App';
 
@@ -417,7 +416,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   }, [searchTerm]);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [prioritizeItem, setPrioritizeItem] = useState(null);
   const [revealedOriginals, setRevealedOriginals] = useState(new Set());
   const [aiProgress, setAiProgress] = useState({});
   const [nowTs, setNowTs] = useState(Math.floor(Date.now() / 1000));
@@ -472,12 +470,20 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     return serverIsLocked === 1;
   }, [lockedItems, unlockedItems]);
 
+  const [userVotes, setUserVotes] = useState({});
+
+  const getArticleVote = useCallback((id, serverVote) => {
+    if (userVotes[id] !== undefined) return userVotes[id];
+    return serverVote || 0;
+  }, [userVotes]);
+
   const longPressTimers = useRef({});
   const isDraggingCard = useRef(false);
   const [showRead, setShowRead] = useState(() => {
     return localStorage.getItem('rss_show_read') === 'true';
   });
   const [showLockedOnly, setShowLockedOnly] = useState(false);
+  const [showLikedOnly, setShowLikedOnly] = useState(false);
   const [showImages, setShowImages] = useState(() => {
     return localStorage.getItem('rss_show_images') !== 'false';
   });
@@ -752,6 +758,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     articleId,
     showRead,
     showLockedOnly,
+    showLikedOnly,
     debouncedSearch,
     selectedCategory,
     selectedTag,
@@ -769,6 +776,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       articleId: aId,
       showRead: sRead,
       showLockedOnly: sLocked,
+      showLikedOnly: sLiked,
       debouncedSearch: dSearch,
       selectedCategory: sCat,
       selectedTag: sTag,
@@ -785,6 +793,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       if (aId) queryParts.push(`article_id=${encodeURIComponent(aId)}`);
       if (sLocked) {
         queryParts.push('locked_only=true');
+      } else if (sLiked) {
+        queryParts.push('liked_only=true');
       } else if (sRead) {
         queryParts.push('show_read=true');
       }
@@ -904,7 +914,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
       }
     };
-  }, [feedId, articleId, showRead, showLockedOnly, debouncedSearch, isPrioMode, selectedCategory, selectedTag, clusterMode]);
+  }, [feedId, articleId, showRead, showLockedOnly, showLikedOnly, debouncedSearch, isPrioMode, selectedCategory, selectedTag, clusterMode]);
 
   const handleSelectCategory = (cat) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -1072,6 +1082,27 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     }
   };
 
+  const handleVote = async (id, currentVote, targetVote) => {
+    const newVote = currentVote === targetVote ? 0 : targetVote;
+    try {
+      setUserVotes(prev => ({ ...prev, [id]: newVote }));
+      if (newVote === 1) {
+        setLockedItems(prev => new Set(prev).add(id));
+        setUnlockedItems(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+      await api.post(`/articles/${id}/vote`, { vote: newVote });
+      if (navigator.vibrate) {
+        navigator.vibrate(40);
+      }
+    } catch (error) {
+      console.error("Kunde inte spara röst:", error);
+    }
+  };
+
   const markAllAsRead = async () => {
     try {
       const url = feedId 
@@ -1184,7 +1215,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button
-            onClick={() => setShowLockedOnly(!showLockedOnly)}
+            onClick={() => {
+              if (!showLockedOnly) setShowLikedOnly(false);
+              setShowLockedOnly(!showLockedOnly);
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -1204,6 +1238,31 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           >
             <Lock size={16} />
             <span className="desktop-only">{showLockedOnly ? "Alla artiklar" : "Låsta"}</span>
+          </button>
+          <button
+            onClick={() => {
+              if (!showLikedOnly) setShowLockedOnly(false);
+              setShowLikedOnly(!showLikedOnly);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '6px 12px',
+              border: showLikedOnly ? '1px solid #10b981' : '1px solid var(--border-color)',
+              backgroundColor: showLikedOnly ? '#10b981' : 'var(--bg-card)',
+              color: showLikedOnly ? 'white' : 'var(--text-muted)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+              height: '36px'
+            }}
+            title={showLikedOnly ? "Visa alla artiklar i flödet" : "Visa endast artiklar du har gillat"}
+          >
+            <ThumbsUp size={16} />
+            <span className="desktop-only">{showLikedOnly ? "Alla artiklar" : "Gillade"}</span>
           </button>
           <button
             onClick={() => setShowRead(!showRead)}
@@ -1693,6 +1752,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           <p style={{ color: 'var(--text-muted)' }}>
             {showLockedOnly 
               ? "Inga låsta artiklar hittades. Du kan spara artiklar med lås-ikonen på artikelkorten." 
+              : showLikedOnly
+              ? "Inga gillade artiklar hittades. Du kan gilla artiklar med tumme upp på artikelkorten för att spara dem och lära AI vad du gillar."
               : "Inga olästa nyheter just nu. Byt till 'Visa lästa' eller uppdatera flödena."}
           </p>
         </div>
@@ -1708,6 +1769,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               const recDate = getArticleReceivedDate(item);
               const hasDistinctReceivedTime = recDate && Math.abs(recDate.getTime() - pubDate.getTime()) > 120000;
               const isReadNow = Boolean(isArticleRead(item.id, item.is_read));
+              const currentVote = getArticleVote(item.id, item.user_vote);
 
               return (
                 <SwipeableArticleCard
@@ -1721,7 +1783,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                   style={{ 
                     filter: 'none', 
-                    opacity: (showRead && isReadNow) ? 0.85 : 1,
+                    opacity: currentVote === -1 ? 0.55 : ((showRead && isReadNow) ? 0.85 : 1),
                     userSelect: 'none', 
                     WebkitUserSelect: 'none',
                     border: isClickbait ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border-color)',
@@ -1753,8 +1815,48 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       </div>
                     )}
                     
-                    {/* Actions: Lock/Read buttons */}
-                    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+                    {/* Actions: Vote/Read/Lock buttons */}
+                    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                      {/* Vote: Gilla */}
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleVote(item.id, currentVote, 1); }}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          color: currentVote === 1 ? '#10b981' : 'rgba(255,255,255,0.6)', 
+                          backgroundColor: currentVote === 1 ? 'rgba(16, 185, 129, 0.25)' : 'transparent', 
+                          border: 'none', 
+                          cursor: 'pointer', 
+                          padding: '0.35rem', 
+                          borderRadius: '4px', 
+                          transition: 'all 0.2s' 
+                        }}
+                        title={currentVote === 1 ? "Ta bort gilla" : "Gilla artikel (lär AI dina intressen och sparar artikeln)"}
+                      >
+                        <ThumbsUp size={16} />
+                      </button>
+
+                      {/* Vote: Ogilla */}
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleVote(item.id, currentVote, -1); }}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          color: currentVote === -1 ? '#ef4444' : 'rgba(255,255,255,0.6)', 
+                          backgroundColor: currentVote === -1 ? 'rgba(239, 68, 68, 0.25)' : 'transparent', 
+                          border: 'none', 
+                          cursor: 'pointer', 
+                          padding: '0.35rem', 
+                          borderRadius: '4px', 
+                          transition: 'all 0.2s' 
+                        }}
+                        title={currentVote === -1 ? "Ta bort ogilla" : "Ogilla artikel (minska liknande ämnen)"}
+                      >
+                        <ThumbsDown size={16} />
+                      </button>
+
                       {/* Read button */}
                       {isArticleRead(item.id, item.is_read) ? (
                         <button 
@@ -1989,23 +2091,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        {prioEnabled && (
-                          <button
-                            className="feed-card-share-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPrioritizeItem(item);
-                            }}
-                            title={item.priority === 'high' ? "Prioriterad (klicka för att redigera/bevaka ämne)" : "Prioritera händelse / bevaka ämne"}
-                            style={{
-                              color: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? '#f97316' : undefined,
-                              backgroundColor: (item.priority === 'high' || (item.prio_score || 0) >= 75) ? 'rgba(249, 115, 22, 0.12)' : undefined
-                            }}
-                          >
-                            <Flame size={16} />
-                          </button>
-                        )}
-
                         {prioEnabled && (!item.ai_summary || isPrioMode) && (
                           <button
                             className="feed-card-share-btn"
@@ -2582,6 +2667,28 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         borderBottomLeftRadius: '8px'
                       }}
                     >
+                      {/* Gilla */}
+                      <button
+                        className={`modern-bottombar-btn ${currentVote === 1 ? 'active' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); handleVote(item.id, currentVote, 1); }}
+                        title={currentVote === 1 ? "Ta bort gilla" : "Gilla händelse (lär AI dina intressen och sparar händelsen)"}
+                        style={currentVote === 1 ? { backgroundColor: 'rgba(16, 185, 129, 0.38)', color: '#34d399' } : {}}
+                      >
+                        <ThumbsUp size={13} />
+                        <span>{currentVote === 1 ? 'Gillad' : 'Gilla'}</span>
+                      </button>
+
+                      {/* Ogilla */}
+                      <button
+                        className={`modern-bottombar-btn ${currentVote === -1 ? 'active' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); handleVote(item.id, currentVote, -1); }}
+                        title={currentVote === -1 ? "Ta bort ogilla" : "Ogilla händelse (minska liknande ämnen)"}
+                        style={currentVote === -1 ? { backgroundColor: 'rgba(239, 68, 68, 0.38)', color: '#f87171' } : {}}
+                      >
+                        <ThumbsDown size={13} />
+                        <span>{currentVote === -1 ? 'Ogillad' : 'Ogilla'}</span>
+                      </button>
+
                       {/* Läst / Oläst */}
                       {isArticleRead(item.id, item.is_read) ? (
                         <button
@@ -2622,18 +2729,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         >
                           <Unlock size={13} />
                           <span>Lås</span>
-                        </button>
-                      )}
-
-                      {/* Prio */}
-                      {prioEnabled && (
-                        <button
-                          className="modern-bottombar-btn"
-                          onClick={(e) => { e.stopPropagation(); setPrioritizeItem(item); }}
-                          title="Prioritera händelse / bevaka ämne"
-                        >
-                          <Flame size={13} />
-                          <span>Prio</span>
                         </button>
                       )}
 
@@ -2746,39 +2841,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         />
       )}
 
-      {/* Prioritera / bevaka dialog */}
-      <PrioritizeModal
-        isOpen={!!prioritizeItem}
-        article={prioritizeItem}
-        onClose={() => setPrioritizeItem(null)}
-        onPrioritized={(artId, data) => {
-          setAllFeeds(prev => prev.map(a => {
-            if (a.id === artId) {
-              return {
-                ...a,
-                priority: data.priority || 'high',
-                prio_score: data.prio_score || 100,
-                prio_reason: data.prio_reason || a.prio_reason,
-                ai_processed: 1
-              };
-            }
-            return a;
-          }));
-          setDisplayedFeeds(prev => prev.map(a => {
-            if (a.id === artId) {
-              return {
-                ...a,
-                priority: data.priority || 'high',
-                prio_score: data.prio_score || 100,
-                prio_reason: data.prio_reason || a.prio_reason,
-                ai_processed: 1
-              };
-            }
-            return a;
-          }));
-          window.dispatchEvent(new Event('feedsUpdated'));
-        }}
-      />
 
       {/* Onboarding för Prio Flöde */}
       <PrioOnboardingModal
