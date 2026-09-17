@@ -742,20 +742,14 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       fetchFeeds(true);
     };
 
-    const handleDigestUpdated = () => {
-      fetchLatestDigest();
-    };
-
     window.addEventListener('aiProgress', handleAiProgress);
     window.addEventListener('aiUpdated', handleAiUpdated);
-    window.addEventListener('digestUpdated', handleDigestUpdated);
 
     return () => {
       window.removeEventListener('aiProgress', handleAiProgress);
       window.removeEventListener('aiUpdated', handleAiUpdated);
-      window.removeEventListener('digestUpdated', handleDigestUpdated);
     };
-  }, [fetchLatestDigest, fetchFeeds]);
+  }, [fetchFeeds]);
 
   // 2. Fetch Feeds & Event Listeners
   useEffect(() => {

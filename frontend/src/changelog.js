@@ -1,9 +1,22 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.17.04',
+    date: '2026-09-17',
+    title: 'Rättning av kvarlämnad händelselyssnare i nyhetsflödet',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Åtgärdat ReferenceError för fetchLatestDigest',
+        description: 'Tog bort en kvarlämnad händelselyssnare och beroende i Dashboard-komponenten som anropade fetchLatestDigest efter att briefing-rutan brutits ut till ett eget fristående flöde.'
+      }
+    ]
+  },
+  {
     version: '2026.09.17.03',
     date: '2026-09-17',
     title: 'Förenklad AI-sammanfattningsruta och renare artikelkort',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'ui',
