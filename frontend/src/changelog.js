@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.17.05',
+    date: '2026-09-17',
+    title: 'Mobiloptimerad briefingvy med artikelkortsdesign och snabbväljare',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Artikelkortsdesign för briefingar',
+        description: 'Byggt om hela briefingvyn till att använda applikationens moderna artikelkort (feed-card card-modern) med toppbar, färggradienter för morgon- och kvällsrapporter, källbrickor och modern knapprad.'
+      },
+      {
+        type: 'ui',
+        title: 'Minskade marginaler och maximal läsbarhet på mobil',
+        description: 'Eliminerat de tidigare klumpiga marginalerna (från 28px till kompakta, eleganta marginaler), vilket ger briefingtexten full bredd och gör rapporten mycket mer lättläst på mobilskärmar.'
+      },
+      {
+        type: 'feature',
+        title: 'Horisontell snabbväljare för briefings',
+        description: 'Lagt till en svepbar remsa med pillerknappar längst upp för att direkt växla mellan tidigare morgon- och kvällsrapporter med ett enda klick utan att behöva scrolla längst ner.'
+      }
+    ]
+  },
+  {
     version: '2026.09.17.04',
     date: '2026-09-17',
     title: 'Rättning av kvarlämnad händelselyssnare i nyhetsflödet',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'fix',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileText, RefreshCw, Calendar, Sparkles, ExternalLink, ChevronRight, Clock, Volume2, VolumeX, Copy, Check } from 'lucide-react';
+import { FileText, RefreshCw, Calendar, Sparkles, ExternalLink, ChevronRight, Clock, Volume2, VolumeX, Copy, Check, Share2 } from 'lucide-react';
 import api from '../api';
 
 const decodeHtmlEntities = (str) => {
@@ -37,6 +37,17 @@ const formatReportTitle = (title) => {
   return clean;
 };
 
+const isMorningReport = (digest) => {
+  if (!digest) return true;
+  if (digest.title && digest.title.toLowerCase().includes('morgon')) return true;
+  if (digest.title && (digest.title.toLowerCase().includes('kväll') || digest.title.toLowerCase().includes('eftermiddag'))) return false;
+  if (digest.created_at) {
+    const d = new Date(typeof digest.created_at === 'number' ? digest.created_at * 1000 : digest.created_at);
+    return d.getHours() < 14;
+  }
+  return true;
+};
+
 const renderBriefingMarkdown = (content) => {
   if (!content) return null;
   const lines = content.split('\n');
@@ -46,11 +57,11 @@ const renderBriefingMarkdown = (content) => {
   const flushList = () => {
     if (currentList.length > 0) {
       elements.push(
-        <div key={`list-${elements.length}`} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', margin: '0.65rem 0' }}>
+        <div key={`list-${elements.length}`} style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', margin: '0.4rem 0 0.65rem 0' }}>
           {currentList.map((item, lIdx) => (
-            <div key={lIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', lineHeight: 1.6 }}>
-              <span style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1rem', lineHeight: '1.2rem' }}>•</span>
-              <div style={{ flex: 1 }}>{renderBriefingInline(item)}</div>
+            <div key={lIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', lineHeight: 1.5 }}>
+              <span style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '0.85rem', lineHeight: '1.4', flexShrink: 0 }}>•</span>
+              <div style={{ flex: 1, fontSize: '0.91rem' }}>{renderBriefingInline(item)}</div>
             </div>
           ))}
         </div>
@@ -70,9 +81,19 @@ const renderBriefingMarkdown = (content) => {
       flushList();
       const headerText = trimmed.replace(/^#+\s*/, '');
       elements.push(
-        <h4 key={idx} style={{ margin: '1rem 0 0.4rem 0', fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>
-          {renderBriefingInline(headerText)}
-        </h4>
+        <div key={idx} style={{ 
+          margin: elements.length === 0 ? '0 0 0.4rem 0' : '0.9rem 0 0.4rem 0', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.45rem',
+          paddingBottom: '0.2rem',
+          borderBottom: '1px solid var(--border-color, rgba(0,0,0,0.06))'
+        }}>
+          <span style={{ width: '3px', height: '14px', borderRadius: '2px', backgroundColor: 'var(--primary)', flexShrink: 0 }} />
+          <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-main)' }}>
+            {renderBriefingInline(headerText)}
+          </h4>
+        </div>
       );
       return;
     }
@@ -88,9 +109,9 @@ const renderBriefingMarkdown = (content) => {
       const numMatch = trimmed.match(/^(\d+\.)\s*(.*)/);
       if (numMatch) {
         elements.push(
-          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', margin: '0.5rem 0', lineHeight: 1.6 }}>
-            <span style={{ color: 'var(--primary)', fontWeight: 700, minWidth: '1.3rem' }}>{numMatch[1]}</span>
-            <div style={{ flex: 1 }}>{renderBriefingInline(numMatch[2])}</div>
+          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', margin: '0.4rem 0', lineHeight: 1.5 }}>
+            <span style={{ color: 'var(--primary)', fontWeight: 700, minWidth: '1.2rem', fontSize: '0.9rem' }}>{numMatch[1]}</span>
+            <div style={{ flex: 1, fontSize: '0.91rem' }}>{renderBriefingInline(numMatch[2])}</div>
           </div>
         );
         return;
@@ -99,7 +120,7 @@ const renderBriefingMarkdown = (content) => {
 
     flushList();
     elements.push(
-      <p key={idx} style={{ margin: '0 0 0.75rem 0', lineHeight: 1.65, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+      <p key={idx} style={{ margin: '0 0 0.55rem 0', lineHeight: 1.55, color: 'var(--text-main)', fontSize: '0.91rem' }}>
         {renderBriefingInline(trimmed)}
       </p>
     );
@@ -111,7 +132,7 @@ const renderBriefingMarkdown = (content) => {
 
 const formatDigestDate = (ts) => {
   if (!ts) return '';
-  const d = new Date(ts * 1000);
+  const d = new Date(typeof ts === 'number' ? ts * 1000 : ts);
   const today = new Date();
   const isToday = d.toDateString() === today.toDateString();
   const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -134,6 +155,8 @@ const BriefingView = () => {
   const [selectedDigestId, setSelectedDigestId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const fetchDigests = useCallback(async () => {
     try {
@@ -169,9 +192,6 @@ const BriefingView = () => {
       setGenerating(false);
     }
   };
-
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     fetchDigests();
@@ -233,38 +253,50 @@ const BriefingView = () => {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  const handleShare = () => {
+    if (!selectedDigest) return;
+    const title = formatReportTitle(selectedDigest.title);
+    const text = `${title}\n\n${selectedDigest.content}`;
+    if (navigator.share) {
+      navigator.share({ title, text }).catch(() => {});
+    } else {
+      handleCopy();
+    }
+  };
+
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1.5rem 1rem' }}>
+    <div className="briefing-view-container">
       {/* Header bar */}
       <div style={{ 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'space-between', 
         flexWrap: 'wrap', 
-        gap: '1rem', 
-        marginBottom: '1.5rem',
-        paddingBottom: '1.25rem',
+        gap: '0.75rem', 
+        marginBottom: '0.75rem',
+        paddingBottom: '0.65rem',
         borderBottom: '1px solid var(--border-color)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '10px',
+            width: '36px',
+            height: '36px',
+            borderRadius: '9px',
             backgroundColor: 'rgba(59, 130, 246, 0.12)',
             color: 'var(--primary)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            flexShrink: 0
           }}>
-            <FileText size={22} />
+            <FileText size={20} />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-main)' }}>
-              Dagens Briefing
+            <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              Morgon- & Kvällsrapport
             </h1>
-            <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Morgon- och kvällsrapporter genererade automatiskt i bakgrunden kl 07:00 och 18:00
+            <p style={{ margin: '0.1rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              Sammanställning av nyhetsläget kl 07:00 och 18:00
             </p>
           </div>
         </div>
@@ -275,51 +307,51 @@ const BriefingView = () => {
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.45rem',
-            padding: '0.6rem 1.1rem',
-            fontSize: '0.85rem',
+            gap: '0.4rem',
+            padding: '0.45rem 0.85rem',
+            fontSize: '0.8rem',
             fontWeight: 600,
             borderRadius: '8px',
             border: 'none',
             backgroundColor: 'var(--primary)',
             color: '#ffffff',
             cursor: generating ? 'not-allowed' : 'pointer',
-            boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+            boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
             transition: 'all 0.15s ease'
           }}
           title="Generera en färsk briefing nu via LM Studio"
         >
-          <RefreshCw size={15} className={generating ? 'spin' : ''} />
-          <span>{generating ? 'Analyserar nyhetsläget...' : 'Generera ny briefing nu'}</span>
+          <RefreshCw size={14} className={generating ? 'spin' : ''} />
+          <span>{generating ? 'Analyserar...' : 'Generera ny nu'}</span>
         </button>
       </div>
 
       {loading && digests.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-muted)' }}>
-          <RefreshCw size={28} className="spin" style={{ margin: '0 auto 1rem auto', display: 'block', color: 'var(--primary)' }} />
-          Hämtar dagliga briefings...
+          <RefreshCw size={26} className="spin" style={{ margin: '0 auto 1rem auto', display: 'block', color: 'var(--primary)' }} />
+          Hämtar dagliga rapporter...
         </div>
       ) : digests.length === 0 ? (
         <div style={{ 
           backgroundColor: 'var(--bg-card)', 
           border: '1px solid var(--border-color)', 
           borderRadius: '12px', 
-          padding: '3rem 1.5rem', 
+          padding: '2.5rem 1.25rem', 
           textAlign: 'center',
-          maxWidth: '560px',
+          maxWidth: '520px',
           margin: '2rem auto'
         }}>
-          <FileText size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 1rem auto', display: 'block' }} />
-          <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>Ingen briefing har skapats än</h3>
-          <p style={{ margin: '0 0 1.5rem 0', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+          <FileText size={34} style={{ color: 'var(--text-muted)', margin: '0 auto 0.75rem auto', display: 'block' }} />
+          <h3 style={{ margin: '0 0 0.4rem 0', color: 'var(--text-main)' }}>Ingen briefing har skapats än</h3>
+          <p style={{ margin: '0 0 1.25rem 0', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.5 }}>
             Klicka på knappen nedan för att göra en direkt analys av dina aktiva nyhetsflöden från det senaste dygnet.
           </p>
           <button
             onClick={() => handleGenerate(false)}
             disabled={generating}
             style={{
-              padding: '0.65rem 1.3rem',
-              fontSize: '0.9rem',
+              padding: '0.6rem 1.2rem',
+              fontSize: '0.88rem',
               fontWeight: 600,
               borderRadius: '8px',
               border: 'none',
@@ -332,208 +364,350 @@ const BriefingView = () => {
           </button>
         </div>
       ) : (
-        <div className="briefing-view-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: '1.5rem', alignItems: 'start' }}>
-          {/* Huvudområde: Vald rapport */}
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            padding: '1.75rem',
-            boxShadow: '0 4px 20px -4px rgba(0, 0, 0, 0.06)'
-          }}>
-            {selectedDigest ? (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      padding: '0.25rem 0.65rem',
-                      borderRadius: '6px',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      backgroundColor: selectedDigest.digest_type === 'ai_generated' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(59, 130, 246, 0.12)',
-                      color: selectedDigest.digest_type === 'ai_generated' ? '#10b981' : 'var(--primary)'
-                    }}>
-                      {selectedDigest.digest_type === 'ai_generated' ? <Sparkles size={13} /> : <Clock size={13} />}
-                      {selectedDigest.digest_type === 'ai_generated' ? 'AI-analys (LM Studio)' : 'Regelbaserad sammanställning'}
-                    </span>
-
-                    {selectedDigest.created_at && (
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <Calendar size={13} />
-                        {formatDigestDate(selectedDigest.created_at)}
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <button
-                      onClick={toggleSpeech}
-                      title={isPlayingAudio ? 'Stoppa uppläsning' : 'Lyssna på rapporten'}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        padding: '0.35rem 0.75rem',
-                        borderRadius: '6px',
-                        fontSize: '0.8rem',
-                        fontWeight: 500,
-                        backgroundColor: isPlayingAudio ? 'rgba(239, 68, 68, 0.12)' : 'var(--bg-tag)',
-                        color: isPlayingAudio ? '#ef4444' : 'var(--text-main)',
-                        border: '1px solid var(--border-color)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      {isPlayingAudio ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                      <span>{isPlayingAudio ? 'Stoppa' : 'Lyssna'}</span>
-                    </button>
-
-                    <button
-                      onClick={handleCopy}
-                      title="Kopiera rapport till urklipp"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        padding: '0.35rem 0.75rem',
-                        borderRadius: '6px',
-                        fontSize: '0.8rem',
-                        fontWeight: 500,
-                        backgroundColor: isCopied ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-tag)',
-                        color: isCopied ? '#10b981' : 'var(--text-main)',
-                        border: '1px solid var(--border-color)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      {isCopied ? <Check size={14} /> : <Copy size={14} />}
-                      <span>{isCopied ? 'Kopierad!' : 'Kopiera'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <h2 style={{ margin: '0 0 1.25rem 0', fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.35 }}>
-                  {formatReportTitle(selectedDigest.title)}
-                </h2>
-
-                <div style={{ color: 'var(--text-main)', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', marginBottom: '1.5rem' }}>
-                  {renderBriefingMarkdown(selectedDigest.content)}
-                </div>
-
-                {/* Berörda artiklar */}
-                {selectedDigest.articles && selectedDigest.articles.length > 0 && (
-                  <div style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '1.25rem' }}>
-                    <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Berörda källor och händelser ({selectedDigest.articles.length}):
-                    </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.6rem' }}>
-                      {selectedDigest.articles.map((art) => (
-                        <a
-                          key={art.id}
-                          href={art.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '0.5rem',
-                            padding: '0.55rem 0.85rem',
-                            borderRadius: '8px',
-                            fontSize: '0.82rem',
-                            backgroundColor: 'var(--bg-app)',
-                            border: '1px solid var(--border-color)',
-                            color: 'var(--text-main)',
-                            textDecoration: 'none',
-                            transition: 'all 0.15s ease'
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.transform = 'none'; }}
-                          title={`${art.source_title}: ${art.title}`}
-                        >
-                          <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                            <span style={{ color: 'var(--primary)', fontWeight: 600, display: 'block', fontSize: '0.75rem', marginBottom: '0.1rem' }}>
-                              {art.source_title}
-                            </span>
-                            <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {decodeHtmlEntities(art.title)}
-                            </span>
-                          </div>
-                          <ExternalLink size={13} style={{ opacity: 0.6, flexShrink: 0 }} />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : null}
-          </div>
-
-          {/* Högerpanel: Historik och tidigare rapporter */}
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            padding: '1.25rem',
-            position: 'sticky',
-            top: '1.5rem',
-            maxHeight: 'calc(100vh - 3rem)',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
-              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                Tidigare Briefings
-              </span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                {digests.length} st
-              </span>
-            </div>
-
-            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.45rem', paddingRight: '0.2rem' }}>
+        <>
+          {/* Horisontell snabbväljare för rapporter (särskilt bekväm på mobil) */}
+          {digests.length > 0 && (
+            <div className="briefing-quick-tabs">
               {digests.map((d) => {
                 const isSelected = d.id === selectedDigestId;
+                const isMorning = isMorningReport(d);
+                const accentColor = isMorning ? '#2563eb' : '#ea580c';
                 return (
                   <button
                     key={d.id}
                     onClick={() => setSelectedDigestId(d.id)}
                     style={{
-                      display: 'flex',
+                      display: 'inline-flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      textAlign: 'left',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: '8px',
-                      border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}`,
-                      backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
+                      gap: '0.35rem',
+                      padding: '0.32rem 0.65rem',
+                      borderRadius: '20px',
+                      fontSize: '0.78rem',
+                      fontWeight: isSelected ? 700 : 500,
+                      whiteSpace: 'nowrap',
+                      border: `1px solid ${isSelected ? accentColor : 'var(--border-color)'}`,
+                      backgroundColor: isSelected ? accentColor : 'var(--bg-card)',
+                      color: isSelected ? '#ffffff' : 'var(--text-main)',
                       cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--bg-app)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                      flexShrink: 0,
+                      transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'
                     }}
                   >
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: isSelected ? 700 : 600, color: isSelected ? 'var(--primary)' : 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {formatReportTitle(d.title)}
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                        {formatDigestDate(d.created_at)} • {(d.articles || []).length || (d.article_ids || []).length} källor
-                      </div>
-                    </div>
-                    <ChevronRight size={15} style={{ color: isSelected ? 'var(--primary)' : 'var(--text-muted)', marginLeft: '0.4rem', flexShrink: 0 }} />
+                    <Sparkles size={11} style={{ opacity: isSelected ? 1 : 0.7 }} />
+                    <span>{formatDigestDate(d.created_at)}</span>
+                    <span style={{ opacity: isSelected ? 0.9 : 0.6, fontSize: '0.72rem' }}>
+                      ({isMorning ? 'Morgon' : 'Kväll'})
+                    </span>
                   </button>
                 );
               })}
             </div>
+          )}
+
+          <div className="briefing-view-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '1rem', alignItems: 'start' }}>
+            {/* Huvudområde: Vald rapport formaterad som ett snyggt artikelkort */}
+            <div>
+              {selectedDigest ? (
+                <article 
+                  className="feed-card card-modern" 
+                  style={{ 
+                    borderLeft: `4px solid ${isMorningReport(selectedDigest) ? '#2563eb' : '#ea580c'}`,
+                    backgroundColor: 'var(--bg-card)',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 14px -2px rgba(0, 0, 0, 0.06)',
+                    cursor: 'default',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    width: '100%'
+                  }}
+                >
+                  {/* Modern Topp-Bar */}
+                  <div 
+                    className="feed-card-topbar topbar-modern"
+                    style={{
+                      background: isMorningReport(selectedDigest)
+                        ? 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)' 
+                        : 'linear-gradient(135deg, #c2410c 0%, #ea580c 100%)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.28rem 0.6rem',
+                      minHeight: '30px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
+                      <span className="modern-time-pill" title={`Skapad: ${formatDigestDate(selectedDigest.created_at)}`}>
+                        Publ: {formatDigestDate(selectedDigest.created_at)}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#ffffff', fontWeight: 700, fontSize: '0.8rem' }}>
+                        <Sparkles size={12} />
+                        <span>{isMorningReport(selectedDigest) ? 'Morgonrapport' : 'Kvällsrapport'}</span>
+                      </div>
+                      <span style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '0.2rem', 
+                        padding: '0.1rem 0.35rem', 
+                        borderRadius: '4px', 
+                        fontSize: '0.68rem', 
+                        fontWeight: 600, 
+                        backgroundColor: 'rgba(0, 0, 0, 0.25)', 
+                        color: 'rgba(255, 255, 255, 0.95)' 
+                      }}>
+                        {selectedDigest.digest_type === 'ai_generated' ? 'AI (LM Studio)' : 'Regelbaserad'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <button
+                        onClick={toggleSpeech}
+                        title={isPlayingAudio ? 'Stoppa uppläsning' : 'Lyssna på rapporten'}
+                        className="modern-time-pill"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          backgroundColor: isPlayingAudio ? '#ef4444' : 'rgba(0, 0, 0, 0.28)'
+                        }}
+                      >
+                        {isPlayingAudio ? <VolumeX size={12} /> : <Volume2 size={12} />}
+                        <span>{isPlayingAudio ? 'Stoppa' : 'Lyssna'}</span>
+                      </button>
+
+                      <button
+                        onClick={handleCopy}
+                        title="Kopiera rapport"
+                        className="modern-time-pill"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          backgroundColor: isCopied ? '#10b981' : 'rgba(0, 0, 0, 0.28)'
+                        }}
+                      >
+                        {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                        <span>{isCopied ? 'Kopierad' : 'Kopiera'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Kortinnehåll */}
+                  <div className="feed-card-content" style={{ padding: '0.6rem 0.75rem' }}>
+                    <h2 style={{ 
+                      margin: '0.15rem 0 0.6rem 0', 
+                      fontSize: '1.15rem', 
+                      fontWeight: 700, 
+                      color: 'var(--text-main)', 
+                      lineHeight: 1.35 
+                    }}>
+                      {formatReportTitle(selectedDigest.title)}
+                    </h2>
+
+                    {/* Insjunken AI-ruta, exakt som på artikelkorten */}
+                    <div className="ai-summary-well" style={{ padding: '0.65rem 0.8rem', margin: '0.25rem 0 0.75rem 0' }}>
+                      <div style={{ color: 'var(--text-main)', fontSize: '0.92rem', lineHeight: 1.6 }}>
+                        {renderBriefingMarkdown(selectedDigest.content)}
+                      </div>
+                    </div>
+
+                    {/* Berörda källor och händelser */}
+                    {selectedDigest.articles && selectedDigest.articles.length > 0 && (
+                      <div style={{ marginTop: '0.75rem', borderTop: '1px dashed var(--border-color)', paddingTop: '0.65rem' }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.4rem' }}>
+                          Berörda källor och händelser ({selectedDigest.articles.length}):
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.4rem' }}>
+                          {selectedDigest.articles.map((art) => (
+                            <a
+                              key={art.id}
+                              href={art.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '0.4rem',
+                                padding: '0.4rem 0.6rem',
+                                borderRadius: '6px',
+                                fontSize: '0.78rem',
+                                backgroundColor: 'var(--bg-app)',
+                                border: '1px solid var(--border-color)',
+                                color: 'var(--text-main)',
+                                textDecoration: 'none',
+                                transition: 'all 0.15s ease'
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.borderColor = isMorningReport(selectedDigest) ? '#3b82f6' : '#ea580c'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
+                            >
+                              <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                <span style={{ color: isMorningReport(selectedDigest) ? '#2563eb' : '#ea580c', fontWeight: 600, display: 'block', fontSize: '0.7rem' }}>
+                                  {art.source_title}
+                                </span>
+                                <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {decodeHtmlEntities(art.title)}
+                                </span>
+                              </div>
+                              <ExternalLink size={12} style={{ opacity: 0.6, flexShrink: 0 }} />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Nedre knapprad */}
+                  <div 
+                    className="feed-card-bottombar bottombar-modern"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.35rem 0.65rem',
+                      borderTop: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-card-hover, rgba(0,0,0,0.02))'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <button
+                        onClick={toggleSpeech}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          backgroundColor: isPlayingAudio ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-card)',
+                          color: isPlayingAudio ? '#ef4444' : 'var(--text-main)',
+                          border: '1px solid var(--border-color)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {isPlayingAudio ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                        <span>{isPlayingAudio ? 'Stoppa' : 'Lyssna'}</span>
+                      </button>
+
+                      <button
+                        onClick={handleCopy}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          fontWeight: 500,
+                          backgroundColor: isCopied ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-card)',
+                          color: isCopied ? '#10b981' : 'var(--text-main)',
+                          border: '1px solid var(--border-color)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {isCopied ? <Check size={13} /> : <Copy size={13} />}
+                        <span>{isCopied ? 'Kopierad!' : 'Kopiera'}</span>
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={handleShare}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '6px',
+                        fontSize: '0.78rem',
+                        fontWeight: 500,
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-main)',
+                        border: '1px solid var(--border-color)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Share2 size={13} />
+                      <span>Dela</span>
+                    </button>
+                  </div>
+                </article>
+              ) : null}
+            </div>
+
+            {/* Högerpanel: Historik och tidigare rapporter (visas endast på desktop) */}
+            <div className="briefing-desktop-sidebar" style={{
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '12px',
+              padding: '1rem',
+              position: 'sticky',
+              top: '1.5rem',
+              maxHeight: 'calc(100vh - 3rem)',
+              flexDirection: 'column'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Tidigare Briefings
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  {digests.length} st
+                </span>
+              </div>
+
+              <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingRight: '0.2rem' }}>
+                {digests.map((d) => {
+                  const isSelected = d.id === selectedDigestId;
+                  const isMorning = isMorningReport(d);
+                  return (
+                    <button
+                      key={d.id}
+                      onClick={() => setSelectedDigestId(d.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        textAlign: 'left',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: '8px',
+                        border: `1px solid ${isSelected ? (isMorning ? '#2563eb' : '#ea580c') : 'var(--border-color)'}`,
+                        backgroundColor: isSelected ? (isMorning ? 'rgba(37, 99, 235, 0.08)' : 'rgba(234, 88, 12, 0.08)') : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--bg-app)';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: isSelected ? 700 : 600, color: isSelected ? (isMorning ? '#2563eb' : '#ea580c') : 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {formatReportTitle(d.title)}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                          {formatDigestDate(d.created_at)} • {(d.articles || []).length || (d.article_ids || []).length} källor
+                        </div>
+                      </div>
+                      <ChevronRight size={14} style={{ color: isSelected ? (isMorning ? '#2563eb' : '#ea580c') : 'var(--text-muted)', marginLeft: '0.35rem', flexShrink: 0 }} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
