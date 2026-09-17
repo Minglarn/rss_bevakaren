@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.17.05-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.17.06-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -13,7 +13,7 @@ RSS-Bevakaren är ett modernt, självhostat system för att övervaka, filtrera,
 
 ## Huvudfunktioner
 
-- **Gilla- & Ogilla-system (Adaptiv intresseprofil):** Interaktiv röstning direkt på händelsekorten (Tumme upp / Tumme ner). Att gilla en artikel låser den automatiskt mot rensning och tränar upp en personlig intresseprofil som prioriterar upp framtida liknande ämnen (+10p bonus per matchande tagg). Att ogilla en artikel dämpar den visuellt och sänker poängen (-15p) för liknande ämnen.
+- **Gilla- & Ogilla-system (Adaptiv intresseprofil):** Interaktiv röstning direkt på händelsekorten (Tumme upp / Tumme ner). Att gilla en artikel tränar upp en personlig intresseprofil som prioriterar upp framtida liknande ämnen (+10p bonus per matchande tagg). Att ogilla en artikel sänker poängen (-15p) för liknande ämnen. Artikellåsning (skydd mot databasrensning) styrs separat via den dedikerade Lås-knappen.
 - **Favoritfilter ("Gillade"):** Ett dedikerat filter i navigeringsfältet för att omedelbart visa alla dina gillade och sparade artiklar.
 - **Nyhetsklustring och dubletthantering (Topic Clustering):** Intelligent semantisk och heuristisk gruppering av artiklar från olika redaktioner som rapporterar om samma händelse (t.ex. SVT, DN, Aftonbladet). Visar länkade källbrickor och gör det möjligt att markera hela händelser som lästa med ett klick. Styrs centralt via Inställningar -> Utseende och är aktiv som standard.
 - **Dagens Briefing & Eget Rapportflöde (AI Digest):** Automatisk morgon- och kvällsrapport (kl 07:00 och 18:00) av nyhetsläget sammanställd via lokal AI. Fungerar som ett eget renodlat flöde på desktop och mobil med full historik, arkivbläddring, talsyntesuppläsning och direkt kopiering.

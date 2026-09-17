@@ -3354,9 +3354,6 @@ def vote_article(
     
     vote_val = 1 if payload.vote > 0 else (-1 if payload.vote < 0 else 0)
     article.user_vote = vote_val
-    if vote_val == 1:
-        # Gilla skyddar automatiskt artikeln från automatisk rensning
-        article.is_locked = 1
     db.commit()
     return {
         "status": "ok", 

@@ -988,14 +988,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     const newVote = currentVote === targetVote ? 0 : targetVote;
     try {
       setUserVotes(prev => ({ ...prev, [id]: newVote }));
-      if (newVote === 1) {
-        setLockedItems(prev => new Set(prev).add(id));
-        setUnlockedItems(prev => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      }
       await api.post(`/articles/${id}/vote`, { vote: newVote });
       if (navigator.vibrate) {
         navigator.vibrate(40);
@@ -1611,7 +1603,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           borderRadius: '4px', 
                           transition: 'all 0.2s' 
                         }}
-                        title={currentVote === 1 ? "Ta bort gilla" : "Gilla artikel (lär AI dina intressen och sparar artikeln)"}
+                        title={currentVote === 1 ? "Ta bort gilla" : "Gilla artikel (lär AI dina intressen och prioriterar liknande ämnen)"}
                       >
                         <ThumbsUp size={16} />
                       </button>
@@ -2482,7 +2474,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       <button
                         className={`modern-bottombar-btn ${currentVote === 1 ? 'active' : ''}`}
                         onClick={(e) => { e.stopPropagation(); handleVote(item.id, currentVote, 1); }}
-                        title={currentVote === 1 ? "Ta bort gilla" : "Gilla händelse (lär AI dina intressen och sparar händelsen)"}
+                        title={currentVote === 1 ? "Ta bort gilla" : "Gilla händelse (lär AI dina intressen och prioriterar liknande ämnen)"}
                         style={currentVote === 1 ? { backgroundColor: 'rgba(16, 185, 129, 0.38)', color: '#34d399' } : {}}
                       >
                         <ThumbsUp size={14} />

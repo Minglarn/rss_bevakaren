@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.17.06',
+    date: '2026-09-17',
+    title: 'Särskiljning av Gilla (AI-träning) och Lås (skydd mot rensning)',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Gilla tränar AI utan att låsa artikeln',
+        description: 'Att gilla en artikel tränar nu uteslutande din personliga intresseprofil för att lyfta fram liknande ämnen, utan att automatiskt låsa artikeln. Artikellåsning styrs nu helt självständigt via den dedikerade Lås-knappen.'
+      },
+      {
+        type: 'backend',
+        title: 'Oberoende röst- och låstillstånd i backend',
+        description: 'Tog bort den automatiska tilldelningen av is_locked vid röstning i /articles/{article_id}/vote, vilket gör att artikelns låsstatus bevaras intakt oavsett om man gillar, ogillar eller tar bort sin röst.'
+      }
+    ]
+  },
+  {
     version: '2026.09.17.05',
     date: '2026-09-17',
     title: 'Mobiloptimerad briefingvy med artikelkortsdesign och snabbväljare',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'ui',
