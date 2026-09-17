@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from '
 import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText, Smartphone, Calendar, ThumbsUp, ThumbsDown, Info } from 'lucide-react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
+import toast from 'react-hot-toast';
 import ShareModal from './ShareModal';
 import PrioOnboardingModal from './PrioOnboardingModal';
 import AIReasoningModal from './AIReasoningModal';
@@ -975,12 +976,39 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     setAnalyzingIds(prev => new Set(prev).add(id));
     try {
       const res = await api.post(`/articles/${id}/analyze`);
-      if (res && res.data) {
-        setReasoningItem(prev => (prev && prev.id === id ? { ...prev, ...res.data } : prev));
+      if (res && res.data && res.data.article) {
+        const updatedArt = res.data.article;
+        setReasoningItem(prev => (prev && prev.id === id ? { ...prev, ...updatedArt } : prev));
+        setAllFeeds(prev => prev.map(a => (a.id === id ? { ...a, ...updatedArt } : a)));
+        setDisplayedFeeds(prev => prev.map(a => (a.id === id ? { ...a, ...updatedArt } : a)));
+        toast.success('Ny AI-analys slutförd!');
+      } else if (res && res.data && res.data.analysis) {
+        const a = res.data.analysis;
+        const partial = {
+          category: a.category,
+          priority: a.priority,
+          prio_score: a.prio_score,
+          prio_reason: a.prio_reason,
+          urgency_score: a.urgency_score,
+          substance_score: a.substance_score,
+          ai_summary: a.ai_summary,
+          tags: a.tags,
+          ai_model: a.ai_model,
+          ai_duration_s: a.duration_s,
+          is_clickbait: a.is_clickbait,
+          clickbait_reason: a.clickbait_reason,
+          ai_processed: 1
+        };
+        setReasoningItem(prev => (prev && prev.id === id ? { ...prev, ...partial } : prev));
+        setAllFeeds(prev => prev.map(item => (item.id === id ? { ...item, ...partial } : item)));
+        setDisplayedFeeds(prev => prev.map(item => (item.id === id ? { ...item, ...partial } : item)));
+        toast.success('Ny AI-analys slutförd!');
       }
       fetchFeeds(true);
     } catch (err) {
       console.error("Fel vid AI-analys:", err);
+      const msg = err.response?.data?.detail || err.message || 'Kunde inte slutföra AI-analys.';
+      toast.error(`AI-analys misslyckades: ${msg}`);
     } finally {
       setAnalyzingIds(prev => {
         const next = new Set(prev);
@@ -2267,9 +2295,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   
                   {/* AI-sammanfattning & Laddningsläge / Fallback */}
                   {(() => {
+                    const isCurrentlyAnalyzing = analyzingIds.has(item.id);
                     const isWaitingForAi = shouldShowAi && !item.ai_summary && (item.ai_processed === 0 || item.ai_processed === null || item.ai_processed === undefined);
-                    const isTimedOut = isWaitingForAi && item.received_ts && (nowTs - item.received_ts > 45);
-                    const showSkeleton = isWaitingForAi && !isTimedOut && !revealedOriginals.has(item.id);
+                    const isTimedOut = !isCurrentlyAnalyzing && isWaitingForAi && item.received_ts && (nowTs - item.received_ts > 45);
+                    const showSkeleton = (isWaitingForAi || isCurrentlyAnalyzing) && !isTimedOut && !revealedOriginals.has(item.id);
 
                     if (showSkeleton) {
                       const currentProgress = aiProgress[item.id];
@@ -2288,11 +2317,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#f97316', fontSize: '0.78rem', fontWeight: 600 }}>
                               <Loader2 size={13} className="spin" />
                               <span>
-                                {pct === null
-                                  ? 'I kö för AI-analys...'
-                                  : pct < 100
-                                  ? `Bearbetar prompt (${pct}%)`
-                                  : 'Genererar sammanfattning...'}
+                                {isCurrentlyAnalyzing
+                                  ? (pct === null ? 'Kör ny AI-analys...' : pct < 100 ? `Bearbetar ny analys (${pct}%)` : 'Genererar sammanfattning...')
+                                  : (pct === null ? 'I kö för AI-analys...' : pct < 100 ? `Bearbetar prompt (${pct}%)` : 'Genererar sammanfattning...')}
                               </span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>

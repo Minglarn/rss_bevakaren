@@ -1,9 +1,37 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.17.01',
+    date: '2026-09-17',
+    title: 'Re-analys synkronisering, realtidsuppdatering och omedelbar UI-respons',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Omedelbar uppdatering av artikelkort och resonemang',
+        description: 'Kopplat ihop re-analysens API-svar så att både artikelkortet och resonemangsmodalen uppdateras direkt i React-state med nya poäng, ny sammanfattning, taggar och modell.'
+      },
+      {
+        type: 'ui',
+        title: 'Visuell laddningsindikator vid omkörning av AI',
+        description: 'Artikelkortet visar nu animerat laddningsskelett med progressbar under re-analysen ("Kör ny AI-analys..."), så att det syns direkt i kortet att bearbetning pågår.'
+      },
+      {
+        type: 'backend',
+        title: 'WebSocket-notifiering och databasmigrering',
+        description: 'Lagt till AI_UPDATED och STATS_UPDATE över WebSocket vid manuell re-analys, samt säkerställt automatisk SQLite-migrering för urgency_score och substance_score.'
+      },
+      {
+        type: 'fix',
+        title: 'Användarfeedback via notiser',
+        description: 'Lagt till direkta bekräftelse- och felnotiser (toast) vid körning av manuell AI-analys så att eventuella anslutningsfel eller timeouts från LM Studio presenteras tydligt.'
+      }
+    ]
+  },
+  {
     version: '2026.09.16.20',
     date: '2026-09-16',
     title: 'AI-chatt Markdown-stöd, insjunken AI-ruta och modellvisning i resonemang',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'fix',

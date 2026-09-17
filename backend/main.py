@@ -155,6 +155,14 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE articles ADD COLUMN ai_duration_s REAL DEFAULT 0.0"))
                     conn.commit()
                     print("[DB] Added ai_duration_s column to articles", flush=True)
+                if "urgency_score" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN urgency_score INTEGER DEFAULT 5"))
+                    conn.commit()
+                    print("[DB] Added urgency_score column to articles", flush=True)
+                if "substance_score" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN substance_score INTEGER DEFAULT 5"))
+                    conn.commit()
+                    print("[DB] Added substance_score column to articles", flush=True)
                 if "ai_model" not in art_cols:
                     conn.execute(text("ALTER TABLE articles ADD COLUMN ai_model TEXT DEFAULT ''"))
                     conn.commit()
@@ -2326,7 +2334,56 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     except Exception:
         pass
 
-    return {"status": "ok", "article_id": art.id, "analysis": analysis}
+    # Bygg komplett artikelobjekt för omedelbar frontend-synkronisering
+    parsed_tags = []
+    if art.tags:
+        try:
+            parsed_tags = json.loads(art.tags)
+        except Exception:
+            parsed_tags = []
+
+    art_dict = {
+        "id": art.id,
+        "feed_id": art.feed_id,
+        "guid": art.guid,
+        "title": art.title,
+        "link": art.link,
+        "published": art.published,
+        "published_ts": art.published_ts,
+        "summary": art.summary,
+        "image_url": art.image_url,
+        "categories": cats,
+        "source_title": source,
+        "feed_icon": get_feed_icon_url(art.feed, art.link) if art.feed else "",
+        "scrape_enabled": bool(art.feed.scrape_enabled) if art.feed else False,
+        "received_ts": art.received_ts,
+        "is_read": art.is_read or 0,
+        "is_locked": art.is_locked or 0,
+        "user_vote": art.user_vote or 0,
+        "ai_processed": 1,
+        "category": art.category,
+        "priority": art.priority,
+        "prio_score": art.prio_score or 0,
+        "prio_reason": art.prio_reason or "",
+        "urgency_score": art.urgency_score if art.urgency_score is not None else 5,
+        "substance_score": art.substance_score if art.substance_score is not None else 5,
+        "ai_duration_s": round(art.ai_duration_s, 2) if art.ai_duration_s else None,
+        "ai_model": art.ai_model or ai_service.get_active_model(),
+        "ai_summary": art.ai_summary,
+        "tags": parsed_tags,
+        "is_clickbait": art.is_clickbait or 0,
+        "clickbait_reason": art.clickbait_reason or "",
+        "cluster_id": art.cluster_id,
+        "cluster_size": 1,
+        "similar_articles": [],
+        "content": art.content
+    }
+
+    # Skicka WebSocket-uppdateringar till klienten
+    await manager.send_personal_message(f"AI_UPDATED:{art.id}", current_user.id)
+    await manager.send_personal_message("STATS_UPDATE", current_user.id)
+
+    return {"status": "ok", "article_id": art.id, "article": art_dict, "analysis": analysis}
 
 @app.post("/articles/{article_id}/prioritize")
 async def prioritize_article(
