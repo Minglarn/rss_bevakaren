@@ -834,6 +834,7 @@ const App = () => {
               <Route path="/chat" element={<AiChat />} />
               <Route path="/ai" element={<Navigate to="/prio" replace />} />
               <Route path="/manage" element={<Navigate to="/settings?tab=manage" replace />} />
+              <Route path="/interests" element={<Navigate to="/settings?tab=interests" replace />} />
               <Route path="/settings" element={<Settings onLogout={handleLogout} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

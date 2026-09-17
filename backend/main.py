@@ -3429,4 +3429,158 @@ async def ai_chat_stream_endpoint(
         media_type="text/event-stream"
     )
 
+@app.get("/user/interest-profile")
+def get_user_interest_profile_endpoint(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """
+    Returnerar en fullständig analys av användarens adaptiva intresseprofil
+    baserat på gillade och ogillade artiklar samt deras AI-genererade ämnestaggar och kategorier.
+    """
+    from collections import Counter
+    liked_query = db.query(models.Article).join(models.Feed).filter(
+        models.Feed.user_id == current_user.id,
+        models.Article.user_vote == 1
+    ).order_by(models.Article.id.desc())
+
+    disliked_query = db.query(models.Article).join(models.Feed).filter(
+        models.Feed.user_id == current_user.id,
+        models.Article.user_vote == -1
+    ).order_by(models.Article.id.desc())
+
+    liked_articles = liked_query.limit(200).all()
+    disliked_articles = disliked_query.limit(200).all()
+
+    liked_total = liked_query.count()
+    disliked_total = disliked_query.count()
+
+    liked_tags_counter = Counter()
+    disliked_tags_counter = Counter()
+    liked_categories_counter = Counter()
+    disliked_categories_counter = Counter()
+    liked_sources_counter = Counter()
+
+    def process_tags(articles, counter, cat_counter, src_counter=None):
+        for art in articles:
+            if art.category:
+                cat_clean = art.category.strip()
+                if cat_clean:
+                    cat_counter[cat_clean] += 1
+            if src_counter is not None and art.feed and art.feed.title:
+                src_counter[art.feed.title] += 1
+
+            if art.tags:
+                try:
+                    parsed = json.loads(art.tags) if isinstance(art.tags, str) else art.tags
+                    if isinstance(parsed, list):
+                        for t in parsed:
+                            clean_t = str(t).strip().lower()
+                            if clean_t and len(clean_t) >= 2:
+                                counter[clean_t] += 1
+                except Exception:
+                    pass
+
+    process_tags(liked_articles, liked_tags_counter, liked_categories_counter, liked_sources_counter)
+    process_tags(disliked_articles, disliked_tags_counter, disliked_categories_counter)
+
+    # Gillade ämnen har alltid företräde; ett ämne man gillat kan aldrig ge ogillat-avdrag
+    for lt in list(disliked_tags_counter.keys()):
+        if lt in liked_tags_counter:
+            del disliked_tags_counter[lt]
+
+    max_liked = max(liked_tags_counter.values()) if liked_tags_counter else 1
+    liked_tags_list = [
+        {
+            "tag": tag,
+            "count": count,
+            "strength": min(100, int(round((count / max_liked) * 100))),
+            "bonus_p": min(20, count * 10)
+        }
+        for tag, count in liked_tags_counter.most_common(50)
+    ]
+
+    max_disliked = max(disliked_tags_counter.values()) if disliked_tags_counter else 1
+    disliked_tags_list = [
+        {
+            "tag": tag,
+            "count": count,
+            "strength": min(100, int(round((count / max_disliked) * 100))),
+            "penalty_p": 15
+        }
+        for tag, count in disliked_tags_counter.most_common(50)
+    ]
+
+    all_cats = set(liked_categories_counter.keys()) | set(disliked_categories_counter.keys())
+    categories_breakdown = []
+    for cat in sorted(all_cats):
+        l_cnt = liked_categories_counter.get(cat, 0)
+        d_cnt = disliked_categories_counter.get(cat, 0)
+        total_votes = l_cnt + d_cnt
+        ratio = round((l_cnt / total_votes) * 100) if total_votes > 0 else 50
+        categories_breakdown.append({
+            "category": cat,
+            "liked_count": l_cnt,
+            "disliked_count": d_cnt,
+            "total": total_votes,
+            "positivity_ratio": ratio
+        })
+
+    categories_breakdown.sort(key=lambda x: x["total"], reverse=True)
+
+    top_sources = [
+        {"source": src, "count": cnt}
+        for src, cnt in liked_sources_counter.most_common(10)
+    ]
+
+    def format_recent(art_list):
+        res = []
+        for a in art_list[:5]:
+            p_tags = []
+            if a.tags:
+                try:
+                    p_tags = json.loads(a.tags) if isinstance(a.tags, str) else a.tags
+                except Exception:
+                    p_tags = []
+            res.append({
+                "id": a.id,
+                "title": a.title or "Utan rubrik",
+                "category": a.category or "Övrigt",
+                "source": a.feed.title if a.feed else "",
+                "tags": p_tags if isinstance(p_tags, list) else []
+            })
+        return res
+
+    return {
+        "stats": {
+            "total_liked": liked_total,
+            "total_disliked": disliked_total,
+            "unique_liked_tags": len(liked_tags_counter),
+            "unique_disliked_tags": len(disliked_tags_counter),
+        },
+        "liked_tags": liked_tags_list,
+        "disliked_tags": disliked_tags_list,
+        "categories": categories_breakdown,
+        "top_sources": top_sources,
+        "recent_liked": format_recent(liked_articles),
+        "recent_disliked": format_recent(disliked_articles)
+    }
+
+@app.post("/user/interest-profile/reset")
+def reset_user_interest_profile_endpoint(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Nollställer alla användarens röstade artiklar."""
+    articles = db.query(models.Article).join(models.Feed).filter(
+        models.Feed.user_id == current_user.id,
+        models.Article.user_vote != 0
+    ).all()
+    count = len(articles)
+    for art in articles:
+        art.user_vote = 0
+    db.commit()
+    return {"status": "ok", "cleared_votes": count}
+
+
 

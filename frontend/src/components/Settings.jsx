@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, BellOff, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, AlertTriangle, ExternalLink, Search } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, BellOff, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, ArrowUpRight, AlertTriangle, ExternalLink, Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
 import packageJson from '../../package.json';
 import { resolveFeedIcon } from '../utils/textUtils';
 import RssManager from './RssManager';
+import InterestProfile from './InterestProfile';
 
 const formatEuropeanDateTime = (timestamp) => {
   if (!timestamp) return 'No data';
@@ -1060,7 +1061,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
   };
 
   return (
-    <div style={{ maxWidth: activeTab === 'manage' ? '1000px' : '800px', margin: '0 auto' }}>
+    <div style={{ maxWidth: (activeTab === 'manage' || activeTab === 'interests' || activeTab === 'insights') ? '1000px' : '800px', margin: '0 auto' }}>
       <h1 style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
         <SettingsIcon /> Inställningar
       </h1>
@@ -1090,6 +1091,12 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           className={`settings-tab-btn ${activeTab === 'insights' ? 'active' : ''}`}
         >
           <BarChart2 size={16} /> Insikter
+        </button>
+        <button 
+          onClick={() => handleTabChange('interests')}
+          className={`settings-tab-btn ${activeTab === 'interests' ? 'active' : ''}`}
+        >
+          <ThumbsUp size={16} /> Intresseprofil
         </button>
         <button 
           onClick={() => handleTabChange('database')}
@@ -2536,6 +2543,10 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           </div>
 
         </motion.div>
+      )}
+
+      {activeTab === 'interests' && (
+        <InterestProfile />
       )}
 
       {activeTab === 'database' && (
@@ -4083,6 +4094,64 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 <Plus size={15} /> Lägg till
               </button>
             </form>
+          </div>
+
+          {/* Adaptiv Intresseprofil Banner */}
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            padding: '1.25rem 1.5rem',
+            borderRadius: '12px',
+            border: '1px solid rgba(22, 163, 74, 0.3)',
+            boxShadow: '0 4px 12px rgba(22, 163, 74, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '240px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                backgroundColor: 'rgba(22, 163, 74, 0.15)',
+                color: '#16a34a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <ThumbsUp size={20} />
+              </div>
+              <div>
+                <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 700 }}>
+                  Adaptiv Intresseprofil (Gilla & Ogilla)
+                </h4>
+                <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.84rem', lineHeight: 1.45 }}>
+                  Artiklar du gillar skapar automatiskt en personlig intressebonus (+10p till +20p), medan ogillade ämnen dämpas (-15p).
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleTabChange('interests')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.55rem 1rem',
+                backgroundColor: 'rgba(22, 163, 74, 0.15)',
+                color: '#16a34a',
+                border: '1px solid rgba(22, 163, 74, 0.35)',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                cursor: 'pointer'
+              }}
+            >
+              <span>Se din Intresseprofil</span>
+              <ArrowUpRight size={15} />
+            </button>
           </div>
 
           {/* Kategori-viktning (0–10) */}

@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.17.08',
+    date: '2026-09-17',
+    title: 'Visuell Intresseprofil: "Detta är du intresserad av" och "Detta är du inte intresserad av"',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Visuell Intresseprofil under Inställningar',
+        description: 'Lagt till en helt ny dedikerad flik under Inställningar som visualiserar vilka ämnen och taggar du är intresserad av (positiv profil) och vilka du vill undvika (negativ profil), baserat på dina gillade och ogillade artiklar.'
+      },
+      {
+        type: 'ui',
+        title: 'Styrkestaplar, ämneskapslar och kategoribalans',
+        description: 'Interaktiva färgkodade ämneskapslar och horisontella styrkestaplar som i realtid visar hur dina röster skapar intressebonusar (+10p till +20p) eller avdrag (-15p), samt en komplett fördelningsvy över dina favoritkategorier.'
+      },
+      {
+        type: 'backend',
+        title: 'API-endpoint för intresseprofilanalys',
+        description: 'Ny endpoint /api/user/interest-profile som automatiskt aggregerar frekvenser, poängpåverkan och kategoribalans från användarens sparade artikelröster och AI-taggar.'
+      }
+    ]
+  },
+  {
     version: '2026.09.17.07',
     date: '2026-09-17',
     title: 'Automatisk visning av lästa artiklar i filtren Gillade, Låsta och Ogillade',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'fix',
