@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.17.02',
+    date: '2026-09-17',
+    title: 'Dedikerat briefing-flöde för morgon- och kvällsrapporter',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Borttagning av briefing-rutan i nyhetsflödet',
+        description: 'Den tidigare expanderbara morgonrapport-bannern längst upp i nyhetsflödet har tagits bort för ett renare, snabbare och mer fokuserat flöde.'
+      },
+      {
+        type: 'feature',
+        title: 'Morgon- och kvällsrapport som eget flöde',
+        description: 'Briefingar betraktas nu som ett helt självständigt flöde tillgängligt i sidomenyn och i mobilens flödesmeny, med full historik och direkt arkivbläddring.'
+      },
+      {
+        type: 'feature',
+        title: 'Uppläsning med talsyntes och kopiering',
+        description: 'Lagt till direkt uppläsning av rapporten via svensk talsyntes samt möjlighet att kopiera hela sammanställningen till urklipp med ett klick.'
+      }
+    ]
+  },
+  {
     version: '2026.09.17.01',
     date: '2026-09-17',
     title: 'Re-analys synkronisering, realtidsuppdatering och omedelbar UI-respons',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'fix',

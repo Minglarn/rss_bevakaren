@@ -380,7 +380,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             backgroundColor: location.pathname === '/briefing' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             fontWeight: location.pathname === '/briefing' ? 600 : 400
           }}>
-            <FileText size={19} /> {!isCollapsed && "Briefing"}
+            <FileText size={19} /> {!isCollapsed && "Morgon- & Kvällsrapport"}
           </Link>
           <Link to="/chat" style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
@@ -590,6 +590,18 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               )}
             </Link>
           )}
+          <Link 
+            to="/briefing" 
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem',
+              color: location.pathname === '/briefing' ? 'var(--primary)' : 'var(--text-main)', 
+              backgroundColor: location.pathname === '/briefing' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+              borderRadius: '12px', textDecoration: 'none', fontWeight: 600
+            }}
+            onClick={() => setIsMobileSheetOpen(false)}
+          >
+            <FileText size={20} style={{ color: 'var(--primary)' }} /> Morgon- & Kvällsrapport
+          </Link>
           <Link 
             to="/chat" 
             style={{

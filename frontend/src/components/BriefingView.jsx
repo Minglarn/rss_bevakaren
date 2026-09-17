@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileText, RefreshCw, Calendar, Sparkles, ExternalLink, ChevronRight, Clock } from 'lucide-react';
+import { FileText, RefreshCw, Calendar, Sparkles, ExternalLink, ChevronRight, Clock, Volume2, VolumeX, Copy, Check } from 'lucide-react';
 import api from '../api';
 
 const decodeHtmlEntities = (str) => {
@@ -170,6 +170,9 @@ const BriefingView = () => {
     }
   };
 
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
   useEffect(() => {
     fetchDigests();
 
@@ -178,10 +181,57 @@ const BriefingView = () => {
     };
 
     window.addEventListener('digestUpdated', handleDigestUpdated);
-    return () => window.removeEventListener('digestUpdated', handleDigestUpdated);
+    return () => {
+      window.removeEventListener('digestUpdated', handleDigestUpdated);
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
   }, [fetchDigests]);
 
   const selectedDigest = digests.find(d => d.id === selectedDigestId) || digests[0] || null;
+
+  useEffect(() => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAudio(false);
+    }
+  }, [selectedDigestId]);
+
+  const toggleSpeech = () => {
+    if (!window.speechSynthesis) {
+      alert("Talsyntes stöds inte av denna webbläsare.");
+      return;
+    }
+
+    if (isPlayingAudio) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAudio(false);
+      return;
+    }
+
+    if (!selectedDigest || !selectedDigest.content) return;
+
+    window.speechSynthesis.cancel();
+    const cleanText = `${formatReportTitle(selectedDigest.title)}. ${selectedDigest.content.replace(/[*#_`>•]/g, ' ').replace(/\s+/g, ' ').trim()}`;
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'sv-SE';
+    utterance.rate = 1.0;
+
+    utterance.onend = () => setIsPlayingAudio(false);
+    utterance.onerror = () => setIsPlayingAudio(false);
+
+    window.speechSynthesis.speak(utterance);
+    setIsPlayingAudio(true);
+  };
+
+  const handleCopy = () => {
+    if (!selectedDigest || !selectedDigest.content) return;
+    const fullText = `${formatReportTitle(selectedDigest.title)}\n\n${selectedDigest.content}`;
+    navigator.clipboard.writeText(fullText);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1.5rem 1rem' }}>
@@ -316,6 +366,52 @@ const BriefingView = () => {
                         {formatDigestDate(selectedDigest.created_at)}
                       </span>
                     )}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button
+                      onClick={toggleSpeech}
+                      title={isPlayingAudio ? 'Stoppa uppläsning' : 'Lyssna på rapporten'}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        padding: '0.35rem 0.75rem',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontWeight: 500,
+                        backgroundColor: isPlayingAudio ? 'rgba(239, 68, 68, 0.12)' : 'var(--bg-tag)',
+                        color: isPlayingAudio ? '#ef4444' : 'var(--text-main)',
+                        border: '1px solid var(--border-color)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {isPlayingAudio ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                      <span>{isPlayingAudio ? 'Stoppa' : 'Lyssna'}</span>
+                    </button>
+
+                    <button
+                      onClick={handleCopy}
+                      title="Kopiera rapport till urklipp"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        padding: '0.35rem 0.75rem',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontWeight: 500,
+                        backgroundColor: isCopied ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-tag)',
+                        color: isCopied ? '#10b981' : 'var(--text-main)',
+                        border: '1px solid var(--border-color)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                      <span>{isCopied ? 'Kopierad!' : 'Kopiera'}</span>
+                    </button>
                   </div>
                 </div>
 
