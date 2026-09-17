@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.17.07',
+    date: '2026-09-17',
+    title: 'Automatisk visning av lästa artiklar i filtren Gillade, Låsta och Ogillade',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Gillade och Låsta artiklar döljs inte längre som lästa',
+        description: 'Justerat frontend-filtret så att artiklar du gillat, låst eller ogillat alltid visas direkt när du aktiverar respektive filter, utan att du manuellt behöver klicka i "Visa lästa".'
+      },
+      {
+        type: 'backend',
+        title: 'Global täckning för Gillade och Låsta i backend',
+        description: 'Säkerställt att backend inkluderar alla gillade, låsta och ogillade artiklar över alla användarens flöden även om ett specifikt källflöde har inställningen "include_in_dashboard" avaktiverad.'
+      }
+    ]
+  },
+  {
     version: '2026.09.17.06',
     date: '2026-09-17',
     title: 'Särskiljning av Gilla (AI-träning) och Lås (skydd mot rensning)',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

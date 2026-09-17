@@ -2006,7 +2006,7 @@ def get_dashboard_feeds(
     else:
         if feed_id:
             query = query.filter(models.Article.feed_id == feed_id)
-        else:
+        elif not (locked_only or liked_only or disliked_only):
             query = query.filter(models.Feed.include_in_dashboard == 1)
             
         if locked_only:

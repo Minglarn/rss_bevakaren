@@ -504,7 +504,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     if (feedId) {
       list = list.filter(item => String(item.feed_id) === String(feedId));
     }
-    if (!showRead) {
+    if (!showRead && !showLikedOnly && !showLockedOnly && !showDislikedOnly) {
       list = list.filter(item => !isArticleRead(item.id, item.is_read));
     }
     return [...list].sort((a, b) => {
@@ -515,7 +515,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       }
       return (b.id || 0) - (a.id || 0);
     });
-  }, [displayedFeeds, feedId, showRead, isArticleRead]);
+  }, [displayedFeeds, feedId, showRead, showLikedOnly, showLockedOnly, showDislikedOnly, isArticleRead]);
 
   // Gruppera artiklar per dag med strikt datumdeduplicering och kronologisk sortering
   const dayGroups = useMemo(() => {
