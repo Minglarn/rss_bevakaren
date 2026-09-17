@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.17.03',
+    date: '2026-09-17',
+    title: 'Förenklad AI-sammanfattningsruta och renare artikelkort',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Borttagning av överflödiga informationsrutor',
+        description: 'Tog bort de separata rutorna för Akuthet, Substans och tidsåtgång från artikelkortet, eftersom fullständiga poäng, mätare och diagnostik redan presenteras i resonemangsdialogen.'
+      },
+      {
+        type: 'ui',
+        title: 'Resonemangsknappen flyttad till rubrikraden',
+        description: 'Placerat "Resonemang"-knappen direkt på samma rad som "AI-sammanfattning", vilket sparar vertikalt utrymme och ger kortet ett mycket mer kompakt och elegant utseende.'
+      }
+    ]
+  },
+  {
     version: '2026.09.17.02',
     date: '2026-09-17',
     title: 'Dedikerat briefing-flöde för morgon- och kvällsrapporter',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'ui',

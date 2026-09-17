@@ -2094,47 +2094,33 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           transition={{ duration: 0.25 }}
                           className="ai-summary-well"
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem', gap: '0.5rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600 }}>
                               <Sparkles size={13} /> AI-sammanfattning
                             </div>
-                            {item.urgency_score !== undefined && item.substance_score !== undefined && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                                <span style={{ padding: '0.1rem 0.4rem', borderRadius: '4px', backgroundColor: 'var(--bg-card-hover, rgba(255,255,255,0.06))', border: '1px solid var(--border-color, rgba(255,255,255,0.1))' }} title="Akuthet och nyhetsvärde bedömt av AI (1-10)">
-                                  Akuthet: {item.urgency_score}/10
-                                </span>
-                                <span style={{ padding: '0.1rem 0.4rem', borderRadius: '4px', backgroundColor: 'var(--bg-card-hover, rgba(255,255,255,0.06))', border: '1px solid var(--border-color, rgba(255,255,255,0.1))' }} title="Faktatäthet och substans bedömt av AI (1-10)">
-                                  Substans: {item.substance_score}/10
-                                </span>
-                                {item.ai_duration_s ? (
-                                  <span style={{ padding: '0.1rem 0.4rem', borderRadius: '4px', backgroundColor: 'var(--bg-card-hover, rgba(255,255,255,0.06))', border: '1px solid var(--border-color, rgba(255,255,255,0.1))' }} title="Analystid">
-                                    {item.ai_duration_s}s
-                                  </span>
-                                ) : null}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setReasoningItem(item);
-                                  }}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.2rem',
-                                    padding: '0.1rem 0.45rem',
-                                    borderRadius: '4px',
-                                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                                    border: '1px solid rgba(99, 102, 241, 0.3)',
-                                    color: '#818cf8',
-                                    cursor: 'pointer',
-                                    fontSize: '0.72rem',
-                                    fontWeight: 600
-                                  }}
-                                  title="Se detaljerat AI-resonemang och poängfördelning"
-                                >
-                                  <Info size={11} /> Resonemang
-                                </button>
-                              </div>
-                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReasoningItem(item);
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                padding: '0.12rem 0.5rem',
+                                borderRadius: '4px',
+                                backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                                border: '1px solid rgba(99, 102, 241, 0.28)',
+                                color: '#818cf8',
+                                cursor: 'pointer',
+                                fontSize: '0.72rem',
+                                fontWeight: 600,
+                                transition: 'all 0.15s ease'
+                              }}
+                              title="Se detaljerat AI-resonemang och poängfördelning"
+                            >
+                              <Info size={11} /> Resonemang
+                            </button>
                           </div>
                           <div style={{ 
                             color: 'var(--text-main)', 
