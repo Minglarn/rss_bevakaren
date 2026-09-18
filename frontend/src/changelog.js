@@ -1,9 +1,22 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.18.09',
+    date: '2026-09-18',
+    title: 'Förenklad ClickBait-indikering i notiser',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Varningstriangel i notisens titel',
+        description: 'Förenklat ClickBait-markeringen i push-notiser. Istället för textblock på två ställen visas nu en varningstriangel direkt i notisens titel, samtidigt som brödtexten hålls ren och fokuserad på sammanfattningen.'
+      }
+    ]
+  },
+  {
     version: '2026.09.18.08',
     date: '2026-09-18',
     title: 'Korrigerad ikonimport och säkrad stabilitet för artikelkort',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'fix',

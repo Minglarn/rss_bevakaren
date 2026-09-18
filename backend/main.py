@@ -972,7 +972,7 @@ def send_push_notification_to_user(
     last_status_code = None
     errors = []
 
-    default_icon = "/default-feed-icon.png?v=2026.09.18.08"
+    default_icon = "/default-feed-icon.png?v=2026.09.18.09"
     if not icon_url or not icon_url.strip() or icon_url.strip().endswith(".svg") or "/default-feed-icon" in icon_url:
         resolved_icon = default_icon
     else:
@@ -1801,22 +1801,12 @@ async def ai_processing_loop():
                                     should_send_push = False
 
                             if should_send_push and user_id:
-                                cb_prefix = "[ClickBait] " if is_clickbait else ""
-                                if cb_prefix and not push_title.startswith("[ClickBait]"):
+                                cb_prefix = "⚠ " if is_clickbait else ""
+                                if cb_prefix and not push_title.startswith("⚠"):
                                     push_title = f"{cb_prefix}{push_title}"
 
                                 chosen_summary = (ai_short_summary if item.get("push_summary_type") == "short" and ai_short_summary else ai_summary) or ai_short_summary
-                                base_body = (chosen_summary or item["summary"] or item["title"] or "Ny artikel") if item["inc_summary"] else (item["summary"] or item["title"] or "Ny artikel")
-                                
-                                if is_clickbait:
-                                    if clickbait_reason and not base_body.startswith("[ClickBait"):
-                                        push_body = f"[ClickBait: {clickbait_reason}] {base_body}"
-                                    elif not base_body.startswith("[ClickBait"):
-                                        push_body = f"[ClickBait] {base_body}"
-                                    else:
-                                        push_body = base_body
-                                else:
-                                    push_body = base_body
+                                push_body = (chosen_summary or item["summary"] or item["title"] or "Ny artikel") if item["inc_summary"] else (item["summary"] or item["title"] or "Ny artikel")
 
                                 push_img = item["image_url"] if item["inc_image"] else None
                                 push_info = send_push_notification_to_user(
