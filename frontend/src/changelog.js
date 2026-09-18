@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.18.11',
+    date: '2026-09-18',
+    title: 'Klickbar borttagning av gillade ämnen i intresseprofilen',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Symmetrisk hantering för gillade ämnen',
+        description: 'Lade till en kryssknapp vid alla ämnen under "Detta är du intresserad av". Klicka på krysset för att omedelbart ta bort perifera ämnen som råkat följa med från en gillad artikel, så att de inte ger oönskad intressebonus.'
+      },
+      {
+        type: 'feature',
+        title: 'Återställning av borttagna gillade ämnen',
+        description: 'En ny sektion under intresserade ämnen visar vilka ämnen som tagits bort, med möjlighet att enkelt återaktivera dem med en ångra-knapp.'
+      }
+    ]
+  },
+  {
     version: '2026.09.18.10',
     date: '2026-09-18',
     title: 'Smartare intresseprofil med tröskelregel och vitlistning',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

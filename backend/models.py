@@ -131,6 +131,7 @@ class UserAISettings(Base):
     short_summary_max_words = Column(Integer, default=20) # Max antal ord i korta sammanfattningar
     short_summary_max_sentences = Column(Integer, default=1) # Max antal meningar i korta sammanfattningar (1 eller 2)
     ignored_disliked_tags = Column(String, default="[]") # JSON-lista med ämnestaggar som användaren tagit bort från dämpade ämnen
+    ignored_liked_tags = Column(String, default="[]") # JSON-lista med ämnestaggar som användaren tagit bort från gillade ämnen
 
     owner = relationship("User", back_populates="ai_settings")
 

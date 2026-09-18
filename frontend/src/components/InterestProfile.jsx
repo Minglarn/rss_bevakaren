@@ -84,18 +84,42 @@ const InterestProfile = () => {
     }
   };
 
+  const handleDismissLikedTag = async (tag) => {
+    try {
+      await api.post('/user/interest-profile/dismiss-liked-tag', { tag });
+      toast.success(`"${tag}" togs bort från intresserade ämnen.`);
+      fetchProfile(false);
+    } catch (err) {
+      console.error('Kunde inte ta bort gillat ämne:', err);
+      toast.error('Kunde inte ta bort ämnet.');
+    }
+  };
+
+  const handleUnignoreLikedTag = async (tag) => {
+    try {
+      await api.post('/user/interest-profile/unignore-liked-tag', { tag });
+      toast.success(`"${tag}" kan nu ge intressebonus igen.`);
+      fetchProfile(false);
+    } catch (err) {
+      console.error('Kunde inte återställa gillat ämne:', err);
+      toast.error('Kunde inte återställa ämnet.');
+    }
+  };
+
   const stats = profileData?.stats || {
     total_liked: 0,
     total_disliked: 0,
     unique_liked_tags: 0,
     unique_disliked_tags: 0,
     active_disliked_tags: 0,
-    ignored_tags_count: 0
+    ignored_tags_count: 0,
+    ignored_liked_count: 0
   };
 
   const likedTags = profileData?.liked_tags || [];
   const dislikedTags = profileData?.disliked_tags || [];
   const ignoredTags = profileData?.ignored_tags || [];
+  const ignoredLikedTags = profileData?.ignored_liked_tags || [];
   const categories = profileData?.categories || [];
   const recentLiked = profileData?.recent_liked || [];
   const recentDisliked = profileData?.recent_disliked || [];
@@ -334,7 +358,7 @@ const InterestProfile = () => {
           </div>
 
           <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-            Inkommande artiklar som matchar dessa ämnen får en intressebonus som lyfter dem direkt mot ditt PRIO-flöde och aktiverar eventuella push-notiser.
+            Inkommande artiklar som matchar dessa ämnen får en intressebonus som lyfter dem direkt mot ditt PRIO-flöde och aktiverar eventuella push-notiser. Klicka på krysset för att ta bort ett ämne från bonuslistan.
           </p>
 
           {likedTags.length > 0 ? (
@@ -343,14 +367,36 @@ const InterestProfile = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                 {likedTags.slice(0, 6).map((item) => (
                   <div key={item.tag} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem', fontWeight: 600 }}>
                       <span style={{ color: 'var(--text-main)' }}>{item.tag}</span>
-                      <span style={{ color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <span>+{item.bonus_p}p</span>
-                        <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.76rem' }}>
-                          ({item.count} {item.count === 1 ? 'artikel' : 'artiklar'})
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span>+{item.bonus_p}p</span>
+                          <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.76rem' }}>
+                            ({item.count} {item.count === 1 ? 'artikel' : 'artiklar'})
+                          </span>
                         </span>
-                      </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDismissLikedTag(item.tag)}
+                          title={`Ta bort "${item.tag}" från intresserade ämnen`}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '3px',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            borderRadius: '4px',
+                            transition: 'color 0.2s'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#16a34a'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
                     </div>
                     {/* Progress Bar */}
                     <div style={{
@@ -385,8 +431,8 @@ const InterestProfile = () => {
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '0.3rem',
-                          padding: '0.25rem 0.6rem',
+                          gap: '0.35rem',
+                          padding: '0.25rem 0.55rem',
                           borderRadius: '16px',
                           backgroundColor: 'rgba(22, 163, 74, 0.1)',
                           border: '1px solid rgba(22, 163, 74, 0.25)',
@@ -399,6 +445,74 @@ const InterestProfile = () => {
                         <span style={{ color: '#16a34a', fontSize: '0.72rem', fontWeight: 700 }}>
                           +{item.bonus_p}p
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDismissLikedTag(item.tag)}
+                          title={`Ta bort "${item.tag}" från intresserade ämnen`}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '0 1px',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            marginLeft: '2px'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#16a34a'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        >
+                          <X size={13} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Borttagna / Ignorerade gillade ämnen */}
+              {ignoredLikedTags && ignoredLikedTags.length > 0 && (
+                <div style={{
+                  marginTop: '0.75rem',
+                  paddingTop: '0.75rem',
+                  borderTop: '1px dashed var(--border-color)'
+                }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.45rem', fontWeight: 600 }}>
+                    Borttagna gillade ämnen ({ignoredLikedTags.length} st)
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    {ignoredLikedTags.map((tag) => (
+                      <span
+                        key={tag}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '16px',
+                          backgroundColor: 'var(--bg-app)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-muted)',
+                          fontSize: '0.76rem'
+                        }}
+                      >
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleUnignoreLikedTag(tag)}
+                          title={`Återaktivera "${tag}" så det åter ger intressebonus`}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '0',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <RotateCcw size={11} />
+                        </button>
                       </span>
                     ))}
                   </div>
