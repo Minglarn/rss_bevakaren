@@ -1687,32 +1687,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         borderBottom: 'none'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
-                        {/* Tidsbricka: Publiceringstid samt hämtningstid om de skiljer sig */}
-                        <span 
-                          className="modern-time-pill" 
-                          title={`Publicerad av källan: ${formatFullDateTime(pubDate)}`}
-                          style={{ cursor: 'help' }}
-                        >
-                          Publ: {formatTime(pubDate)} {formatDateLabel(pubDate)}
-                        </span>
-                        {hasDistinctReceivedTime && (
-                          <span 
-                            className="modern-time-pill" 
-                            title={`Hämtades in till RSS-Bevakaren: ${formatFullDateTime(recDate)}`}
-                            style={{ 
-                              cursor: 'help', 
-                              backgroundColor: 'rgba(0, 0, 0, 0.28)',
-                              fontSize: '0.73rem',
-                              opacity: 0.95
-                            }}
-                          >
-                            Hämtad {formatTime(recDate)}
-                          </span>
-                        )}
-
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
                         {/* Källnamn med flödesikon */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#ffffff', fontWeight: 700, fontSize: '0.84rem', minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#ffffff', fontWeight: 700, fontSize: '0.86rem', minWidth: 0 }}>
                           <img 
                             src={resolveFeedIcon(item.feed_icon)} 
                             alt="" 
@@ -1738,7 +1715,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           </span>
                         </div>
 
-                        {/* Clickbait-varning */}
+                        {/* ClickBait-varning */}
                         {shouldShowAi && Boolean(item.is_clickbait) && (
                           <span style={{
                             display: 'inline-flex',
@@ -1750,8 +1727,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             borderRadius: '4px',
                             fontSize: '0.7rem',
                             fontWeight: 700
-                          }} title={item.clickbait_reason || "Clickbait-varning"}>
-                            <AlertTriangle size={12} /> Clickbait
+                          }} title={item.clickbait_reason || "ClickBait-varning"}>
+                            <AlertTriangle size={12} /> ClickBait
                           </span>
                         )}
                       </div>
@@ -1910,10 +1887,18 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   <div className="feed-card-content">
                   {/* Title / Content + Thumbnail i kompakt läge (Väg 2) */}
                   {flowLayout === 'compact' && !isItemExpanded ? (
-                    <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                      <h3 className="feed-card-title" style={{ flex: 1, margin: 0 }}>
-                        {decodeHtmlEntities(item.title)}
-                      </h3>
+                    <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start', marginBottom: '0.65rem' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h3 className="feed-card-title" style={{ margin: '0 0 0.35rem 0' }}>
+                          {decodeHtmlEntities(item.title)}
+                        </h3>
+                        {pubDate && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 500 }}>
+                            <Clock size={12} style={{ opacity: 0.8 }} />
+                            <span>Publ: {formatTime(pubDate)} {formatDateLabel(pubDate)}</span>
+                          </div>
+                        )}
+                      </div>
                       {showImages && item.image_url && (
                         <div 
                           onClick={(e) => {
@@ -1944,9 +1929,15 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     </div>
                   ) : (
                     <>
-                      <h3 className="feed-card-title">
+                      <h3 className="feed-card-title" style={{ marginBottom: '0.35rem' }}>
                         {decodeHtmlEntities(item.title)}
                       </h3>
+                      {pubDate && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 500, marginBottom: '0.75rem' }}>
+                          <Clock size={12} style={{ opacity: 0.8 }} />
+                          <span>Publ: {formatTime(pubDate)} {formatDateLabel(pubDate)}</span>
+                        </div>
+                      )}
                       
                       {showImages && item.image_url && (
                         <motion.div 
@@ -2240,7 +2231,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             );
                           })}
 
-                        {/* Resonemang-knapp flyttad till taggraden */}
+                        {/* Detaljer-knapp i taggraden */}
                         {shouldShowAi && (item.prio_reason || item.ai_summary || item.prio_score != null || Boolean(item.ai_processed)) && (
                           <button
                             onClick={(e) => {
@@ -2261,9 +2252,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                               fontWeight: 600,
                               transition: 'all 0.15s ease'
                             }}
-                            title="Se detaljerat AI-resonemang och poängfördelning"
+                            title="Se artikeldetaljer, hämtningstidpunkt och AI-analys"
                           >
-                            <Info size={11} /> Resonemang
+                            <Info size={11} /> Detaljer
                           </button>
                         )}
                       </div>

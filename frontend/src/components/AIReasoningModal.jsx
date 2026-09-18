@@ -31,6 +31,21 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
   const clusterSize = item.cluster_size || 1;
   const tags = Array.isArray(item.tags) ? item.tags : [];
 
+  const formatDateTime = (dateVal) => {
+    if (!dateVal) return null;
+    const d = typeof dateVal === 'number' ? new Date(dateVal * 1000) : new Date(dateVal);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('sv-SE', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const pubDateFormatted = formatDateTime(item.published_ts || item.published);
+  const recDateFormatted = formatDateTime(item.received_ts);
+
   const getPriorityInfo = () => {
     if (priority === 'high' || score >= 75) {
       return {
@@ -81,7 +96,7 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
                 <Info size={20} />
               </div>
               <div style={{ minWidth: 0 }}>
-                <h3 className="ai-modal-title">AI-analys & Resonemang</h3>
+                <h3 className="ai-modal-title">Artikeldetaljer & AI-analys</h3>
                 <div className="ai-modal-subtitle">
                   {item.feed_icon ? (
                     <img
@@ -149,6 +164,23 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
                   <span>Öppna originalartikel</span>
                   <ExternalLink size={12} />
                 </a>
+              )}
+
+              {(pubDateFormatted || recDateFormatted) && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem', marginTop: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  {pubDateFormatted && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Clock size={12} style={{ color: 'var(--primary, #3b82f6)' }} />
+                      <span>Publicerad: <strong style={{ color: 'var(--text-main)' }}>{pubDateFormatted}</strong></span>
+                    </div>
+                  )}
+                  {recDateFormatted && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Clock size={12} style={{ color: '#10b981' }} />
+                      <span>Hämtad: <strong style={{ color: 'var(--text-main)' }}>{recDateFormatted}</strong></span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
@@ -320,6 +352,19 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
                       <div className="ai-modal-diagnostic-label">Flerkällsbekräftelse</div>
                       <div className="ai-modal-diagnostic-val">
                         {clusterSize} oberoende källor
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Hämtad till systemet */}
+                {recDateFormatted && (
+                  <div className="ai-modal-diagnostic-chip">
+                    <Clock size={16} className="ai-modal-diagnostic-icon" style={{ color: '#0ea5e9' }} />
+                    <div>
+                      <div className="ai-modal-diagnostic-label">Hämtad till systemet</div>
+                      <div className="ai-modal-diagnostic-val">
+                        {recDateFormatted}
                       </div>
                     </div>
                   </div>

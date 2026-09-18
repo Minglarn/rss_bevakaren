@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.18.07',
+    date: '2026-09-18',
+    title: 'Optimerad kortlayout med ren toppbar och Detaljer-dialog',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Publiceringstid placerad under titeln',
+        description: 'Publiceringstiden (Publ: xx:xx) har flyttats från topplisten till precis under artikelns rubrik. Detta ger ett mer naturligt redaktionellt läsflöde.'
+      },
+      {
+        type: 'feature',
+        title: 'Hämtningstidpunkt flyttad till Detaljer',
+        description: 'Tidpunkten då artikeln hämtades in av systemet har flyttats från kortets topplist och visas nu snyggt och strukturerat inuti detaljdialogen.'
+      },
+      {
+        type: 'feature',
+        title: 'Resonemang har döpts om till Detaljer',
+        description: 'Knappen i taggraden och tillhörande informationsdialog heter nu "Detaljer" och samlar källinformation, tidsstämplar, diagnostik och djupgående AI-analys.'
+      }
+    ]
+  },
+  {
     version: '2026.09.18.06',
     date: '2026-09-18',
     title: 'Kompakt artikelkort med AI-ikon och resonemang i taggraden',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',
