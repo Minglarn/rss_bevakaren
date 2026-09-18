@@ -106,6 +106,10 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN max_article_age_hours INTEGER DEFAULT 24"))
                     conn.commit()
                     print("[DB] Added max_article_age_hours column to user_ai_settings", flush=True)
+                if "ignored_disliked_tags" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN ignored_disliked_tags TEXT DEFAULT '[]'"))
+                    conn.commit()
+                    print("[DB] Added ignored_disliked_tags column to user_ai_settings", flush=True)
                 conn.execute(text("UPDATE user_ai_settings SET prio_enabled = 0 WHERE prio_enabled IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET prio_notify_only = 0 WHERE prio_notify_only IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET push_include_title = 1 WHERE push_include_title IS NULL"))
@@ -115,6 +119,7 @@ def ensure_db_migrations():
                 conn.execute(text("UPDATE user_ai_settings SET auto_purge_days = 30 WHERE auto_purge_days IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET auto_scrape_article_text = 1 WHERE auto_scrape_article_text IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET max_article_age_hours = 24 WHERE max_article_age_hours IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET ignored_disliked_tags = '[]' WHERE ignored_disliked_tags IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = NULL WHERE custom_system_prompt IS NOT NULL AND custom_system_prompt NOT LIKE '%SAKLIGA NYHETER%'"))
                 conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = REPLACE(custom_system_prompt, 'Max två korta', 'Max tre korta') WHERE custom_system_prompt LIKE '%Max två korta%'"))
                 conn.commit()
@@ -972,7 +977,7 @@ def send_push_notification_to_user(
     last_status_code = None
     errors = []
 
-    default_icon = "/default-feed-icon.png?v=2026.09.18.09"
+    default_icon = "/default-feed-icon.png?v=2026.09.18.10"
     if not icon_url or not icon_url.strip() or icon_url.strip().endswith(".svg") or "/default-feed-icon" in icon_url:
         resolved_icon = default_icon
     else:
@@ -1360,6 +1365,8 @@ def get_user_interest_profile(db: Session, user_id: int):
     OBS: Huvudkategorier inkluderas INTE här då de styrs explicit av användarens
     kategorireglage i Inställningar.
     """
+    from collections import Counter
+
     liked_rows = db.query(models.Article.tags).join(models.Feed).filter(
         models.Feed.user_id == user_id,
         models.Article.user_vote == 1
@@ -1370,26 +1377,47 @@ def get_user_interest_profile(db: Session, user_id: int):
         models.Article.user_vote == -1
     ).order_by(models.Article.id.desc()).limit(100).all()
 
-    def _extract_tags(rows):
-        terms = set()
+    ignored_tags = set()
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == user_id).first()
+    if user_ai and user_ai.ignored_disliked_tags:
+        try:
+            parsed_ignored = json.loads(user_ai.ignored_disliked_tags) if isinstance(user_ai.ignored_disliked_tags, str) else user_ai.ignored_disliked_tags
+            if isinstance(parsed_ignored, list):
+                ignored_tags = {str(t).strip().lower() for t in parsed_ignored if t and str(t).strip()}
+        except Exception:
+            pass
+
+    liked_counter = Counter()
+    disliked_counter = Counter()
+
+    def _count_tags(rows, counter):
         for (r_tags,) in rows:
             if r_tags:
                 try:
                     parsed = json.loads(r_tags) if isinstance(r_tags, str) else r_tags
                     if isinstance(parsed, list):
+                        seen_in_art = set()
                         for t in parsed:
                             clean_t = str(t).strip().lower()
-                            if clean_t and len(clean_t) >= 2:
-                                terms.add(clean_t)
+                            if clean_t and len(clean_t) >= 2 and clean_t not in seen_in_art:
+                                seen_in_art.add(clean_t)
+                                counter[clean_t] += 1
                 except Exception:
                     pass
-        return terms
 
-    liked_set = _extract_tags(liked_rows)
-    disliked_set = _extract_tags(disliked_rows)
+    _count_tags(liked_rows, liked_counter)
+    _count_tags(disliked_rows, disliked_counter)
 
-    # Gillade ämnen har alltid företräde; ett ämne man gillat kan aldrig ge ett ogillat-avdrag
+    liked_set = set(liked_counter.keys())
+
+    # TRÖSKELREGEL: Ett ämne måste ha ogillats i minst 2 artiklar för att aktivera -15p straffavdrag!
+    disliked_set = {tag for tag, count in disliked_counter.items() if count >= 2}
+
+    # 1. Gillade ämnen har alltid företräde; ett ämne man gillat kan aldrig ge ett ogillat-avdrag
     disliked_set = disliked_set - liked_set
+
+    # 2. Ignorerade / vitlistade ämnen straffas aldrig
+    disliked_set = disliked_set - ignored_tags
 
     return list(liked_set), list(disliked_set)
 
@@ -3798,6 +3826,21 @@ def get_user_interest_profile_endpoint(
     process_tags(liked_articles, liked_tags_counter, liked_categories_counter, liked_sources_counter)
     process_tags(disliked_articles, disliked_tags_counter, disliked_categories_counter)
 
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    ignored_tags_list = []
+    if user_ai and user_ai.ignored_disliked_tags:
+        try:
+            parsed_ig = json.loads(user_ai.ignored_disliked_tags) if isinstance(user_ai.ignored_disliked_tags, str) else user_ai.ignored_disliked_tags
+            if isinstance(parsed_ig, list):
+                ignored_tags_list = [str(t).strip().lower() for t in parsed_ig if t and str(t).strip()]
+        except Exception:
+            pass
+
+    # Ignorerade ämnen kan aldrig ge ogillat-avdrag eller visas som dämpade
+    for it in ignored_tags_list:
+        if it in disliked_tags_counter:
+            del disliked_tags_counter[it]
+
     # Gillade ämnen har alltid företräde; ett ämne man gillat kan aldrig ge ogillat-avdrag
     for lt in list(disliked_tags_counter.keys()):
         if lt in liked_tags_counter:
@@ -3820,7 +3863,8 @@ def get_user_interest_profile_endpoint(
             "tag": tag,
             "count": count,
             "strength": min(100, int(round((count / max_disliked) * 100))),
-            "penalty_p": 15
+            "active": count >= 2,
+            "penalty_p": 15 if count >= 2 else 0
         }
         for tag, count in disliked_tags_counter.most_common(50)
     ]
@@ -3865,27 +3909,85 @@ def get_user_interest_profile_endpoint(
             })
         return res
 
+    active_disliked_count = sum(1 for c in disliked_tags_counter.values() if c >= 2)
+
     return {
         "stats": {
             "total_liked": liked_total,
             "total_disliked": disliked_total,
             "unique_liked_tags": len(liked_tags_counter),
             "unique_disliked_tags": len(disliked_tags_counter),
+            "active_disliked_tags": active_disliked_count,
+            "ignored_tags_count": len(ignored_tags_list)
         },
         "liked_tags": liked_tags_list,
         "disliked_tags": disliked_tags_list,
+        "ignored_tags": ignored_tags_list,
         "categories": categories_breakdown,
         "top_sources": top_sources,
         "recent_liked": format_recent(liked_articles),
         "recent_disliked": format_recent(disliked_articles)
     }
 
+@app.post("/user/interest-profile/dismiss-tag")
+def dismiss_interest_tag_endpoint(
+    req: schemas.TagActionRequest,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Tar bort och vitlistar en tagg från dämpade ämnen."""
+    clean_tag = req.tag.strip().lower()
+    if not clean_tag:
+        raise HTTPException(status_code=400, detail="Ogiltig tagg")
+
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    if not user_ai:
+        user_ai = models.UserAISettings(user_id=current_user.id)
+        db.add(user_ai)
+
+    current_ignored = []
+    if user_ai.ignored_disliked_tags:
+        try:
+            parsed = json.loads(user_ai.ignored_disliked_tags) if isinstance(user_ai.ignored_disliked_tags, str) else user_ai.ignored_disliked_tags
+            if isinstance(parsed, list):
+                current_ignored = [str(t).strip().lower() for t in parsed if t and str(t).strip()]
+        except Exception:
+            current_ignored = []
+
+    if clean_tag not in current_ignored:
+        current_ignored.append(clean_tag)
+        user_ai.ignored_disliked_tags = json.dumps(current_ignored)
+        db.commit()
+
+    return {"status": "ok", "tag": clean_tag, "ignored_tags": current_ignored}
+
+@app.post("/user/interest-profile/unignore-tag")
+def unignore_interest_tag_endpoint(
+    req: schemas.TagActionRequest,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Återställer en tidigare borttagen tagg så den åter kan dämpas vid framtida ogillanden."""
+    clean_tag = req.tag.strip().lower()
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    if user_ai and user_ai.ignored_disliked_tags:
+        try:
+            parsed = json.loads(user_ai.ignored_disliked_tags) if isinstance(user_ai.ignored_disliked_tags, str) else user_ai.ignored_disliked_tags
+            if isinstance(parsed, list) and clean_tag in parsed:
+                parsed.remove(clean_tag)
+                user_ai.ignored_disliked_tags = json.dumps(parsed)
+                db.commit()
+                return {"status": "ok", "tag": clean_tag, "ignored_tags": parsed}
+        except Exception:
+            pass
+    return {"status": "ok", "tag": clean_tag}
+
 @app.post("/user/interest-profile/reset")
 def reset_user_interest_profile_endpoint(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    """Nollställer alla användarens röstade artiklar."""
+    """Nollställer alla användarens röstade artiklar samt rensar borttagna taggar."""
     articles = db.query(models.Article).join(models.Feed).filter(
         models.Feed.user_id == current_user.id,
         models.Article.user_vote != 0
@@ -3893,8 +3995,14 @@ def reset_user_interest_profile_endpoint(
     count = len(articles)
     for art in articles:
         art.user_vote = 0
+    
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    if user_ai:
+        user_ai.ignored_disliked_tags = "[]"
+
     db.commit()
     return {"status": "ok", "cleared_votes": count}
+
 
 
 

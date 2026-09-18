@@ -130,6 +130,7 @@ class UserAISettings(Base):
     push_summary_type = Column(String, default="short") # "short" = 1-1.5 meningar, "long" = upp till 3 meningar
     short_summary_max_words = Column(Integer, default=20) # Max antal ord i korta sammanfattningar
     short_summary_max_sentences = Column(Integer, default=1) # Max antal meningar i korta sammanfattningar (1 eller 2)
+    ignored_disliked_tags = Column(String, default="[]") # JSON-lista med ämnestaggar som användaren tagit bort från dämpade ämnen
 
     owner = relationship("User", back_populates="ai_settings")
 

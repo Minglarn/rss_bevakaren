@@ -231,3 +231,7 @@ class ClusterBulkReadRequest(BaseModel):
 class ArticleVoteRequest(BaseModel):
     vote: int # 1 = Gilla, -1 = Ogilla, 0 = Nollställ
 
+class TagActionRequest(BaseModel):
+    tag: str
+
+

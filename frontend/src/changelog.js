@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.18.10',
+    date: '2026-09-18',
+    title: 'Smartare intresseprofil med tröskelregel och vitlistning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Tröskelregel för dämpade ämnen',
+        description: 'Ett ämne måste nu ha ogillats i minst 2 artiklar innan det aktiverar ett automatiskt -15p straffavdrag. Detta förhindrar att enstaka artiklar felaktigt dämpar bredare intressen som råkade omnämnas.'
+      },
+      {
+        type: 'feature',
+        title: 'Direkt borttagning och vitlistning i gränssnittet',
+        description: 'Lade till en kryssknapp vid alla ämnen i listan över dämpade ämnen. Klicka på krysset för att omedelbart ta bort och vitlista ämnet från framtida straffavdrag.'
+      }
+    ]
+  },
+  {
     version: '2026.09.18.09',
     date: '2026-09-18',
     title: 'Förenklad ClickBait-indikering i notiser',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

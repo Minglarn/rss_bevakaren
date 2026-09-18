@@ -14,7 +14,9 @@ import {
   ArrowUpRight, 
   CheckCircle2, 
   TrendingUp,
-  Activity
+  Activity,
+  X,
+  RotateCcw
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
@@ -60,15 +62,40 @@ const InterestProfile = () => {
     }
   };
 
+  const handleDismissTag = async (tag) => {
+    try {
+      await api.post('/user/interest-profile/dismiss-tag', { tag });
+      toast.success(`"${tag}" togs bort från dämpade ämnen.`);
+      fetchProfile(false);
+    } catch (err) {
+      console.error('Kunde inte ta bort tagg:', err);
+      toast.error('Kunde inte ta bort ämnet.');
+    }
+  };
+
+  const handleUnignoreTag = async (tag) => {
+    try {
+      await api.post('/user/interest-profile/unignore-tag', { tag });
+      toast.success(`"${tag}" kan nu dämpas igen.`);
+      fetchProfile(false);
+    } catch (err) {
+      console.error('Kunde inte återställa tagg:', err);
+      toast.error('Kunde inte återställa ämnet.');
+    }
+  };
+
   const stats = profileData?.stats || {
     total_liked: 0,
     total_disliked: 0,
     unique_liked_tags: 0,
-    unique_disliked_tags: 0
+    unique_disliked_tags: 0,
+    active_disliked_tags: 0,
+    ignored_tags_count: 0
   };
 
   const likedTags = profileData?.liked_tags || [];
   const dislikedTags = profileData?.disliked_tags || [];
+  const ignoredTags = profileData?.ignored_tags || [];
   const categories = profileData?.categories || [];
   const recentLiked = profileData?.recent_liked || [];
   const recentDisliked = profileData?.recent_disliked || [];
@@ -436,7 +463,7 @@ const InterestProfile = () => {
           </div>
 
           <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-            Inkommande artiklar som matchar dessa ämnen bestraffas automatiskt med -15 poäng och flyttas nedåt mot det tysta bakgrundsflödet.
+            Inkommande artiklar som matchar dessa ämnen bestraffas med -15 poäng när samma ämne ogillats minst 2 gånger. Klicka på krysset för att ta bort och vitlista ett ämne från spärrlistan.
           </p>
 
           {dislikedTags.length > 0 ? (
@@ -445,14 +472,43 @@ const InterestProfile = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                 {dislikedTags.slice(0, 6).map((item) => (
                   <div key={item.tag} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', fontWeight: 600 }}>
-                      <span style={{ color: 'var(--text-main)' }}>{item.tag}</span>
-                      <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <span>-{item.penalty_p}p</span>
-                        <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.76rem' }}>
-                          ({item.count} {item.count === 1 ? 'artikel' : 'artiklar'})
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ color: 'var(--text-main)' }}>{item.tag}</span>
+                        {!item.active && (
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                            (kräver 2 ogillade)
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ color: item.active ? '#ef4444' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span>{item.active ? `-${item.penalty_p}p` : '0p'}</span>
+                          <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.76rem' }}>
+                            ({item.count} {item.count === 1 ? 'artikel' : 'artiklar'})
+                          </span>
                         </span>
-                      </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDismissTag(item.tag)}
+                          title={`Ta bort "${item.tag}" och vitlista från avdrag`}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '3px',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            borderRadius: '4px',
+                            transition: 'color 0.2s'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
                     </div>
                     {/* Progress Bar */}
                     <div style={{
@@ -466,7 +522,7 @@ const InterestProfile = () => {
                         width: `${item.strength}%`,
                         height: '100%',
                         borderRadius: '4px',
-                        backgroundColor: '#ef4444',
+                        backgroundColor: item.active ? '#ef4444' : 'var(--text-muted)',
                         transition: 'width 0.4s ease'
                       }} />
                     </div>
@@ -487,20 +543,88 @@ const InterestProfile = () => {
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '0.3rem',
-                          padding: '0.25rem 0.6rem',
+                          gap: '0.35rem',
+                          padding: '0.25rem 0.55rem',
                           borderRadius: '16px',
-                          backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                          border: '1px solid rgba(239, 68, 68, 0.25)',
+                          backgroundColor: item.active ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-app)',
+                          border: `1px solid ${item.active ? 'rgba(239, 68, 68, 0.25)' : 'var(--border-color)'}`,
                           color: 'var(--text-main)',
                           fontSize: '0.78rem',
                           fontWeight: 500
                         }}
                       >
                         <span>{item.tag}</span>
-                        <span style={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 700 }}>
-                          -{item.penalty_p}p
+                        <span style={{ color: item.active ? '#ef4444' : 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700 }}>
+                          {item.active ? `-${item.penalty_p}p` : '0p'}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDismissTag(item.tag)}
+                          title={`Ta bort "${item.tag}" och vitlista från avdrag`}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '0 1px',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            marginLeft: '2px'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        >
+                          <X size={13} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Borttagna / Vitlistade ämnen */}
+              {ignoredTags && ignoredTags.length > 0 && (
+                <div style={{
+                  marginTop: '0.75rem',
+                  paddingTop: '0.75rem',
+                  borderTop: '1px dashed var(--border-color)'
+                }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.45rem', fontWeight: 600 }}>
+                    Vitlistade ämnen ({ignoredTags.length} st)
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    {ignoredTags.map((tag) => (
+                      <span
+                        key={tag}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '16px',
+                          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                          border: '1px solid rgba(34, 197, 94, 0.25)',
+                          color: 'var(--text-main)',
+                          fontSize: '0.76rem'
+                        }}
+                      >
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleUnignoreTag(tag)}
+                          title={`Återaktivera "${tag}" så det kan dämpas igen vid behov`}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '0',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <RotateCcw size={11} />
+                        </button>
                       </span>
                     ))}
                   </div>
