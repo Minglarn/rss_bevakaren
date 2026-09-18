@@ -1,9 +1,55 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.18.02',
+    date: '2026-09-18',
+    title: 'Dubbla AI-sammanfattningar: Kompakt notissammanfattning och MQTT-expansion',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Dubbla AI-sammanfattningar (kort och lång)',
+        description: 'Språkmodellen genererar nu automatiskt två nivåer av sammanfattning: en fullständig sammanfattning på upp till 3 meningar för läsning i appen, samt en ultrakompakt sammanfattning på 1–1,5 meningar optimerad för mobilnotiser och smartklockor.'
+      },
+      {
+        type: 'ui',
+        title: 'Val av notistyp under Inställningar',
+        description: 'Lagt till en väljare under Notiser där du kan välja om du föredrar kompakta notiser (rymmer alltid på låsskärmen) eller fullständiga notiser.'
+      },
+      {
+        type: 'feature',
+        title: 'MQTT-stöd för short_summary och utökad dokumentation',
+        description: 'Den kompakta sammanfattningen exponeras nu även direkt i MQTT-nyttolasten som short_summary för Home Assistant och smarta displayer. Dokumentationen i README.md har uppdaterats med de nya fälten.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.18.01',
+    date: '2026-09-18',
+    title: 'Driftnotiser för AI-motorn (LM Studio) till administratören',
+    badge: '',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Automatiska driftnotiser vid AI-avbrott',
+        description: 'Systemet övervakar nu anslutningen till LM Studio och skickar en direkt push-notis till administratören om AI-motorn är onåbar i mer än 45 sekunder, samt en bekräftelsenotis när anslutningen återställts.'
+      },
+      {
+        type: 'backend',
+        title: 'Intelligent tidsfönster (Debounce)',
+        description: 'För att undvika falsklarm vid korta omstarter eller modellbyten skickas driftnotisen först efter 45 sekunder av kontinuerligt avbrott, och endast en notis per avbrottsperiod.'
+      },
+      {
+        type: 'ui',
+        title: 'Inställning för driftnotiser',
+        description: 'Lagt till en administratörsbrytare i Inställningar under fliken AI-analys för att enkelt slå på eller stänga av driftnotiserna.'
+      }
+    ]
+  },
+  {
     version: '2026.09.17.08',
     date: '2026-09-17',
     title: 'Visuell Intresseprofil: "Detta är du intresserad av" och "Detta är du inte intresserad av"',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

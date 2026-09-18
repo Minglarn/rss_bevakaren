@@ -110,6 +110,7 @@ class ArticleResponse(BaseModel):
     ai_duration_s: Optional[float] = None
     ai_model: Optional[str] = ""
     ai_summary: Optional[str] = None
+    ai_short_summary: Optional[str] = None
     tags: Optional[List[str]] = []
     is_clickbait: Optional[int] = 0
     clickbait_reason: Optional[str] = ""
@@ -143,6 +144,8 @@ class AIConfigUpdate(BaseModel):
     auto_purge_days: Optional[int] = None
     auto_scrape_article_text: Optional[bool] = None
     max_article_age_hours: Optional[int] = None
+    notify_ai_offline: Optional[bool] = None
+    push_summary_type: Optional[str] = None
 
 class AIConfigResponse(BaseModel):
     prio_rules: str = ""
@@ -164,6 +167,8 @@ class AIConfigResponse(BaseModel):
     auto_purge_days: int = 30
     auto_scrape_article_text: bool = True
     max_article_age_hours: int = 24
+    notify_ai_offline: bool = True
+    push_summary_type: str = "short"
 
 class ArticlePrioritizeRequest(BaseModel):
     topic: Optional[str] = None

@@ -36,6 +36,7 @@ DEFAULT_SYSTEM_PROMPT = f"""Du är en neutral nyhetsanalytiker och klassificerar
   "urgency_score": 5,
   "substance_score": 5,
   "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. OBLIGATORISKT: 1. Ange ALLTID geografisk plats (ort, kommun, stad eller land) om det framgår i artikeln (t.ex. 'i Lekebergs kommun' eller 'i centrala Malmö'). 2. Undvik helt metasnack som 'rapporterar Expressen' eller 'enligt tidningen' – fokusera enbart på själva händelsen. 3. Om rubriken är Clickbait eller undanhåller vem, vad eller var, ska svaret och de faktiska detaljerna avslöjas rakt på sak i första meningen.",
+  "short_summary": "Exakt 1 till 1,5 korta meningar på svenska (max 20 ord) som ultrakompakt anger kärnhändelsen och platsen för korta mobilnotiser och låsskärmar.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
   "clickbait_reason": "Om is_clickbait är true: Beskriv kortfattat vad rubriken undanhåller och bekräfta att fakta har lyfts fram i sammanfattningen (t.ex. 'Rubriken undanhåller vad de nya priserna är för att locka klick. Fakta har lyfts fram i sammanfattningen ovan.'). Lämna tomt om false."
@@ -502,6 +503,7 @@ def build_user_prompt(categories: Optional[Any] = None, prio_rules: Optional[str
   "urgency_score": 5,
   "substance_score": 5,
   "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. OBLIGATORISKT: 1. Ange ALLTID geografisk plats (ort, kommun, stad eller land) om det framgår i artikeln (t.ex. 'i Lekebergs kommun' eller 'i centrala Malmö'). 2. Undvik helt metasnack som 'rapporterar Expressen' eller 'enligt tidningen' – fokusera enbart på själva händelsen. 3. Om rubriken är Clickbait eller undanhåller vem, vad eller var, ska svaret och de faktiska detaljerna avslöjas rakt på sak i första meningen.",
+  "short_summary": "Exakt 1 till 1,5 korta meningar på svenska (max 20 ord) som ultrakompakt anger kärnhändelsen och platsen för korta mobilnotiser och låsskärmar.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
   "clickbait_reason": "Om is_clickbait är true: Beskriv kortfattat vad rubriken undanhåller och bekräfta att fakta har lyfts fram i sammanfattningen (t.ex. 'Rubriken undanhåller vad de nya priserna är för att locka klick. Fakta har lyfts fram i sammanfattningen ovan.'). Lämna tomt om false."
@@ -527,7 +529,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 def ensure_clickbait_in_prompt(prompt: Optional[str], categories: Optional[Any] = None) -> str:
     """
     Säkerställer att prompten innehåller de moderna, balanserade klickbete-instruktionerna,
-    poängmatris för urgency/substance, krav på geografisk plats, 3 meningars sammanfattning.
+    poängmatris för urgency/substance, krav på geografisk plats, 3 meningars sammanfattning
+    och short_summary för korta notiser.
     Om prompten är tom eller saknar de senaste reglerna, genereras en uppdaterad prompt.
     """
     if not prompt or not prompt.strip():
@@ -540,6 +543,8 @@ def ensure_clickbait_in_prompt(prompt: Optional[str], categories: Optional[Any] 
     if "fakta har lyfts fram" not in cleaned.lower():
         return build_user_prompt(categories=categories)
     if "urgency_score" not in cleaned:
+        return build_user_prompt(categories=categories)
+    if "short_summary" not in cleaned:
         return build_user_prompt(categories=categories)
     if "SAKLIGA NYHETER" in cleaned:
         return cleaned
@@ -874,6 +879,12 @@ def analyze_article(
         prio_reason = prio_calc["prio_reason"]
             
         ai_summary = str(parsed.get("summary", "")).strip()
+        raw_short = parsed.get("short_summary")
+        ai_short_summary = str(raw_short).strip() if raw_short else ""
+        # Intelligent fallback om modellen bara returnerade summary: ta första meningen
+        if not ai_short_summary and ai_summary:
+            first_sentence = ai_summary.split(".")[0].strip()
+            ai_short_summary = (first_sentence + ".") if first_sentence else ai_summary
 
         return {
             "category": category,
@@ -883,6 +894,7 @@ def analyze_article(
             "urgency_score": urgency_score,
             "substance_score": substance_score,
             "ai_summary": ai_summary,
+            "ai_short_summary": ai_short_summary,
             "tags": tags,
             "is_clickbait": 1 if is_clickbait else 0,
             "clickbait_reason": clickbait_reason,

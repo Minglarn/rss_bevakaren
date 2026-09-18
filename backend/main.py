@@ -167,6 +167,10 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE articles ADD COLUMN ai_model TEXT DEFAULT ''"))
                     conn.commit()
                     print("[DB] Added ai_model column to articles", flush=True)
+                if "ai_short_summary" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN ai_short_summary TEXT DEFAULT ''"))
+                    conn.commit()
+                    print("[DB] Added ai_short_summary column to articles", flush=True)
                 conn.execute(text("UPDATE articles SET allow_push = 1 WHERE allow_push IS NULL"))
                 conn.commit()
         except Exception as e:
@@ -234,6 +238,21 @@ def ensure_db_migrations():
         except Exception as e:
             print(f"[DB] Migration notice for push_subscriptions: {e}", flush=True)
 
+        try:
+            res_ai_set = conn.execute(text("PRAGMA table_info(user_ai_settings)"))
+            ai_cols = [row[1] for row in res_ai_set.fetchall()]
+            if ai_cols:
+                if "notify_ai_offline" not in ai_cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN notify_ai_offline INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added notify_ai_offline column to user_ai_settings", flush=True)
+                if "push_summary_type" not in ai_cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN push_summary_type TEXT DEFAULT 'short'"))
+                    conn.commit()
+                    print("[DB] Added push_summary_type column to user_ai_settings", flush=True)
+        except Exception as e:
+            print(f"[DB] Migration notice for user_ai_settings: {e}", flush=True)
+
 ensure_db_migrations()
 
 app = FastAPI(title="RSS Bevakaren API")
@@ -267,7 +286,7 @@ def get_version():
         return "unknown"
 
 VERSION = get_version()
-LAST_UPDATE = "2026-09-08"
+LAST_UPDATE = "2026-09-18"
 
 def normalize_user_categories(cats_raw: Any) -> List[Dict[str, Any]]:
     """Säkerställer att kategorier returneras som en lista av dicts: [{'name': '...', 'weight': X}, ...]."""
@@ -557,6 +576,24 @@ def run_db_migrations(db_path: str):
         # Migration 22: Add ai_duration_s to articles (float)
         try:
             cur.execute("ALTER TABLE articles ADD COLUMN ai_duration_s REAL DEFAULT 0.0;")
+        except sqlite3.OperationalError:
+            pass
+
+        # Migration 23: Add notify_ai_offline to user_ai_settings
+        try:
+            cur.execute("ALTER TABLE user_ai_settings ADD COLUMN notify_ai_offline INTEGER DEFAULT 1;")
+        except sqlite3.OperationalError:
+            pass
+
+        # Migration 24: Add ai_short_summary to articles
+        try:
+            cur.execute("ALTER TABLE articles ADD COLUMN ai_short_summary TEXT;")
+        except sqlite3.OperationalError:
+            pass
+
+        # Migration 25: Add push_summary_type to user_ai_settings
+        try:
+            cur.execute("ALTER TABLE user_ai_settings ADD COLUMN push_summary_type VARCHAR DEFAULT 'short';")
         except sqlite3.OperationalError:
             pass
 
@@ -1240,7 +1277,18 @@ ai_wake_event = asyncio.Event()
 ai_failed_attempts: dict[int, int] = {}
 ai_retry_after: dict[int, float] = {}
 
+def get_admin_user(db: Session) -> Optional[models.User]:
+    """Hämtar administratörskontot (antingen användarnamn 'admin' eller användare id 1)."""
+    admin = db.query(models.User).filter(func.lower(models.User.username) == "admin").first()
+    if admin:
+        return admin
+    return db.query(models.User).order_by(models.User.id.asc()).first()
+
+ai_lm_offline_since: Optional[float] = None
+ai_lm_offline_notified: bool = False
+
 async def ai_processing_loop():
+    global ai_lm_offline_since, ai_lm_offline_notified
     print("Background AI enrichment loop started", flush=True)
     # Vänta lite i början så appen och LM Studio hinner initialiseras
     await asyncio.sleep(5)
@@ -1250,9 +1298,65 @@ async def ai_processing_loop():
             # Kontrollera om LM Studio är nåbart innan vi hämtar artiklar (TTL-cachad, snabb)
             is_healthy = await asyncio.to_thread(ai_service.check_lm_studio_health)
             if not is_healthy:
+                now = time.time()
+                if ai_lm_offline_since is None:
+                    ai_lm_offline_since = now
+
+                # Om LM Studio har varit onåbart i minst 45 sekunder och vi inte redan larmat:
+                if (now - ai_lm_offline_since >= 45) and not ai_lm_offline_notified:
+                    db_alert = database.SessionLocal()
+                    try:
+                        admin_user = get_admin_user(db_alert)
+                        if admin_user:
+                            admin_ai = db_alert.query(models.UserAISettings).filter(models.UserAISettings.user_id == admin_user.id).first()
+                            wants_alert = bool(admin_ai.notify_ai_offline if admin_ai and admin_ai.notify_ai_offline is not None else 1)
+                            if wants_alert:
+                                print(f"[AI Driftlarm] LM Studio har varit onåbart i 45 sekunder. Skickar driftnotis till admin '{admin_user.username}'.", flush=True)
+                                send_push_notification_to_user(
+                                    db=db_alert,
+                                    user_id=admin_user.id,
+                                    title="AI-motorn är offline",
+                                    body="LM Studio svarar inte. Kontrollera att servern och modellen är igång.",
+                                    url="/settings?tab=ai",
+                                    context="AI Offline Alert"
+                                )
+                                asyncio.create_task(manager.send_personal_message("AI_OFFLINE_ALERT", admin_user.id))
+                                ai_lm_offline_notified = True
+                    except Exception as ex_alert:
+                        print(f"[AI Driftlarm] Fel vid sändning av offline-notis: {ex_alert}", flush=True)
+                    finally:
+                        db_alert.close()
+
                 # Sov 15 sekunder om LM Studio är offline för att inte spamma loggar
                 await asyncio.sleep(15)
                 continue
+            else:
+                # LM Studio är online! Om vi tidigare larmat om offline skickas en återställningsnotis
+                if ai_lm_offline_notified:
+                    db_alert = database.SessionLocal()
+                    try:
+                        admin_user = get_admin_user(db_alert)
+                        if admin_user:
+                            admin_ai = db_alert.query(models.UserAISettings).filter(models.UserAISettings.user_id == admin_user.id).first()
+                            wants_alert = bool(admin_ai.notify_ai_offline if admin_ai and admin_ai.notify_ai_offline is not None else 1)
+                            if wants_alert:
+                                print(f"[AI Driftlarm] LM Studio är online igen! Skickar återställningsnotis till admin '{admin_user.username}'.", flush=True)
+                                send_push_notification_to_user(
+                                    db=db_alert,
+                                    user_id=admin_user.id,
+                                    title="AI-motorn är online igen",
+                                    body="Anslutningen till LM Studio är återställd. Analys av köade artiklar återupptas.",
+                                    url="/settings?tab=ai",
+                                    context="AI Online Alert"
+                                )
+                                asyncio.create_task(manager.send_personal_message("AI_ONLINE_ALERT", admin_user.id))
+                    except Exception as ex_alert:
+                        print(f"[AI Driftlarm] Fel vid sändning av återställningsnotis: {ex_alert}", flush=True)
+                    finally:
+                        db_alert.close()
+
+                ai_lm_offline_since = None
+                ai_lm_offline_notified = False
                 
             # 1. Hämta inställningar och utför underhåll i en kort, omedelbart stängd DB-session
             cutoff_ts = int(time.time()) - (24 * 3600)
@@ -1368,12 +1472,14 @@ async def ai_processing_loop():
                         inc_title = bool(user_ai.push_include_title if user_ai.push_include_title is not None else 1)
                         inc_image = bool(user_ai.push_include_image if user_ai.push_include_image is not None else 1)
                         inc_summary = bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1)
+                        push_summary_type = getattr(user_ai, "push_summary_type", "short") or "short"
 
                         kws = db_item.query(models.Keyword).filter(models.Keyword.user_id == user_id).all()
                         matched_kw_candidates = [k.keyword for k in kws if k.keyword]
                         liked_tags, disliked_tags = get_user_interest_profile(db_item, user_id)
                     else:
                         liked_tags, disliked_tags = [], []
+                        push_summary_type = "short"
 
                     u_rec = db_item.query(models.User).filter(models.User.id == user_id).first() if user_id else None
                     u_display = u_rec.username if u_rec else f"user_{user_id}"
@@ -1409,7 +1515,8 @@ async def ai_processing_loop():
                         "feed_notifs_on": feed_notifs_on,
                         "inc_title": inc_title,
                         "inc_image": inc_image,
-                        "inc_summary": inc_summary
+                        "inc_summary": inc_summary,
+                        "push_summary_type": push_summary_type
                     }
                 finally:
                     db_item.close()
@@ -1481,6 +1588,7 @@ async def ai_processing_loop():
                     prio_score = analysis.get("prio_score", 10)
                     prio_reason = analysis.get("prio_reason", "")
                     ai_summary = analysis.get("ai_summary", "")
+                    ai_short_summary = analysis.get("ai_short_summary", "")
                     tags_json = json.dumps(analysis.get("tags", []), ensure_ascii=False)
                     is_clickbait = analysis.get("is_clickbait", 0)
                     clickbait_reason = analysis.get("clickbait_reason", "")
@@ -1512,6 +1620,7 @@ async def ai_processing_loop():
                             save_art.urgency_score = urgency_score
                             save_art.substance_score = substance_score
                             save_art.ai_summary = ai_summary
+                            save_art.ai_short_summary = ai_short_summary
                             save_art.tags = tags_json
                             save_art.is_clickbait = is_clickbait
                             save_art.clickbait_reason = clickbait_reason
@@ -1551,7 +1660,8 @@ async def ai_processing_loop():
                                     context_tag = "Flöde-Push"
 
                             if should_send_push and user_id:
-                                push_body = (ai_summary or item["summary"] or item["title"] or "Ny artikel") if item["inc_summary"] else (item["summary"] or item["title"] or "Ny artikel")
+                                chosen_summary = (ai_short_summary if item.get("push_summary_type") == "short" and ai_short_summary else ai_summary) or ai_short_summary
+                                push_body = (chosen_summary or item["summary"] or item["title"] or "Ny artikel") if item["inc_summary"] else (item["summary"] or item["title"] or "Ny artikel")
                                 push_img = item["image_url"] if item["inc_image"] else None
                                 push_info = send_push_notification_to_user(
                                     db=db_save,
@@ -2094,6 +2204,7 @@ def get_dashboard_feeds(
             "ai_duration_s": round(art.ai_duration_s, 2) if (include_ai and art.ai_duration_s) else None,
             "ai_model": (getattr(art, "ai_model", "") or "google/gemma-4-12b-qat") if (include_ai and art.ai_processed) else "",
             "ai_summary": art.ai_summary if include_ai else None,
+            "ai_short_summary": art.ai_short_summary if include_ai else None,
             "tags": parsed_tags if include_ai else [],
             "is_clickbait": art.is_clickbait or 0 if include_ai else 0,
             "clickbait_reason": art.clickbait_reason or "" if include_ai else "",
@@ -2304,6 +2415,7 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     art.urgency_score = analysis.get("urgency_score", 5)
     art.substance_score = analysis.get("substance_score", 5)
     art.ai_summary = analysis.get("ai_summary", "")
+    art.ai_short_summary = analysis.get("ai_short_summary", "")
     art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
     art.is_clickbait = analysis.get("is_clickbait", 0)
     art.clickbait_reason = analysis.get("clickbait_reason", "")
@@ -2370,6 +2482,7 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
         "ai_duration_s": round(art.ai_duration_s, 2) if art.ai_duration_s else None,
         "ai_model": art.ai_model or ai_service.get_active_model(),
         "ai_summary": art.ai_summary,
+        "ai_short_summary": art.ai_short_summary,
         "tags": parsed_tags,
         "is_clickbait": art.is_clickbait or 0,
         "clickbait_reason": art.clickbait_reason or "",
@@ -2513,9 +2626,11 @@ def get_ai_config(
             push_include_title=True,
             push_include_image=True,
             push_include_summary=True,
+            push_summary_type="short",
             auto_purge_enabled=True,
             auto_purge_days=30,
-            auto_scrape_article_text=True
+            auto_scrape_article_text=True,
+            notify_ai_offline=True
         )
         
     cats = normalize_user_categories(user_ai.categories)
@@ -2541,10 +2656,12 @@ def get_ai_config(
         push_include_title=bool(user_ai.push_include_title if user_ai.push_include_title is not None else 1),
         push_include_image=bool(user_ai.push_include_image if user_ai.push_include_image is not None else 1),
         push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1),
+        push_summary_type=getattr(user_ai, "push_summary_type", "short") or "short",
         auto_purge_enabled=bool(user_ai.auto_purge_enabled if user_ai.auto_purge_enabled is not None else 1),
         auto_purge_days=int(user_ai.auto_purge_days or 30),
         auto_scrape_article_text=bool(user_ai.auto_scrape_article_text if user_ai.auto_scrape_article_text is not None else 1),
-        max_article_age_hours=int(user_ai.max_article_age_hours or 24)
+        max_article_age_hours=int(user_ai.max_article_age_hours or 24),
+        notify_ai_offline=bool(user_ai.notify_ai_offline if user_ai.notify_ai_offline is not None else 1)
     )
 
 @app.get("/ai/models")
@@ -2559,7 +2676,7 @@ def get_ai_models(refresh: bool = False, current_user: models.User = Depends(aut
 @app.put("/ai/config", response_model=schemas.AIConfigResponse)
 def update_ai_config(
     config: schemas.AIConfigUpdate, 
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(database.get_db), 
     current_user: models.User = Depends(auth.get_current_user)
 ):
     user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
@@ -2591,6 +2708,8 @@ def update_ai_config(
         user_ai.push_include_image = 1 if config.push_include_image else 0
     if config.push_include_summary is not None:
         user_ai.push_include_summary = 1 if config.push_include_summary else 0
+    if config.push_summary_type is not None:
+        user_ai.push_summary_type = config.push_summary_type if config.push_summary_type in ("short", "full") else "short"
     if config.auto_purge_enabled is not None:
         user_ai.auto_purge_enabled = 1 if config.auto_purge_enabled else 0
     if config.auto_purge_days is not None:
@@ -2599,6 +2718,8 @@ def update_ai_config(
         user_ai.auto_scrape_article_text = 1 if config.auto_scrape_article_text else 0
     if config.max_article_age_hours is not None:
         user_ai.max_article_age_hours = max(1, min(168, config.max_article_age_hours))
+    if config.notify_ai_offline is not None:
+        user_ai.notify_ai_offline = 1 if config.notify_ai_offline else 0
 
     cats = normalize_user_categories(user_ai.categories)
 
@@ -2633,10 +2754,12 @@ def update_ai_config(
         push_include_title=bool(user_ai.push_include_title if user_ai.push_include_title is not None else 1),
         push_include_image=bool(user_ai.push_include_image if user_ai.push_include_image is not None else 1),
         push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1),
+        push_summary_type=getattr(user_ai, "push_summary_type", "short") or "short",
         auto_purge_enabled=bool(user_ai.auto_purge_enabled if user_ai.auto_purge_enabled is not None else 1),
         auto_purge_days=int(user_ai.auto_purge_days or 30),
         auto_scrape_article_text=bool(user_ai.auto_scrape_article_text if user_ai.auto_scrape_article_text is not None else 1),
-        max_article_age_hours=int(user_ai.max_article_age_hours or 24)
+        max_article_age_hours=int(user_ai.max_article_age_hours or 24),
+        notify_ai_offline=bool(user_ai.notify_ai_offline if user_ai.notify_ai_offline is not None else 1)
     )
 
 @app.get("/scrape")

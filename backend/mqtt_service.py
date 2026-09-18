@@ -204,6 +204,7 @@ def publish_article(
         "feed_id": getattr(feed, "id", None),
         "category": getattr(article, "category", "") or "Övrigt",
         "summary": getattr(article, "ai_summary", "") or getattr(article, "summary", "") or "",
+        "short_summary": getattr(article, "ai_short_summary", "") or "",
         "raw_summary": getattr(article, "summary", "") or "",
         "link": getattr(article, "link", "") or "",
         "image_url": getattr(article, "image_url", None),

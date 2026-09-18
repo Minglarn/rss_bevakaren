@@ -120,6 +120,18 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           }, 2000);
         } else if (event.data === "DIGEST_UPDATED") {
           window.dispatchEvent(new Event('digestUpdated'));
+        } else if (event.data === "AI_OFFLINE_ALERT") {
+          toast.error("AI-motorn är offline. Kontrollera att LM Studio är igång.", {
+            id: 'ai-offline-alert',
+            duration: 6000
+          });
+          window.dispatchEvent(new Event('aiStatusChanged'));
+        } else if (event.data === "AI_ONLINE_ALERT") {
+          toast.success("AI-motorn är online igen. Analys av artiklar återupptas.", {
+            id: 'ai-online-alert',
+            duration: 5000
+          });
+          window.dispatchEvent(new Event('aiStatusChanged'));
         }
       };
 

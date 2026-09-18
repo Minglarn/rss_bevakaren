@@ -181,6 +181,7 @@ const Settings = ({ onLogout }) => {
     push_include_title: true,
     push_include_image: true,
     push_include_summary: true,
+    push_summary_type: 'short',
     auto_purge_enabled: true,
     auto_purge_days: 30
   });
@@ -215,6 +216,7 @@ const Settings = ({ onLogout }) => {
 {
   "category": "Välj den mest passande av följande kategorier: ${catsStr}",
   "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. OBLIGATORISKT: 1. Ange ALLTID geografisk plats (ort, kommun, stad eller land) om det framgår i artikeln (t.ex. 'i Lekebergs kommun' eller 'i centrala Malmö'). 2. Undvik helt metasnack som 'rapporterar Expressen' eller 'enligt tidningen' – fokusera enbart på själva händelsen. 3. Om rubriken är Clickbait eller undanhåller vem, vad eller var, ska svaret avslöjas rakt på sak i första meningen.",
+  "short_summary": "Exakt 1 till 1,5 kort mening (max 20 ord) på ren svenska för snabba mobilnotiser och låsskärmar. Ska snabbt och kärnfullt berätta vad som hänt och var.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
   "clickbait_reason": ""
@@ -689,7 +691,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         push_include_title: aiConfig.push_include_title ?? true,
         push_include_image: aiConfig.push_include_image ?? true,
         push_include_summary: aiConfig.push_include_summary ?? true,
-        max_article_age_hours: aiConfig.max_article_age_hours || 24
+        max_article_age_hours: aiConfig.max_article_age_hours || 24,
+        notify_ai_offline: aiConfig.notify_ai_offline ?? true
       });
       if (res.data) {
         setAiConfig(res.data);
@@ -726,7 +729,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         push_include_title: aiConfig.push_include_title ?? true,
         push_include_image: aiConfig.push_include_image ?? true,
         push_include_summary: aiConfig.push_include_summary ?? true,
-        max_article_age_hours: aiConfig.max_article_age_hours || 24
+        max_article_age_hours: aiConfig.max_article_age_hours || 24,
+        notify_ai_offline: aiConfig.notify_ai_offline ?? true
       });
       if (res.data) {
         setAiConfig(res.data);
@@ -764,7 +768,9 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         push_include_title: aiConfig.push_include_title ?? true,
         push_include_image: aiConfig.push_include_image ?? true,
         push_include_summary: aiConfig.push_include_summary ?? true,
+        push_summary_type: aiConfig.push_summary_type || 'short',
         max_article_age_hours: aiConfig.max_article_age_hours || 24,
+        notify_ai_offline: aiConfig.notify_ai_offline ?? true,
         [key]: nextVal
       };
       const res = await api.put('/ai/config', payload);
@@ -776,6 +782,44 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     } catch (err) {
       console.error(`Could not update push setting ${key}:`, err);
       toast.error('Kunde inte spara notisinställningen.');
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
+
+  const handleSelectPushSummaryType = async (type) => {
+    if (aiConfig.push_summary_type === type) return;
+    try {
+      setIsSavingAi(true);
+      const formattedCats = (aiConfig.categories || []).map(c => 
+        typeof c === 'object' ? { name: c.name, weight: c.weight ?? 5 } : { name: c, weight: 5 }
+      );
+      const payload = {
+        prio_rules: aiConfig.prio_rules || '',
+        exclude_rules: aiConfig.exclude_rules || '',
+        categories: formattedCats,
+        prio_threshold: aiConfig.prio_threshold || 75,
+        system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
+        onboarding_completed: true,
+        prio_enabled: aiConfig.prio_enabled ?? false,
+        prio_notify_only: aiConfig.prio_notify_only ?? false,
+        lm_studio_model: aiConfig.lm_studio_model || '',
+        push_include_title: aiConfig.push_include_title ?? true,
+        push_include_image: aiConfig.push_include_image ?? true,
+        push_include_summary: aiConfig.push_include_summary ?? true,
+        push_summary_type: type,
+        max_article_age_hours: aiConfig.max_article_age_hours || 24,
+        notify_ai_offline: aiConfig.notify_ai_offline ?? true
+      };
+      const res = await api.put('/ai/config', payload);
+      if (res.data) {
+        setAiConfig(res.data);
+      }
+      toast.success(`Notissammanfattning ändrad till: ${type === 'short' ? 'Kompakt (1,5 meningar)' : 'Fullständig (upp till 3 meningar)'}`);
+      window.dispatchEvent(new Event('aiConfigUpdated'));
+    } catch (err) {
+      console.error("Could not update push_summary_type:", err);
+      toast.error('Kunde inte spara inställningen för notistyp.');
     } finally {
       setIsSavingAi(false);
     }
@@ -3488,6 +3532,104 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                         <span className="toggle-slider"></span>
                       </label>
                     </div>
+
+                    {/* Väljare för typ av notissammanfattning när AI-sammanfattning är påslagen */}
+                    {aiConfig.push_include_summary !== false && (
+                      <div style={{
+                        padding: '0.75rem 0.9rem',
+                        backgroundColor: 'var(--bg-app)',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.6rem'
+                      }}>
+                        <div style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                          Typ av sammanfattning i notiser
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectPushSummaryType('short')}
+                            disabled={isSavingAi}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              textAlign: 'left',
+                              padding: '0.65rem 0.75rem',
+                              borderRadius: '6px',
+                              border: `1.5px solid ${(aiConfig.push_summary_type || 'short') === 'short' ? '#f97316' : 'var(--border-color)'}`,
+                              backgroundColor: (aiConfig.push_summary_type || 'short') === 'short' ? 'rgba(249, 115, 22, 0.08)' : 'transparent',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{ fontSize: '0.84rem', fontWeight: 600, color: (aiConfig.push_summary_type || 'short') === 'short' ? '#f97316' : 'var(--text-main)' }}>
+                              Kompakt (1,5 meningar)
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: '1.25' }}>
+                              Kort och kärnfullt (max 20 ord). Perfekt för korta mobilnotiser och låsskärmar.
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSelectPushSummaryType('full')}
+                            disabled={isSavingAi}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              textAlign: 'left',
+                              padding: '0.65rem 0.75rem',
+                              borderRadius: '6px',
+                              border: `1.5px solid ${aiConfig.push_summary_type === 'full' ? '#f97316' : 'var(--border-color)'}`,
+                              backgroundColor: aiConfig.push_summary_type === 'full' ? 'rgba(249, 115, 22, 0.08)' : 'transparent',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{ fontSize: '0.84rem', fontWeight: 600, color: aiConfig.push_summary_type === 'full' ? '#f97316' : 'var(--text-main)' }}>
+                              Fullständig (upp till 3 meningar)
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: '1.25' }}>
+                              Komplett AI-sammanfattning med full sammanhangstext och detaljer.
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Toggle 4: Driftnotiser vid AI-avbrott */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem 0.9rem',
+                      backgroundColor: 'var(--bg-app)',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      gap: '0.75rem'
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.86rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Server size={14} style={{ color: '#f97316' }} /> Driftnotiser vid AI-avbrott (Endast administratör)
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                          Skickar en pushnotis om LM Studio är onåbart i mer än 45 sekunder, samt när anslutningen återställts.
+                        </div>
+                      </div>
+                      <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={aiConfig.notify_ai_offline !== false}
+                          onChange={() => handleTogglePushSetting('notify_ai_offline', 'Driftnotiser vid AI-avbrott')}
+                          disabled={isSavingAi}
+                        />
+                        <span className="toggle-slider"></span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4031,6 +4173,36 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   Äldre artiklar hoppas över vid AI-analys
                 </div>
               </div>
+            </div>
+
+            {/* Driftnotiser för AI (Endast Administratör) */}
+            <div style={{
+              marginTop: '1rem',
+              paddingTop: '0.9rem',
+              borderTop: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.75rem'
+            }}>
+              <div style={{ flex: 1, minWidth: '220px' }}>
+                <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Bell size={15} style={{ color: '#f97316' }} /> Driftnotiser vid AI-avbrott (Endast administratör)
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
+                  Skickar en pushnotis till administratören om LM Studio är onåbart i mer än 45 sekunder, samt när anslutningen återställts.
+                </div>
+              </div>
+              <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={aiConfig.notify_ai_offline !== false}
+                  onChange={() => handleTogglePushSetting('notify_ai_offline', 'Driftnotiser vid AI-avbrott')}
+                  disabled={isSavingAi}
+                />
+                <span className="toggle-slider"></span>
+              </label>
             </div>
           </div>
 

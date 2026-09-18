@@ -84,6 +84,7 @@ class Article(Base):
     ai_model = Column(String, default="") # Modellnamn som utförde analysen (t.ex. google/gemma-4-12b-qat)
     user_vote = Column(Integer, default=0, index=True) # 1 = Gilla, -1 = Ogilla, 0 = Neutral
     ai_summary = Column(String, nullable=True)
+    ai_short_summary = Column(String, nullable=True) # Ultrakompakt sammanfattning (1-1.5 meningar) för notiser
     tags = Column(String, default="[]")
     is_clickbait = Column(Integer, default=0)
     clickbait_reason = Column(String, default="")
@@ -125,6 +126,8 @@ class UserAISettings(Base):
     auto_purge_days = Column(Integer, default=30) # Antal dagar att spara olåsta artiklar innan rensning
     auto_scrape_article_text = Column(Integer, default=1) # 1 = skrapa brödtext före AI-analys, 0 = enbart RSS-ingress
     max_article_age_hours = Column(Integer, default=24) # Maximal ålder i timmar för AI-analys av artiklar (default 24h)
+    notify_ai_offline = Column(Integer, default=1) # 1 = skicka driftnotis till admin vid AI-avbrott, 0 = avstängd
+    push_summary_type = Column(String, default="short") # "short" = 1-1.5 meningar, "long" = upp till 3 meningar
 
     owner = relationship("User", back_populates="ai_settings")
 

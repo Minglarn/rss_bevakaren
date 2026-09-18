@@ -228,6 +228,7 @@ Varje meddelande som publiceras innehåller en strukturerad JSON-nyttolast med f
   "feed_slug": "carup",
   "feed_id": 4,
   "summary": "Nya EU-siffror visar att laddhybrider släpper ut betydligt mer koldioxid än vad biltillverkarna tidigare uppgett. Detta innebär att tusentals nya bilar kommer att drabbas av betydligt högre skatter baserat på de faktiska utsläppen.",
+  "short_summary": "Nya EU-siffror medför kraftigt höjd fordonsskatt för laddhybrider.",
   "raw_summary": "Nya EU-siffror visar att laddhybrider släpper ut mer...",
   "link": "https://carup.se/chocksiffrorna-nu-hojs-bilskatten-med-1300/",
   "image_url": "https://carup.se/wp-content/uploads/2026/09/laddhybrid-skatt.jpg",
@@ -256,7 +257,8 @@ Varje meddelande som publiceras innehåller en strukturerad JSON-nyttolast med f
 | `source` | sträng | Visningsnamn på flödeskällan (t.ex. `Polisen`, `CarUp`, `SVT Nyheter`). |
 | `feed_slug` | sträng | Sanerat ID som matchar flödets MQTT-underämne. |
 | `feed_id` | heltal | Numeriskt ID för det bevakade flödet. |
-| `summary` | sträng | AI-sammanfattning (eller RSS-beskrivning om AI är avstängt). |
+| `summary` | sträng | AI-sammanfattning upp till 3 meningar (eller RSS-beskrivning om AI är avstängt). |
+| `short_summary` | sträng | Kompakt AI-sammanfattning (1–1,5 meningar, max 20 ord) optimerad för snabba mobilnotiser och displayer. |
 | `raw_summary` | sträng | Ursprunglig sammanfattning/ingress från källans RSS-flöde. |
 | `link` | sträng | Direkt webbadress till originalartikeln. |
 | `image_url` | sträng | Bildadress om flödet tillhandahåller en artikelbild. |
