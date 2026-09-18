@@ -61,8 +61,8 @@ async function setToken(token) {
 self.addEventListener('push', function(event) {
   if (!event.data) return;
 
-  const defaultPngIcon = new URL('/default-feed-icon.png?v=2026.09.18.03', self.location.origin).href;
-  const defaultBadge = new URL('/badge.png?v=2026.09.18.03', self.location.origin).href;
+  const defaultPngIcon = new URL('/default-feed-icon.png?v=2026.09.18.06', self.location.origin).href;
+  const defaultBadge = new URL('/badge.png?v=2026.09.18.06', self.location.origin).href;
 
   event.waitUntil((async () => {
     let title = 'RSS Bevakaren';

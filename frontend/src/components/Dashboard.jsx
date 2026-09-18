@@ -2080,34 +2080,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           transition={{ duration: 0.25 }}
                           className="ai-summary-well"
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem', gap: '0.5rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#f97316', fontSize: '0.75rem', fontWeight: 600 }}>
-                              <Sparkles size={13} /> AI-sammanfattning
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setReasoningItem(item);
-                              }}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                padding: '0.12rem 0.5rem',
-                                borderRadius: '4px',
-                                backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                                border: '1px solid rgba(99, 102, 241, 0.28)',
-                                color: '#818cf8',
-                                cursor: 'pointer',
-                                fontSize: '0.72rem',
-                                fontWeight: 600,
-                                transition: 'all 0.15s ease'
-                              }}
-                              title="Se detaljerat AI-resonemang och poängfördelning"
-                            >
-                              <Info size={11} /> Resonemang
-                            </button>
-                          </div>
                           <div style={{ 
                             color: 'var(--text-main)', 
                             fontSize: '0.95rem', 
@@ -2163,10 +2135,37 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     return null;
                   })()}
 
-                  {/* Taggar från AI-analys inklusive kategori samt PRIO-märke */}
-                  {shouldShowAi && (item.category || (item.tags && item.tags.length > 0) || item.priority === 'high' || (item.prio_score || 0) >= 75) && (
+                  {/* Taggar från AI-analys inklusive kategori, AI-ikon, Resonemang samt PRIO-märke */}
+                  {shouldShowAi && (
+                    item.category || 
+                    (item.tags && item.tags.length > 0) || 
+                    item.priority === 'high' || 
+                    (item.prio_score || 0) >= 75 ||
+                    item.ai_summary ||
+                    item.prio_reason
+                  ) && (
                     <div className="card-tags-section">
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.15rem', alignItems: 'center' }}>
+                        {/* AI-ikon som indikerar att AI-sammanfattning finns (endast ikon) */}
+                        {Boolean(item.ai_summary) && (
+                          <span 
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '0.2rem 0.45rem',
+                              borderRadius: '12px',
+                              backgroundColor: 'rgba(249, 115, 22, 0.12)',
+                              color: '#f97316',
+                              border: '1px solid rgba(249, 115, 22, 0.25)',
+                              lineHeight: 1
+                            }}
+                            title="AI-sammanfattning"
+                          >
+                            <Sparkles size={12} />
+                          </span>
+                        )}
+
                         {/* PRIO-piller flyttad från TopBar för en renare layout */}
                         {shouldShowAi && (item.priority === 'high' || (item.prio_score || 0) >= 75) && (
                           <span 
@@ -2240,6 +2239,33 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                               </button>
                             );
                           })}
+
+                        {/* Resonemang-knapp flyttad till taggraden */}
+                        {shouldShowAi && (item.prio_reason || item.ai_summary || item.prio_score != null || Boolean(item.ai_processed)) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReasoningItem(item);
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '12px',
+                              backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                              border: '1px solid rgba(99, 102, 241, 0.28)',
+                              color: '#818cf8',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              transition: 'all 0.15s ease'
+                            }}
+                            title="Se detaljerat AI-resonemang och poängfördelning"
+                          >
+                            <Info size={11} /> Resonemang
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}

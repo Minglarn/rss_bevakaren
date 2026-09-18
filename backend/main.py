@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 import asyncio
 import time
 from fastapi.security import OAuth2PasswordRequestForm
@@ -660,6 +660,7 @@ async def startup_event():
     asyncio.create_task(ai_processing_loop())
     asyncio.create_task(scheduled_purge_loop())
     asyncio.create_task(scheduled_digest_loop())
+    asyncio.create_task(asyncio.to_thread(ensure_all_feed_icons_cached))
 
     # Starta MQTT-tjänsten om den är aktiverad via miljövariabler
     mqtt_service.start_mqtt()
@@ -809,23 +810,134 @@ def parse_device_name(ua: Optional[str]) -> str:
 
     return f"{os_name} ({browser_name})"
 
-def get_feed_icon_url(feed: Optional[models.Feed], link: Optional[str] = None) -> str:
-    """Returnerar flödets sparade ikon eller genererar en automatisk högupplöst favicon via Google service."""
-    if feed and getattr(feed, "icon_url", None) and feed.icon_url.strip():
-        raw_icon = feed.icon_url.strip()
-        if raw_icon in ("/default-feed-icon.svg", "/default-feed-icon.png"):
-            return "/default-feed-icon.png"
-        return raw_icon
+def get_icons_dir() -> str:
+    """Returnerar och säkerställer katalogen för lokala flödesikoner."""
+    base = "/data/icons" if os.path.exists("/data") else os.path.join(os.getcwd(), "data", "icons")
+    os.makedirs(base, exist_ok=True)
+    return base
+
+def delete_local_feed_icon(feed_id: int):
+    """Raderar den lokala ikonfilen när ett flöde tas bort."""
+    try:
+        icon_path = os.path.join(get_icons_dir(), f"feed_{feed_id}.png")
+        if os.path.exists(icon_path):
+            os.remove(icon_path)
+            print(f"[ICONS] Raderade lokal ikon för flöde #{feed_id}: {icon_path}", flush=True)
+    except Exception as e:
+        print(f"[ICONS] Kunde inte radera lokal ikon för #{feed_id}: {e}", flush=True)
+
+def download_and_save_feed_icon_sync(feed: Optional[models.Feed], link: Optional[str] = None) -> Optional[str]:
+    """
+    Laddar ner flödets ikon från nätet (favicon/RSS-bild), konverterar den till PNG och sparar lokalt.
+    Returnerar den lokala sökvägen till PNG-filen.
+    """
+    if not feed or not getattr(feed, "id", None):
+        return None
+    icons_dir = get_icons_dir()
+    target_path = os.path.join(icons_dir, f"feed_{feed.id}.png")
+
+    if os.path.exists(target_path) and os.path.getsize(target_path) > 100:
+        return target_path
+
     target_url = (feed.url if feed and feed.url else "") or (link or "")
+    from urllib.parse import urlparse
+    domain = ""
     if target_url:
         try:
-            from urllib.parse import urlparse
             domain = urlparse(target_url).netloc
-            if domain:
-                return f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
         except Exception:
             pass
+
+    candidates = []
+    # 1. Befintlig sparad extern icon_url om den är giltig http/https
+    if getattr(feed, "icon_url", None) and feed.icon_url.strip().startswith(("http://", "https://")):
+        candidates.append(feed.icon_url.strip())
+    
+    # 2. Google Favicon Service (128x128 PNG)
+    if domain:
+        candidates.append(f"https://www.google.com/s2/favicons?domain={domain}&sz=128")
+        candidates.append(f"https://icons.duckduckgo.com/ip3/{domain}.ico")
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
+    for cand_url in candidates:
+        try:
+            resp = requests.get(cand_url, headers=headers, timeout=6)
+            if resp.status_code == 200 and resp.content and len(resp.content) > 100:
+                try:
+                    from PIL import Image
+                    import io
+                    img = Image.open(io.BytesIO(resp.content))
+                    img = img.convert("RGBA")
+                    if img.width > 192 or img.height > 192:
+                        img.thumbnail((192, 192), Image.Resampling.LANCZOS)
+                    img.save(target_path, format="PNG")
+                    print(f"[ICONS] Sparade och konverterade lokal ikon för #{feed.id} ({feed.title or domain}) -> {target_path}", flush=True)
+                    return target_path
+                except Exception:
+                    with open(target_path, "wb") as f:
+                        f.write(resp.content)
+                    print(f"[ICONS] Sparade rå ikon för #{feed.id} ({feed.title or domain}) -> {target_path}", flush=True)
+                    return target_path
+        except Exception:
+            continue
+    return None
+
+def get_default_icon_path() -> Optional[str]:
+    possible = [
+        os.path.join(os.path.dirname(__file__), "static", "default-feed-icon.png"),
+        os.path.join(os.getcwd(), "backend", "static", "default-feed-icon.png"),
+        os.path.join(os.getcwd(), "frontend", "public", "default-feed-icon.png")
+    ]
+    for p in possible:
+        if os.path.exists(p):
+            return p
+    return None
+
+def ensure_all_feed_icons_cached():
+    """Går igenom alla flöden och säkerställer att deras ikoner laddas ner och sparas lokalt."""
+    db = database.SessionLocal()
+    try:
+        feeds = db.query(models.Feed).all()
+        for f in feeds:
+            try:
+                download_and_save_feed_icon_sync(f)
+            except Exception as e:
+                print(f"[ICONS] Fel vid cachning av ikon för flöde #{f.id}: {e}", flush=True)
+    except Exception as ex:
+        print(f"[ICONS] Fel i ensure_all_feed_icons_cached: {ex}", flush=True)
+    finally:
+        db.close()
+
+def get_feed_icon_url(feed: Optional[models.Feed], link: Optional[str] = None) -> str:
+    """Returnerar den lokala URL:en för flödets ikon (/api/feed-icons/{id}.png), eller default."""
+    if feed and getattr(feed, "id", None):
+        return f"/api/feed-icons/{feed.id}.png"
     return "/default-feed-icon.png"
+
+@app.get("/feed-icons/{feed_id}.png")
+@app.get("/api/feed-icons/{feed_id}.png")
+def serve_feed_icon(feed_id: int, db: Session = Depends(database.get_db)):
+    """Serverar den lokala PNG-ikonen för ett flöde, med automatisk nedladdning vid behov."""
+    icons_dir = get_icons_dir()
+    target_path = os.path.join(icons_dir, f"feed_{feed_id}.png")
+
+    if os.path.exists(target_path) and os.path.getsize(target_path) > 100:
+        return FileResponse(target_path, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+    feed = db.query(models.Feed).filter(models.Feed.id == feed_id).first()
+    if feed:
+        saved_path = download_and_save_feed_icon_sync(feed)
+        if saved_path and os.path.exists(saved_path) and os.path.getsize(saved_path) > 100:
+            return FileResponse(saved_path, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+    def_path = get_default_icon_path()
+    if def_path and os.path.exists(def_path):
+        return FileResponse(def_path, media_type="image/png", headers={"Cache-Control": "public, max-age=3600"})
+
+    raise HTTPException(status_code=404, detail="Icon not found")
 
 def send_push_notification_to_user(
     db: Session,
@@ -860,7 +972,7 @@ def send_push_notification_to_user(
     last_status_code = None
     errors = []
 
-    default_icon = "/default-feed-icon.png?v=2026.09.18.03"
+    default_icon = "/default-feed-icon.png?v=2026.09.18.06"
     if not icon_url or not icon_url.strip() or icon_url.strip().endswith(".svg") or "/default-feed-icon" in icon_url:
         resolved_icon = default_icon
     else:
@@ -1921,6 +2033,11 @@ def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db)
     db.add(db_feed)
     db.commit()
     db.refresh(db_feed)
+    try:
+        download_and_save_feed_icon_sync(db_feed)
+    except Exception as icon_err:
+        print(f"[ICONS] Kunde inte ladda ner ikon vid skapande av flöde #{db_feed.id}: {icon_err}", flush=True)
+
     # Convert integer to boolean for response
     db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
     db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
@@ -1978,6 +2095,7 @@ def delete_feed(feed_id: int, db: Session = Depends(database.get_db), current_us
         raise HTTPException(status_code=404, detail="Feed not found")
     db.delete(feed)
     db.commit()
+    delete_local_feed_icon(feed_id)
     return {"status": "ok"}
 
 @app.get("/keywords", response_model=List[schemas.KeywordResponse])
@@ -2081,6 +2199,7 @@ def create_feeds_batch(payload: dict, db: Session = Depends(database.get_db), cu
         
     if added_count > 0:
         db.commit()
+        asyncio.create_task(asyncio.to_thread(ensure_all_feed_icons_cached))
         
     return {"status": "ok", "added_count": added_count}
 

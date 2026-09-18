@@ -12,3 +12,4 @@ requests
 wsproto
 paho-mqtt
 numpy
+Pillow

@@ -1,9 +1,45 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.18.06',
+    date: '2026-09-18',
+    title: 'Kompakt artikelkort med AI-ikon och resonemang i taggraden',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Ren och kompakt sammanfattningsruta',
+        description: 'Den tidigare övre listen inuti den insjunkna sammanfattningsrutan har tagits bort. Sammanfattningen startar nu direkt och ger ett betydligt mer kompakt och stilrent intryck.'
+      },
+      {
+        type: 'feature',
+        title: 'AI-ikon och resonemang i taggraden',
+        description: 'Ordet "AI-sammanfattning" har ersatts av en elegant AI-ikon på samma rad som kategorier och taggar. Även "Resonemang"-knappen har flyttats ner till taggraden så att alla metadata och analysverktyg samlas på ett ställe.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.18.05',
+    date: '2026-09-18',
+    title: 'Lokal ikonlagring för flöden och automatisk städning vid radering',
+    badge: '',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Lokal lagring av flödesikoner',
+        description: 'Flödesikoner laddas nu automatiskt ner till serverns lokala datamapp och konverteras till högkvalitativa PNG-ikoner. Detta eliminerar externa nätverksspärrar och CORS-problem så att flödesikonen alltid syns direkt i mobil- och webbpushnotiser.'
+      },
+      {
+        type: 'feature',
+        title: 'Automatisk radering av ikon vid borttagning av flöde',
+        description: 'När ett RSS-flöde tas bort från systemet raderas även dess tillhörande lokala ikonfil automatiskt från disken.'
+      }
+    ]
+  },
+  {
     version: '2026.09.18.04',
     date: '2026-09-18',
     title: 'Anpassningsbar längd för korta sammanfattningar (max ord och meningar)',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',
