@@ -146,6 +146,8 @@ class AIConfigUpdate(BaseModel):
     max_article_age_hours: Optional[int] = None
     notify_ai_offline: Optional[bool] = None
     push_summary_type: Optional[str] = None
+    short_summary_max_words: Optional[int] = 20
+    short_summary_max_sentences: Optional[int] = 1
 
 class AIConfigResponse(BaseModel):
     prio_rules: str = ""
@@ -169,6 +171,8 @@ class AIConfigResponse(BaseModel):
     max_article_age_hours: int = 24
     notify_ai_offline: bool = True
     push_summary_type: str = "short"
+    short_summary_max_words: int = 20
+    short_summary_max_sentences: int = 1
 
 class ArticlePrioritizeRequest(BaseModel):
     topic: Optional[str] = None

@@ -128,6 +128,8 @@ class UserAISettings(Base):
     max_article_age_hours = Column(Integer, default=24) # Maximal ålder i timmar för AI-analys av artiklar (default 24h)
     notify_ai_offline = Column(Integer, default=1) # 1 = skicka driftnotis till admin vid AI-avbrott, 0 = avstängd
     push_summary_type = Column(String, default="short") # "short" = 1-1.5 meningar, "long" = upp till 3 meningar
+    short_summary_max_words = Column(Integer, default=20) # Max antal ord i korta sammanfattningar
+    short_summary_max_sentences = Column(Integer, default=1) # Max antal meningar i korta sammanfattningar (1 eller 2)
 
     owner = relationship("User", back_populates="ai_settings")
 

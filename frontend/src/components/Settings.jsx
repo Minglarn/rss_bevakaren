@@ -182,6 +182,8 @@ const Settings = ({ onLogout }) => {
     push_include_image: true,
     push_include_summary: true,
     push_summary_type: 'short',
+    short_summary_max_words: 20,
+    short_summary_max_sentences: 1,
     auto_purge_enabled: true,
     auto_purge_days: 30
   });
@@ -769,6 +771,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         push_include_image: aiConfig.push_include_image ?? true,
         push_include_summary: aiConfig.push_include_summary ?? true,
         push_summary_type: aiConfig.push_summary_type || 'short',
+        short_summary_max_words: aiConfig.short_summary_max_words ?? 20,
+        short_summary_max_sentences: aiConfig.short_summary_max_sentences ?? 1,
         max_article_age_hours: aiConfig.max_article_age_hours || 24,
         notify_ai_offline: aiConfig.notify_ai_offline ?? true,
         [key]: nextVal
@@ -808,6 +812,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         push_include_image: aiConfig.push_include_image ?? true,
         push_include_summary: aiConfig.push_include_summary ?? true,
         push_summary_type: type,
+        short_summary_max_words: aiConfig.short_summary_max_words ?? 20,
+        short_summary_max_sentences: aiConfig.short_summary_max_sentences ?? 1,
         max_article_age_hours: aiConfig.max_article_age_hours || 24,
         notify_ai_offline: aiConfig.notify_ai_offline ?? true
       };
@@ -820,6 +826,54 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     } catch (err) {
       console.error("Could not update push_summary_type:", err);
       toast.error('Kunde inte spara inställningen för notistyp.');
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
+
+  const handleUpdateShortSummaryLimits = async (newWords, newSentences) => {
+    const targetWords = newWords !== undefined ? Number(newWords) : (aiConfig.short_summary_max_words ?? 20);
+    const targetSentences = newSentences !== undefined ? Number(newSentences) : (aiConfig.short_summary_max_sentences ?? 1);
+
+    setAiConfig(prev => ({
+      ...prev,
+      short_summary_max_words: targetWords,
+      short_summary_max_sentences: targetSentences
+    }));
+
+    try {
+      setIsSavingAi(true);
+      const formattedCats = (aiConfig.categories || []).map(c => 
+        typeof c === 'object' ? { name: c.name, weight: c.weight ?? 5 } : { name: c, weight: 5 }
+      );
+      const payload = {
+        prio_rules: aiConfig.prio_rules || '',
+        exclude_rules: aiConfig.exclude_rules || '',
+        categories: formattedCats,
+        prio_threshold: aiConfig.prio_threshold || 75,
+        system_prompt: isCustomPromptEdited ? aiConfig.system_prompt : '',
+        onboarding_completed: true,
+        prio_enabled: aiConfig.prio_enabled ?? false,
+        prio_notify_only: aiConfig.prio_notify_only ?? false,
+        lm_studio_model: aiConfig.lm_studio_model || '',
+        push_include_title: aiConfig.push_include_title ?? true,
+        push_include_image: aiConfig.push_include_image ?? true,
+        push_include_summary: aiConfig.push_include_summary ?? true,
+        push_summary_type: aiConfig.push_summary_type || 'short',
+        short_summary_max_words: targetWords,
+        short_summary_max_sentences: targetSentences,
+        max_article_age_hours: aiConfig.max_article_age_hours || 24,
+        notify_ai_offline: aiConfig.notify_ai_offline ?? true
+      };
+      const res = await api.put('/ai/config', payload);
+      if (res.data) {
+        setAiConfig(res.data);
+      }
+      toast.success(`Kort sammanfattning anpassad: Max ${targetWords} ord, ${targetSentences === 1 ? '1 mening' : 'upp till 2 meningar'}.`);
+      window.dispatchEvent(new Event('aiConfigUpdated'));
+    } catch (err) {
+      console.error("Kunde inte uppdatera längd på kort sammanfattning:", err);
+      toast.error('Kunde inte spara inställningen.');
     } finally {
       setIsSavingAi(false);
     }
@@ -3597,6 +3651,101 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                               Komplett AI-sammanfattning med full sammanhangstext och detaljer.
                             </div>
                           </button>
+                        </div>
+
+                        {/* Finjustera längd för korta sammanfattningar */}
+                        <div style={{
+                          marginTop: '0.4rem',
+                          padding: '0.85rem',
+                          backgroundColor: 'rgba(249, 115, 22, 0.04)',
+                          borderRadius: '8px',
+                          border: '1px dashed rgba(249, 115, 22, 0.3)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.75rem'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <div>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                                Maxgräns för korta sammanfattningar
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                                Bestäm hur kort och komprimerad den snabba AI-sammanfattningen ska vara för notiser och displayer.
+                              </div>
+                            </div>
+                            <span style={{
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: '12px',
+                              backgroundColor: 'rgba(249, 115, 22, 0.15)',
+                              color: '#f97316',
+                              border: '1px solid rgba(249, 115, 22, 0.3)'
+                            }}>
+                              Max {aiConfig.short_summary_max_words || 20} ord | {(aiConfig.short_summary_max_sentences || 1) === 1 ? '1 mening' : `${aiConfig.short_summary_max_sentences || 1} meningar`}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem', marginTop: '0.2rem' }}>
+                            {/* Val av max antal ord */}
+                            <div>
+                              <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+                                <span>Max antal ord</span>
+                                <strong style={{ color: 'var(--text-main)' }}>{aiConfig.short_summary_max_words || 20} ord</strong>
+                              </label>
+                              <input
+                                type="range"
+                                min="10"
+                                max="45"
+                                step="5"
+                                value={aiConfig.short_summary_max_words || 20}
+                                onChange={(e) => handleUpdateShortSummaryLimits(e.target.value, aiConfig.short_summary_max_sentences)}
+                                disabled={isSavingAi}
+                                style={{ width: '100%', accentColor: '#f97316', cursor: 'pointer' }}
+                              />
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                                <span>10 ord</span>
+                                <span>20 ord (standard)</span>
+                                <span>45 ord</span>
+                              </div>
+                            </div>
+
+                            {/* Val av max antal meningar */}
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+                                Max antal meningar
+                              </label>
+                              <div style={{ display: 'flex', gap: '0.35rem' }}>
+                                {[
+                                  { sents: 1, label: '1 mening', desc: 'Ultrakompakt' },
+                                  { sents: 2, label: '2 meningar', desc: 'Mer detalj' }
+                                ].map((item) => (
+                                  <button
+                                    key={item.sents}
+                                    type="button"
+                                    onClick={() => handleUpdateShortSummaryLimits(aiConfig.short_summary_max_words, item.sents)}
+                                    disabled={isSavingAi}
+                                    style={{
+                                      flex: 1,
+                                      padding: '0.45rem 0.5rem',
+                                      borderRadius: '6px',
+                                      border: `1px solid ${(aiConfig.short_summary_max_sentences || 1) === item.sents ? '#f97316' : 'var(--border-color)'}`,
+                                      backgroundColor: (aiConfig.short_summary_max_sentences || 1) === item.sents ? 'rgba(249, 115, 22, 0.12)' : 'var(--bg-card)',
+                                      color: (aiConfig.short_summary_max_sentences || 1) === item.sents ? '#f97316' : 'var(--text-main)',
+                                      fontSize: '0.76rem',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                      textAlign: 'center',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                  >
+                                    <div>{item.label}</div>
+                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 400, marginTop: '0.1rem' }}>{item.desc}</div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}

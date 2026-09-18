@@ -492,10 +492,48 @@ def extract_category_names(categories_input: Any) -> List[str]:
         names = [str(k).strip() for k in categories_input.keys() if str(k).strip()]
     return names if names else DEFAULT_CATEGORIES
 
-def build_user_prompt(categories: Optional[Any] = None, prio_rules: Optional[str] = None, exclude_rules: Optional[str] = None, prio_threshold: int = 75) -> str:
-    """Sammanställer en skräddarsydd systemprompt baserat på användarens specifika kategorier."""
+def format_short_summary_instruction(max_words: int = 20, max_sentences: int = 1) -> str:
+    words = max(5, min(100, int(max_words or 20)))
+    sents = max(1, min(3, int(max_sentences or 1)))
+    if sents <= 1:
+        sent_phrase = "Exakt 1 kort mening"
+    elif sents == 2:
+        sent_phrase = "Max 1 till 2 korta meningar"
+    else:
+        sent_phrase = f"Max {sents} korta meningar"
+    return f"{sent_phrase} på svenska (max {words} ord) som ultrakompakt anger kärnhändelsen och platsen för korta mobilnotiser och låsskärmar."
+
+def enforce_short_summary_limits(text: str, max_words: int = 20, max_sentences: int = 1) -> str:
+    if not text:
+        return ""
+    words_limit = max(5, min(100, int(max_words or 20)))
+    sents_limit = max(1, min(3, int(max_sentences or 1)))
+    
+    cleaned = text.strip()
+    s_parts = [s.strip() for s in re.split(r'(?<=[.!?])\s+', cleaned) if s.strip()]
+    if len(s_parts) > sents_limit:
+        cleaned = " ".join(s_parts[:sents_limit])
+        
+    words = cleaned.split()
+    if len(words) > words_limit:
+        trimmed = " ".join(words[:words_limit]).rstrip(",:;–- ")
+        if not trimmed.endswith("."):
+            trimmed += "..."
+        cleaned = trimmed
+    return cleaned
+
+def build_user_prompt(
+    categories: Optional[Any] = None, 
+    prio_rules: Optional[str] = None, 
+    exclude_rules: Optional[str] = None, 
+    prio_threshold: int = 75,
+    short_summary_max_words: int = 20,
+    short_summary_max_sentences: int = 1
+) -> str:
+    """Sammanställer en skräddarsydd systemprompt baserat på användarens specifika kategorier och sammanfattningsregler."""
     cats = extract_category_names(categories)
     cats_str = " | ".join(cats)
+    short_instr = format_short_summary_instruction(short_summary_max_words, short_summary_max_sentences)
     
     prompt = f"""Du är en neutral nyhetsanalytiker och klassificerare. Analysera artikeln och svara ENDAST med ett strikt JSON-objekt utan markdown-block eller omslutande text:
 {{
@@ -503,7 +541,7 @@ def build_user_prompt(categories: Optional[Any] = None, prio_rules: Optional[str
   "urgency_score": 5,
   "substance_score": 5,
   "summary": "Max tre korta, informativa meningar på svenska som sammanfattar kärnhändelsen. OBLIGATORISKT: 1. Ange ALLTID geografisk plats (ort, kommun, stad eller land) om det framgår i artikeln (t.ex. 'i Lekebergs kommun' eller 'i centrala Malmö'). 2. Undvik helt metasnack som 'rapporterar Expressen' eller 'enligt tidningen' – fokusera enbart på själva händelsen. 3. Om rubriken är Clickbait eller undanhåller vem, vad eller var, ska svaret och de faktiska detaljerna avslöjas rakt på sak i första meningen.",
-  "short_summary": "Exakt 1 till 1,5 korta meningar på svenska (max 20 ord) som ultrakompakt anger kärnhändelsen och platsen för korta mobilnotiser och låsskärmar.",
+  "short_summary": "{short_instr}",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
   "clickbait_reason": "Om is_clickbait är true: Beskriv kortfattat vad rubriken undanhåller och bekräfta att fakta har lyfts fram i sammanfattningen (t.ex. 'Rubriken undanhåller vad de nya priserna är för att locka klick. Fakta har lyfts fram i sammanfattningen ovan.'). Lämna tomt om false."
@@ -526,29 +564,43 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 - Vid minsta tveksamhet, sätt alltid is_clickbait: false."""
     return prompt
 
-def ensure_clickbait_in_prompt(prompt: Optional[str], categories: Optional[Any] = None) -> str:
+def ensure_clickbait_in_prompt(
+    prompt: Optional[str], 
+    categories: Optional[Any] = None,
+    short_summary_max_words: int = 20,
+    short_summary_max_sentences: int = 1
+) -> str:
     """
     Säkerställer att prompten innehåller de moderna, balanserade klickbete-instruktionerna,
     poängmatris för urgency/substance, krav på geografisk plats, 3 meningars sammanfattning
-    och short_summary för korta notiser.
+    och anpassat short_summary för korta notiser.
     Om prompten är tom eller saknar de senaste reglerna, genereras en uppdaterad prompt.
     """
     if not prompt or not prompt.strip():
-        return build_user_prompt(categories=categories)
+        return build_user_prompt(
+            categories=categories,
+            short_summary_max_words=short_summary_max_words,
+            short_summary_max_sentences=short_summary_max_sentences
+        )
     cleaned = prompt.strip()
     if "Max två korta" in cleaned:
         cleaned = cleaned.replace("Max två korta", "Max tre korta")
     if "geografisk plats" not in cleaned.lower():
-        return build_user_prompt(categories=categories)
+        return build_user_prompt(categories=categories, short_summary_max_words=short_summary_max_words, short_summary_max_sentences=short_summary_max_sentences)
     if "fakta har lyfts fram" not in cleaned.lower():
-        return build_user_prompt(categories=categories)
+        return build_user_prompt(categories=categories, short_summary_max_words=short_summary_max_words, short_summary_max_sentences=short_summary_max_sentences)
     if "urgency_score" not in cleaned:
-        return build_user_prompt(categories=categories)
+        return build_user_prompt(categories=categories, short_summary_max_words=short_summary_max_words, short_summary_max_sentences=short_summary_max_sentences)
     if "short_summary" not in cleaned:
-        return build_user_prompt(categories=categories)
+        return build_user_prompt(categories=categories, short_summary_max_words=short_summary_max_words, short_summary_max_sentences=short_summary_max_sentences)
+    
+    # Uppdatera short_summary instruktionen i prompten så den matchar användarens inställning
+    new_short_instr = format_short_summary_instruction(short_summary_max_words, short_summary_max_sentences)
+    cleaned = re.sub(r'"short_summary":\s*"[^"]*"', f'"short_summary": "{new_short_instr}"', cleaned)
+
     if "SAKLIGA NYHETER" in cleaned:
         return cleaned
-    return build_user_prompt(categories=categories)
+    return build_user_prompt(categories=categories, short_summary_max_words=short_summary_max_words, short_summary_max_sentences=short_summary_max_sentences)
 
 def calculate_priority(
     category: str,
@@ -710,7 +762,9 @@ def analyze_article(
     model_override: Optional[str] = None,
     on_progress: Optional[Callable[[int], None]] = None,
     liked_tags: Optional[List[str]] = None,
-    disliked_tags: Optional[List[str]] = None
+    disliked_tags: Optional[List[str]] = None,
+    short_summary_max_words: int = 20,
+    short_summary_max_sentences: int = 1
 ) -> Optional[Dict[str, Any]]:
     """
     Anropar LM Studio och returnerar ett berikat artikelobjekt.
@@ -885,6 +939,13 @@ def analyze_article(
         if not ai_short_summary and ai_summary:
             first_sentence = ai_summary.split(".")[0].strip()
             ai_short_summary = (first_sentence + ".") if first_sentence else ai_summary
+
+        # Tvinga strikt begränsning på max ord och meningar enligt användarens inställning
+        ai_short_summary = enforce_short_summary_limits(
+            ai_short_summary,
+            max_words=short_summary_max_words,
+            max_sentences=short_summary_max_sentences
+        )
 
         return {
             "category": category,

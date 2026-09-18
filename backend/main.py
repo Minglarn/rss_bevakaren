@@ -250,6 +250,14 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN push_summary_type TEXT DEFAULT 'short'"))
                     conn.commit()
                     print("[DB] Added push_summary_type column to user_ai_settings", flush=True)
+                if "short_summary_max_words" not in ai_cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN short_summary_max_words INTEGER DEFAULT 20"))
+                    conn.commit()
+                    print("[DB] Added short_summary_max_words column to user_ai_settings", flush=True)
+                if "short_summary_max_sentences" not in ai_cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN short_summary_max_sentences INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added short_summary_max_sentences column to user_ai_settings", flush=True)
         except Exception as e:
             print(f"[DB] Migration notice for user_ai_settings: {e}", flush=True)
 
@@ -1461,11 +1469,6 @@ async def ai_processing_loop():
                             db_item.commit()
                             continue
 
-                        user_cats = normalize_user_categories(user_ai.categories)
-                        user_prompt = ai_service.ensure_clickbait_in_prompt(user_ai.custom_system_prompt, categories=user_cats)
-                        user_model = user_ai.selected_model if user_ai.selected_model else None
-                        if user_ai.auto_scrape_article_text is not None:
-                            auto_scrape_active = (user_ai.auto_scrape_article_text != 0)
                         threshold = user_ai.prio_threshold if user_ai.prio_threshold else 75
                         prio_enabled = bool(user_ai.prio_enabled)
                         prio_notify_only = bool(user_ai.prio_notify_only)
@@ -1473,6 +1476,19 @@ async def ai_processing_loop():
                         inc_image = bool(user_ai.push_include_image if user_ai.push_include_image is not None else 1)
                         inc_summary = bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1)
                         push_summary_type = getattr(user_ai, "push_summary_type", "short") or "short"
+                        short_summary_max_words = getattr(user_ai, "short_summary_max_words", 20) or 20
+                        short_summary_max_sentences = getattr(user_ai, "short_summary_max_sentences", 1) or 1
+
+                        user_cats = normalize_user_categories(user_ai.categories)
+                        user_prompt = ai_service.ensure_clickbait_in_prompt(
+                            user_ai.custom_system_prompt,
+                            categories=user_cats,
+                            short_summary_max_words=short_summary_max_words,
+                            short_summary_max_sentences=short_summary_max_sentences
+                        )
+                        user_model = user_ai.selected_model if user_ai.selected_model else None
+                        if user_ai.auto_scrape_article_text is not None:
+                            auto_scrape_active = (user_ai.auto_scrape_article_text != 0)
 
                         kws = db_item.query(models.Keyword).filter(models.Keyword.user_id == user_id).all()
                         matched_kw_candidates = [k.keyword for k in kws if k.keyword]
@@ -1516,7 +1532,9 @@ async def ai_processing_loop():
                         "inc_title": inc_title,
                         "inc_image": inc_image,
                         "inc_summary": inc_summary,
-                        "push_summary_type": push_summary_type
+                        "push_summary_type": push_summary_type,
+                        "short_summary_max_words": short_summary_max_words,
+                        "short_summary_max_sentences": short_summary_max_sentences
                     }
                 finally:
                     db_item.close()
@@ -1579,7 +1597,9 @@ async def ai_processing_loop():
                     model_override=item["user_model"],
                     on_progress=on_progress_sync,
                     liked_tags=item.get("liked_tags"),
-                    disliked_tags=item.get("disliked_tags")
+                    disliked_tags=item.get("disliked_tags"),
+                    short_summary_max_words=item.get("short_summary_max_words", 20),
+                    short_summary_max_sentences=item.get("short_summary_max_sentences", 1)
                 )
 
                 if analysis:
@@ -2380,12 +2400,29 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     # Hämta användarens personliga AI-inställningar
     user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
     user_cats = normalize_user_categories(user_ai.categories if user_ai else None)
-    user_prompt = ai_service.ensure_clickbait_in_prompt(user_ai.custom_system_prompt if user_ai else None, categories=user_cats)
+    short_words = getattr(user_ai, "short_summary_max_words", 20) or 20
+    short_sents = getattr(user_ai, "short_summary_max_sentences", 1) or 1
+    user_prompt = ai_service.ensure_clickbait_in_prompt(
+        user_ai.custom_system_prompt if user_ai else None, 
+        categories=user_cats,
+        short_summary_max_words=short_words,
+        short_summary_max_sentences=short_sents
+    )
 
     user_model = user_ai.selected_model if (user_ai and user_ai.selected_model) else None
-    
-    loop = asyncio.get_running_loop()
+
+    # Skrapa artikelns fulltext om tillgänglig och auto-skrapning är på
+    if art.link and (not art.content or len(art.content.strip()) < 30):
+        auto_scrape = bool(user_ai.auto_scrape_article_text if user_ai and user_ai.auto_scrape_article_text is not None else 1)
+        feed_allows_scrape = bool(art.feed.scrape_enabled if art.feed and art.feed.scrape_enabled is not None else 1)
+        if auto_scrape and feed_allows_scrape:
+            scraped_text = await asyncio.to_thread(extract_clean_article_text, art.link, 8)
+            if scraped_text and len(scraped_text.strip()) > 30:
+                art.content = scraped_text
+                db.commit()
+
     last_reported_pct = -1
+    loop = asyncio.get_running_loop()
 
     def on_progress_sync(pct: int):
         nonlocal last_reported_pct
@@ -2411,7 +2448,9 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
         model_override=user_model,
         on_progress=on_progress_sync,
         liked_tags=liked_tags,
-        disliked_tags=disliked_tags
+        disliked_tags=disliked_tags,
+        short_summary_max_words=short_words,
+        short_summary_max_sentences=short_sents
     )
     if not analysis:
         raise HTTPException(status_code=502, detail="LM Studio svarade inte eller kunde inte analysera artikeln.")
@@ -2636,6 +2675,8 @@ def get_ai_config(
             push_include_image=True,
             push_include_summary=True,
             push_summary_type="short",
+            short_summary_max_words=20,
+            short_summary_max_sentences=1,
             auto_purge_enabled=True,
             auto_purge_days=30,
             auto_scrape_article_text=True,
@@ -2643,8 +2684,15 @@ def get_ai_config(
         )
         
     cats = normalize_user_categories(user_ai.categories)
+    s_words = int(getattr(user_ai, "short_summary_max_words", 20) or 20)
+    s_sents = int(getattr(user_ai, "short_summary_max_sentences", 1) or 1)
 
-    prompt = ai_service.ensure_clickbait_in_prompt(user_ai.custom_system_prompt, categories=cats)
+    prompt = ai_service.ensure_clickbait_in_prompt(
+        user_ai.custom_system_prompt, 
+        categories=cats,
+        short_summary_max_words=s_words,
+        short_summary_max_sentences=s_sents
+    )
     if user_ai.custom_system_prompt != prompt:
         user_ai.custom_system_prompt = prompt
         db.commit()
@@ -2666,6 +2714,8 @@ def get_ai_config(
         push_include_image=bool(user_ai.push_include_image if user_ai.push_include_image is not None else 1),
         push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1),
         push_summary_type=getattr(user_ai, "push_summary_type", "short") or "short",
+        short_summary_max_words=s_words,
+        short_summary_max_sentences=s_sents,
         auto_purge_enabled=bool(user_ai.auto_purge_enabled if user_ai.auto_purge_enabled is not None else 1),
         auto_purge_days=int(user_ai.auto_purge_days or 30),
         auto_scrape_article_text=bool(user_ai.auto_scrape_article_text if user_ai.auto_scrape_article_text is not None else 1),
@@ -2719,6 +2769,10 @@ def update_ai_config(
         user_ai.push_include_summary = 1 if config.push_include_summary else 0
     if config.push_summary_type is not None:
         user_ai.push_summary_type = config.push_summary_type if config.push_summary_type in ("short", "full") else "short"
+    if config.short_summary_max_words is not None:
+        user_ai.short_summary_max_words = max(5, min(100, int(config.short_summary_max_words)))
+    if config.short_summary_max_sentences is not None:
+        user_ai.short_summary_max_sentences = max(1, min(3, int(config.short_summary_max_sentences)))
     if config.auto_purge_enabled is not None:
         user_ai.auto_purge_enabled = 1 if config.auto_purge_enabled else 0
     if config.auto_purge_days is not None:
@@ -2731,6 +2785,8 @@ def update_ai_config(
         user_ai.notify_ai_offline = 1 if config.notify_ai_offline else 0
 
     cats = normalize_user_categories(user_ai.categories)
+    s_words = int(getattr(user_ai, "short_summary_max_words", 20) or 20)
+    s_sents = int(getattr(user_ai, "short_summary_max_sentences", 1) or 1)
 
     if config.system_prompt and config.system_prompt.strip():
         user_ai.custom_system_prompt = config.system_prompt.strip()
@@ -2740,7 +2796,9 @@ def update_ai_config(
             categories=cats,
             prio_rules=user_ai.prio_rules,
             exclude_rules=user_ai.exclude_rules,
-            prio_threshold=user_ai.prio_threshold or 75
+            prio_threshold=user_ai.prio_threshold or 75,
+            short_summary_max_words=s_words,
+            short_summary_max_sentences=s_sents
         )
 
     db.commit()
@@ -2764,6 +2822,8 @@ def update_ai_config(
         push_include_image=bool(user_ai.push_include_image if user_ai.push_include_image is not None else 1),
         push_include_summary=bool(user_ai.push_include_summary if user_ai.push_include_summary is not None else 1),
         push_summary_type=getattr(user_ai, "push_summary_type", "short") or "short",
+        short_summary_max_words=s_words,
+        short_summary_max_sentences=s_sents,
         auto_purge_enabled=bool(user_ai.auto_purge_enabled if user_ai.auto_purge_enabled is not None else 1),
         auto_purge_days=int(user_ai.auto_purge_days or 30),
         auto_scrape_article_text=bool(user_ai.auto_scrape_article_text if user_ai.auto_scrape_article_text is not None else 1),

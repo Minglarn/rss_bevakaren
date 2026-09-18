@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.18.04',
+    date: '2026-09-18',
+    title: 'Anpassningsbar längd för korta sammanfattningar (max ord och meningar)',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Inställning för max ord och meningar i korta notiser',
+        description: 'Du kan nu finjustera längden på de korta notissammanfattningarna under Inställningar. Välj maximalt antal ord (10–50 ord) samt maximalt antal meningar (1 till 2 meningar) för att anpassa notiserna perfekt efter din klocka eller mobil.'
+      },
+      {
+        type: 'feature',
+        title: 'Dynamisk prompt- och efterbehandlingsstyrning',
+        description: 'AI-motorn anpassar automatiskt sin promptinstruktion efter dina valda gränser, och en strikt efterkontroll garanterar att notiserna aldrig överskrider dina definierade maxgränser.'
+      }
+    ]
+  },
+  {
     version: '2026.09.18.03',
     date: '2026-09-18',
     title: 'Korrigerad notislogik för alla flöden samt säkrad flödesikonvisning',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'fix',
