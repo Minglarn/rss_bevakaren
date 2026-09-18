@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.18.03',
+    date: '2026-09-18',
+    title: 'Korrigerad notislogik för alla flöden samt säkrad flödesikonvisning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Exakt notisstyrning via PRIO-inställningen',
+        description: 'När PRIO-notiser är påslaget skickas uteslutande notiser för högt prioriterade artiklar och bevakningsord. När PRIO-notiser är avslaget skickas notiser för samtliga nya artiklar från de flöden som är aktiverade i Notiser per flöde.'
+      },
+      {
+        type: 'fix',
+        title: 'Borttagning av överdrivna tids- och burst-spärrar',
+        description: 'Tog bort en 2-timmars tidsspärr på RSS-publiceringsdatum som felaktigt blockerade artiklar med tidszonsavvikelser, samt utökade burst-gränsen så att inkommande flödesnotiser inte stryps i onödan.'
+      },
+      {
+        type: 'fix',
+        title: 'Säkrad ikonvisning i webbpush (CORS och PNG-stöd)',
+        description: 'Tog bort en blockerande HEAD-förfrågan i Service Workern som orsakade CORS-fel mot externa ikoner och tvingade fram standardikonen. Uppdaterade även ikongenereringen till högupplösta PNG-ikoner som stöds fullt ut av alla mobila notissystem.'
+      }
+    ]
+  },
+  {
     version: '2026.09.18.02',
     date: '2026-09-18',
     title: 'Dubbla AI-sammanfattningar: Kompakt notissammanfattning och MQTT-expansion',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

@@ -61,8 +61,8 @@ async function setToken(token) {
 self.addEventListener('push', function(event) {
   if (!event.data) return;
 
-  const defaultPngIcon = new URL('/default-feed-icon.png?v=2026.09.16.04', self.location.origin).href;
-  const defaultBadge = new URL('/badge.png?v=2026.09.16.04', self.location.origin).href;
+  const defaultPngIcon = new URL('/default-feed-icon.png?v=2026.09.18.03', self.location.origin).href;
+  const defaultBadge = new URL('/badge.png?v=2026.09.18.03', self.location.origin).href;
 
   event.waitUntil((async () => {
     let title = 'RSS Bevakaren';
@@ -94,16 +94,6 @@ self.addEventListener('push', function(event) {
         candidateIcon = defaultPngIcon;
       } else if (!candidateIcon.startsWith('http')) {
         candidateIcon = new URL(candidateIcon, self.location.origin).href;
-      } else {
-        // Kontrollera om extern favicon (t.ex. DuckDuckGo) svarar med 200 OK
-        try {
-          const resp = await fetch(candidateIcon, { method: 'HEAD' });
-          if (!resp.ok) {
-            candidateIcon = defaultPngIcon;
-          }
-        } catch (_err) {
-          candidateIcon = defaultPngIcon;
-        }
       }
       options.icon = candidateIcon;
 

@@ -802,20 +802,19 @@ def parse_device_name(ua: Optional[str]) -> str:
     return f"{os_name} ({browser_name})"
 
 def get_feed_icon_url(feed: Optional[models.Feed], link: Optional[str] = None) -> str:
-    """Returnerar flödets sparade ikon eller genererar en automatisk favicon via DuckDuckGo service."""
+    """Returnerar flödets sparade ikon eller genererar en automatisk högupplöst favicon via Google service."""
     if feed and getattr(feed, "icon_url", None) and feed.icon_url.strip():
         raw_icon = feed.icon_url.strip()
-        if "google.com/s2/favicons" not in raw_icon:
-            if raw_icon in ("/default-feed-icon.svg", "/default-feed-icon.png"):
-                return "/default-feed-icon.png"
-            return raw_icon
+        if raw_icon in ("/default-feed-icon.svg", "/default-feed-icon.png"):
+            return "/default-feed-icon.png"
+        return raw_icon
     target_url = (feed.url if feed and feed.url else "") or (link or "")
     if target_url:
         try:
             from urllib.parse import urlparse
             domain = urlparse(target_url).netloc
             if domain:
-                return f"https://icons.duckduckgo.com/ip3/{domain}.ico"
+                return f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
         except Exception:
             pass
     return "/default-feed-icon.png"
@@ -853,7 +852,7 @@ def send_push_notification_to_user(
     last_status_code = None
     errors = []
 
-    default_icon = "/default-feed-icon.png?v=2026.09.16.04"
+    default_icon = "/default-feed-icon.png?v=2026.09.18.03"
     if not icon_url or not icon_url.strip() or icon_url.strip().endswith(".svg") or "/default-feed-icon" in icon_url:
         resolved_icon = default_icon
     else:
@@ -1085,11 +1084,11 @@ async def polling_loop():
                         if not existing:
                             cat_str = ",".join(item.get("categories", []))
                             
-                            # Tyst initial inläsning och tidsfilter (> 2 timmar gammal = ingen push)
+                            # Tyst initial inläsning och spärr mot historiska artiklar (> 24 timmar)
                             art_allow_push = 1
                             if is_initial_poll:
                                 art_allow_push = 0
-                            elif pub_ts > 0 and (current_time - pub_ts > 7200):
+                            elif pub_ts > 0 and (current_time - pub_ts > 86400):
                                 art_allow_push = 0
                                 
                             new_article = models.Article(
@@ -1119,14 +1118,14 @@ async def polling_loop():
                         id_range = f"#{first_id}" if first_id == last_id else f"#{first_id}-#{last_id}"
                         art_count_str = "1 ny artikel sparad" if len(new_articles) == 1 else f"{len(new_articles)} nya artiklar sparade"
 
-                        # Burst-skydd: Om fler än 2 artiklar i en och samma poll kvalificerar sig för push, begränsa till max 2 nyaste
+                        # Burst-skydd: Om fler än 6 artiklar i en och samma poll kvalificerar sig för push, begränsa till max 6 nyaste
                         if not is_initial_poll:
                             push_eligible = [a for a in new_articles if a.allow_push == 1]
-                            if len(push_eligible) > 2:
-                                for a in push_eligible[:-2]:
+                            if len(push_eligible) > 6:
+                                for a in push_eligible[:-6]:
                                     a.allow_push = 0
                                 db.commit()
-                                print(f"[ANTI-BURST: {feed_username}] '{feed_title}': {len(push_eligible)} artiklar. Begränsar push till de 2 nyaste.", flush=True)
+                                print(f"[ANTI-BURST: {feed_username}] '{feed_title}': {len(push_eligible)} artiklar. Begränsar push till de 6 nyaste.", flush=True)
 
                         print(f"[POLL: {feed_username}] {feed_title}: {art_count_str} ({id_range})", flush=True)
                         ai_wake_event.set()
@@ -1176,7 +1175,8 @@ async def polling_loop():
                                     notify_body = ""
                                     
                                     is_feed_notify = feed.notify_enabled if feed.notify_enabled is not None else 1
-                                    if is_feed_notify == 1:
+                                    prio_notify_only = bool(user_ai_pref.prio_notify_only) if user_ai_pref else False
+                                    if not prio_notify_only and is_feed_notify == 1:
                                         should_notify = True
                                         notify_title = f"{feed.title or 'RSS'}: {art.title}"
                                         notify_body = art.summary or art.title
@@ -1636,28 +1636,37 @@ async def ai_processing_loop():
                         push_info = None
 
                         try:
-                            if not item["feed_notifs_on"] or item["allow_push"] == 0:
+                            # Spärr mot initial inläsning och historiska artiklar (> 24 timmar)
+                            is_too_old_or_initial = (item["allow_push"] == 0)
+
+                            if is_too_old_or_initial:
                                 should_send_push = False
-                            elif item["published_ts"] and (time.time() - item["published_ts"] > 7200):
-                                should_send_push = False
-                            else:
-                                if matched_kw:
-                                    should_send_push = True
-                                    kw_str = ", ".join(matched_kw)
-                                    push_title = f"Bevakningsord ({kw_str}): {item['title']}" if item["inc_title"] else f"Bevakningsord ({kw_str})"
-                                    context_tag = "Bevakningsord-Push"
-                                elif item["prio_enabled"] and is_prio:
+                            elif matched_kw:
+                                # Bevakningsord skickas alltid direkt
+                                should_send_push = True
+                                kw_str = ", ".join(matched_kw)
+                                push_title = f"Bevakningsord ({kw_str}): {item['title']}" if item["inc_title"] else f"Bevakningsord ({kw_str})"
+                                context_tag = "Bevakningsord-Push"
+                            elif item["prio_notify_only"]:
+                                # Valet för PRIO-notiser är PÅSLAGET: Skicka ENDAST artiklar som uppnår PRIO
+                                if is_prio:
                                     should_send_push = True
                                     push_title = f"PRIO ({item['source'] or 'RSS'}): {item['title']}" if item["inc_title"] else f"PRIO ({item['source'] or 'RSS'})"
                                     context_tag = "PRIO-Push"
-                                elif item["prio_enabled"] and not item["prio_notify_only"]:
+                                else:
+                                    should_send_push = False
+                            else:
+                                # Valet för PRIO-notiser är AVSLAGET: Skicka notiser för de flöden vi har aktiverat i "Notiser per flöde"
+                                if item["feed_notifs_on"]:
                                     should_send_push = True
-                                    push_title = f"{item['source'] or 'RSS'}: {item['title']}" if item["inc_title"] else f"{item['source'] or 'RSS'}"
-                                    context_tag = "Flöde-Push"
-                                elif not item["prio_enabled"]:
-                                    should_send_push = True
-                                    push_title = f"{item['source'] or 'RSS'}: {item['title']}" if item["inc_title"] else f"{item['source'] or 'RSS'}"
-                                    context_tag = "Flöde-Push"
+                                    if is_prio:
+                                        push_title = f"PRIO ({item['source'] or 'RSS'}): {item['title']}" if item["inc_title"] else f"PRIO ({item['source'] or 'RSS'})"
+                                        context_tag = "PRIO-Push"
+                                    else:
+                                        push_title = f"{item['source'] or 'RSS'}: {item['title']}" if item["inc_title"] else f"{item['source'] or 'RSS'}"
+                                        context_tag = "Flöde-Push"
+                                else:
+                                    should_send_push = False
 
                             if should_send_push and user_id:
                                 chosen_summary = (ai_short_summary if item.get("push_summary_type") == "short" and ai_short_summary else ai_summary) or ai_short_summary
@@ -2042,7 +2051,7 @@ def create_feeds_batch(payload: dict, db: Session = Depends(database.get_db), cu
             polling_interval=random_interval,
             scrape_enabled=1,
             include_in_dashboard=1,
-            notify_enabled=0,
+            notify_enabled=1,
             icon_url=icon_url,
             user_id=current_user.id
         )

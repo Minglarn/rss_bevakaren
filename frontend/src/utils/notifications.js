@@ -216,10 +216,10 @@ export const sendNotification = (title, options = {}) => {
   }
 
   if (Notification.permission === 'granted') {
-    const defaultPng = '/default-feed-icon.png?v=2026.09.16.04';
+    const defaultPng = '/default-feed-icon.png?v=2026.09.18.03';
     const defaultOptions = {
       icon: defaultPng,
-      badge: '/badge.png?v=2026.09.16.04'
+      badge: '/badge.png?v=2026.09.18.03'
     };
     
     const finalOptions = { ...defaultOptions, ...options };

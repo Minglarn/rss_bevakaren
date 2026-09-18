@@ -15,15 +15,6 @@ export function resolveFeedIcon(iconUrl) {
     return '/default-feed-icon.png';
   }
   const cleanUrl = iconUrl.trim();
-  if (cleanUrl.includes('google.com/s2/favicons')) {
-    try {
-      const u = new URL(cleanUrl);
-      const domain = u.searchParams.get('domain');
-      if (domain) return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
-    } catch {
-      return '/default-feed-icon.png';
-    }
-  }
   if (cleanUrl.endsWith('/default-feed-icon.svg')) {
     return '/default-feed-icon.png';
   }
