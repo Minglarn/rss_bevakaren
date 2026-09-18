@@ -1,9 +1,22 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.18.08',
+    date: '2026-09-18',
+    title: 'Korrigerad ikonimport och säkrad stabilitet för artikelkort',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Återställd ikonimport för klocksymbolen',
+        description: 'Lade till den saknade importen av Clock-ikonen i artikelkorten, vilket åtgärdar JavaScript-körtidsfelet och garanterar stabil rendering av publiceringstiden.'
+      }
+    ]
+  },
+  {
     version: '2026.09.18.07',
     date: '2026-09-18',
     title: 'Optimerad kortlayout med ren toppbar och Detaljer-dialog',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

@@ -972,7 +972,7 @@ def send_push_notification_to_user(
     last_status_code = None
     errors = []
 
-    default_icon = "/default-feed-icon.png?v=2026.09.18.07"
+    default_icon = "/default-feed-icon.png?v=2026.09.18.08"
     if not icon_url or not icon_url.strip() or icon_url.strip().endswith(".svg") or "/default-feed-icon" in icon_url:
         resolved_icon = default_icon
     else:
@@ -1879,7 +1879,6 @@ async def ai_processing_loop():
                                 err_summary = f" ({'; '.join(push_info.get('errors', []))})" if push_info.get("errors") else ""
                                 deliv_str = f"Misslyckades skicka till {total_devs} enhet(er){err_summary}"
 
-                        print("", flush=True)
                         print("====================================================================", flush=True)
                         print(f"[{tag_name}{cb_tag}{kw_info}] Användare: {u_display} | Källa: {item['source'] or 'RSS'} | #{item['id']}", flush=True)
                         print(f"  Titel:    \"{item['title']}\"", flush=True)
