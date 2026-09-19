@@ -16,7 +16,6 @@
       <outline text="Nyhetsbyrån Järva" title="Nyhetsbyrån Järva" type="rss" xmlUrl="https://www.nyhetsbyranjarva.se/feed" htmlUrl="https://www.nyhetsbyranjarva.se" category="Riksnyheter &amp; Dagspress" description="Nyhetsbyrån Järva AB" version="RSS2" />
       <outline text="Svenska Dagbladet (SvD)" title="Svenska Dagbladet (SvD)" type="rss" xmlUrl="https://www.svd.se/feed/articles.rss" htmlUrl="https://svd.se" category="Riksnyheter &amp; Dagspress" description="Schibsted" version="RSS2" />
       <outline text="SVT Nyheter" title="SVT Nyheter" type="rss" xmlUrl="https://www.svt.se/rss.xml" htmlUrl="https://www.svt.se" category="Riksnyheter &amp; Dagspress" description="Svenska toppnyheter och snabba uppdateringar" version="RSS2" />
-      <outline text="swed24" title="swed24" type="rss" xmlUrl="https://www.swed24.se/feed" htmlUrl="https://www.swed24.se" category="Riksnyheter &amp; Dagspress" description="Nizar Askar (privatperson)" version="RSS2" />
       <outline text="Sydsvenskan" title="Sydsvenskan" type="rss" xmlUrl="https://www.sydsvenskan.se/feed.xml" htmlUrl="https://www.sydsvenskan.se" category="Riksnyheter &amp; Dagspress" description="Bonnier AB" version="RSS2" />
       <outline text="The Local" title="The Local" type="rss" xmlUrl="https://feeds.thelocal.com" htmlUrl="https://www.thelocal.se" category="Riksnyheter &amp; Dagspress" description="The Local Europe AB" version="RSS2" />
     </outline>
@@ -342,7 +341,6 @@
       <outline text="IT-pedagogen" title="IT-pedagogen" type="rss" xmlUrl="https://it-pedagogen.se/feed" htmlUrl="https://it-pedagogen.se" category="Vetenskap &amp; Forskning" description="IT Media Group Sverige AB" version="RSS2" />
       <outline text="Phys.org - Technology" title="Phys.org - Technology" type="rss" xmlUrl="https://phys.org/rss-feed/technology-news/" htmlUrl="https://phys.org" category="Vetenskap &amp; Forskning" description="Vetenskapliga genombrott och tekniska framsteg" version="RSS2" />
       <outline text="Populär Astronomi" title="Populär Astronomi" type="rss" xmlUrl="https://www.popularastronomi.se/feed" htmlUrl="https://www.popularastronomi.se" category="Vetenskap &amp; Forskning" description="Svenska Astronomiska Sällskapet" version="RSS2" />
-      <outline text="SpaceNews" title="SpaceNews" type="rss" xmlUrl="https://spacenews.com/feed/" htmlUrl="https://spacenews.com" category="Vetenskap &amp; Forskning" description="Kommersiell och militär rymdfart samt astronomi" version="RSS2" />
     </outline>
     <outline text="Film, TV &amp; Nöje" title="Film, TV &amp; Nöje">
       <outline text="Collider" title="Collider" type="rss" xmlUrl="https://collider.com/feed/" htmlUrl="https://collider.com" category="Film, TV &amp; Nöje" description="Film- och seriebevakning, intervjuer och trailers" version="RSS2" />

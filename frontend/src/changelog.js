@@ -1,9 +1,22 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.20',
+    date: '2026-09-19',
+    title: 'Uppdatering av flödeskatalog i OPML',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Rensning av flöden',
+        description: 'Tagit bort inaktuella källor (swed24 och SpaceNews) från den fördefinierade svenska RSS-katalogen.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.19',
     date: '2026-09-19',
     title: 'Kompakt sidopanel med 50% minskade marginaler och paddings',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'improvement',
