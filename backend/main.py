@@ -3102,7 +3102,7 @@ def get_dashboard_feeds(
     return final_items
 
 @app.post("/articles/cluster/{cluster_id}/read")
-def mark_cluster_read(
+async def mark_cluster_read(
     cluster_id: int,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.get_current_user)
@@ -3119,6 +3119,9 @@ def mark_cluster_read(
         updated_ids.append(a.id)
     
     db.commit()
+    if updated_ids:
+        ids_str = ",".join(str(i) for i in updated_ids)
+        await manager.send_personal_message(f"ARTICLES_READ:{ids_str}", current_user.id)
     return {"status": "ok", "cluster_id": cluster_id, "updated_count": len(updated_ids), "article_ids": updated_ids}
 
 @app.get("/ai/digest", response_model=Optional[schemas.DailyDigestResponse])
@@ -4261,15 +4264,16 @@ def get_source_analytics(db: Session = Depends(database.get_db), current_user: m
         }
 
 @app.post("/articles/{article_id}/read")
-def mark_article_read(article_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+async def mark_article_read(article_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     article = db.query(models.Article).join(models.Feed).filter(models.Article.id == article_id, models.Feed.user_id == current_user.id).first()
     if article:
         article.is_read = 1
         db.commit()
+        await manager.send_personal_message(f"ARTICLE_READ:{article_id}", current_user.id)
     return {"status": "ok"}
 
 @app.post("/articles/read-all")
-def mark_all_articles_read(
+async def mark_all_articles_read(
     feed_id: Optional[int] = None, 
     prio_only: Optional[bool] = False, 
     db: Session = Depends(database.get_db), 
@@ -4293,14 +4297,16 @@ def mark_all_articles_read(
     for article in articles:
         article.is_read = 1
     db.commit()
+    await manager.send_personal_message("ALL_READ", current_user.id)
     return {"status": "ok", "count": len(articles)}
 
 @app.post("/articles/{article_id}/unread")
-def mark_article_unread(article_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+async def mark_article_unread(article_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     article = db.query(models.Article).join(models.Feed).filter(models.Article.id == article_id, models.Feed.user_id == current_user.id).first()
     if article:
         article.is_read = 0
         db.commit()
+        await manager.send_personal_message(f"ARTICLE_UNREAD:{article_id}", current_user.id)
     return {"status": "ok"}
 
 @app.post("/articles/{article_id}/lock")

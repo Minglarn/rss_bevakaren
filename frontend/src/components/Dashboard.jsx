@@ -758,6 +758,59 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     };
   }, [fetchFeeds]);
 
+  // Realtidssynk för lässtatus mottaget från andra enheter via global WebSocket
+  useEffect(() => {
+    const handleReadStateChanged = (e) => {
+      if (!e || !e.detail) return;
+      const { articleIds, isRead, allRead } = e.detail;
+
+      if (allRead) {
+        setReadItems(prev => {
+          const next = new Set(prev);
+          allFeeds.forEach(item => next.add(item.id));
+          return next;
+        });
+        setUnreadItems(new Set());
+        setAllFeeds(prev => prev.map(item => ({ ...item, is_read: 1 })));
+        setDisplayedFeeds(prev => prev.map(item => ({ ...item, is_read: 1 })));
+        return;
+      }
+
+      if (Array.isArray(articleIds) && articleIds.length > 0) {
+        if (isRead) {
+          setReadItems(prev => {
+            const next = new Set(prev);
+            articleIds.forEach(id => next.add(id));
+            return next;
+          });
+          setUnreadItems(prev => {
+            const next = new Set(prev);
+            articleIds.forEach(id => next.delete(id));
+            return next;
+          });
+          setAllFeeds(prev => prev.map(item => articleIds.includes(item.id) ? { ...item, is_read: 1 } : item));
+          setDisplayedFeeds(prev => prev.map(item => articleIds.includes(item.id) ? { ...item, is_read: 1 } : item));
+        } else {
+          setUnreadItems(prev => {
+            const next = new Set(prev);
+            articleIds.forEach(id => next.add(id));
+            return next;
+          });
+          setReadItems(prev => {
+            const next = new Set(prev);
+            articleIds.forEach(id => next.delete(id));
+            return next;
+          });
+          setAllFeeds(prev => prev.map(item => articleIds.includes(item.id) ? { ...item, is_read: 0 } : item));
+          setDisplayedFeeds(prev => prev.map(item => articleIds.includes(item.id) ? { ...item, is_read: 0 } : item));
+        }
+      }
+    };
+
+    window.addEventListener('articleReadStateChanged', handleReadStateChanged);
+    return () => window.removeEventListener('articleReadStateChanged', handleReadStateChanged);
+  }, [allFeeds]);
+
   // 2. Fetch Feeds & Event Listeners
   useEffect(() => {
     fetchFeeds();

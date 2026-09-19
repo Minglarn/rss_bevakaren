@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.21',
+    date: '2026-09-19',
+    title: 'Realtidssynkning mellan enheter och balanserad sidopanel',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Realtidssynk av lässtatus mellan enheter',
+        description: 'När du markerar en artikel som läst eller oläst i mobilen synkas detta nu omedelbart till desktop och andra aktiva enheter i realtid via WebSocket, och räknarna uppdateras automatiskt.'
+      },
+      {
+        type: 'improvement',
+        title: 'Automatisk synk vid flik-aktivering',
+        description: 'När webbläsarfliken på desktop blir aktiv uppdateras flöden och olästräknare automatiskt i bakgrunden.'
+      },
+      {
+        type: 'improvement',
+        title: 'Balanserade marginaler i sidopanelen',
+        description: 'Ökat marginaler, avstånd och flödesikoner i sidopanelen med 20 % för optimal balans mellan läsbarhet och kompakt layout.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.20',
     date: '2026-09-19',
     title: 'Uppdatering av flödeskatalog i OPML',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'improvement',
