@@ -4406,33 +4406,28 @@ def dismiss_clickbait(
 
     # Hämta användarens AI-inställningar för korrekt prio-beräkning
     user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
-    user_settings = None
-    if user_ai:
-        user_settings = {
-            "prio_threshold": user_ai.prio_threshold or 75,
-            "prio_rules": user_ai.prio_rules or "",
-            "exclude_rules": user_ai.exclude_rules or "",
-            "categories": json.loads(user_ai.categories) if user_ai.categories else []
-        }
-
-    categories_list = []
-    if article.categories:
+    user_categories = None
+    if user_ai and user_ai.categories:
         try:
-            categories_list = json.loads(article.categories)
+            user_categories = json.loads(user_ai.categories)
         except Exception:
-            categories_list = [c.strip() for c in article.categories.split(",") if c.strip()]
+            user_categories = None
+
+    tags_list = []
+    if article.tags:
+        try:
+            tags_list = json.loads(article.tags)
+        except Exception:
+            tags_list = [t.strip() for t in article.tags.split(",") if t.strip()]
 
     # Beräkna om prioritering utan ClickBait-avdrag (-25p)
-    prio_res = ai_service.calculate_priority_score(
+    prio_res = ai_service.calculate_priority(
+        category=article.category or "Övrigt",
+        categories_config=user_categories,
         urgency_score=article.urgency_score or 5,
         substance_score=article.substance_score or 5,
-        category=article.category or "Övrigt",
-        title=article.title or "",
-        summary=article.ai_summary or article.summary or "",
-        categories=categories_list,
-        user_settings=user_settings,
         is_clickbait=False,
-        user_vote=article.user_vote or 0
+        tags=tags_list
     )
 
     article.priority = prio_res.get("priority", article.priority)

@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.24',
+    date: '2026-09-19',
+    title: 'Buggfix vid borttagning av ClickBait-varning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Borttagning av ClickBait-varning',
+        description: 'Löste fel där borttagning av ClickBait-varning orsakade AttributeError vid omberäkning av artikelprioritet. Korrigerat parametrar och implementerat en bakåtkompatibel wrapper för prioritetsberäkning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.23',
     date: '2026-09-19',
     title: 'Kritisk buggfix för polling-isolering och databasrensning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

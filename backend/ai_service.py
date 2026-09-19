@@ -754,6 +754,34 @@ def calculate_priority(
         "substance_score": s_val
     }
 
+def calculate_priority_score(*args, **kwargs) -> Dict[str, Any]:
+    """Bakåtkompatibel wrapper och alias för calculate_priority."""
+    category = kwargs.get("category") or (args[0] if len(args) > 0 else "Övrigt")
+    categories_config = kwargs.get("categories_config") or kwargs.get("categories") or []
+    if not categories_config and "user_settings" in kwargs and isinstance(kwargs["user_settings"], dict):
+        categories_config = kwargs["user_settings"].get("categories", [])
+    urgency_score = kwargs.get("urgency_score", 5)
+    substance_score = kwargs.get("substance_score", 5)
+    is_clickbait = kwargs.get("is_clickbait", False)
+    cluster_size = kwargs.get("cluster_size", 1)
+    tags = kwargs.get("tags") or []
+    liked_tags = kwargs.get("liked_tags")
+    disliked_tags = kwargs.get("disliked_tags")
+    matched_keywords = kwargs.get("matched_keywords")
+
+    return calculate_priority(
+        category=category,
+        categories_config=categories_config,
+        matched_keywords=matched_keywords,
+        urgency_score=urgency_score,
+        substance_score=substance_score,
+        is_clickbait=is_clickbait,
+        cluster_size=cluster_size,
+        tags=tags,
+        liked_tags=liked_tags,
+        disliked_tags=disliked_tags
+    )
+
 def analyze_article(
     title: str, 
     summary: Optional[str] = None, 
