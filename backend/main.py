@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Request, Response
+from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Request, Response, UploadFile, File
 from fastapi.responses import StreamingResponse, FileResponse
 import asyncio
 import time
@@ -2290,6 +2290,161 @@ def export_feeds_json(db: Session = Depends(database.get_db), current_user: mode
             "Content-Disposition": f'attachment; filename="rss-bevakaren-floden-{date_filename}.json"'
         }
     )
+
+@app.post("/feeds/import")
+async def import_feeds(
+    file: UploadFile = File(...),
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    try:
+        content_bytes = await file.read()
+        content_str = content_bytes.decode("utf-8", errors="replace").strip()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Kunde inte läsa uppladdad fil: {e}")
+
+    if not content_str:
+        raise HTTPException(status_code=400, detail="Filen är tom")
+
+    parsed_feeds = []
+
+    # Kontrollera om det är JSON eller OPML/XML
+    if content_str.startswith("{") or (file.filename and file.filename.lower().endswith(".json")):
+        try:
+            json_obj = json.loads(content_str)
+            raw_feeds = json_obj.get("feeds", []) if isinstance(json_obj, dict) else json_obj
+            for item in raw_feeds:
+                if not isinstance(item, dict):
+                    continue
+                url = (item.get("url") or "").strip()
+                if not url:
+                    continue
+                parsed_feeds.append({
+                    "url": url,
+                    "title": (item.get("title") or "").strip() or url,
+                    "polling_interval": int(item.get("polling_interval_minutes") or item.get("polling_interval") or 0),
+                    "scrape_enabled": 1 if item.get("scrape_enabled", True) else 0,
+                    "include_in_dashboard": 1 if item.get("include_in_dashboard", item.get("is_active", True)) else 0,
+                    "notify_enabled": 1 if item.get("notify_enabled", True) else 0,
+                    "icon_url": item.get("icon_url") or ""
+                })
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Ogiltigt JSON-format: {e}")
+    else:
+        # Tolka som OPML / XML
+        try:
+            root = ET.fromstring(content_str)
+            
+            def parse_outlines(parent):
+                for elem in parent.findall("outline"):
+                    xml_url = (elem.get("xmlUrl") or "").strip()
+                    if xml_url:
+                        # Extrahera anpassade eller standardvärden
+                        title = (elem.get("title") or elem.get("text") or "").strip() or xml_url
+                        is_active_attr = elem.get("active")
+                        inc_dash_attr = elem.get("includeInDashboard")
+                        notif_attr = elem.get("notifyEnabled")
+                        scrape_attr = elem.get("scrapeEnabled")
+                        poll_attr = elem.get("pollingInterval")
+                        icon_attr = elem.get("iconUrl") or ""
+
+                        # Logik för flaggor (standard är aktiverad om ej explicit satt till 0)
+                        inc_dash = 0 if (inc_dash_attr == "0" or is_active_attr == "0") else 1
+                        notif = 0 if notif_attr == "0" else 1
+                        scrape = 0 if scrape_attr == "0" else 1
+                        try:
+                            interval = int(poll_attr) if poll_attr else 0
+                        except (ValueError, TypeError):
+                            interval = 0
+
+                        parsed_feeds.append({
+                            "url": xml_url,
+                            "title": title,
+                            "polling_interval": interval,
+                            "scrape_enabled": scrape,
+                            "include_in_dashboard": inc_dash,
+                            "notify_enabled": notif,
+                            "icon_url": icon_attr
+                        })
+                    # Rekursera eventuella undermappar
+                    parse_outlines(elem)
+
+            body = root.find("body")
+            if body is not None:
+                parse_outlines(body)
+            else:
+                parse_outlines(root)
+
+            # Fallback om outline låg på annan nivå
+            if not parsed_feeds:
+                for elem in root.iter("outline"):
+                    xml_url = (elem.get("xmlUrl") or "").strip()
+                    if xml_url:
+                        title = (elem.get("title") or elem.get("text") or "").strip() or xml_url
+                        parsed_feeds.append({
+                            "url": xml_url,
+                            "title": title,
+                            "polling_interval": 0,
+                            "scrape_enabled": 1,
+                            "include_in_dashboard": 1,
+                            "notify_enabled": 1,
+                            "icon_url": elem.get("iconUrl") or ""
+                        })
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Kunde inte tolka OPML/XML-filen: {e}")
+
+    if not parsed_feeds:
+        return {
+            "status": "warning",
+            "added_count": 0,
+            "skipped_count": 0,
+            "total_parsed": 0,
+            "message": "Inga giltiga flödes-URL:er hittades i filen."
+        }
+
+    # Hämta befintliga URL:er för användaren
+    existing_urls = set(f.url for f in db.query(models.Feed.url).filter(models.Feed.user_id == current_user.id).all())
+    added_count = 0
+    skipped_count = 0
+    import random
+
+    for item in parsed_feeds:
+        feed_url = item["url"]
+        if feed_url in existing_urls:
+            skipped_count += 1
+            continue
+
+        poll_interval = item["polling_interval"]
+        if not poll_interval or poll_interval <= 0:
+            poll_interval = random.randint(10, 30)
+
+        icon_url = item["icon_url"] or get_feed_icon_url(None, feed_url)
+
+        db_feed = models.Feed(
+            url=feed_url,
+            title=item["title"],
+            polling_interval=poll_interval,
+            scrape_enabled=item["scrape_enabled"],
+            include_in_dashboard=item["include_in_dashboard"],
+            notify_enabled=item["notify_enabled"],
+            icon_url=icon_url,
+            user_id=current_user.id
+        )
+        db.add(db_feed)
+        existing_urls.add(feed_url)
+        added_count += 1
+
+    if added_count > 0:
+        db.commit()
+        asyncio.create_task(asyncio.to_thread(ensure_all_feed_icons_cached))
+
+    return {
+        "status": "ok",
+        "added_count": added_count,
+        "skipped_count": skipped_count,
+        "total_parsed": len(parsed_feeds),
+        "message": f"{added_count} nya flöden lades till ({skipped_count} fanns redan i din lista)."
+    }
 
 @app.post("/feeds/batch")
 def create_feeds_batch(payload: dict, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):

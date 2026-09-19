@@ -4,7 +4,7 @@ import {
   Plus, Trash2, List, Edit2, Check, X, Link as LinkIcon, 
   Activity, Globe, Search, Library, Eye, CheckSquare, 
   Square, Filter, FolderPlus, EyeOff, Layers, Download,
-  ChevronDown, FileCode, FileText
+  ChevronDown, FileCode, FileText, Upload
 } from 'lucide-react';
 import api from '../api';
 import { resolveFeedIcon } from '../utils/textUtils';
@@ -92,6 +92,53 @@ const RssManager = ({ embedded = false }) => {
       console.error("Kunde inte exportera flöden:", err);
     } finally {
       setExportingFormat(null);
+    }
+  };
+
+  // Import av flöden
+  const [importing, setImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleFileImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Återställ filväljaren så att samma fil kan väljas igen
+    e.target.value = '';
+
+    setImporting(true);
+    setImportMessage(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await api.post('/feeds/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const data = res.data;
+      if (data.status === 'ok') {
+        setImportMessage({
+          type: 'success',
+          text: data.message || `${data.added_count} flöden importerades.`
+        });
+        await fetchFeeds();
+      } else {
+        setImportMessage({
+          type: 'warning',
+          text: data.message || 'Inga flöden kunde importeras från filen.'
+        });
+      }
+    } catch (err) {
+      console.error('Kunde inte importera flöden:', err);
+      const detail = err.response?.data?.detail || 'Ett fel uppstod vid import av filen.';
+      setImportMessage({
+        type: 'error',
+        text: `Import misslyckades: ${detail}`
+      });
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -418,6 +465,41 @@ const RssManager = ({ embedded = false }) => {
               )}
             </div>
 
+            {/* Dold filväljare för import */}
+            <input 
+              type="file"
+              ref={fileInputRef}
+              accept=".opml,.xml,.json"
+              onChange={handleFileImport}
+              style={{ display: 'none' }}
+            />
+
+            {/* Importera flöden */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              style={{
+                padding: '0.55rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                cursor: importing ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                opacity: importing ? 0.7 : 1,
+                transition: 'all 0.2s'
+              }}
+              title="Importera flöden från en OPML- eller JSON-fil"
+            >
+              <Upload size={16} style={{ color: 'var(--primary)' }} />
+              {importing ? 'Importerar...' : 'Importera'}
+            </button>
+
             <button 
               onClick={() => setShowAddForm(!showAddForm)}
               style={{
@@ -440,6 +522,50 @@ const RssManager = ({ embedded = false }) => {
             </button>
           </div>
         </div>
+
+        {/* Återkoppling vid import */}
+        {importMessage && (
+          <div style={{
+            padding: '0.75rem 1rem',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            backgroundColor: importMessage.type === 'success' 
+              ? 'rgba(16, 185, 129, 0.12)' 
+              : importMessage.type === 'warning'
+              ? 'rgba(245, 158, 11, 0.12)'
+              : 'rgba(239, 68, 68, 0.12)',
+            border: `1px solid ${
+              importMessage.type === 'success' 
+                ? 'rgba(16, 185, 129, 0.3)' 
+                : importMessage.type === 'warning'
+                ? 'rgba(245, 158, 11, 0.3)'
+                : 'rgba(239, 68, 68, 0.3)'
+            }`,
+            color: importMessage.type === 'success' 
+              ? '#10b981' 
+              : importMessage.type === 'warning'
+              ? '#f59e0b'
+              : '#ef4444',
+            fontSize: '0.9rem',
+            fontWeight: 500
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {importMessage.type === 'success' ? <Check size={16} /> : <Activity size={16} />}
+              <span>{importMessage.text}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setImportMessage(null)}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
+            >
+              <X size={15} />
+            </button>
+          </div>
+        )}
 
         {/* Segmenterad flikväljare */}
         <div style={{

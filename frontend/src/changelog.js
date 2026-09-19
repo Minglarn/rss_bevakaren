@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.02',
+    date: '2026-09-19',
+    title: 'Filimport av flöden via OPML och JSON',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Import av OPML 2.0- och XML-filer',
+        description: 'Importera flöden direkt från valfri RSS-läsare. Om filen kommer från RSS-Bevakaren återskapas även aktiveringsstatus, dashboard-val, notiser och hämtningsintervall automatiskt.'
+      },
+      {
+        type: 'feature',
+        title: 'Import av JSON-säkerhetskopior',
+        description: 'Möjlighet att ladda upp och återställa en tidigare exporterad JSON-backup med alla anpassade inställningar intakta.'
+      },
+      {
+        type: 'feature',
+        title: 'Smart dublettskydd och sammanfattning',
+        description: 'Flöden som redan bevakas hoppas över för att undvika dubbletter, och användaren får en tydlig rapport om hur många flöden som lades till.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.01',
     date: '2026-09-19',
     title: 'Export av flöden med aktiveringsstatus och inställningar',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',
