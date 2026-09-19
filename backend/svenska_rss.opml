@@ -9,18 +9,20 @@
     <outline text="Riksnyheter &amp; Dagspress" title="Riksnyheter &amp; Dagspress">
       <outline text="8 Sidor" title="8 Sidor" type="rss" xmlUrl="https://8sidor.se/feed" htmlUrl="https://8sidor.se" category="Riksnyheter &amp; Dagspress" description="Myndigheten för tillgängliga medier" version="RSS2" />
       <outline text="Aftonbladet" title="Aftonbladet" type="rss" xmlUrl="https://rss.aftonbladet.se/rss2/small/pages/sections/senastenytt" htmlUrl="https://www.aftonbladet.se" category="Riksnyheter &amp; Dagspress" description="Aftonbladet Hierta AB" version="RSS2" />
-      <outline text="BBC News - World" title="BBC News - World" type="rss" xmlUrl="https://feeds.bbci.co.uk/news/world/rss.xml" htmlUrl="https://www.bbc.com/news" category="Riksnyheter &amp; Dagspress" description="Internationella världsnyheter" version="RSS2" />
       <outline text="Dagens Nyheter (DN)" title="Dagens Nyheter (DN)" type="rss" xmlUrl="https://www.dn.se/rss" htmlUrl="https://www.dn.se" category="Riksnyheter &amp; Dagspress" description="Bonnier News" version="RSS2" />
       <outline text="Expressen" title="Expressen" type="rss" xmlUrl="https://feeds.expressen.se" htmlUrl="https://expressen.se" category="Riksnyheter &amp; Dagspress" description="Bonnier News" version="RSS2" />
       <outline text="Göteborgs-Posten" title="Göteborgs-Posten" type="rss" xmlUrl="https://www.gp.se/rss" htmlUrl="https://www.gp.se" category="Riksnyheter &amp; Dagspress" description="Stampen Media" version="RSS2" />
       <outline text="Hufvudstadsbladet" title="Hufvudstadsbladet" type="rss" xmlUrl="https://www.hbl.fi/feeds/feed.xml" htmlUrl="https://www.hbl.fi" category="Riksnyheter &amp; Dagspress" description="Bonnier News och Konstsamfundet" version="RSS2" />
       <outline text="Nyhetsbyrån Järva" title="Nyhetsbyrån Järva" type="rss" xmlUrl="https://www.nyhetsbyranjarva.se/feed" htmlUrl="https://www.nyhetsbyranjarva.se" category="Riksnyheter &amp; Dagspress" description="Nyhetsbyrån Järva AB" version="RSS2" />
-      <outline text="Reuters - Top News" title="Reuters - Top News" type="rss" xmlUrl="https://news.google.com/rss/search?q=source:Reuters&amp;ceid=US:en" htmlUrl="https://www.reuters.com" category="Riksnyheter &amp; Dagspress" description="Global neutral nyhetsrapportering via standardiserad feed" version="RSS2" />
       <outline text="Svenska Dagbladet (SvD)" title="Svenska Dagbladet (SvD)" type="rss" xmlUrl="https://www.svd.se/feed/articles.rss" htmlUrl="https://svd.se" category="Riksnyheter &amp; Dagspress" description="Schibsted" version="RSS2" />
       <outline text="SVT Nyheter" title="SVT Nyheter" type="rss" xmlUrl="https://www.svt.se/rss.xml" htmlUrl="https://www.svt.se" category="Riksnyheter &amp; Dagspress" description="Svenska toppnyheter och snabba uppdateringar" version="RSS2" />
       <outline text="swed24" title="swed24" type="rss" xmlUrl="https://www.swed24.se/feed" htmlUrl="https://www.swed24.se" category="Riksnyheter &amp; Dagspress" description="Nizar Askar (privatperson)" version="RSS2" />
       <outline text="Sydsvenskan" title="Sydsvenskan" type="rss" xmlUrl="https://www.sydsvenskan.se/feed.xml" htmlUrl="https://www.sydsvenskan.se" category="Riksnyheter &amp; Dagspress" description="Bonnier AB" version="RSS2" />
       <outline text="The Local" title="The Local" type="rss" xmlUrl="https://feeds.thelocal.com" htmlUrl="https://www.thelocal.se" category="Riksnyheter &amp; Dagspress" description="The Local Europe AB" version="RSS2" />
+    </outline>
+    <outline text="Omvärld &amp; Internationellt" title="Omvärld &amp; Internationellt">
+      <outline text="BBC News - World" title="BBC News - World" type="rss" xmlUrl="https://feeds.bbci.co.uk/news/world/rss.xml" htmlUrl="https://www.bbc.com/news" category="Omvärld &amp; Internationellt" description="Internationella världsnyheter" version="RSS2" />
+      <outline text="Reuters - Top News" title="Reuters - Top News" type="rss" xmlUrl="https://news.google.com/rss/search?q=source:Reuters&amp;ceid=US:en" htmlUrl="https://www.reuters.com" category="Omvärld &amp; Internationellt" description="Global neutral nyhetsrapportering via standardiserad feed" version="RSS2" />
     </outline>
     <outline text="Lokalt &amp; Regionalt" title="Lokalt &amp; Regionalt">
       <outline text="Arbetarbladet" title="Arbetarbladet" type="rss" xmlUrl="https://www.arbetarbladet.se/feeds/feed.xml" htmlUrl="https://www.arbetarbladet.se" category="Lokalt &amp; Regionalt" description="Bonnier News Local AB" version="RSS2" />
@@ -63,7 +65,6 @@
       <outline text="Mora Tidning" title="Mora Tidning" type="rss" xmlUrl="https://www.moratidning.se/feed.xml" htmlUrl="https://www.moratidning.se" category="Lokalt &amp; Regionalt" description="Bonnier News Local AB" version="RSS2" />
       <outline text="Nacka Värmdö Posten" title="Nacka Värmdö Posten" type="rss" xmlUrl="https://www.nvp.se/feed.xml" htmlUrl="https://www.nvp.se" category="Lokalt &amp; Regionalt" description="Bonnier News Local AB" version="RSS2" />
       <outline text="Nerikes Allehanda" title="Nerikes Allehanda" type="rss" xmlUrl="https://www.na.se/feeds/feed.xml" htmlUrl="https://www.na.se" category="Lokalt &amp; Regionalt" description="Bonnier News Local AB" version="RSS2" />
-      <outline text="News55" title="News55" type="rss" xmlUrl="https://www.news55.se/feed/" htmlUrl="https://news55.se" category="Lokalt &amp; Regionalt" description="Relevance Communication Nordic AB" version="RSS2" />
       <outline text="Nkpg.News" title="Nkpg.News" type="rss" xmlUrl="https://nkpg.news/feed" htmlUrl="https://nkpg.news" category="Lokalt &amp; Regionalt" description="Nyhetswebben" version="RSS2" />
       <outline text="Norra Skåne" title="Norra Skåne" type="rss" xmlUrl="https://www.nsk.se/feed.xml" htmlUrl="https://www.nsk.se" category="Lokalt &amp; Regionalt" description="Gota Media AB" version="RSS2" />
       <outline text="Norran" title="Norran" type="rss" xmlUrl="https://www.norran.se/rss" htmlUrl="https://norran.se" category="Lokalt &amp; Regionalt" description="NTM Media AB" version="RSS2" />
@@ -159,11 +160,17 @@
     <outline text="Motor &amp; Fordon" title="Motor &amp; Fordon">
       <outline text="Allt om elbil" title="Allt om elbil" type="rss" xmlUrl="https://alltomelbil.se/feed" htmlUrl="https://alltomelbil.se" category="Motor &amp; Fordon" description="Raskimedia" version="RSS2" />
       <outline text="Allt om MC" title="Allt om MC" type="rss" xmlUrl="https://www.alltommc.se/feed" htmlUrl="https://www.alltommc.se" category="Motor &amp; Fordon" description="Motorrad Nordic AB" version="RSS2" />
-      <outline text="Autosport F1" title="Autosport F1" type="rss" xmlUrl="https://www.autosport.com/rss/feed/f1" htmlUrl="https://www.autosport.com" category="Motor &amp; Fordon" description="Nyheter, analyser och resultat från Formel 1" version="RSS2" />
+      <outline text="Båtliv" title="Båtliv" type="rss" xmlUrl="https://www.batliv.se/feed" htmlUrl="https://www.batliv.se" category="Motor &amp; Fordon" description="Svenska Båtunionen" version="RSS2" />
       <outline text="CarUp" title="CarUp" type="rss" xmlUrl="https://carup.se/feed" htmlUrl="https://carup.se" category="Motor &amp; Fordon" description="Techniqsolutions Sweden AB" version="RSS2" />
+      <outline text="CleanTechnica" title="CleanTechnica" type="rss" xmlUrl="https://cleantechnica.com/feed/" htmlUrl="https://cleantechnica.com" category="Motor &amp; Fordon" description="Solenergi, vindkraft och ren teknik" version="RSS2" />
+      <outline text="Electrek" title="Electrek" type="rss" xmlUrl="https://electrek.co/feed/" htmlUrl="https://electrek.co" category="Motor &amp; Fordon" description="Elbilar, ren energi och grön transport" version="RSS2" />
+      <outline text="Flygrevyn" title="Flygrevyn" type="rss" xmlUrl="https://www.flygrevyn.se/feed" htmlUrl="https://www.flygrevyn.se" category="Motor &amp; Fordon" description="Flygrevyn Förlags AB" version="RSS2" />
       <outline text="MotorMagasinet" title="MotorMagasinet" type="rss" xmlUrl="https://www.motormagasinet.se/xml/rss2/articles" htmlUrl="https://www.motormagasinet.se" category="Motor &amp; Fordon" description="Nordiske Medier Stockholm AB" version="RSS2" />
-      <outline text="Motorsport.com F1" title="Motorsport.com F1" type="rss" xmlUrl="https://www.motorsport.com/rss/f1/news/" htmlUrl="https://www.motorsport.com" category="Motor &amp; Fordon" description="Global motorsport och F1-bevakning" version="RSS2" />
-      <outline text="RaceFans" title="RaceFans" type="rss" xmlUrl="https://www.racefans.net/feed/" htmlUrl="https://www.racefans.net" category="Motor &amp; Fordon" description="Oberoende F1-analyser och förardata" version="RSS2" />
+    </outline>
+    <outline text="Formel 1 &amp; Motorsport" title="Formel 1 &amp; Motorsport">
+      <outline text="Autosport F1" title="Autosport F1" type="rss" xmlUrl="https://www.autosport.com/rss/feed/f1" htmlUrl="https://www.autosport.com" category="Formel 1 &amp; Motorsport" description="Nyheter, analyser och resultat från Formel 1" version="RSS2" />
+      <outline text="Motorsport.com F1" title="Motorsport.com F1" type="rss" xmlUrl="https://www.motorsport.com/rss/f1/news/" htmlUrl="https://www.motorsport.com" category="Formel 1 &amp; Motorsport" description="Global motorsport och F1-bevakning" version="RSS2" />
+      <outline text="RaceFans" title="RaceFans" type="rss" xmlUrl="https://www.racefans.net/feed/" htmlUrl="https://www.racefans.net" category="Formel 1 &amp; Motorsport" description="Oberoende F1-analyser och förardata" version="RSS2" />
     </outline>
     <outline text="Samhälle, Politik &amp; Debatt" title="Samhälle, Politik &amp; Debatt">
       <outline text="Aktuellt i Politiken" title="Aktuellt i Politiken" type="rss" xmlUrl="https://aip.nu/feed" htmlUrl="https://aip.nu" category="Samhälle, Politik &amp; Debatt" description="AiP Media Produktion AB" version="RSS2" />
@@ -299,7 +306,6 @@
     <outline text="Livsstil &amp; Kvinnor" title="Livsstil &amp; Kvinnor">
       <outline text="Allt om Mat" title="Allt om Mat" type="rss" xmlUrl="https://feeds.expressen.se/alltommat" htmlUrl="https://alltommat.expressen.se" category="Livsstil &amp; Kvinnor" description="Bonnier News" version="RSS2" />
       <outline text="Amelia" title="Amelia" type="rss" xmlUrl="https://amelia.expressen.se/feed/" htmlUrl="https://amelia.expressen.se" category="Livsstil &amp; Kvinnor" description="Sveriges mest lästa kvinnotidning om relationer, hälsa och livsstil" version="RSS2" />
-      <outline text="Amelia" title="Amelia" type="rss" xmlUrl="https://feeds.expressen.se/amelia" htmlUrl="https://amelia.expressen.se" category="Livsstil &amp; Kvinnor" description="Bonnier News" version="RSS2" />
       <outline text="Camino" title="Camino" type="rss" xmlUrl="https://caminomagasin.se/feed/" htmlUrl="https://www.caminomagasin.se" category="Livsstil &amp; Kvinnor" description="Getaware ekonomisk förening" version="RSS2" />
       <outline text="Damernas Värld" title="Damernas Värld" type="rss" xmlUrl="https://damernasvarld.expressen.se/feed/" htmlUrl="https://damernasvarld.expressen.se" category="Livsstil &amp; Kvinnor" description="Sveriges största modemagasin med stil, skönhet och reportage" version="RSS2" />
       <outline text="ELLE Sverige" title="ELLE Sverige" type="rss" xmlUrl="https://www.elle.se/feed" htmlUrl="https://www.elle.se" category="Livsstil &amp; Kvinnor" description="Internationellt och svenskt mode, skönhet och trender" version="RSS2" />
@@ -308,25 +314,24 @@
       <outline text="The Everygirl" title="The Everygirl" type="rss" xmlUrl="https://theeverygirl.com/feed/" htmlUrl="https://theeverygirl.com" category="Livsstil &amp; Kvinnor" description="Karriär, ekonomi, mode och välbefinnande för unga kvinnor" version="RSS2" />
       <outline text="Women 2.0" title="Women 2.0" type="rss" xmlUrl="https://women2.com/feed/" htmlUrl="https://women2.com" category="Livsstil &amp; Kvinnor" description="Ledarskap, tech, entreprenörskap och jämställdhet i arbetslivet" version="RSS2" />
     </outline>
+    <outline text="Livsstil &amp; Senior" title="Livsstil &amp; Senior">
+      <outline text="News55" title="News55" type="rss" xmlUrl="https://www.news55.se/feed/" htmlUrl="https://news55.se" category="Livsstil &amp; Senior" description="Relevance Communication Nordic AB" version="RSS2" />
+      <outline text="Senioren" title="Senioren" type="rss" xmlUrl="https://www.senioren.se/feed" htmlUrl="https://www.senioren.se" category="Livsstil &amp; Senior" description="SPF Seniorerna" version="RSS2" />
+    </outline>
     <outline text="Natur, Djur &amp; Friluftsliv" title="Natur, Djur &amp; Friluftsliv">
       <outline text="Allt om Husvagn &amp; Camping" title="Allt om Husvagn &amp; Camping" type="rss" xmlUrl="https://www.husvagnochcamping.se/feed" htmlUrl="https://www.husvagnochcamping.se" category="Natur, Djur &amp; Friluftsliv" description="Story House Egmont AB" version="RSS2" />
       <outline text="American Trails" title="American Trails" type="rss" xmlUrl="https://americantrailsmag.com/feed" htmlUrl="https://americantrailsmag.com" category="Natur, Djur &amp; Friluftsliv" description="Paper Heart Publishing AB" version="RSS2" />
       <outline text="ATL, Lantbrukets affärstidning" title="ATL, Lantbrukets affärstidning" type="rss" xmlUrl="https://www.atl.nu/rss" htmlUrl="https://www.atl.nu" category="Natur, Djur &amp; Friluftsliv" description="Lantbrukarnas Riksförbund" version="RSS2" />
       <outline text="Bygd och Natur" title="Bygd och Natur" type="rss" xmlUrl="https://bygdochnatur.se/feed" htmlUrl="https://bygdochnatur.se" category="Natur, Djur &amp; Friluftsliv" description="Sveriges Hembygdsförbund" version="RSS2" />
-      <outline text="Båtliv" title="Båtliv" type="rss" xmlUrl="https://www.batliv.se/feed" htmlUrl="https://www.batliv.se" category="Natur, Djur &amp; Friluftsliv" description="Svenska Båtunionen" version="RSS2" />
       <outline text="Cykelmagasinet" title="Cykelmagasinet" type="rss" xmlUrl="https://cykelmagasinet.se/feed" htmlUrl="https://cykelmagasinet.se" category="Natur, Djur &amp; Friluftsliv" description="Daniel Breece (privatperson)" version="RSS2" />
       <outline text="Djurskyddet" title="Djurskyddet" type="rss" xmlUrl="https://tidningen.djurskyddet.se/feed" htmlUrl="https://tidningen.djurskyddet.se" category="Natur, Djur &amp; Friluftsliv" description="Djurskyddet Sverige" version="RSS2" />
-      <outline text="Flygrevyn" title="Flygrevyn" type="rss" xmlUrl="https://www.flygrevyn.se/feed" htmlUrl="https://www.flygrevyn.se" category="Natur, Djur &amp; Friluftsliv" description="Flygrevyn Förlags AB" version="RSS2" />
       <outline text="Natursidan" title="Natursidan" type="rss" xmlUrl="https://www.natursidan.se/feed" htmlUrl="https://www.natursidan.se" category="Natur, Djur &amp; Friluftsliv" version="RSS2" />
-      <outline text="Senioren" title="Senioren" type="rss" xmlUrl="https://www.senioren.se/feed" htmlUrl="https://www.senioren.se" category="Natur, Djur &amp; Friluftsliv" description="SPF Seniorerna" version="RSS2" />
       <outline text="Svensk Veterinärtidning" title="Svensk Veterinärtidning" type="rss" xmlUrl="https://www.svenskveterinartidning.se/feed" htmlUrl="https://www.svenskveterinartidning.se" category="Natur, Djur &amp; Friluftsliv" description="Sveriges Veterinärförbund" version="RSS2" />
       <outline text="Sveriges Natur" title="Sveriges Natur" type="rss" xmlUrl="https://www.sverigesnatur.org/feed" htmlUrl="http://www.sverigesnatur.org" category="Natur, Djur &amp; Friluftsliv" description="Naturskyddsföreningen" version="RSS2" />
     </outline>
     <outline text="Energi &amp; Hållbarhet" title="Energi &amp; Hållbarhet">
       <outline text="Aktuell Hållbarhet" title="Aktuell Hållbarhet" type="rss" xmlUrl="https://www.aktuellhallbarhet.se/rss.xml" htmlUrl="https://www.aktuellhallbarhet.se" category="Energi &amp; Hållbarhet" description="Bonnier News Business" version="RSS2" />
       <outline text="Bioenergi" title="Bioenergi" type="rss" xmlUrl="https://bioenergitidningen.se/feed" htmlUrl="https://bioenergitidningen.se" category="Energi &amp; Hållbarhet" version="RSS2" />
-      <outline text="CleanTechnica" title="CleanTechnica" type="rss" xmlUrl="https://cleantechnica.com/feed/" htmlUrl="https://cleantechnica.com" category="Energi &amp; Hållbarhet" description="Solenergi, vindkraft och ren teknik" version="RSS2" />
-      <outline text="Electrek" title="Electrek" type="rss" xmlUrl="https://electrek.co/feed/" htmlUrl="https://electrek.co" category="Energi &amp; Hållbarhet" description="Elbilar, ren energi och grön transport" version="RSS2" />
       <outline text="Supermiljöbloggen (SMB)" title="Supermiljöbloggen (SMB)" type="rss" xmlUrl="https://supermiljobloggen.se/feed" htmlUrl="https://supermiljobloggen.se" category="Energi &amp; Hållbarhet" description="Föreningen Supermiljöbloggen" version="RSS2" />
       <outline text="Warp News" title="Warp News" type="rss" xmlUrl="https://www.warpnews.se/rss" htmlUrl="https://www.warpnews.se" category="Energi &amp; Hållbarhet" description="Optimists Edge Media AB" version="RSS2" />
     </outline>
@@ -352,7 +357,7 @@
       <outline text="Variety" title="Variety" type="rss" xmlUrl="https://variety.com/feed/" htmlUrl="https://variety.com" category="Film, TV &amp; Nöje" description="Analyser, recensioner och nyheter från underhållningsvärlden" version="RSS2" />
     </outline>
     <outline text="Blåljus &amp; Krisinformation" title="Blåljus &amp; Krisinformation">
-      <outline text="Krisinformation" title="Krisinformation" type="rss" xmlUrl="https://www.krisinformation.se/nyheter/?rss=true" htmlUrl="https://www.krisinformation.se" category="Blåljus &amp; Krisinformation" description="Viktiga meddelanden och krisinformation från svenska myndigheter (MSB)" version="RSS2" />
+      <outline text="Krisinformation" title="Krisinformation" type="rss" xmlUrl="https://www.krisinformation.se/nyheter/?rss=true" htmlUrl="https://www.krisinformation.se" category="Blåljus &amp; Krisinformation" description="Viktiga meddelanden och krisinformation från svenska myndigheter (Myndigheten för civilt försvar, MCF)" version="RSS2" />
       <outline text="Polisen Händelser" title="Polisen Händelser" type="rss" xmlUrl="https://polisen.se/aktuellt/rss/hela-landet/handelser-i-hela-landet/" htmlUrl="https://polisen.se" category="Blåljus &amp; Krisinformation" description="Polisens officiella händelserapportering för hela landet" version="RSS2" />
       <outline text="Samverkan 112" title="Samverkan 112" type="rss" xmlUrl="https://s112.se/feed" htmlUrl="https://s112.se" category="Blåljus &amp; Krisinformation" description="On Road Educations AB" version="RSS2" />
       <outline text="Sjöräddningen Hela landet" title="Sjöräddningen Hela landet" type="rss" xmlUrl="https://www.sjoraddning.se/rss.xml" htmlUrl="https://www.sjoraddning.se" category="Blåljus &amp; Krisinformation" description="Sjöräddningssällskapet (SSRS)" version="RSS2" />

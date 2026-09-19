@@ -1,9 +1,37 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.15',
+    date: '2026-09-19',
+    title: 'Finjustering av flödeskatalogen: nya kategorier, rensade dubbletter och myndighetsuppdatering',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Rensad Amelia-dubblett',
+        description: 'Tog bort dubblettinmatningen för Amelia under Livsstil & Kvinnor och behöll det officiella primärflödet.'
+      },
+      {
+        type: 'feature',
+        title: 'Nya kategorier: Omvärld & Internationellt, Formel 1 & Motorsport samt Livsstil & Senior',
+        description: 'Skapat dedikerade kategorier för internationell nyhetsrapportering (BBC och Reuters), renodlad banracing samt seniorfokuserade publikationer (News55 och Senioren).'
+      },
+      {
+        type: 'improvement',
+        title: 'Omplacering av fordon, maritimt och flyg',
+        description: 'Båtliv, Flygrevyn, Electrek och CleanTechnica har flyttats till Motor & Fordon, vilket ger en mer fokuserad sektion för svensk Energi & Hållbarhet samt Natur & Friluftsliv.'
+      },
+      {
+        type: 'improvement',
+        title: 'Myndighetsuppdatering för Krisinformation.se',
+        description: 'Uppdaterat källbeskrivningen till Myndigheten för civilt försvar (MCF).'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.14',
     date: '2026-09-19',
     title: 'Komplett omkategorisering av flödeskatalogen i 20 specifika ämnesområden',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',
