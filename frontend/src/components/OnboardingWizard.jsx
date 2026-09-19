@@ -79,7 +79,7 @@ const RECOMMENDED_PACKAGES = [
     title: 'Livsstil & Kvinnor',
     description: 'Mode, hälsa, karriär, relationer och inspiration från ledande magasin.',
     feeds: [
-      { title: 'Amelia', url: 'https://amelia.expressen.se/feed/' },
+      { title: 'Amelia', url: 'https://feeds.expressen.se/amelia' },
       { title: 'Femina', url: 'https://www.femina.se/feed' },
       { title: 'ELLE Sverige', url: 'https://www.elle.se/feed' },
       { title: 'Damernas Värld', url: 'https://damernasvarld.expressen.se/feed/' },

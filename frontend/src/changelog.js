@@ -1,9 +1,22 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.16',
+    date: '2026-09-19',
+    title: 'Korrigerat officiell flödesadress för Amelia',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Officiellt RSS-flöde för Amelia',
+        description: 'Uppdaterat flödesadressen för Amelia till officiella https://feeds.expressen.se/amelia i både flödeskatalogen och introduktionsguiden.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.15',
     date: '2026-09-19',
     title: 'Finjustering av flödeskatalogen: nya kategorier, rensade dubbletter och myndighetsuppdatering',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'improvement',

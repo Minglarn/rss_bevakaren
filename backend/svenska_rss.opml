@@ -305,7 +305,7 @@
     </outline>
     <outline text="Livsstil &amp; Kvinnor" title="Livsstil &amp; Kvinnor">
       <outline text="Allt om Mat" title="Allt om Mat" type="rss" xmlUrl="https://feeds.expressen.se/alltommat" htmlUrl="https://alltommat.expressen.se" category="Livsstil &amp; Kvinnor" description="Bonnier News" version="RSS2" />
-      <outline text="Amelia" title="Amelia" type="rss" xmlUrl="https://amelia.expressen.se/feed/" htmlUrl="https://amelia.expressen.se" category="Livsstil &amp; Kvinnor" description="Sveriges mest lästa kvinnotidning om relationer, hälsa och livsstil" version="RSS2" />
+      <outline text="Amelia" title="Amelia" type="rss" xmlUrl="https://feeds.expressen.se/amelia" htmlUrl="https://amelia.expressen.se" category="Livsstil &amp; Kvinnor" description="Sveriges mest lästa kvinnotidning om relationer, hälsa och livsstil" version="RSS2" />
       <outline text="Camino" title="Camino" type="rss" xmlUrl="https://caminomagasin.se/feed/" htmlUrl="https://www.caminomagasin.se" category="Livsstil &amp; Kvinnor" description="Getaware ekonomisk förening" version="RSS2" />
       <outline text="Damernas Värld" title="Damernas Värld" type="rss" xmlUrl="https://damernasvarld.expressen.se/feed/" htmlUrl="https://damernasvarld.expressen.se" category="Livsstil &amp; Kvinnor" description="Sveriges största modemagasin med stil, skönhet och reportage" version="RSS2" />
       <outline text="ELLE Sverige" title="ELLE Sverige" type="rss" xmlUrl="https://www.elle.se/feed" htmlUrl="https://www.elle.se" category="Livsstil &amp; Kvinnor" description="Internationellt och svenskt mode, skönhet och trender" version="RSS2" />
