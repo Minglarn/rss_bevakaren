@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.14',
+    date: '2026-09-19',
+    title: 'Komplett omkategorisering av flödeskatalogen i 20 specifika ämnesområden',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: '20 tematiska flödeskategorier',
+        description: 'Samtliga 318 flöden i katalogen är nu strukturerade i 20 tydliga kategorier (t.ex. Lokalt & Regionalt, Riksnyheter, Ekonomi & Bransch, Arbetsliv & Fackligt, Kultur & Samtid, Bygg & Industri).'
+      },
+      {
+        type: 'improvement',
+        title: 'Eliminerat ospecificerat i katalogen',
+        description: 'Inga flöden hamnar längre i osorterade samlingskategorier eller Övrigt, vilket gör det enkelt att filtrera fram lokaltidningar och nischade fackmagasin direkt.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.13',
     date: '2026-09-19',
     title: 'Ny flödeskategori: Livsstil & Kvinnor med 7 ledande källor',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',
