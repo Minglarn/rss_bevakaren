@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.17',
+    date: '2026-09-19',
+    title: 'Optimerad verktygsrad och förstorade flödesikoner i Hantera flöden',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Integrerad verktygsrad (Toolbar)',
+        description: 'Flikväljaren och åtgärdsknapparna (Exportera, Importera, Lägg till eget flöde) är nu samlade på samma rad i en balanserad layout som anpassar sig snyggt på smala skärmar och mobil.'
+      },
+      {
+        type: 'feature',
+        title: 'Dubbelt så stora flödesikoner',
+        description: 'Ikonerna för varje källa har förstorats till 40x40 px med en stilren ikonbadge som fyller hela radens höjd och ger tydlig identitet åt varje flöde.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.16',
     date: '2026-09-19',
     title: 'Korrigerat officiell flödesadress för Amelia',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'fix',

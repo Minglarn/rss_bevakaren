@@ -351,305 +351,219 @@ const RssManager = ({ embedded = false }) => {
   return (
     <div className={embedded ? "" : "dashboard-container"} style={{ maxWidth: '1100px', margin: embedded ? '0' : '0 auto' }}>
       
-      {/* Huvudrubrik och primär fliknavigering */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
-          <h2 style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.75rem', margin: 0, fontSize: embedded ? '1.4rem' : '1.8rem' }}>
-            <List size={embedded ? 22 : 28} style={{ color: 'var(--primary)' }} /> Hantera flöden
-          </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-            {/* Exportera flöden */}
-            <div style={{ position: 'relative' }} ref={exportMenuRef}>
-              <button 
-                type="button"
-                onClick={() => setShowExportMenu(!showExportMenu)}
-                disabled={feeds.length === 0 || exportingFormat !== null}
-                style={{
-                  padding: '0.55rem 1rem',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: showExportMenu ? 'var(--bg-app)' : 'var(--bg-card)',
-                  color: feeds.length === 0 ? 'var(--text-muted)' : 'var(--text-main)',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  cursor: feeds.length === 0 ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  opacity: feeds.length === 0 ? 0.6 : 1,
-                  transition: 'all 0.2s'
-                }}
-                title={feeds.length === 0 ? 'Du har inga flöden att exportera' : 'Exportera dina flöden med aktiveringsstatus och inställningar'}
-              >
-                <Download size={16} style={{ color: 'var(--primary)' }} />
-                {exportingFormat ? 'Exporterar...' : 'Exportera'}
-                <ChevronDown 
-                  size={14} 
-                  style={{ 
-                    color: 'var(--text-muted)', 
-                    transform: showExportMenu ? 'rotate(180deg)' : 'none', 
-                    transition: 'transform 0.2s' 
-                  }} 
-                />
-              </button>
+      {/* Huvudrubrik */}
+      <div className="rss-manager-header-row">
+        <h2 className="rss-manager-title">
+          <List size={embedded ? 22 : 28} style={{ color: 'var(--primary)' }} /> Hantera flöden
+        </h2>
+      </div>
 
-              {showExportMenu && (
-                <div 
-                  style={{
-                    position: 'absolute',
-                    right: 0,
-                    top: 'calc(100% + 6px)',
-                    backgroundColor: 'var(--bg-card)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '10px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-                    padding: '0.5rem',
-                    minWidth: '260px',
-                    zIndex: 100,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.25rem'
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleExport('opml')}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      gap: '0.2rem',
-                      padding: '0.65rem 0.75rem',
-                      borderRadius: '7px',
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      color: 'var(--text-main)',
-                      width: '100%',
-                      transition: 'background-color 0.15s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-app)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 600, fontSize: '0.88rem' }}>
-                      <FileCode size={15} style={{ color: 'var(--primary)' }} />
-                      OPML 2.0 (Rekommenderas)
-                    </div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                      Universellt RSS-format berikat med aktiveringsstatus, dashboard-val och intervall
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleExport('json')}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      gap: '0.2rem',
-                      padding: '0.65rem 0.75rem',
-                      borderRadius: '7px',
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      color: 'var(--text-main)',
-                      width: '100%',
-                      transition: 'background-color 0.15s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-app)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 600, fontSize: '0.88rem' }}>
-                      <FileText size={15} style={{ color: '#10b981' }} />
-                      JSON-backup
-                    </div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                      Fullständig datastruktur med alla användaranpassade inställningar
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Dold filväljare för import */}
-            <input 
-              type="file"
-              ref={fileInputRef}
-              accept=".opml,.xml,.json"
-              onChange={handleFileImport}
-              style={{ display: 'none' }}
-            />
-
-            {/* Importera flöden */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={importing}
-              style={{
-                padding: '0.55rem 1rem',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-card)',
-                color: 'var(--text-main)',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                cursor: importing ? 'wait' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                opacity: importing ? 0.7 : 1,
-                transition: 'all 0.2s'
-              }}
-              title="Importera flöden från en OPML- eller JSON-fil"
-            >
-              <Upload size={16} style={{ color: 'var(--primary)' }} />
-              {importing ? 'Importerar...' : 'Importera'}
-            </button>
-
-            <button 
-              onClick={() => setShowAddForm(!showAddForm)}
-              style={{
-                padding: '0.55rem 1.1rem',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: showAddForm ? 'var(--bg-app)' : 'var(--bg-card)',
-                color: 'var(--text-main)',
-                fontWeight: 600,
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                transition: 'all 0.2s'
-              }}
-            >
-              {showAddForm ? <X size={16} /> : <Plus size={16} style={{ color: 'var(--primary)' }} />}
-              {showAddForm ? 'Dölj formulär' : 'Lägg till eget flöde'}
-            </button>
-          </div>
-        </div>
-
-        {/* Återkoppling vid import */}
-        {importMessage && (
-          <div style={{
-            padding: '0.75rem 1rem',
-            borderRadius: '8px',
-            marginBottom: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.75rem',
-            backgroundColor: importMessage.type === 'success' 
-              ? 'rgba(16, 185, 129, 0.12)' 
-              : importMessage.type === 'warning'
-              ? 'rgba(245, 158, 11, 0.12)'
-              : 'rgba(239, 68, 68, 0.12)',
-            border: `1px solid ${
-              importMessage.type === 'success' 
-                ? 'rgba(16, 185, 129, 0.3)' 
-                : importMessage.type === 'warning'
-                ? 'rgba(245, 158, 11, 0.3)'
-                : 'rgba(239, 68, 68, 0.3)'
-            }`,
-            color: importMessage.type === 'success' 
-              ? '#10b981' 
-              : importMessage.type === 'warning'
-              ? '#f59e0b'
-              : '#ef4444',
-            fontSize: '0.9rem',
-            fontWeight: 500
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {importMessage.type === 'success' ? <Check size={16} /> : <Activity size={16} />}
-              <span>{importMessage.text}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setImportMessage(null)}
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
-            >
-              <X size={15} />
-            </button>
-          </div>
-        )}
-
-        {/* Segmenterad flikväljare */}
+      {/* Återkoppling vid import */}
+      {importMessage && (
         <div style={{
+          padding: '0.75rem 1rem',
+          borderRadius: '8px',
+          marginBottom: '1rem',
           display: 'flex',
-          gap: '0.5rem',
-          background: 'var(--bg-app)',
-          padding: '0.35rem',
-          borderRadius: '10px',
-          border: '1px solid var(--border-color)',
-          maxWidth: '520px'
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.75rem',
+          backgroundColor: importMessage.type === 'success' 
+            ? 'rgba(16, 185, 129, 0.12)' 
+            : importMessage.type === 'warning'
+            ? 'rgba(245, 158, 11, 0.12)'
+            : 'rgba(239, 68, 68, 0.12)',
+          border: `1px solid ${
+            importMessage.type === 'success' 
+              ? 'rgba(16, 185, 129, 0.3)' 
+              : importMessage.type === 'warning'
+              ? 'rgba(245, 158, 11, 0.3)'
+              : 'rgba(239, 68, 68, 0.3)'
+          }`,
+          color: importMessage.type === 'success' 
+            ? '#10b981' 
+            : importMessage.type === 'warning'
+            ? '#f59e0b'
+            : '#ef4444',
+          fontSize: '0.9rem',
+          fontWeight: 500
         }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {importMessage.type === 'success' ? <Check size={16} /> : <Activity size={16} />}
+            <span>{importMessage.text}</span>
+          </div>
           <button
+            type="button"
+            onClick={() => setImportMessage(null)}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
+      {/* Enhetlig kontrollrad (Toolbar) med flikväljare och åtgärdsknappar */}
+      <div className="rss-manager-toolbar">
+        {/* Vänster: Segmenterad flikväljare */}
+        <div className="rss-segmented-tabs">
+          <button
+            type="button"
             onClick={() => setActiveTab('my_feeds')}
-            style={{
-              flex: 1,
-              padding: '0.6rem 1rem',
-              borderRadius: '7px',
-              border: 'none',
-              background: activeTab === 'my_feeds' ? 'var(--bg-card)' : 'transparent',
-              color: activeTab === 'my_feeds' ? 'var(--text-main)' : 'var(--text-muted)',
-              fontWeight: activeTab === 'my_feeds' ? 700 : 500,
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              boxShadow: activeTab === 'my_feeds' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
-              transition: 'all 0.2s'
-            }}
+            className={`rss-tab-btn ${activeTab === 'my_feeds' ? 'active' : ''}`}
           >
             <List size={16} style={{ color: activeTab === 'my_feeds' ? 'var(--primary)' : 'inherit' }} />
-            Mina flöden
-            <span style={{ 
-              fontSize: '0.75rem', 
-              padding: '0.1rem 0.5rem', 
-              borderRadius: '10px', 
-              background: activeTab === 'my_feeds' ? 'rgba(37, 99, 235, 0.12)' : 'var(--bg-card)', 
-              color: activeTab === 'my_feeds' ? 'var(--primary)' : 'var(--text-muted)' 
-            }}>
+            <span>Mina flöden</span>
+            <span className="rss-tab-badge">
               {feeds.length}
             </span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('catalog')}
-            style={{
-              flex: 1,
-              padding: '0.6rem 1rem',
-              borderRadius: '7px',
-              border: 'none',
-              background: activeTab === 'catalog' ? 'var(--bg-card)' : 'transparent',
-              color: activeTab === 'catalog' ? 'var(--text-main)' : 'var(--text-muted)',
-              fontWeight: activeTab === 'catalog' ? 700 : 500,
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              boxShadow: activeTab === 'catalog' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
-              transition: 'all 0.2s'
-            }}
+            className={`rss-tab-btn ${activeTab === 'catalog' ? 'active' : ''}`}
           >
             <Library size={16} style={{ color: activeTab === 'catalog' ? 'var(--primary)' : 'inherit' }} />
-            Flödeskatalog & Upptäck
-            <span style={{ 
-              fontSize: '0.75rem', 
-              padding: '0.1rem 0.5rem', 
-              borderRadius: '10px', 
-              background: activeTab === 'catalog' ? 'rgba(37, 99, 235, 0.12)' : 'var(--bg-card)', 
-              color: activeTab === 'catalog' ? 'var(--primary)' : 'var(--text-muted)' 
-            }}>
+            <span>Flödeskatalog & Upptäck</span>
+            <span className="rss-tab-badge">
               {opmlFeeds.length}
             </span>
+          </button>
+        </div>
+
+        {/* Höger: Åtgärder samlade i samma rad */}
+        <div className="rss-manager-actions">
+          {/* Exportera flöden */}
+          <div style={{ position: 'relative' }} ref={exportMenuRef}>
+            <button 
+              type="button"
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={feeds.length === 0 || exportingFormat !== null}
+              className="rss-action-btn"
+              title={feeds.length === 0 ? 'Du har inga flöden att exportera' : 'Exportera dina flöden med aktiveringsstatus och inställningar'}
+            >
+              <Download size={15} style={{ color: 'var(--primary)' }} />
+              <span>{exportingFormat ? 'Exporterar...' : 'Exportera'}</span>
+              <ChevronDown 
+                size={14} 
+                style={{ 
+                  color: 'var(--text-muted)', 
+                  transform: showExportMenu ? 'rotate(180deg)' : 'none', 
+                  transition: 'transform 0.2s' 
+                }} 
+              />
+            </button>
+
+            {showExportMenu && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 'calc(100% + 6px)',
+                  backgroundColor: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                  padding: '0.5rem',
+                  minWidth: '260px',
+                  zIndex: 100,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem'
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleExport('opml')}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: '0.2rem',
+                    padding: '0.65rem 0.75rem',
+                    borderRadius: '7px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    color: 'var(--text-main)',
+                    width: '100%',
+                    transition: 'background-color 0.15s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-app)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 600, fontSize: '0.88rem' }}>
+                    <FileCode size={15} style={{ color: 'var(--primary)' }} />
+                    OPML 2.0 (Rekommenderas)
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                    Universellt RSS-format berikat med aktiveringsstatus, dashboard-val och intervall
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExport('json')}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: '0.2rem',
+                    padding: '0.65rem 0.75rem',
+                    borderRadius: '7px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    color: 'var(--text-main)',
+                    width: '100%',
+                    transition: 'background-color 0.15s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-app)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 600, fontSize: '0.88rem' }}>
+                    <FileText size={15} style={{ color: '#10b981' }} />
+                    JSON-backup
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                    Fullständig datastruktur med alla användaranpassade inställningar
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Dold filväljare för import */}
+          <input 
+            type="file"
+            ref={fileInputRef}
+            accept=".opml,.xml,.json"
+            onChange={handleFileImport}
+            style={{ display: 'none' }}
+          />
+
+          {/* Importera flöden */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="rss-action-btn"
+            title="Importera flöden från en OPML- eller JSON-fil"
+          >
+            <Upload size={15} style={{ color: 'var(--primary)' }} />
+            <span>{importing ? 'Importerar...' : 'Importera'}</span>
+          </button>
+
+          {/* Lägg till eget flöde */}
+          <button 
+            type="button"
+            onClick={() => setShowAddForm(!showAddForm)}
+            className={`rss-action-btn ${showAddForm ? '' : 'primary'}`}
+          >
+            {showAddForm ? <X size={15} /> : <Plus size={15} />}
+            <span>{showAddForm ? 'Dölj formulär' : 'Lägg till eget flöde'}</span>
           </button>
         </div>
       </div>
@@ -1323,12 +1237,12 @@ const RssManager = ({ embedded = false }) => {
                       <>
                         {/* DESKTOP VY */}
                         {/* 1. Källa / Flöde */}
-                        <div className="rss-desktop-only" style={{ flexDirection: 'column', minWidth: 0, gap: '0.2rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                        <div className="rss-desktop-only rss-feed-cell">
+                          <div className="rss-feed-icon-badge" title={feed.title}>
                             <img 
                               src={resolveFeedIcon(feed.icon_url)} 
                               alt="" 
-                              style={{ width: 18, height: 18, borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }} 
+                              className="rss-feed-icon-img"
                               onError={(e) => { 
                                 if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
                                   e.currentTarget.onerror = null;
@@ -1336,15 +1250,15 @@ const RssManager = ({ embedded = false }) => {
                                 }
                               }} 
                             />
-                            <span style={{ fontSize: '0.95rem', color: 'var(--text-main)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={feed.title}>
+                          </div>
+                          <div className="rss-feed-meta">
+                            <span className="rss-feed-title" title={feed.title}>
                               {feed.title || '[Ingen titel angiven]'}
                             </span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.76rem', color: 'var(--text-muted)', paddingLeft: '1.65rem' }}>
-                            <LinkIcon size={11} style={{ flexShrink: 0 }} />
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={feed.url}>
-                              {feed.url}
-                            </span>
+                            <div className="rss-feed-url" title={feed.url}>
+                              <LinkIcon size={11} style={{ flexShrink: 0 }} />
+                              <span>{feed.url}</span>
+                            </div>
                           </div>
                         </div>
 
@@ -1541,17 +1455,18 @@ const RssManager = ({ embedded = false }) => {
                         <div className="rss-mobile-only" style={{ flexDirection: 'column', width: '100%', gap: '0.65rem' }}>
                           <div className="rss-mobile-top">
                             <div className="rss-mobile-header-info">
-                              <img 
-                                src={resolveFeedIcon(feed.icon_url)} 
-                                alt="" 
-                                style={{ width: 20, height: 20, borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }} 
-                                onError={(e) => { 
-                                  if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
-                                    e.currentTarget.onerror = null;
-                                    e.currentTarget.src = '/default-feed-icon.png';
-                                  }
-                                }} 
-                              />
+                              <div className="rss-mobile-icon-badge" title={feed.title}>
+                                <img 
+                                  src={resolveFeedIcon(feed.icon_url)} 
+                                  alt="" 
+                                  onError={(e) => { 
+                                    if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
+                                      e.currentTarget.onerror = null;
+                                      e.currentTarget.src = '/default-feed-icon.png';
+                                    }
+                                  }} 
+                                />
+                              </div>
                               <h3 title={feed.title}>
                                 {feed.title || '[Ingen titel angiven]'}
                               </h3>
