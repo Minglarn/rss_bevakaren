@@ -332,5 +332,10 @@
       <outline type="rss" text="ComingSoon" title="ComingSoon" xmlUrl="https://www.comingsoon.net/feed" description="Kommande biopremiärer, trailers och releasedatum" htmlUrl="https://www.comingsoon.net"/>
       <outline type="rss" text="Dark Horizons" title="Dark Horizons" xmlUrl="https://www.darkhorizons.com/feed/" description="Klassisk nyhetssajt för film och TV-produktioner" htmlUrl="https://www.darkhorizons.com"/>
     </outline>
+    <outline text="Kommun &amp; Lokalt" title="Kommun &amp; Lokalt">
+      <outline type="rss" text="Trosa Evenemang" title="Trosa Evenemang" xmlUrl="https://trosa.com/events/feed/" category="Kommun &amp; Lokalt" description="Evenemang och upplevelser i Trosa" htmlUrl="https://trosa.com"/>
+      <outline type="rss" text="TROSA Notiser" title="TROSA Notiser" xmlUrl="https://www.trosa.se/notiser/feed/" category="Kommun &amp; Lokalt" description="Officiella notiser från Trosa kommun" htmlUrl="https://www.trosa.se"/>
+      <outline type="rss" text="TROSA Nyheter" title="TROSA Nyheter" xmlUrl="https://www.trosa.se/feed/" category="Kommun &amp; Lokalt" description="Aktuella nyheter och information från Trosa kommun" htmlUrl="https://www.trosa.se"/>
+    </outline>
   </body>
 </opml>

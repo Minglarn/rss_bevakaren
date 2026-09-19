@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.08',
+    date: '2026-09-19',
+    title: 'Nya lokala flöden i katalogen: Trosa kommun och evenemang',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Kommun & Lokalt i flödeskatalogen',
+        description: 'Lagt till en dedikerad kategori för Kommun & Lokalt i den inbyggda flödeskatalogen (OPML), innehållande Trosa Evenemang, TROSA Notiser och TROSA Nyheter.'
+      },
+      {
+        type: 'feature',
+        title: 'Rekommenderat paket i introduktionsguiden',
+        description: 'Gjort Trosa-flödena tillgängliga som ett valbart paket direkt i installations- och välkomstguiden vid nyinstallation.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.07',
     date: '2026-09-19',
     title: 'Intelligent käll- och kategoridiversifiering för morgon- och kvällsrapporter',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

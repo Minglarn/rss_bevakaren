@@ -62,6 +62,16 @@ const RECOMMENDED_PACKAGES = [
       { title: 'Allt om elbil', url: 'https://alltomelbil.se/feed' },
       { title: 'CarUp', url: 'https://carup.se/feed' }
     ]
+  },
+  {
+    id: 'local',
+    title: 'Kommun & Lokalt',
+    description: 'Lokala nyheter, officiella notiser och evenemang i Trosa kommun.',
+    feeds: [
+      { title: 'TROSA Nyheter', url: 'https://www.trosa.se/feed/' },
+      { title: 'TROSA Notiser', url: 'https://www.trosa.se/notiser/feed/' },
+      { title: 'Trosa Evenemang', url: 'https://trosa.com/events/feed/' }
+    ]
   }
 ];
 
