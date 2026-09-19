@@ -1747,17 +1747,58 @@ def generate_daily_digest(db: Any, user_id: int, model: Optional[str] = None, fo
             "created_at": now_ts
         }
 
-    # Gruppera så vi tar max en artikel per kluster för bredd i urvalet
+    # 2. Intelligent diversifierat urval för bredd och balans:
+    # - Max 1 artikel per kluster (samma nyhetshändelse från flera redaktioner)
+    # - Max 2 artiklar per källflöde (förhindrar att en enskild sajt dominerar urvalet)
+    # - Max 3 artiklar per kategori (förhindrar att t.ex. Formel 1 eller sport kuppar hela rapporten)
+    MAX_DIGEST_ITEMS = 10
+    MAX_PER_FEED = 2
+    MAX_PER_CATEGORY = 3
+
     seen_clusters = set()
+    feed_counts = {}
+    category_counts = {}
     top_candidates = []
+    remaining_candidates = []
+
+    # Pass 1: Strikt diversifiering
     for art in user_articles:
         if art.cluster_id:
             if art.cluster_id in seen_clusters:
                 continue
-            seen_clusters.add(art.cluster_id)
-        top_candidates.append(art)
-        if len(top_candidates) >= 10:
-            break
+
+        f_id = art.feed_id
+        cat = (art.category or "Övrigt").strip()
+
+        current_feed_count = feed_counts.get(f_id, 0)
+        current_cat_count = category_counts.get(cat, 0)
+
+        if current_feed_count < MAX_PER_FEED and current_cat_count < MAX_PER_CATEGORY:
+            if art.cluster_id:
+                seen_clusters.add(art.cluster_id)
+            feed_counts[f_id] = current_feed_count + 1
+            category_counts[cat] = current_cat_count + 1
+            top_candidates.append(art)
+            if len(top_candidates) >= MAX_DIGEST_ITEMS:
+                break
+        else:
+            remaining_candidates.append(art)
+
+    # Pass 2: Mjuk fallback om vi har färre än 10 artiklar (fyll på med högsta poäng utan dubblettkluster)
+    if len(top_candidates) < MAX_DIGEST_ITEMS:
+        for art in remaining_candidates:
+            if art in top_candidates:
+                continue
+            if art.cluster_id and art.cluster_id in seen_clusters:
+                continue
+            f_id = art.feed_id
+            if feed_counts.get(f_id, 0) < 3:
+                if art.cluster_id:
+                    seen_clusters.add(art.cluster_id)
+                feed_counts[f_id] = feed_counts.get(f_id, 0) + 1
+                top_candidates.append(art)
+                if len(top_candidates) >= MAX_DIGEST_ITEMS:
+                    break
 
     covered_ids = [a.id for a in top_candidates]
     covered_articles_summary = [
@@ -1797,7 +1838,8 @@ def generate_daily_digest(db: Any, user_id: int, model: Optional[str] = None, fo
             "2. Välj ut de 3 till 5 viktigaste händelserna och formulera en koncis punktlista.\n"
             "3. Varje punkt i listan SKA inledas med en fetstilt rubrik följt av 1-2 informativa, sakliga meningar.\n"
             "4. Skriv uteslutande på ren, korrekt svenska.\n"
-            "5. STRIKT FÖRBUD MOT EMOJIS: Det är absolut förbjudet att använda några som helst emojis eller symbol-ikoner i svaret."
+            "5. Allsidig representation: Se till att rapporten lyfter fram en god och balanserad bredd över de olika ämnena i underlaget istället för att ensidigt fokusera på en nisch.\n"
+            "6. STRIKT FÖRBUD MOT EMOJIS: Det är absolut förbjudet att använda några som helst emojis eller symbol-ikoner i svaret."
         )
 
         try:

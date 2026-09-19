@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.07',
+    date: '2026-09-19',
+    title: 'Intelligent käll- och kategoridiversifiering för morgon- och kvällsrapporter',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Källtak (Max 2 artiklar per källa)',
+        description: 'Infört strikt källdiversifiering vid urval till rapporter. Förhindrar att en enskild nyhetssajt eller nischkanal dominerar urvalet, även om källan publicerat många högt poängsatta artiklar under natten.'
+      },
+      {
+        type: 'feature',
+        title: 'Kategoribalans (Max 3 artiklar per kategori)',
+        description: 'Infört ett kategoritak som garanterar en balanserad representation över olika ämnesområden (Inrikes, Utrikes, Teknik, Ekonomi, Blåljus m.fl.) så att ingen enskild nisch (t.ex. motorsport eller sport) kan ta över rapporten.'
+      },
+      {
+        type: 'ai',
+        title: 'Förbättrad redaktionell prompt',
+        description: 'Instruerat AI-modellen att sammanställa en bred och allsidig briefing som lyfter fram hela nyhetsläget och undviker ensidig fixering vid enskilda nischer.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.06',
     date: '2026-09-19',
     title: 'Centrerad inloggningsvy, helskärmsbakgrund och svenskt gränssnitt',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'fix',
