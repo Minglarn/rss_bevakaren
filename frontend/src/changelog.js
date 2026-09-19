@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.03',
+    date: '2026-09-19',
+    title: 'Total export och återställning av alla inställningar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Komplett säkerhetskopiering till JSON',
+        description: 'Exportera samtliga konfigurationer i ett klick: AI-systemprompt, prioriterings- och exkluderingsregler, poängtrösklar, kategorivikter, intresseprofilens taggar, bevakade nyckelord och prenumererade flöden med alla dess inställningar.'
+      },
+      {
+        type: 'feature',
+        title: 'Återställning i inställningsvyn',
+        description: 'Ett nytt dedikerat verktyg under Databas & system gör det enkelt att ladda upp och återskapa hela din anpassade miljö på en ny enhet eller efter ominstallation.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.02',
     date: '2026-09-19',
     title: 'Filimport av flöden via OPML och JSON',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

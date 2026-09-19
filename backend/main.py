@@ -2446,6 +2446,272 @@ async def import_feeds(
         "message": f"{added_count} nya flöden lades till ({skipped_count} fanns redan i din lista)."
     }
 
+@app.get("/settings/backup/export")
+def export_all_settings(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    keywords = db.query(models.Keyword).filter(models.Keyword.user_id == current_user.id).all()
+    feeds = db.query(models.Feed).filter(models.Feed.user_id == current_user.id).order_by(models.Feed.title.asc()).all()
+    
+    date_filename = datetime.now().strftime("%Y-%m-%d")
+    
+    # Extrahera kategorier & vikter
+    cats = normalize_user_categories(json.loads(user_ai.categories) if (user_ai and user_ai.categories) else None)
+    
+    # Extrahera tagglistor från intresseprofil
+    ignored_disliked = []
+    ignored_liked = []
+    if user_ai and user_ai.ignored_disliked_tags:
+        try:
+            ignored_disliked = json.loads(user_ai.ignored_disliked_tags)
+        except Exception:
+            pass
+    if user_ai and user_ai.ignored_liked_tags:
+        try:
+            ignored_liked = json.loads(user_ai.ignored_liked_tags)
+        except Exception:
+            pass
+
+    notification_settings_data = {
+        "prio_notify_only": bool(user_ai.prio_notify_only) if user_ai else False,
+        "push_include_title": bool(user_ai.push_include_title if user_ai and user_ai.push_include_title is not None else True),
+        "push_include_image": bool(user_ai.push_include_image if user_ai and user_ai.push_include_image is not None else True),
+        "push_include_summary": bool(user_ai.push_include_summary if user_ai and user_ai.push_include_summary is not None else True),
+        "push_summary_type": user_ai.push_summary_type if (user_ai and user_ai.push_summary_type) else "short",
+        "short_summary_max_words": user_ai.short_summary_max_words if user_ai else 20,
+        "short_summary_max_sentences": user_ai.short_summary_max_sentences if user_ai else 1,
+        "notify_ai_offline": bool(user_ai.notify_ai_offline if user_ai and user_ai.notify_ai_offline is not None else True)
+    }
+
+    ai_config_data = {
+        "prio_enabled": bool(user_ai.prio_enabled) if user_ai else False,
+        "prio_rules": user_ai.prio_rules if user_ai else "",
+        "exclude_rules": user_ai.exclude_rules if user_ai else "",
+        "prio_threshold": user_ai.prio_threshold if user_ai else 75,
+        "custom_system_prompt": user_ai.custom_system_prompt if user_ai else "",
+        "selected_model": user_ai.selected_model if user_ai else "",
+        "auto_scrape_article_text": bool(user_ai.auto_scrape_article_text if user_ai and user_ai.auto_scrape_article_text is not None else True),
+        "max_article_age_hours": user_ai.max_article_age_hours if user_ai else 24,
+        "auto_purge_enabled": bool(user_ai.auto_purge_enabled if user_ai and user_ai.auto_purge_enabled is not None else True),
+        "auto_purge_days": user_ai.auto_purge_days if user_ai else 30,
+        "onboarding_completed": bool(user_ai.onboarding_completed) if user_ai else False
+    }
+
+    backup_payload = {
+        "format": "rss_bevakaren_full_backup",
+        "version": "2026.09.19.03",
+        "exported_at": datetime.now().isoformat(),
+        "user": current_user.username,
+        "notification_settings": notification_settings_data,
+        "ai_settings": ai_config_data,
+        "categories_and_weights": cats,
+        "interest_profile": {
+            "ignored_disliked_tags": ignored_disliked,
+            "ignored_liked_tags": ignored_liked
+        },
+        "keywords": [kw.keyword for kw in keywords if kw.keyword],
+        "feeds": [
+            {
+                "url": f.url,
+                "title": f.title,
+                "polling_interval": f.polling_interval or 60,
+                "scrape_enabled": bool(f.scrape_enabled),
+                "include_in_dashboard": bool(f.include_in_dashboard),
+                "notify_enabled": bool(f.notify_enabled),
+                "icon_url": f.icon_url or ""
+            }
+            for f in feeds
+        ]
+    }
+
+    json_str = json.dumps(backup_payload, ensure_ascii=False, indent=2)
+    return Response(
+        content=json_str,
+        media_type="application/json; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="rss-bevakaren-alla-installningar-{date_filename}.json"'
+        }
+    )
+
+@app.post("/settings/backup/import")
+async def import_all_settings(
+    file: UploadFile = File(...),
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    try:
+        content_bytes = await file.read()
+        content_str = content_bytes.decode("utf-8", errors="replace").strip()
+        data = json.loads(content_str)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Kunde inte tolka säkerhetskopian som JSON: {e}")
+
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=400, detail="Ogiltig filstruktur för säkerhetskopia.")
+
+    # 1. Hämta eller skapa UserAISettings
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    if not user_ai:
+        user_ai = models.UserAISettings(user_id=current_user.id)
+        db.add(user_ai)
+
+    ai_in = data.get("ai_settings") or {}
+    notif_in = data.get("notification_settings") or {}
+    combined_notif = {**ai_in, **notif_in}
+
+    if "prio_enabled" in ai_in:
+        user_ai.prio_enabled = 1 if ai_in["prio_enabled"] else 0
+    if "prio_rules" in ai_in:
+        user_ai.prio_rules = (ai_in["prio_rules"] or "").strip()
+    if "exclude_rules" in ai_in:
+        user_ai.exclude_rules = (ai_in["exclude_rules"] or "").strip()
+    if "prio_threshold" in ai_in:
+        try:
+            user_ai.prio_threshold = max(50, min(95, int(ai_in["prio_threshold"])))
+        except (ValueError, TypeError):
+            pass
+    if "custom_system_prompt" in ai_in:
+        user_ai.custom_system_prompt = (ai_in["custom_system_prompt"] or "").strip()
+    if "selected_model" in ai_in:
+        user_ai.selected_model = (ai_in["selected_model"] or "").strip()
+    if "auto_scrape_article_text" in ai_in:
+        user_ai.auto_scrape_article_text = 1 if ai_in["auto_scrape_article_text"] else 0
+    if "max_article_age_hours" in ai_in:
+        try:
+            user_ai.max_article_age_hours = max(1, min(168, int(ai_in["max_article_age_hours"])))
+        except (ValueError, TypeError):
+            pass
+    if "auto_purge_enabled" in ai_in:
+        user_ai.auto_purge_enabled = 1 if ai_in["auto_purge_enabled"] else 0
+    if "auto_purge_days" in ai_in:
+        try:
+            user_ai.auto_purge_days = max(1, min(365, int(ai_in["auto_purge_days"])))
+        except (ValueError, TypeError):
+            pass
+    if "onboarding_completed" in ai_in:
+        user_ai.onboarding_completed = 1 if ai_in["onboarding_completed"] else 0
+
+    # Notisinställningar
+    if "prio_notify_only" in combined_notif:
+        user_ai.prio_notify_only = 1 if combined_notif["prio_notify_only"] else 0
+    if "push_include_title" in combined_notif:
+        user_ai.push_include_title = 1 if combined_notif["push_include_title"] else 0
+    if "push_include_image" in combined_notif:
+        user_ai.push_include_image = 1 if combined_notif["push_include_image"] else 0
+    if "push_include_summary" in combined_notif:
+        user_ai.push_include_summary = 1 if combined_notif["push_include_summary"] else 0
+    if "push_summary_type" in combined_notif:
+        user_ai.push_summary_type = combined_notif["push_summary_type"] if combined_notif["push_summary_type"] in ("short", "full") else "short"
+    if "short_summary_max_words" in combined_notif:
+        try:
+            user_ai.short_summary_max_words = max(5, min(100, int(combined_notif["short_summary_max_words"])))
+        except (ValueError, TypeError):
+            pass
+    if "short_summary_max_sentences" in combined_notif:
+        try:
+            user_ai.short_summary_max_sentences = max(1, min(3, int(combined_notif["short_summary_max_sentences"])))
+        except (ValueError, TypeError):
+            pass
+    if "notify_ai_offline" in combined_notif:
+        user_ai.notify_ai_offline = 1 if combined_notif["notify_ai_offline"] else 0
+
+    # 2. Kategorier och vikter
+    cats_in = data.get("categories_and_weights")
+    if cats_in is not None:
+        norm_cats = normalize_user_categories(cats_in)
+        user_ai.categories = json.dumps(norm_cats, ensure_ascii=False)
+        # Bygg om systemprompt om ej satt manuellt
+        if not user_ai.custom_system_prompt:
+            user_ai.custom_system_prompt = ai_service.build_user_prompt(
+                categories=norm_cats,
+                prio_rules=user_ai.prio_rules or "",
+                exclude_rules=user_ai.exclude_rules or "",
+                prio_threshold=user_ai.prio_threshold or 75
+            )
+
+    # 3. Intresseprofil (taggar)
+    interest = data.get("interest_profile") or {}
+    if "ignored_disliked_tags" in interest:
+        user_ai.ignored_disliked_tags = json.dumps(interest["ignored_disliked_tags"] or [], ensure_ascii=False)
+    if "ignored_liked_tags" in interest:
+        user_ai.ignored_liked_tags = json.dumps(interest["ignored_liked_tags"] or [], ensure_ascii=False)
+
+    # 4. Nyckelord
+    keywords_in = data.get("keywords") or []
+    existing_kws = set(kw.keyword.lower() for kw in db.query(models.Keyword.keyword).filter(models.Keyword.user_id == current_user.id).all())
+    added_keywords = 0
+    for kw_str in keywords_in:
+        if isinstance(kw_str, str) and kw_str.strip():
+            clean_kw = kw_str.strip()
+            if clean_kw.lower() not in existing_kws:
+                db.add(models.Keyword(keyword=clean_kw, user_id=current_user.id))
+                existing_kws.add(clean_kw.lower())
+                added_keywords += 1
+
+    # 5. Flöden
+    feeds_in = data.get("feeds") or []
+    existing_feeds = {f.url: f for f in db.query(models.Feed).filter(models.Feed.user_id == current_user.id).all()}
+    added_feeds = 0
+    updated_feeds = 0
+    import random
+
+    for f_item in feeds_in:
+        if not isinstance(f_item, dict):
+            continue
+        url = (f_item.get("url") or "").strip()
+        if not url:
+            continue
+        title = (f_item.get("title") or "").strip() or url
+        try:
+            poll_int = int(f_item.get("polling_interval") or f_item.get("polling_interval_minutes") or 0)
+        except (ValueError, TypeError):
+            poll_int = 0
+        if poll_int <= 0:
+            poll_int = random.randint(10, 30)
+        scrape = 1 if f_item.get("scrape_enabled", True) else 0
+        inc_dash = 1 if f_item.get("include_in_dashboard", True) else 0
+        notif = 1 if f_item.get("notify_enabled", True) else 0
+        icon = f_item.get("icon_url") or get_feed_icon_url(None, url)
+
+        if url in existing_feeds:
+            existing_f = existing_feeds[url]
+            existing_f.title = title
+            existing_f.polling_interval = poll_int
+            existing_f.scrape_enabled = scrape
+            existing_f.include_in_dashboard = inc_dash
+            existing_f.notify_enabled = notif
+            if icon and not existing_f.icon_url:
+                existing_f.icon_url = icon
+            updated_feeds += 1
+        else:
+            db_feed = models.Feed(
+                url=url,
+                title=title,
+                polling_interval=poll_int,
+                scrape_enabled=scrape,
+                include_in_dashboard=inc_dash,
+                notify_enabled=notif,
+                icon_url=icon,
+                user_id=current_user.id
+            )
+            db.add(db_feed)
+            added_feeds += 1
+
+    db.commit()
+    if added_feeds > 0:
+        asyncio.create_task(asyncio.to_thread(ensure_all_feed_icons_cached))
+
+    return {
+        "status": "ok",
+        "message": f"Säkerhetskopia återställd: {added_feeds} nya flöden lades till, {updated_feeds} flöden uppdaterades, {added_keywords} nya nyckelord lades till och alla AI-prompter och vikter har synkroniserats.",
+        "added_feeds": added_feeds,
+        "updated_feeds": updated_feeds,
+        "added_keywords": added_keywords,
+        "ai_settings_restored": True
+    }
+
 @app.post("/feeds/batch")
 def create_feeds_batch(payload: dict, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     feeds_data = payload.get("feeds", [])

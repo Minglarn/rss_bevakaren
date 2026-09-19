@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, BellOff, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, ArrowUpRight, AlertTriangle, ExternalLink, Search } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, BellOff, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, ArrowUpRight, AlertTriangle, ExternalLink, Search, Download, Upload } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
@@ -127,6 +127,66 @@ const Settings = ({ onLogout }) => {
     };
     setExpandedNotificationSections(next);
     localStorage.setItem('rss_expanded_notification_sections', JSON.stringify(next));
+  };
+
+  // Säkerhetskopiering och återställning av alla inställningar
+  const [isExportingBackup, setIsExportingBackup] = useState(false);
+  const [isImportingBackup, setIsImportingBackup] = useState(false);
+  const backupFileInputRef = useRef(null);
+
+  const handleExportFullBackup = async () => {
+    try {
+      setIsExportingBackup(true);
+      const res = await api.get('/settings/backup/export', { responseType: 'blob' });
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const blob = new Blob([res.data], { type: 'application/json' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', `rss-bevakaren-alla-installningar-${dateStr}.json`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      toast.success('Alla inställningar exporterades framgångsrikt.');
+    } catch (err) {
+      console.error('Kunde inte exportera inställningar:', err);
+      toast.error('Kunde inte exportera inställningar.');
+    } finally {
+      setIsExportingBackup(false);
+    }
+  };
+
+  const handleImportFullBackup = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    if (!window.confirm('Vill du återställa alla inställningar från den valda säkerhetskopian? Detta uppdaterar dina AI-prompter, vikter, nyckelord och flöden.')) {
+      return;
+    }
+
+    try {
+      setIsImportingBackup(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await api.post('/settings/backup/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      toast.success(res.data.message || 'Inställningarna återställdes framgångsrikt.');
+      await fetchAiConfig();
+      await fetchData();
+      if (typeof fetchDbStats === 'function') fetchDbStats();
+      window.dispatchEvent(new Event('feedsUpdated'));
+    } catch (err) {
+      console.error('Kunde inte återställa säkerhetskopia:', err);
+      const detail = err.response?.data?.detail || 'Ett fel uppstod vid återställning av inställningarna.';
+      toast.error(`Återställning misslyckades: ${detail}`);
+    } finally {
+      setIsImportingBackup(false);
+    }
   };
 
   const toggleSwipeGestures = () => {
@@ -2944,6 +3004,81 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>dagar</span>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Säkerhetskopiering & Återställning av alla inställningar */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem', paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <HardDrive size={20} style={{ color: 'var(--primary)' }} />
+                <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem' }}>
+                  Säkerhetskopiering och återställning av alla inställningar
+                </h3>
+              </div>
+            </div>
+
+            <p style={{ margin: '0 0 1.25rem 0', paddingLeft: '0.25rem', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+              Säkerhetskopiera eller återställ samtliga dina anpassade inställningar i en och samma JSON-fil. Inkluderar fullständiga notisinställningar (PRIO-filtrering, sammanfattningsformat, notisinnehåll och flödesnotiser), AI-systemprompter, prioriterings- och exkluderingsregler, kategorivikter, intresseprofilens taggjusteringar, bevakade nyckelord samt alla prenumererade RSS-flöden.
+            </p>
+
+            {/* Dold filväljare */}
+            <input 
+              type="file"
+              ref={backupFileInputRef}
+              accept=".json"
+              onChange={handleImportFullBackup}
+              style={{ display: 'none' }}
+            />
+
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', paddingLeft: '0.25rem' }}>
+              <button
+                type="button"
+                onClick={handleExportFullBackup}
+                disabled={isExportingBackup}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.6rem 1.2rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: isExportingBackup ? 'wait' : 'pointer',
+                  opacity: isExportingBackup ? 0.7 : 1,
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Download size={16} style={{ color: 'var(--primary)' }} />
+                {isExportingBackup ? 'Exporterar säkerhetskopia...' : 'Exportera alla inställningar (JSON)'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => backupFileInputRef.current?.click()}
+                disabled={isImportingBackup}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.6rem 1.2rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: isImportingBackup ? 'wait' : 'pointer',
+                  opacity: isImportingBackup ? 0.7 : 1,
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Upload size={16} style={{ color: '#10b981' }} />
+                {isImportingBackup ? 'Återställer inställningar...' : 'Återställ från säkerhetskopia'}
+              </button>
             </div>
           </div>
         </motion.div>
