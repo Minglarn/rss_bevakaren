@@ -137,9 +137,28 @@ const Settings = ({ onLogout }) => {
   const handleExportFullBackup = async () => {
     try {
       setIsExportingBackup(true);
-      const res = await api.get('/settings/backup/export', { responseType: 'blob' });
+      const res = await api.get('/settings/backup/export');
+      const backupData = res.data;
+
+      // Samla in ALLA gränssnittspreferenser från localStorage
+      const uiPreferences = {
+        theme: localStorage.getItem('rss_theme') || 'system',
+        card_style: localStorage.getItem('rss_card_style') || 'modern',
+        flow_layout: localStorage.getItem('rss_flow_layout') || 'compact',
+        desktop_columns: localStorage.getItem('rss_desktop_columns') || 'auto',
+        feed_mode: localStorage.getItem('rss_feed_mode') || 'ai',
+        cluster_mode: localStorage.getItem('rss_cluster_mode') !== 'false',
+        show_images: localStorage.getItem('rss_show_images') !== 'false',
+        show_read: localStorage.getItem('rss_show_read') === 'true',
+        swipe_gestures: localStorage.getItem('rss_swipe_gestures') !== 'false',
+        expanded_ui_sections: localStorage.getItem('rss_expanded_ui_sections') || null,
+        expanded_notification_sections: localStorage.getItem('rss_expanded_notification_sections') || null
+      };
+
+      backupData.ui_preferences = uiPreferences;
+
       const dateStr = new Date().toISOString().slice(0, 10);
-      const blob = new Blob([res.data], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -148,7 +167,7 @@ const Settings = ({ onLogout }) => {
       link.click();
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
-      toast.success('Alla inställningar exporterades framgångsrikt.');
+      toast.success('Samtliga inställningar (inklusive notiser och gränssnitt) har exporterats.');
     } catch (err) {
       console.error('Kunde inte exportera inställningar:', err);
       toast.error('Kunde inte exportera inställningar.');
@@ -162,12 +181,71 @@ const Settings = ({ onLogout }) => {
     if (!file) return;
     e.target.value = '';
 
-    if (!window.confirm('Vill du återställa alla inställningar från den valda säkerhetskopian? Detta uppdaterar dina AI-prompter, vikter, nyckelord och flöden.')) {
+    if (!window.confirm('Vill du återställa alla inställningar från den valda säkerhetskopian? Detta återställer dina notispreferenser, AI-prompter, kategorivikter, sökord, flöden och gränssnittsval.')) {
       return;
     }
 
     try {
       setIsImportingBackup(true);
+
+      // Läs in filinnehållet lokalt först för att återställa gränssnittspreferenser
+      const fileText = await file.text();
+      let parsedBackup = null;
+      try {
+        parsedBackup = JSON.parse(fileText);
+      } catch {
+        // Fallback: fortsätt till backend
+      }
+
+      if (parsedBackup && parsedBackup.ui_preferences) {
+        const uip = parsedBackup.ui_preferences;
+        if (uip.theme) {
+          localStorage.setItem('rss_theme', uip.theme);
+          setTheme(uip.theme);
+          window.dispatchEvent(new Event('themeChanged'));
+        }
+        if (uip.card_style) {
+          localStorage.setItem('rss_card_style', uip.card_style);
+          setCardStyle(uip.card_style);
+          window.dispatchEvent(new Event('cardStyleChanged'));
+        }
+        if (uip.flow_layout) {
+          localStorage.setItem('rss_flow_layout', uip.flow_layout);
+          setFlowLayout(uip.flow_layout);
+          window.dispatchEvent(new Event('flowLayoutChanged'));
+        }
+        if (uip.desktop_columns) {
+          localStorage.setItem('rss_desktop_columns', uip.desktop_columns);
+        }
+        if (uip.feed_mode) {
+          localStorage.setItem('rss_feed_mode', uip.feed_mode);
+          setFeedMode(uip.feed_mode);
+        }
+        if (uip.cluster_mode !== undefined) {
+          localStorage.setItem('rss_cluster_mode', String(uip.cluster_mode));
+          setClusterMode(Boolean(uip.cluster_mode));
+        }
+        if (uip.show_images !== undefined) {
+          localStorage.setItem('rss_show_images', String(uip.show_images));
+          setShowImages(Boolean(uip.show_images));
+        }
+        if (uip.show_read !== undefined) {
+          localStorage.setItem('rss_show_read', String(uip.show_read));
+        }
+        if (uip.swipe_gestures !== undefined) {
+          localStorage.setItem('rss_swipe_gestures', String(uip.swipe_gestures));
+          setSwipeGesturesEnabled(Boolean(uip.swipe_gestures));
+          window.dispatchEvent(new Event('swipeGesturesChanged'));
+        }
+        if (uip.expanded_ui_sections) {
+          localStorage.setItem('rss_expanded_ui_sections', typeof uip.expanded_ui_sections === 'string' ? uip.expanded_ui_sections : JSON.stringify(uip.expanded_ui_sections));
+        }
+        if (uip.expanded_notification_sections) {
+          localStorage.setItem('rss_expanded_notification_sections', typeof uip.expanded_notification_sections === 'string' ? uip.expanded_notification_sections : JSON.stringify(uip.expanded_notification_sections));
+        }
+      }
+
+      // Skicka till backend för återställning av databasinställningar
       const formData = new FormData();
       formData.append('file', file);
 
@@ -175,7 +253,7 @@ const Settings = ({ onLogout }) => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      toast.success(res.data.message || 'Inställningarna återställdes framgångsrikt.');
+      toast.success(res.data.message || 'Alla inställningar återställdes framgångsrikt.');
       await fetchAiConfig();
       await fetchData();
       if (typeof fetchDbStats === 'function') fetchDbStats();

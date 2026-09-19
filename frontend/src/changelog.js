@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.04',
+    date: '2026-09-19',
+    title: 'Komplett säkerhetskopiering av SAMTLIGA inställningar i hela systemet',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Fullständiga notis- och AI-inställningar',
+        description: 'Säkerhetskopian inkluderar nu alla notispreferenser (PRIO-filtrering, kompakt/fullständig sammanfattning, max ord och meningar, rubrik- och bildval, driftnotiser samt notiser per enskilt flöde) tillsammans med alla AI-systemprompter, regler, kategorivikter och nyckelord.'
+      },
+      {
+        type: 'feature',
+        title: 'Gränssnitts- och layoutpreferenser',
+        description: 'Även applikationens visuella inställningar (färgtema, kortstil, flödeslayout, swipe-gester på mobilen, kolumnval och expanderade sektioner) sparas och återställs automatiskt vid import på valfri enhet.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.03',
     date: '2026-09-19',
     title: 'Total export och återställning av alla inställningar',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',
