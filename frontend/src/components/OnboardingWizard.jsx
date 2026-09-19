@@ -50,7 +50,8 @@ const RECOMMENDED_PACKAGES = [
     description: 'Officiella larm, polisens händelserapporter och samhällsvarningar.',
     feeds: [
       { title: 'Polisen Händelser', url: 'https://polisen.se/aktuellt/rss/hela-landet/handelser-i-hela-landet/' },
-      { title: 'Krisinformation', url: 'https://www.krisinformation.se/nyheter/?rss=true' }
+      { title: 'Krisinformation', url: 'https://www.krisinformation.se/nyheter/?rss=true' },
+      { title: 'Sveriges Domstolar', url: 'https://www.domstol.se/feed/56/?searchPageId=2693&scope=news' }
     ]
   },
   {

@@ -55,6 +55,7 @@ Riktlinjer för poängsättning:
 Riktlinjer för is_clickbait (Var mycket restriktiv):
 - Sätt ENDAST is_clickbait till true vid uppenbara Clickbaits där rubriken avsiktligt döljer själva händelsen eller ämnet med vaga formuleringar eller pronomen (t.ex. "Här slår han till", "Det här ska du aldrig göra", "Chockbeskedet", "Du anar inte vad som hände", "Här är nya priserna").
 - Om is_clickbait sätts till true: Beskriv i clickbait_reason kortfattat vad rubriken döljer och bekräfta att fakta har lyfts fram i sammanfattningen ovan.
+- Myndighets- och krisinformation (t.ex. Krisinformation.se, Polisen, Sveriges Domstolar, MSB, SMHI, SOS Alarm, kommuner, officiella larm och VMA) är SAKLIG samhällsinformation och är ALDRIG ClickBait! De ska ALLTID ha is_clickbait: false.
 - SAKLIGA NYHETER ska ALLTID ha is_clickbait: false! Rubriker som beskriver vad som faktiskt hänt (t.ex. "Knarkcontainer på väg till Sverige stoppades", "Skottlossning i Malmö", "Regeringen presenterar budgeten", "Brand i villa") är sakliga nyheter och är ALDRIG Clickbait, även om de är korta eller inte nämner alla detaljer.
 - Vid minsta tveksamhet, sätt alltid is_clickbait: false."""
 
@@ -560,6 +561,7 @@ Riktlinjer för poängsättning:
 Riktlinjer för is_clickbait (Var mycket restriktiv):
 - Sätt ENDAST is_clickbait till true vid uppenbara Clickbaits där rubriken avsiktligt döljer själva händelsen eller ämnet med vaga formuleringar eller pronomen (t.ex. "Här slår han till", "Det här ska du aldrig göra", "Chockbeskedet", "Du anar inte vad som hände", "Här är nya priserna").
 - Om is_clickbait sätts till true: Beskriv i clickbait_reason kortfattat vad rubriken döljer och bekräfta att fakta har lyfts fram i sammanfattningen ovan.
+- Myndighets- och krisinformation (t.ex. Krisinformation.se, Polisen, Sveriges Domstolar, MSB, SMHI, SOS Alarm, kommuner, officiella larm och VMA) är SAKLIG samhällsinformation och är ALDRIG ClickBait! De ska ALLTID ha is_clickbait: false.
 - SAKLIGA NYHETER ska ALLTID ha is_clickbait: false! Rubriker som beskriver vad som faktiskt hänt (t.ex. "Knarkcontainer på väg till Sverige stoppades", "Skottlossning i Malmö", "Regeringen presenterar budgeten", "Brand i villa") är sakliga nyheter och är ALDRIG Clickbait, även om de är korta eller inte nämner alla detaljer.
 - Vid minsta tveksamhet, sätt alltid is_clickbait: false."""
     return prompt
@@ -764,7 +766,8 @@ def analyze_article(
     liked_tags: Optional[List[str]] = None,
     disliked_tags: Optional[List[str]] = None,
     short_summary_max_words: int = 20,
-    short_summary_max_sentences: int = 1
+    short_summary_max_sentences: int = 1,
+    is_official_source: bool = False
 ) -> Optional[Dict[str, Any]]:
     """
     Anropar LM Studio och returnerar ett berikat artikelobjekt.
@@ -774,12 +777,18 @@ def analyze_article(
     system_prompt = custom_prompt.strip() if (custom_prompt and custom_prompt.strip()) else load_system_prompt()
     model = model_override.strip() if (model_override and model_override.strip()) else get_active_model()
     
+    is_official = is_official_source or any(
+        k in (source_title or "").lower() for k in ["krisinformation", "polisen", "msb", "sos alarm", "smhi", "kommun", "folkhalsomyndigheten", "regeringen", "domstol", "domstolar"]
+    )
+
     # Bygg en kompakt, informativ användarprompt
     user_prompt_lines = [
         "Analysera följande nyhetsartikel och svara enbart med JSON-objektet:",
         f"Källa: {source_title or 'Okänd källa'}",
         f"Rubrik: {title or 'Utan rubrik'}"
     ]
+    if is_official:
+        user_prompt_lines.append("Källtyp: Officiell kris- eller myndighetsinformation (Får ALDRIG klassas som ClickBait)")
     if summary and summary.strip():
         # Begränsa texten om den är extremt lång för snabbare svar, men behåll tillräckligt för ort/detaljer
         clean_summary = summary.strip()[:1500]
@@ -898,6 +907,11 @@ def analyze_article(
         raw_cb = parsed.get("is_clickbait", False)
         is_clickbait = bool(raw_cb) if isinstance(raw_cb, bool) else (str(raw_cb).lower() in ("true", "1"))
         clickbait_reason = str(parsed.get("clickbait_reason", "")).strip()
+
+        # Myndighets- och krisinformation kan aldrig vara ClickBait
+        if is_official:
+            is_clickbait = False
+            clickbait_reason = ""
 
         # Extrahera mätvärden för poängmatrisen (urgency och substance)
         raw_u = parsed.get("urgency_score", 5)

@@ -26,6 +26,7 @@ const RssManager = ({ embedded = false }) => {
   const [pollingInterval, setPollingInterval] = useState(getRandomInterval);
   const [scrapeEnabled, setScrapeEnabled] = useState(true);
   const [includeInDashboard, setIncludeInDashboard] = useState(true);
+  const [clickbaitEnabled, setClickbaitEnabled] = useState(true);
 
   // Redigering och borttagning av befintliga flöden
   const [editingFeedId, setEditingFeedId] = useState(null);
@@ -34,6 +35,7 @@ const RssManager = ({ embedded = false }) => {
   const [editPollingInterval, setEditPollingInterval] = useState(60);
   const [editScrapeEnabled, setEditScrapeEnabled] = useState(true);
   const [editIncludeInDashboard, setEditIncludeInDashboard] = useState(true);
+  const [editClickbaitEnabled, setEditClickbaitEnabled] = useState(true);
   const [deletingFeedId, setDeletingFeedId] = useState(null);
   const [feedSearch, setFeedSearch] = useState('');
 
@@ -176,7 +178,8 @@ const RssManager = ({ embedded = false }) => {
         title: feedTitle, 
         polling_interval: randomInterval, 
         scrape_enabled: true, 
-        include_in_dashboard: true 
+        include_in_dashboard: true,
+        clickbait_enabled: true
       });
       await fetchFeeds();
       setSelectedFeedUrls(prev => prev.filter(u => u !== feedUrl));
@@ -215,13 +218,15 @@ const RssManager = ({ embedded = false }) => {
         title, 
         polling_interval: parseInt(pollingInterval, 10), 
         scrape_enabled: scrapeEnabled, 
-        include_in_dashboard: includeInDashboard 
+        include_in_dashboard: includeInDashboard,
+        clickbait_enabled: clickbaitEnabled
       });
       setUrl('');
       setTitle('');
       setPollingInterval(getRandomInterval());
       setScrapeEnabled(true);
       setIncludeInDashboard(true);
+      setClickbaitEnabled(true);
       setShowAddForm(false);
       fetchFeeds();
     } catch (err) {
@@ -699,7 +704,7 @@ const RssManager = ({ embedded = false }) => {
                   />
                 </div>
                 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: '1', minWidth: '250px', paddingBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: '1', minWidth: '350px', flexWrap: 'wrap', paddingBottom: '0.5rem' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)', cursor: 'pointer', fontSize: '0.9rem' }}>
                     <div className="toggle-switch">
                       <input type="checkbox" checked={scrapeEnabled} onChange={(e) => setScrapeEnabled(e.target.checked)} />
@@ -713,6 +718,13 @@ const RssManager = ({ embedded = false }) => {
                       <span className="toggle-slider"></span>
                     </div>
                     Visa i nyhetsflödet
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)', cursor: 'pointer', fontSize: '0.9rem' }} title="AI granskar och flaggar eventuellt ClickBait (kan inaktiveras för myndigheter och krisinformation)">
+                    <div className="toggle-switch">
+                      <input type="checkbox" checked={clickbaitEnabled} onChange={(e) => setClickbaitEnabled(e.target.checked)} />
+                      <span className="toggle-slider"></span>
+                    </div>
+                    ClickBait-granskning
                   </label>
                 </div>
 
@@ -1192,7 +1204,14 @@ const RssManager = ({ embedded = false }) => {
                         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
                           <button 
                             onClick={() => {
-                              api.put(`/feeds/${feed.id}`, { title: editTitle, url: editUrl, polling_interval: editPollingInterval, scrape_enabled: editScrapeEnabled, include_in_dashboard: editIncludeInDashboard }).then(fetchFeeds);
+                              api.put(`/feeds/${feed.id}`, { 
+                                title: editTitle, 
+                                url: editUrl, 
+                                polling_interval: editPollingInterval, 
+                                scrape_enabled: editScrapeEnabled, 
+                                include_in_dashboard: editIncludeInDashboard,
+                                clickbait_enabled: editClickbaitEnabled
+                              }).then(fetchFeeds);
                               setEditingFeedId(null);
                             }} 
                             style={{ padding: '0.3rem 0.6rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem' }}
@@ -1233,7 +1252,7 @@ const RssManager = ({ embedded = false }) => {
                     )}
                   </div>
 
-                  {/* Mitten: Inställningar (Pollning, Auto-skrap, Dashboard) */}
+                  {/* Mitten: Inställningar (Pollning, Auto-skrap, Dashboard, ClickBait) */}
                   <div className="rss-actions-container" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }} title="Uppdateringsintervall i minuter">
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Intervall</span>
@@ -1252,7 +1271,7 @@ const RssManager = ({ embedded = false }) => {
                             if (editingFeedId !== feed.id) {
                               const newVal = parseInt(e.target.value, 10);
                               if (newVal !== feed.polling_interval && !isNaN(newVal)) {
-                                api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: newVal, scrape_enabled: feed.scrape_enabled, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
+                                api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: newVal, scrape_enabled: feed.scrape_enabled, include_in_dashboard: feed.include_in_dashboard, clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true }).then(fetchFeeds);
                               }
                             }
                           }}
@@ -1281,7 +1300,7 @@ const RssManager = ({ embedded = false }) => {
                             if (editingFeedId === feed.id) {
                               setEditScrapeEnabled(e.target.checked);
                             } else {
-                              api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: e.target.checked, include_in_dashboard: feed.include_in_dashboard }).then(fetchFeeds);
+                              api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: e.target.checked, include_in_dashboard: feed.include_in_dashboard, clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true }).then(fetchFeeds);
                             }
                           }}
                         />
@@ -1299,7 +1318,32 @@ const RssManager = ({ embedded = false }) => {
                             if (editingFeedId === feed.id) {
                               setEditIncludeInDashboard(e.target.checked);
                             } else {
-                              api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled, include_in_dashboard: e.target.checked }).then(fetchFeeds);
+                              api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled, include_in_dashboard: e.target.checked, clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true }).then(fetchFeeds);
+                            }
+                          }}
+                        />
+                        <span className="toggle-slider"></span>
+                      </label>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="ClickBait-granskning med AI (inaktivera för t.ex. Krisinformation och myndigheter)">
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ClickBait</span>
+                      <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
+                        <input
+                          type="checkbox"
+                          checked={editingFeedId === feed.id ? editClickbaitEnabled : (feed.clickbait_enabled !== undefined ? Boolean(feed.clickbait_enabled) : true)}
+                          onChange={(e) => {
+                            if (editingFeedId === feed.id) {
+                              setEditClickbaitEnabled(e.target.checked);
+                            } else {
+                              api.put(`/feeds/${feed.id}`, { 
+                                title: feed.title, 
+                                url: feed.url, 
+                                polling_interval: feed.polling_interval, 
+                                scrape_enabled: feed.scrape_enabled, 
+                                include_in_dashboard: feed.include_in_dashboard,
+                                clickbait_enabled: e.target.checked 
+                              }).then(fetchFeeds);
                             }
                           }}
                         />
@@ -1328,6 +1372,7 @@ const RssManager = ({ embedded = false }) => {
                             setEditPollingInterval(feed.polling_interval || 60);
                             setEditScrapeEnabled(feed.scrape_enabled);
                             setEditIncludeInDashboard(feed.include_in_dashboard);
+                            setEditClickbaitEnabled(feed.clickbait_enabled !== undefined ? Boolean(feed.clickbait_enabled) : true);
                           }}
                           style={{
                             background: 'transparent',

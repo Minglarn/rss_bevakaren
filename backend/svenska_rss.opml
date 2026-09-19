@@ -339,6 +339,7 @@
     <outline text="Blåljus &amp; Krisinformation" title="Blåljus &amp; Krisinformation">
       <outline type="rss" text="Krisinformation" title="Krisinformation" xmlUrl="https://www.krisinformation.se/nyheter/?rss=true" category="Blåljus &amp; Krisinformation" description="Viktiga meddelanden och krisinformation från svenska myndigheter (MSB)" htmlUrl="https://www.krisinformation.se"/>
       <outline type="rss" text="Polisen Händelser" title="Polisen Händelser" xmlUrl="https://polisen.se/aktuellt/rss/hela-landet/handelser-i-hela-landet/" category="Blåljus &amp; Krisinformation" description="Polisens officiella händelserapportering för hela landet" htmlUrl="https://polisen.se"/>
+      <outline type="rss" text="Sveriges Domstolar" title="Sveriges Domstolar" xmlUrl="https://www.domstol.se/feed/56/?searchPageId=2693&amp;scope=news" category="Blåljus &amp; Krisinformation" description="Officiella domstolsbeslut och nyheter från Sveriges Domstolar" htmlUrl="https://www.domstol.se"/>
     </outline>
   </body>
 </opml>

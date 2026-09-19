@@ -1004,6 +1004,30 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     }
   };
 
+  const handleDismissClickbait = async (id, e) => {
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
+    try {
+      const res = await api.post(`/articles/${id}/dismiss_clickbait`);
+      const updated = res.data;
+      const updates = {
+        is_clickbait: 0,
+        clickbait_reason: '',
+        priority: updated.priority,
+        prio_score: updated.prio_score,
+        prio_reason: updated.prio_reason
+      };
+      setReasoningItem(prev => (prev && prev.id === id ? { ...prev, ...updates } : prev));
+      setAllFeeds(prev => prev.map(a => (a.id === id ? { ...a, ...updates } : a)));
+      setDisplayedFeeds(prev => prev.map(a => (a.id === id ? { ...a, ...updates } : a)));
+      toast.success('ClickBait-varning borttagen och prioritet återställd');
+    } catch (err) {
+      console.error('Kunde inte ta bort ClickBait-varning:', err);
+      toast.error('Kunde inte ta bort ClickBait-varning');
+    }
+  };
+
   const markAllAsRead = async () => {
     try {
       const url = feedId 
@@ -1724,18 +1748,24 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
                         {/* ClickBait-varning */}
                         {shouldShowAi && Boolean(item.is_clickbait) && (
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.2rem',
-                            backgroundColor: 'rgba(239, 68, 68, 0.95)',
-                            color: '#ffffff',
-                            padding: '0.12rem 0.45rem',
-                            borderRadius: '4px',
-                            fontSize: '0.7rem',
-                            fontWeight: 700
-                          }} title={item.clickbait_reason || "ClickBait-varning"}>
+                          <span 
+                            onClick={(e) => handleDismissClickbait(item.id, e)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              backgroundColor: 'rgba(239, 68, 68, 0.95)',
+                              color: '#ffffff',
+                              padding: '0.12rem 0.45rem',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }} 
+                            title={item.clickbait_reason ? `${item.clickbait_reason} (Klicka för att ta bort varning)` : "Klicka för att ta bort ClickBait-varning"}
+                          >
                             <AlertTriangle size={12} /> ClickBait
+                            <X size={12} style={{ opacity: 0.85 }} />
                           </span>
                         )}
                       </div>
@@ -1798,20 +1828,26 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         )}
 
                         {shouldShowAi && Boolean(item.is_clickbait) && (
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                            color: '#ef4444',
-                            border: '1px solid rgba(239, 68, 68, 0.35)',
-                            padding: '0.15rem 0.5rem',
-                            borderRadius: '6px',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.3px'
-                          }} title={item.clickbait_reason || "Clickbait-varning"}>
-                            <AlertTriangle size={12} /> Clickbait-varning
+                          <span 
+                            onClick={(e) => handleDismissClickbait(item.id, e)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                              color: '#ef4444',
+                              border: '1px solid rgba(239, 68, 68, 0.35)',
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: '6px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              letterSpacing: '0.3px',
+                              cursor: 'pointer'
+                            }} 
+                            title={item.clickbait_reason ? `${item.clickbait_reason} (Klicka för att ta bort varning)` : "Klicka för att ta bort ClickBait-varning"}
+                          >
+                            <AlertTriangle size={12} /> ClickBait-varning
+                            <X size={12} style={{ opacity: 0.85 }} />
                           </span>
                         )}
 
@@ -2088,19 +2124,49 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           {Boolean(item.is_clickbait) && (
                             <div style={{
                               display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: '0.4rem',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              gap: '0.5rem',
                               marginTop: '0.65rem',
+                              padding: '0.45rem 0.65rem',
+                              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(239, 68, 68, 0.25)',
                               fontSize: '0.8rem',
                               color: 'var(--text-muted)',
-                              lineHeight: '1.4',
-                              fontStyle: 'italic'
+                              lineHeight: '1.4'
                             }}>
-                              <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444', fontStyle: 'normal' }} />
-                              <span>
-                                <strong style={{ color: '#ef4444', fontStyle: 'normal' }}>Clickbait:</strong>{' '}
-                                {item.clickbait_reason || "Rubriken undanhåller centrala fakta eller överdriver för att locka klick. Fakta har lyfts fram i sammanfattningen ovan."}
-                              </span>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', flex: 1, minWidth: '220px' }}>
+                                <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444' }} />
+                                <span>
+                                  <strong style={{ color: '#ef4444' }}>ClickBait:</strong>{' '}
+                                  {item.clickbait_reason || "Rubriken undanhåller centrala fakta eller överdriver för att locka klick. Fakta har lyfts fram i sammanfattningen ovan."}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => handleDismissClickbait(item.id, e)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  backgroundColor: '#ef4444',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  padding: '0.25rem 0.55rem',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  flexShrink: 0,
+                                  transition: 'opacity 0.2s'
+                                }}
+                                title="Ta bort ClickBait-varningen och återställ artikelns prioritetspoäng"
+                              >
+                                <X size={13} />
+                                Ta bort ClickBait-varning
+                              </button>
                             </div>
                           )}
                         </motion.div>

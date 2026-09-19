@@ -215,10 +215,58 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE feeds ADD COLUMN icon_url TEXT DEFAULT ''"))
                     conn.commit()
                     print("[DB] Added icon_url column to feeds", flush=True)
+                if "clickbait_enabled" not in f_cols:
+                    conn.execute(text("ALTER TABLE feeds ADD COLUMN clickbait_enabled INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added clickbait_enabled column to feeds", flush=True)
                 conn.execute(text("UPDATE feeds SET notify_enabled = 1 WHERE notify_enabled IS NULL"))
+                conn.execute(text("UPDATE feeds SET clickbait_enabled = 1 WHERE clickbait_enabled IS NULL"))
                 conn.commit()
 
-            first_user = conn.execute(text("SELECT id FROM users ORDER BY id ASC LIMIT 1")).fetchone()
+                # Säkerställ att officiella myndighetsflöden har clickbait_enabled = 0
+                conn.execute(text("""
+                    UPDATE feeds 
+                    SET clickbait_enabled = 0 
+                    WHERE LOWER(title) LIKE '%krisinformation%' 
+                       OR LOWER(title) LIKE '%polisen%' 
+                       OR LOWER(title) LIKE '%msb%' 
+                       OR LOWER(title) LIKE '%domstol%'
+                       OR LOWER(url) LIKE '%krisinformation.se%' 
+                       OR LOWER(url) LIKE '%polisen.se%'
+                       OR LOWER(url) LIKE '%domstol.se%'
+                """))
+                conn.commit()
+
+                # Automatisk rensning av felaktig ClickBait-märkning för officiella kris- och myndighetsflöden
+                conn.execute(text("""
+                    UPDATE articles 
+                    SET is_clickbait = 0, clickbait_reason = '' 
+                    WHERE is_clickbait = 1 AND feed_id IN (
+                        SELECT id FROM feeds 
+                        WHERE LOWER(title) LIKE '%krisinformation%' 
+                           OR LOWER(title) LIKE '%polisen%' 
+                           OR LOWER(title) LIKE '%msb%' 
+                           OR LOWER(title) LIKE '%domstol%'
+                           OR LOWER(url) LIKE '%krisinformation.se%' 
+                           OR LOWER(url) LIKE '%polisen.se%'
+                           OR LOWER(url) LIKE '%domstol.se%'
+                           OR clickbait_enabled = 0
+                    )
+                """))
+                conn.commit()
+
+                # Lägg till Sveriges Domstolar om det inte redan finns för användaren
+                first_user = conn.execute(text("SELECT id FROM users ORDER BY id ASC LIMIT 1")).fetchone()
+                if first_user:
+                    uid = first_user[0]
+                    domstol_exists = conn.execute(text(f"SELECT id FROM feeds WHERE user_id = {uid} AND (url LIKE '%domstol.se%' OR title LIKE '%Domstol%')")).fetchone()
+                    if not domstol_exists:
+                        conn.execute(text(f"""
+                            INSERT INTO feeds (url, title, polling_interval, scrape_enabled, include_in_dashboard, notify_enabled, clickbait_enabled, icon_url, user_id)
+                            VALUES ('https://www.domstol.se/feed/56/?searchPageId=2693&scope=news', 'Sveriges Domstolar', 20, 1, 1, 1, 0, '', {uid})
+                        """))
+                        conn.commit()
+                        print("[DB] Lade till Sveriges Domstolar som officiellt myndighetsflöde för användare #" + str(uid), flush=True)
             if first_user:
                 conn.execute(text(f"UPDATE feeds SET user_id = {first_user[0]} WHERE user_id IS NULL"))
                 conn.commit()
@@ -371,6 +419,25 @@ def normalize_user_categories(cats_raw: Any) -> List[Dict[str, Any]]:
             result.append({"name": name, "weight": max(0, min(10, w))})
             
     return result if result else list(ai_service.DEFAULT_CATEGORIES_WITH_WEIGHTS)
+
+def is_official_or_exempt_feed(feed_title: str = "", feed_url: str = "", clickbait_enabled: Any = 1) -> bool:
+    """Avgör om ett flöde är en officiell myndighet/krisresurs eller om ClickBait-kontroll är avstängd."""
+    if clickbait_enabled is not None:
+        try:
+            if int(clickbait_enabled) == 0:
+                return True
+        except (ValueError, TypeError):
+            pass
+    t = (feed_title or "").lower()
+    u = (feed_url or "").lower()
+    official_keywords = [
+        "krisinformation", "polisen", "msb", "sos alarm", "smhi", 
+        "folkhalsomyndigheten", "regeringen", "trosa kommun", "kommun",
+        "domstol", "domstolsverket", "domstolar"
+    ]
+    if any(k in t or k in u for k in official_keywords):
+        return True
+    return False
 
 def run_db_migrations(db_path: str):
     if not os.path.exists(db_path):
@@ -612,6 +679,12 @@ def run_db_migrations(db_path: str):
         # Migration 25: Add push_summary_type to user_ai_settings
         try:
             cur.execute("ALTER TABLE user_ai_settings ADD COLUMN push_summary_type VARCHAR DEFAULT 'short';")
+        except sqlite3.OperationalError:
+            pass
+
+        # Migration 26: Add clickbait_enabled to feeds
+        try:
+            cur.execute("ALTER TABLE feeds ADD COLUMN clickbait_enabled INTEGER DEFAULT 1;")
         except sqlite3.OperationalError:
             pass
 
@@ -1594,6 +1667,9 @@ async def ai_processing_loop():
                     feed_obj = db_item.query(models.Feed).filter(models.Feed.id == feed_id).first() if feed_id else None
                     source = feed_obj.title if (feed_obj and feed_obj.title) else ""
                     user_id = feed_obj.user_id if feed_obj else None
+                    feed_url = feed_obj.url if feed_obj else ""
+                    feed_cb_enabled = getattr(feed_obj, "clickbait_enabled", 1) if feed_obj else 1
+                    is_official = is_official_or_exempt_feed(source, feed_url, feed_cb_enabled)
 
                     user_prompt = None
                     user_cats = None
@@ -1688,7 +1764,8 @@ async def ai_processing_loop():
                         "inc_summary": inc_summary,
                         "push_summary_type": push_summary_type,
                         "short_summary_max_words": short_summary_max_words,
-                        "short_summary_max_sentences": short_summary_max_sentences
+                        "short_summary_max_sentences": short_summary_max_sentences,
+                        "is_official": is_official
                     }
                 finally:
                     db_item.close()
@@ -1753,7 +1830,8 @@ async def ai_processing_loop():
                     liked_tags=item.get("liked_tags"),
                     disliked_tags=item.get("disliked_tags"),
                     short_summary_max_words=item.get("short_summary_max_words", 20),
-                    short_summary_max_sentences=item.get("short_summary_max_sentences", 1)
+                    short_summary_max_sentences=item.get("short_summary_max_sentences", 1),
+                    is_official_source=item.get("is_official", False)
                 )
 
                 if analysis:
@@ -1764,8 +1842,9 @@ async def ai_processing_loop():
                     ai_summary = analysis.get("ai_summary", "")
                     ai_short_summary = analysis.get("ai_short_summary", "")
                     tags_json = json.dumps(analysis.get("tags", []), ensure_ascii=False)
-                    is_clickbait = analysis.get("is_clickbait", 0)
-                    clickbait_reason = analysis.get("clickbait_reason", "")
+                    is_exempt = item.get("is_official", False)
+                    is_clickbait = 0 if is_exempt else analysis.get("is_clickbait", 0)
+                    clickbait_reason = "" if is_exempt else analysis.get("clickbait_reason", "")
                     urgency_score = analysis.get("urgency_score", 5)
                     substance_score = analysis.get("substance_score", 5)
                     dur = analysis.get("duration_s", 0.0)
@@ -2028,6 +2107,7 @@ def get_feeds(db: Session = Depends(database.get_db), current_user: models.User 
             "scrape_enabled": bool(feed.scrape_enabled),
             "include_in_dashboard": bool(feed.include_in_dashboard),
             "notify_enabled": bool(feed.notify_enabled),
+            "clickbait_enabled": bool(getattr(feed, 'clickbait_enabled', 1) if getattr(feed, 'clickbait_enabled', 1) is not None else True),
             "icon_url": get_feed_icon_url(feed),
             "unread_count": unread_count
         }
@@ -2065,6 +2145,12 @@ def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db)
         import random
         polling_interval = random.randint(10, 30)
 
+    initial_clickbait = 1
+    if is_official_or_exempt_feed(feed.title, feed.url, None):
+        initial_clickbait = 0
+    elif getattr(feed, 'clickbait_enabled', None) is not None:
+        initial_clickbait = 1 if feed.clickbait_enabled else 0
+
     db_feed = models.Feed(
         url=feed.url, 
         title=feed.title, 
@@ -2072,6 +2158,7 @@ def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db)
         scrape_enabled=int(feed.scrape_enabled), 
         include_in_dashboard=int(feed.include_in_dashboard), 
         notify_enabled=int(feed.notify_enabled), 
+        clickbait_enabled=initial_clickbait,
         icon_url=icon_url,
         user_id=current_user.id
     )
@@ -2087,6 +2174,7 @@ def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db)
     db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
     db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
     db_feed.notify_enabled = bool(db_feed.notify_enabled)
+    db_feed.clickbait_enabled = bool(db_feed.clickbait_enabled)
     return db_feed
 
 @app.put("/feeds/notifications/toggle-all", response_model=dict)
@@ -2126,11 +2214,14 @@ def update_feed(feed_id: int, feed: schemas.FeedCreate, db: Session = Depends(da
     db_feed.scrape_enabled = int(feed.scrape_enabled)
     db_feed.include_in_dashboard = int(feed.include_in_dashboard)
     db_feed.notify_enabled = int(feed.notify_enabled)
+    if hasattr(feed, 'clickbait_enabled') and feed.clickbait_enabled is not None:
+        db_feed.clickbait_enabled = int(feed.clickbait_enabled)
     db.commit()
     db.refresh(db_feed)
     db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
     db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
     db_feed.notify_enabled = bool(db_feed.notify_enabled)
+    db_feed.clickbait_enabled = bool(db_feed.clickbait_enabled)
     return db_feed
 
 @app.delete("/feeds/{feed_id}", response_model=dict)
@@ -3106,6 +3197,11 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
 
     liked_tags, disliked_tags = get_user_interest_profile(db, current_user.id)
 
+    feed_title = art.feed.title if art.feed else ""
+    feed_url = art.feed.url if art.feed else ""
+    feed_cb_enabled = getattr(art.feed, "clickbait_enabled", 1) if art.feed else 1
+    is_exempt = is_official_or_exempt_feed(feed_title, feed_url, feed_cb_enabled)
+
     analysis = await asyncio.to_thread(
         ai_service.analyze_article,
         title=art.title,
@@ -3119,7 +3215,8 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
         liked_tags=liked_tags,
         disliked_tags=disliked_tags,
         short_summary_max_words=short_words,
-        short_summary_max_sentences=short_sents
+        short_summary_max_sentences=short_sents,
+        is_official_source=is_exempt
     )
     if not analysis:
         raise HTTPException(status_code=502, detail="LM Studio svarade inte eller kunde inte analysera artikeln.")
@@ -3134,8 +3231,8 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
     art.ai_summary = analysis.get("ai_summary", "")
     art.ai_short_summary = analysis.get("ai_short_summary", "")
     art.tags = json.dumps(analysis.get("tags", []), ensure_ascii=False)
-    art.is_clickbait = analysis.get("is_clickbait", 0)
-    art.clickbait_reason = analysis.get("clickbait_reason", "")
+    art.is_clickbait = 0 if is_exempt else analysis.get("is_clickbait", 0)
+    art.clickbait_reason = "" if is_exempt else analysis.get("clickbait_reason", "")
     art.ai_duration_s = analysis.get("duration_s", 0.0)
     art.ai_model = analysis.get("ai_model") or user_model or ai_service.get_active_model()
 
@@ -4221,6 +4318,68 @@ def vote_article(
         "article_id": article.id, 
         "user_vote": article.user_vote, 
         "is_locked": article.is_locked
+    }
+
+@app.post("/articles/{article_id}/dismiss_clickbait")
+def dismiss_clickbait(
+    article_id: int, 
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    article = db.query(models.Article).join(models.Feed).filter(
+        models.Article.id == article_id, 
+        models.Feed.user_id == current_user.id
+    ).first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Artikeln hittades inte")
+
+    article.is_clickbait = 0
+    article.clickbait_reason = ""
+
+    # Hämta användarens AI-inställningar för korrekt prio-beräkning
+    user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
+    user_settings = None
+    if user_ai:
+        user_settings = {
+            "prio_threshold": user_ai.prio_threshold or 75,
+            "prio_rules": user_ai.prio_rules or "",
+            "exclude_rules": user_ai.exclude_rules or "",
+            "categories": json.loads(user_ai.categories) if user_ai.categories else []
+        }
+
+    categories_list = []
+    if article.categories:
+        try:
+            categories_list = json.loads(article.categories)
+        except Exception:
+            categories_list = [c.strip() for c in article.categories.split(",") if c.strip()]
+
+    # Beräkna om prioritering utan ClickBait-avdrag (-25p)
+    prio_res = ai_service.calculate_priority_score(
+        urgency_score=article.urgency_score or 5,
+        substance_score=article.substance_score or 5,
+        category=article.category or "Övrigt",
+        title=article.title or "",
+        summary=article.ai_summary or article.summary or "",
+        categories=categories_list,
+        user_settings=user_settings,
+        is_clickbait=False,
+        user_vote=article.user_vote or 0
+    )
+
+    article.priority = prio_res.get("priority", article.priority)
+    article.prio_score = prio_res.get("prio_score", article.prio_score)
+    article.prio_reason = prio_res.get("prio_reason", article.prio_reason)
+    db.commit()
+
+    return {
+        "status": "ok",
+        "article_id": article.id,
+        "is_clickbait": 0,
+        "clickbait_reason": "",
+        "priority": article.priority,
+        "prio_score": article.prio_score,
+        "prio_reason": article.prio_reason
     }
 
 @app.post("/system/purge")

@@ -1,9 +1,50 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.11',
+    date: '2026-09-19',
+    title: 'Nytt officiellt flöde: Sveriges Domstolar med inaktiv ClickBait-kontroll',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Sveriges Domstolar tillagt i flödeskatalogen',
+        description: 'Lagt till det officiella flödet för domstolsbeslut och nyheter från Sveriges Domstolar i katalogen och introduktionsguiden.'
+      },
+      {
+        type: 'feature',
+        title: 'Automatisk vitlistning som myndighetskälla',
+        description: 'Sveriges Domstolar konfigureras automatiskt med avstängd ClickBait-kontroll och omfattas av det deterministiska systemskyddet för officiella myndigheter.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.19.10',
+    date: '2026-09-19',
+    title: 'Funktion för att ta bort ClickBait-varning samt skydd för myndighetsflöden',
+    badge: '',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Ta bort ClickBait-varning direkt på artikeln',
+        description: 'Möjlighet att avfärda ClickBait-varningen för en enskild artikel direkt i gränssnittet. Varningen och den röda indikatorn tas bort samtidigt som artikelns prioritetspoäng och nivå återställs utan ClickBait-avdrag.'
+      },
+      {
+        type: 'feature',
+        title: 'Automatiskt ClickBait-skydd för myndighetsflöden',
+        description: 'Artiklar från officiella myndighetskällor (såsom Krisinformation.se, Polisen och MSB) skyddas i både AI-prompt och systemlogik från att felaktigt flaggas som ClickBait.'
+      },
+      {
+        type: 'feature',
+        title: 'ClickBait-kontroll per flöde',
+        description: 'Lagt till inställning i flödeshanteraren för att aktivera eller inaktivera ClickBait-granskning för individuella RSS-flöden.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.09',
     date: '2026-09-19',
     title: 'Dedikerad kategori för Blåljus & Krisinformation och uppdaterat Krisinformation-flöde',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',
