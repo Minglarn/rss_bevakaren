@@ -219,8 +219,13 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE feeds ADD COLUMN clickbait_enabled INTEGER DEFAULT 1"))
                     conn.commit()
                     print("[DB] Added clickbait_enabled column to feeds", flush=True)
+                if "max_items" not in f_cols:
+                    conn.execute(text("ALTER TABLE feeds ADD COLUMN max_items INTEGER DEFAULT 0"))
+                    conn.commit()
+                    print("[DB] Added max_items column to feeds", flush=True)
                 conn.execute(text("UPDATE feeds SET notify_enabled = 1 WHERE notify_enabled IS NULL"))
                 conn.execute(text("UPDATE feeds SET clickbait_enabled = 1 WHERE clickbait_enabled IS NULL"))
+                conn.execute(text("UPDATE feeds SET max_items = 0 WHERE max_items IS NULL"))
                 conn.commit()
 
                 # Säkerställ att officiella myndighetsflöden har clickbait_enabled = 0
@@ -685,6 +690,12 @@ def run_db_migrations(db_path: str):
         # Migration 26: Add clickbait_enabled to feeds
         try:
             cur.execute("ALTER TABLE feeds ADD COLUMN clickbait_enabled INTEGER DEFAULT 1;")
+        except sqlite3.OperationalError:
+            pass
+
+        # Migration 27: Add max_items to feeds
+        try:
+            cur.execute("ALTER TABLE feeds ADD COLUMN max_items INTEGER DEFAULT 0;")
         except sqlite3.OperationalError:
             pass
 
@@ -1258,9 +1269,12 @@ async def polling_loop():
                     max_age_hours = int(user_ai.max_article_age_hours if (user_ai and user_ai.max_article_age_hours) else os.environ.get("AI_MAX_ARTICLE_AGE_HOURS", "48"))
                     cutoff_pub_ts = current_time - (max_age_hours * 3600)
 
-                    # Om flödet saknar tidsstämplar begränsar vi initial import till max 25 nyaste
+                    # Om flödet har ett specificerat max antal artiklar, begränsa till detta
                     parsed_items = items
-                    if is_initial_poll and parsed_items and all((it.get("published_ts") or 0) == 0 for it in parsed_items[:5]):
+                    if getattr(feed, 'max_items', 0) and feed.max_items > 0:
+                        parsed_items = parsed_items[:feed.max_items]
+                    elif is_initial_poll and parsed_items and all((it.get("published_ts") or 0) == 0 for it in parsed_items[:5]):
+                        # Om flödet saknar tidsstämplar begränsar vi initial import till max 25 nyaste
                         parsed_items = parsed_items[:25]
 
                     for item in parsed_items:
@@ -2108,6 +2122,7 @@ def get_feeds(db: Session = Depends(database.get_db), current_user: models.User 
             "include_in_dashboard": bool(feed.include_in_dashboard),
             "notify_enabled": bool(feed.notify_enabled),
             "clickbait_enabled": bool(getattr(feed, 'clickbait_enabled', 1) if getattr(feed, 'clickbait_enabled', 1) is not None else True),
+            "max_items": getattr(feed, 'max_items', 0) or 0,
             "icon_url": get_feed_icon_url(feed),
             "unread_count": unread_count
         }
@@ -2159,6 +2174,7 @@ def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db)
         include_in_dashboard=int(feed.include_in_dashboard), 
         notify_enabled=int(feed.notify_enabled), 
         clickbait_enabled=initial_clickbait,
+        max_items=getattr(feed, 'max_items', 0) or 0,
         icon_url=icon_url,
         user_id=current_user.id
     )
@@ -2175,6 +2191,7 @@ def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db)
     db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
     db_feed.notify_enabled = bool(db_feed.notify_enabled)
     db_feed.clickbait_enabled = bool(db_feed.clickbait_enabled)
+    db_feed.max_items = getattr(db_feed, 'max_items', 0) or 0
     return db_feed
 
 @app.put("/feeds/notifications/toggle-all", response_model=dict)
@@ -2216,12 +2233,15 @@ def update_feed(feed_id: int, feed: schemas.FeedCreate, db: Session = Depends(da
     db_feed.notify_enabled = int(feed.notify_enabled)
     if hasattr(feed, 'clickbait_enabled') and feed.clickbait_enabled is not None:
         db_feed.clickbait_enabled = int(feed.clickbait_enabled)
+    if hasattr(feed, 'max_items') and feed.max_items is not None:
+        db_feed.max_items = int(feed.max_items)
     db.commit()
     db.refresh(db_feed)
     db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
     db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
     db_feed.notify_enabled = bool(db_feed.notify_enabled)
     db_feed.clickbait_enabled = bool(db_feed.clickbait_enabled)
+    db_feed.max_items = getattr(db_feed, 'max_items', 0) or 0
     return db_feed
 
 @app.delete("/feeds/{feed_id}", response_model=dict)

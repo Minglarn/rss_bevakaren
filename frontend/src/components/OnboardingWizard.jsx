@@ -73,6 +73,20 @@ const RECOMMENDED_PACKAGES = [
       { title: 'TROSA Notiser', url: 'https://www.trosa.se/notiser/feed/' },
       { title: 'Trosa Evenemang', url: 'https://trosa.com/events/feed/' }
     ]
+  },
+  {
+    id: 'lifestyle',
+    title: 'Livsstil & Kvinnor',
+    description: 'Mode, hälsa, karriär, relationer och inspiration från ledande magasin.',
+    feeds: [
+      { title: 'Amelia', url: 'https://amelia.expressen.se/feed/' },
+      { title: 'Femina', url: 'https://www.femina.se/feed' },
+      { title: 'ELLE Sverige', url: 'https://www.elle.se/feed' },
+      { title: 'Damernas Värld', url: 'https://damernasvarld.expressen.se/feed/' },
+      { title: 'MåBra', url: 'https://www.mabra.com/feed' },
+      { title: 'The Everygirl', url: 'https://theeverygirl.com/feed/' },
+      { title: 'Women 2.0', url: 'https://women2.com/feed/' }
+    ]
   }
 ];
 

@@ -24,6 +24,7 @@ const RssManager = ({ embedded = false }) => {
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [pollingInterval, setPollingInterval] = useState(getRandomInterval);
+  const [maxItems, setMaxItems] = useState(0);
   const [scrapeEnabled, setScrapeEnabled] = useState(true);
   const [includeInDashboard, setIncludeInDashboard] = useState(true);
   const [clickbaitEnabled, setClickbaitEnabled] = useState(true);
@@ -33,6 +34,7 @@ const RssManager = ({ embedded = false }) => {
   const [editTitle, setEditTitle] = useState('');
   const [editUrl, setEditUrl] = useState('');
   const [editPollingInterval, setEditPollingInterval] = useState(60);
+  const [editMaxItems, setEditMaxItems] = useState(0);
   const [editScrapeEnabled, setEditScrapeEnabled] = useState(true);
   const [editIncludeInDashboard, setEditIncludeInDashboard] = useState(true);
   const [editClickbaitEnabled, setEditClickbaitEnabled] = useState(true);
@@ -219,11 +221,13 @@ const RssManager = ({ embedded = false }) => {
         polling_interval: parseInt(pollingInterval, 10), 
         scrape_enabled: scrapeEnabled, 
         include_in_dashboard: includeInDashboard,
-        clickbait_enabled: clickbaitEnabled
+        clickbait_enabled: clickbaitEnabled,
+        max_items: parseInt(maxItems, 10) || 0
       });
       setUrl('');
       setTitle('');
       setPollingInterval(getRandomInterval());
+      setMaxItems(0);
       setScrapeEnabled(true);
       setIncludeInDashboard(true);
       setClickbaitEnabled(true);
@@ -700,6 +704,18 @@ const RssManager = ({ embedded = false }) => {
                     title="Slumpas som standard mellan 10-30 min för att sprida ut hämtningen"
                     value={pollingInterval}
                     onChange={(e) => setPollingInterval(e.target.value)}
+                    style={{ width: '100%', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
+                  />
+                </div>
+                <div style={{ flex: '0 1 120px' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Max artiklar</label>
+                  <input 
+                    type="number" 
+                    min="0"
+                    placeholder="0 = alla"
+                    title="Högsta antal artiklar att läsa in per hämtning (0 = alla/obegränsat)"
+                    value={maxItems === 0 ? '' : maxItems}
+                    onChange={(e) => setMaxItems(parseInt(e.target.value, 10) || 0)}
                     style={{ width: '100%', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
                   />
                 </div>
@@ -1180,244 +1196,544 @@ const RssManager = ({ embedded = false }) => {
                 Inga träffar för "{feedSearch}".
               </div>
             ) : (
-              sortedAndFilteredFeeds.map((feed) => (
-                <div className="rss-list-item" key={feed.id}>
-                  
-                  {/* Vänster: Titel & URL */}
-                  <div style={{ flex: '2', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                    {editingFeedId === feed.id ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <input 
-                          type="text"
-                          value={editTitle} 
-                          onChange={e => setEditTitle(e.target.value)}
-                          placeholder="Titel"
-                          style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '1rem', width: '100%' }}
-                        />
-                        <input 
-                          type="url"
-                          value={editUrl} 
-                          onChange={e => setEditUrl(e.target.value)}
-                          placeholder="RSS-adress"
-                          style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-app)', color: 'var(--text-muted)', fontSize: '0.85rem', width: '100%' }}
-                        />
-                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                          <button 
-                            onClick={() => {
-                              api.put(`/feeds/${feed.id}`, { 
-                                title: editTitle, 
-                                url: editUrl, 
-                                polling_interval: editPollingInterval, 
-                                scrape_enabled: editScrapeEnabled, 
-                                include_in_dashboard: editIncludeInDashboard,
-                                clickbait_enabled: editClickbaitEnabled
-                              }).then(fetchFeeds);
-                              setEditingFeedId(null);
-                            }} 
-                            style={{ padding: '0.3rem 0.6rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem' }}
-                          >
-                            <Check size={14} /> Spara
-                          </button>
-                          <button 
-                            onClick={() => setEditingFeedId(null)} 
-                            style={{ padding: '0.3rem 0.6rem', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem' }}
-                          >
-                            <X size={14} /> Avbryt
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <img 
-                            src={resolveFeedIcon(feed.icon_url)} 
-                            alt="" 
-                            style={{ width: 18, height: 18, borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }} 
-                            onError={(e) => { 
-                              if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
-                                e.currentTarget.onerror = null;
-                                e.currentTarget.src = '/default-feed-icon.png';
-                              }
-                            }} 
-                          />
-                          <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {feed.title || '[Ingen titel angiven]'}
-                          </h3>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          <LinkIcon size={12} style={{ flexShrink: 0 }} />
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{feed.url}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Mitten: Inställningar (Pollning, Auto-skrap, Dashboard, ClickBait) */}
-                  <div className="rss-actions-container" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }} title="Uppdateringsintervall i minuter">
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Intervall</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', backgroundColor: 'var(--bg-app)', padding: '0.15rem 0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                        <Activity size={12} style={{ color: 'var(--primary)' }} />
-                        <input
-                          type="number"
-                          min="1"
-                          value={editingFeedId === feed.id ? editPollingInterval : (feed.polling_interval || 60)}
-                          onChange={(e) => {
-                            if (editingFeedId === feed.id) {
-                              setEditPollingInterval(parseInt(e.target.value, 10));
-                            }
-                          }}
-                          onBlur={(e) => {
-                            if (editingFeedId !== feed.id) {
-                              const newVal = parseInt(e.target.value, 10);
-                              if (newVal !== feed.polling_interval && !isNaN(newVal)) {
-                                api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: newVal, scrape_enabled: feed.scrape_enabled, include_in_dashboard: feed.include_in_dashboard, clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true }).then(fetchFeeds);
-                              }
-                            }
-                          }}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'var(--text-main)',
-                            fontSize: '0.85rem',
-                            width: '30px',
-                            padding: '0',
-                            textAlign: 'center',
-                            outline: 'none'
-                          }}
-                        />
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>m</span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="Inaktivera om artiklar inte kan hämtas automatiskt">
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Automatisk hämtning</span>
-                      <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
-                        <input
-                          type="checkbox"
-                          checked={editingFeedId === feed.id ? editScrapeEnabled : feed.scrape_enabled}
-                          onChange={(e) => {
-                            if (editingFeedId === feed.id) {
-                              setEditScrapeEnabled(e.target.checked);
-                            } else {
-                              api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: e.target.checked, include_in_dashboard: feed.include_in_dashboard, clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true }).then(fetchFeeds);
-                            }
-                          }}
-                        />
-                        <span className="toggle-slider"></span>
-                      </label>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="Visa i nyhetsflödet">
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nyhetsflöde</span>
-                      <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
-                        <input
-                          type="checkbox"
-                          checked={editingFeedId === feed.id ? editIncludeInDashboard : feed.include_in_dashboard}
-                          onChange={(e) => {
-                            if (editingFeedId === feed.id) {
-                              setEditIncludeInDashboard(e.target.checked);
-                            } else {
-                              api.put(`/feeds/${feed.id}`, { title: feed.title, url: feed.url, polling_interval: feed.polling_interval, scrape_enabled: feed.scrape_enabled, include_in_dashboard: e.target.checked, clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true }).then(fetchFeeds);
-                            }
-                          }}
-                        />
-                        <span className="toggle-slider"></span>
-                      </label>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }} title="ClickBait-granskning med AI (inaktivera för t.ex. Krisinformation och myndigheter)">
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ClickBait</span>
-                      <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
-                        <input
-                          type="checkbox"
-                          checked={editingFeedId === feed.id ? editClickbaitEnabled : (feed.clickbait_enabled !== undefined ? Boolean(feed.clickbait_enabled) : true)}
-                          onChange={(e) => {
-                            if (editingFeedId === feed.id) {
-                              setEditClickbaitEnabled(e.target.checked);
-                            } else {
-                              api.put(`/feeds/${feed.id}`, { 
-                                title: feed.title, 
-                                url: feed.url, 
-                                polling_interval: feed.polling_interval, 
-                                scrape_enabled: feed.scrape_enabled, 
-                                include_in_dashboard: feed.include_in_dashboard,
-                                clickbait_enabled: e.target.checked 
-                              }).then(fetchFeeds);
-                            }
-                          }}
-                        />
-                        <span className="toggle-slider"></span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Höger: Åtgärder (Edit/Delete) */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem', marginLeft: '0.5rem' }}>
-                    {deletingFeedId === feed.id ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
-                        <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'bold' }}>Är du säker?</span>
-                        <div style={{ display: 'flex', gap: '0.25rem' }}>
-                          <button onClick={() => { handleDelete(feed.id); setDeletingFeedId(null); }} style={{ padding: '0.2rem 0.5rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>JA</button>
-                          <button onClick={() => setDeletingFeedId(null)} style={{ padding: '0.2rem 0.5rem', background: 'var(--bg-app)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>NEJ</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <button 
-                          onClick={() => { 
-                            setEditingFeedId(feed.id); 
-                            setEditTitle(feed.title); 
-                            setEditUrl(feed.url); 
-                            setEditPollingInterval(feed.polling_interval || 60);
-                            setEditScrapeEnabled(feed.scrape_enabled);
-                            setEditIncludeInDashboard(feed.include_in_dashboard);
-                            setEditClickbaitEnabled(feed.clickbait_enabled !== undefined ? Boolean(feed.clickbait_enabled) : true);
-                          }}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'var(--text-muted)',
-                            cursor: 'pointer',
-                            padding: '0.4rem',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseOver={(e) => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)'; }}
-                          onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
-                          title="Redigera flöde"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          onClick={() => setDeletingFeedId(feed.id)}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'var(--text-muted)',
-                            cursor: 'pointer',
-                            padding: '0.4rem',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseOver={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; }}
-                          onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
-                          title="Ta bort flöde"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-
+              <>
+                {/* Desktop gemensam tabellheader */}
+                <div className="rss-table-header">
+                  <div>Källa / Flöde</div>
+                  <div className="rss-table-col-center" title="Uppdateringsintervall i minuter">Intervall</div>
+                  <div className="rss-table-col-center" title="Max antal artiklar att läsa in per hämtning (0 = obegränsat)">Max art.</div>
+                  <div className="rss-table-col-center" title="Hämta artiklar automatiskt i bakgrunden">Hämta</div>
+                  <div className="rss-table-col-center" title="Visa artiklar i nyhetsflödet">I flöde</div>
+                  <div className="rss-table-col-center" title="ClickBait-granskning med AI">ClickBait</div>
+                  <div className="rss-table-col-right">Åtgärder</div>
                 </div>
-              ))
+
+                {sortedAndFilteredFeeds.map((feed) => (
+                  <div className="rss-list-item" key={feed.id}>
+                    {editingFeedId === feed.id ? (
+                      <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '0.85rem', width: '100%', padding: '0.25rem 0' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                          <div style={{ flex: '1 1 200px' }}>
+                            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Flödestitel</label>
+                            <input 
+                              type="text"
+                              value={editTitle} 
+                              onChange={e => setEditTitle(e.target.value)}
+                              placeholder="Titel"
+                              style={{ padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.92rem', width: '100%' }}
+                            />
+                          </div>
+                          <div style={{ flex: '2 1 300px' }}>
+                            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>RSS-adress (URL)</label>
+                            <input 
+                              type="url"
+                              value={editUrl} 
+                              onChange={e => setEditUrl(e.target.value)}
+                              placeholder="RSS-adress"
+                              style={{ padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid var(--primary)', background: 'var(--bg-app)', color: 'var(--text-muted)', fontSize: '0.88rem', width: '100%' }}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', background: 'var(--bg-app)', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Intervall:</span>
+                              <div className="rss-pill-input">
+                                <Activity size={12} style={{ color: 'var(--primary)' }} />
+                                <input 
+                                  type="number" 
+                                  min="1" 
+                                  value={editPollingInterval} 
+                                  onChange={e => setEditPollingInterval(parseInt(e.target.value, 10) || 1)} 
+                                />
+                                <span>m</span>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Max art:</span>
+                              <div className="rss-pill-input">
+                                <input 
+                                  type="number" 
+                                  min="0" 
+                                  placeholder="0"
+                                  value={editMaxItems} 
+                                  onChange={e => setEditMaxItems(parseInt(e.target.value, 10) || 0)} 
+                                />
+                                <span>st</span>
+                              </div>
+                            </div>
+
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-main)', cursor: 'pointer' }}>
+                              <div className="toggle-switch" style={{ transform: 'scale(0.75)' }}>
+                                <input type="checkbox" checked={editScrapeEnabled} onChange={e => setEditScrapeEnabled(e.target.checked)} />
+                                <span className="toggle-slider"></span>
+                              </div>
+                              Hämta
+                            </label>
+
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-main)', cursor: 'pointer' }}>
+                              <div className="toggle-switch" style={{ transform: 'scale(0.75)' }}>
+                                <input type="checkbox" checked={editIncludeInDashboard} onChange={e => setEditIncludeInDashboard(e.target.checked)} />
+                                <span className="toggle-slider"></span>
+                              </div>
+                              I flöde
+                            </label>
+
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-main)', cursor: 'pointer' }}>
+                              <div className="toggle-switch" style={{ transform: 'scale(0.75)' }}>
+                                <input type="checkbox" checked={editClickbaitEnabled} onChange={e => setEditClickbaitEnabled(e.target.checked)} />
+                                <span className="toggle-slider"></span>
+                              </div>
+                              ClickBait
+                            </label>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                api.put(`/feeds/${feed.id}`, { 
+                                  title: editTitle, 
+                                  url: editUrl, 
+                                  polling_interval: editPollingInterval, 
+                                  max_items: editMaxItems,
+                                  scrape_enabled: editScrapeEnabled, 
+                                  include_in_dashboard: editIncludeInDashboard,
+                                  clickbait_enabled: editClickbaitEnabled
+                                }).then(fetchFeeds);
+                                setEditingFeedId(null);
+                              }} 
+                              style={{ padding: '0.4rem 0.85rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', fontWeight: 600 }}
+                            >
+                              <Check size={14} /> Spara
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={() => setEditingFeedId(null)} 
+                              style={{ padding: '0.4rem 0.75rem', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}
+                            >
+                              <X size={14} /> Avbryt
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* DESKTOP VY */}
+                        {/* 1. Källa / Flöde */}
+                        <div className="rss-desktop-only" style={{ flexDirection: 'column', minWidth: 0, gap: '0.2rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                            <img 
+                              src={resolveFeedIcon(feed.icon_url)} 
+                              alt="" 
+                              style={{ width: 18, height: 18, borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }} 
+                              onError={(e) => { 
+                                if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
+                                  e.currentTarget.onerror = null;
+                                  e.currentTarget.src = '/default-feed-icon.png';
+                                }
+                              }} 
+                            />
+                            <span style={{ fontSize: '0.95rem', color: 'var(--text-main)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={feed.title}>
+                              {feed.title || '[Ingen titel angiven]'}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.76rem', color: 'var(--text-muted)', paddingLeft: '1.65rem' }}>
+                            <LinkIcon size={11} style={{ flexShrink: 0 }} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={feed.url}>
+                              {feed.url}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* 2. Intervall */}
+                        <div className="rss-desktop-only" style={{ justifyContent: 'center' }}>
+                          <div className="rss-pill-input" title="Uppdateringsintervall i minuter">
+                            <Activity size={12} style={{ color: 'var(--primary)' }} />
+                            <input
+                              type="number"
+                              min="1"
+                              defaultValue={feed.polling_interval || 60}
+                              key={`interval-${feed.id}-${feed.polling_interval}`}
+                              onBlur={(e) => {
+                                const newVal = parseInt(e.target.value, 10);
+                                if (newVal !== feed.polling_interval && !isNaN(newVal) && newVal > 0) {
+                                  api.put(`/feeds/${feed.id}`, { 
+                                    title: feed.title, 
+                                    url: feed.url, 
+                                    polling_interval: newVal, 
+                                    max_items: feed.max_items || 0,
+                                    scrape_enabled: feed.scrape_enabled, 
+                                    include_in_dashboard: feed.include_in_dashboard, 
+                                    clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true 
+                                  }).then(fetchFeeds);
+                                }
+                              }}
+                            />
+                            <span>m</span>
+                          </div>
+                        </div>
+
+                        {/* 3. Max artiklar */}
+                        <div className="rss-desktop-only" style={{ justifyContent: 'center' }}>
+                          <div className="rss-pill-input" title="Max antal artiklar att hämta per pollning (0 = obegränsat/systemstandard)">
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              defaultValue={feed.max_items || 0}
+                              key={`max-${feed.id}-${feed.max_items}`}
+                              onBlur={(e) => {
+                                const newVal = parseInt(e.target.value, 10) || 0;
+                                if (newVal !== (feed.max_items || 0)) {
+                                  api.put(`/feeds/${feed.id}`, { 
+                                    title: feed.title, 
+                                    url: feed.url, 
+                                    polling_interval: feed.polling_interval, 
+                                    max_items: newVal,
+                                    scrape_enabled: feed.scrape_enabled, 
+                                    include_in_dashboard: feed.include_in_dashboard, 
+                                    clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true 
+                                  }).then(fetchFeeds);
+                                }
+                              }}
+                            />
+                            <span>st</span>
+                          </div>
+                        </div>
+
+                        {/* 4. Automatisk hämtning */}
+                        <div className="rss-desktop-only" style={{ justifyContent: 'center' }} title="Hämta artiklar automatiskt">
+                          <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
+                            <input
+                              type="checkbox"
+                              checked={feed.scrape_enabled}
+                              onChange={(e) => {
+                                api.put(`/feeds/${feed.id}`, { 
+                                  title: feed.title, 
+                                  url: feed.url, 
+                                  polling_interval: feed.polling_interval, 
+                                  max_items: feed.max_items || 0,
+                                  scrape_enabled: e.target.checked, 
+                                  include_in_dashboard: feed.include_in_dashboard, 
+                                  clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true 
+                                }).then(fetchFeeds);
+                              }}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </div>
+
+                        {/* 5. Nyhetsflöde */}
+                        <div className="rss-desktop-only" style={{ justifyContent: 'center' }} title="Visa i nyhetsflödet">
+                          <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
+                            <input
+                              type="checkbox"
+                              checked={feed.include_in_dashboard}
+                              onChange={(e) => {
+                                api.put(`/feeds/${feed.id}`, { 
+                                  title: feed.title, 
+                                  url: feed.url, 
+                                  polling_interval: feed.polling_interval, 
+                                  max_items: feed.max_items || 0,
+                                  scrape_enabled: feed.scrape_enabled, 
+                                  include_in_dashboard: e.target.checked, 
+                                  clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true 
+                                }).then(fetchFeeds);
+                              }}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </div>
+
+                        {/* 6. ClickBait */}
+                        <div className="rss-desktop-only" style={{ justifyContent: 'center' }} title="AI-granskning av ClickBait">
+                          <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
+                            <input
+                              type="checkbox"
+                              checked={feed.clickbait_enabled !== undefined ? Boolean(feed.clickbait_enabled) : true}
+                              onChange={(e) => {
+                                api.put(`/feeds/${feed.id}`, { 
+                                  title: feed.title, 
+                                  url: feed.url, 
+                                  polling_interval: feed.polling_interval, 
+                                  max_items: feed.max_items || 0,
+                                  scrape_enabled: feed.scrape_enabled, 
+                                  include_in_dashboard: feed.include_in_dashboard, 
+                                  clickbait_enabled: e.target.checked 
+                                }).then(fetchFeeds);
+                              }}
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                        </div>
+
+                        {/* 7. Åtgärder */}
+                        <div className="rss-desktop-only" style={{ justifyContent: 'flex-end', gap: '0.25rem' }}>
+                          {deletingFeedId === feed.id ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
+                              <span style={{ fontSize: '0.68rem', color: '#ef4444', fontWeight: 'bold' }}>Radera?</span>
+                              <div style={{ display: 'flex', gap: '0.2rem' }}>
+                                <button onClick={() => { handleDelete(feed.id); setDeletingFeedId(null); }} style={{ padding: '0.15rem 0.45rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 'bold' }}>JA</button>
+                                <button onClick={() => setDeletingFeedId(null)} style={{ padding: '0.15rem 0.45rem', background: 'var(--bg-app)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '4px', fontSize: '0.72rem', cursor: 'pointer' }}>NEJ</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <button 
+                                type="button"
+                                onClick={() => { 
+                                  setEditingFeedId(feed.id); 
+                                  setEditTitle(feed.title); 
+                                  setEditUrl(feed.url); 
+                                  setEditPollingInterval(feed.polling_interval || 60);
+                                  setEditMaxItems(feed.max_items || 0);
+                                  setEditScrapeEnabled(feed.scrape_enabled);
+                                  setEditIncludeInDashboard(feed.include_in_dashboard);
+                                  setEditClickbaitEnabled(feed.clickbait_enabled !== undefined ? Boolean(feed.clickbait_enabled) : true);
+                                }}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: 'var(--text-muted)',
+                                  cursor: 'pointer',
+                                  padding: '0.35rem',
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.15s'
+                                }}
+                                onMouseOver={(e) => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)'; }}
+                                onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                title="Redigera flöde"
+                              >
+                                <Edit2 size={15} />
+                              </button>
+                              <button 
+                                type="button"
+                                onClick={() => setDeletingFeedId(feed.id)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: 'var(--text-muted)',
+                                  cursor: 'pointer',
+                                  padding: '0.35rem',
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.15s'
+                                }}
+                                onMouseOver={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; }}
+                                onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                title="Ta bort flöde"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+
+                        {/* MOBIL VY (KORTLAYOUT) */}
+                        <div className="rss-mobile-only" style={{ flexDirection: 'column', width: '100%', gap: '0.65rem' }}>
+                          <div className="rss-mobile-top">
+                            <div className="rss-mobile-header-info">
+                              <img 
+                                src={resolveFeedIcon(feed.icon_url)} 
+                                alt="" 
+                                style={{ width: 20, height: 20, borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }} 
+                                onError={(e) => { 
+                                  if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
+                                    e.currentTarget.onerror = null;
+                                    e.currentTarget.src = '/default-feed-icon.png';
+                                  }
+                                }} 
+                              />
+                              <h3 title={feed.title}>
+                                {feed.title || '[Ingen titel angiven]'}
+                              </h3>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                              {deletingFeedId === feed.id ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                  <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 'bold' }}>Radera?</span>
+                                  <button onClick={() => { handleDelete(feed.id); setDeletingFeedId(null); }} style={{ padding: '0.2rem 0.5rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>JA</button>
+                                  <button onClick={() => setDeletingFeedId(null)} style={{ padding: '0.2rem 0.5rem', background: 'var(--bg-app)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>NEJ</button>
+                                </div>
+                              ) : (
+                                <>
+                                  <button 
+                                    type="button"
+                                    onClick={() => { 
+                                      setEditingFeedId(feed.id); 
+                                      setEditTitle(feed.title); 
+                                      setEditUrl(feed.url); 
+                                      setEditPollingInterval(feed.polling_interval || 60);
+                                      setEditMaxItems(feed.max_items || 0);
+                                      setEditScrapeEnabled(feed.scrape_enabled);
+                                      setEditIncludeInDashboard(feed.include_in_dashboard);
+                                      setEditClickbaitEnabled(feed.clickbait_enabled !== undefined ? Boolean(feed.clickbait_enabled) : true);
+                                    }}
+                                    style={{ background: 'var(--bg-app)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.45rem', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+                                    title="Redigera flöde"
+                                  >
+                                    <Edit2 size={15} />
+                                  </button>
+                                  <button 
+                                    type="button"
+                                    onClick={() => setDeletingFeedId(feed.id)}
+                                    style={{ background: 'var(--bg-app)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.45rem', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+                                    title="Ta bort flöde"
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="rss-mobile-url" title={feed.url}>
+                            <LinkIcon size={12} style={{ flexShrink: 0 }} />
+                            <span>{feed.url}</span>
+                          </div>
+
+                          <div className="rss-mobile-controls">
+                            <div className="rss-mobile-values-row">
+                              <div className="rss-mobile-val-item">
+                                <span>Intervall:</span>
+                                <div className="rss-pill-input">
+                                  <Activity size={12} style={{ color: 'var(--primary)' }} />
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    defaultValue={feed.polling_interval || 60}
+                                    key={`m-int-${feed.id}-${feed.polling_interval}`}
+                                    onBlur={(e) => {
+                                      const newVal = parseInt(e.target.value, 10);
+                                      if (newVal !== feed.polling_interval && !isNaN(newVal) && newVal > 0) {
+                                        api.put(`/feeds/${feed.id}`, { 
+                                          title: feed.title, 
+                                          url: feed.url, 
+                                          polling_interval: newVal, 
+                                          max_items: feed.max_items || 0,
+                                          scrape_enabled: feed.scrape_enabled, 
+                                          include_in_dashboard: feed.include_in_dashboard, 
+                                          clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true 
+                                        }).then(fetchFeeds);
+                                      }
+                                    }}
+                                  />
+                                  <span>m</span>
+                                </div>
+                              </div>
+
+                              <div className="rss-mobile-val-item">
+                                <span>Max art:</span>
+                                <div className="rss-pill-input">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    defaultValue={feed.max_items || 0}
+                                    key={`m-max-${feed.id}-${feed.max_items}`}
+                                    onBlur={(e) => {
+                                      const newVal = parseInt(e.target.value, 10) || 0;
+                                      if (newVal !== (feed.max_items || 0)) {
+                                        api.put(`/feeds/${feed.id}`, { 
+                                          title: feed.title, 
+                                          url: feed.url, 
+                                          polling_interval: feed.polling_interval, 
+                                          max_items: newVal,
+                                          scrape_enabled: feed.scrape_enabled, 
+                                          include_in_dashboard: feed.include_in_dashboard, 
+                                          clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true 
+                                        }).then(fetchFeeds);
+                                      }
+                                    }}
+                                  />
+                                  <span>st</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="rss-mobile-switches-row">
+                              <div className="rss-mobile-switch-item" title="Automatisk hämtning">
+                                <span className="rss-mobile-switch-label">Hämta</span>
+                                <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={feed.scrape_enabled}
+                                    onChange={(e) => {
+                                      api.put(`/feeds/${feed.id}`, { 
+                                        title: feed.title, 
+                                        url: feed.url, 
+                                        polling_interval: feed.polling_interval, 
+                                        max_items: feed.max_items || 0,
+                                        scrape_enabled: e.target.checked, 
+                                        include_in_dashboard: feed.include_in_dashboard, 
+                                        clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true 
+                                      }).then(fetchFeeds);
+                                    }}
+                                  />
+                                  <span className="toggle-slider"></span>
+                                </label>
+                              </div>
+
+                              <div className="rss-mobile-switch-item" title="Visa i nyhetsflödet">
+                                <span className="rss-mobile-switch-label">I flöde</span>
+                                <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={feed.include_in_dashboard}
+                                    onChange={(e) => {
+                                      api.put(`/feeds/${feed.id}`, { 
+                                        title: feed.title, 
+                                        url: feed.url, 
+                                        polling_interval: feed.polling_interval, 
+                                        max_items: feed.max_items || 0,
+                                        scrape_enabled: feed.scrape_enabled, 
+                                        include_in_dashboard: e.target.checked, 
+                                        clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true 
+                                      }).then(fetchFeeds);
+                                    }}
+                                  />
+                                  <span className="toggle-slider"></span>
+                                </label>
+                              </div>
+
+                              <div className="rss-mobile-switch-item" title="ClickBait-granskning">
+                                <span className="rss-mobile-switch-label">ClickBait</span>
+                                <label className="toggle-switch" style={{ transform: 'scale(0.8)' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={feed.clickbait_enabled !== undefined ? Boolean(feed.clickbait_enabled) : true}
+                                    onChange={(e) => {
+                                      api.put(`/feeds/${feed.id}`, { 
+                                        title: feed.title, 
+                                        url: feed.url, 
+                                        polling_interval: feed.polling_interval, 
+                                        max_items: feed.max_items || 0,
+                                        scrape_enabled: feed.scrape_enabled, 
+                                        include_in_dashboard: feed.include_in_dashboard, 
+                                        clickbait_enabled: e.target.checked 
+                                      }).then(fetchFeeds);
+                                    }}
+                                  />
+                                  <span className="toggle-slider"></span>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </>
             )}
           </div>
         </div>

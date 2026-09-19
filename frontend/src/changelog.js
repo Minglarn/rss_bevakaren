@@ -1,9 +1,50 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.13',
+    date: '2026-09-19',
+    title: 'Ny flödeskategori: Livsstil & Kvinnor med 7 ledande källor',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Flödeskategori Livsstil & Kvinnor',
+        description: 'Lagt till en ny kategori i flödeskatalogen med Amelia, Femina, ELLE Sverige, Damernas Värld, MåBra, The Everygirl och Women 2.0.'
+      },
+      {
+        type: 'feature',
+        title: 'Integrerad i introduktionsguiden',
+        description: 'Paketet är valbart direkt i onboarding-guidens rekommenderade flödespaket.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.19.12',
+    date: '2026-09-19',
+    title: 'Redesign av Hantera flöden: tabellvy, mobilkort och max antal artiklar',
+    badge: '',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Modern tabellvy på desktop',
+        description: 'Enhetlig kolumnheader som eliminerar repetitiva versaltexter på varje rad och linjerar alla reglage med millimeterprecision.'
+      },
+      {
+        type: 'feature',
+        title: 'Responsiva kort för smala skärmar och mobil',
+        description: 'På mobiler och smala skärmar transformeras flöden till tydliga, touchvänliga kort med separerad rubriksektion och ergonomisk kontrollpanel.'
+      },
+      {
+        type: 'feature',
+        title: 'Max antal artiklar att hämta in',
+        description: 'Stöd för att begränsa hur många artiklar som hämtas in per flöde (override) med flexibel inmatning och lagring i databasen.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.11',
     date: '2026-09-19',
     title: 'Nytt officiellt flöde: Sveriges Domstolar med inaktiv ClickBait-kontroll',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

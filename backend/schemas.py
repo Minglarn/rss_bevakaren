@@ -27,6 +27,7 @@ class FeedBase(BaseModel):
     include_in_dashboard: bool = True
     notify_enabled: bool = True
     clickbait_enabled: bool = True
+    max_items: Optional[int] = 0
     icon_url: Optional[str] = ""
 
 class FeedCreate(FeedBase):

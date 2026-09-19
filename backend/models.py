@@ -28,6 +28,7 @@ class Feed(Base):
     include_in_dashboard = Column(Integer, default=1) # 1 = true, 0 = false
     notify_enabled = Column(Integer, default=1) # 1 = true, 0 = false
     clickbait_enabled = Column(Integer, default=1) # 1 = true, 0 = false
+    max_items = Column(Integer, default=0) # Max antal artiklar att hämta (0 = obegränsat/systemstandard)
     icon_url = Column(String, default="")
     user_id = Column(Integer, ForeignKey("users.id"))
 
