@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.22',
+    date: '2026-09-19',
+    title: 'Enhetlig och kolumnjusterad loggning med användarkoppling',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Kolumnjusterade logg-taggar',
+        description: 'Standardiserat loggtyperna (AI  , POLL, MQTT, SCRP, ICON) till exakt fyra tecken så att loggarna linjeras perfekt i prydliga kolumner.'
+      },
+      {
+        type: 'improvement',
+        title: 'Användarkoppling på alla händelser',
+        description: 'Säkerställt att skrapnings- och administrationshändelser kopplas till den aktiva användaren eller markeras som system.'
+      },
+      {
+        type: 'improvement',
+        title: 'Skydd mot raderade flöden vid bakgrundspollning',
+        description: 'Hanterat samtidig borttagning av flöden under pågående polling-loop så att inga onödiga felmeddelanden loggas.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.21',
     date: '2026-09-19',
     title: 'Realtidssynkning mellan enheter och balanserad sidopanel',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

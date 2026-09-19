@@ -59,7 +59,7 @@ def extract_clean_article_text(url: str, timeout: int = 8) -> Optional[str]:
             return text_content.strip()
         return None
     except Exception as e:
-        print(f"[SCRAPER] Kunde inte hämta artikeltext ({url}): {e}", flush=True)
+        print(f"[SCRP: system] Kunde inte hämta artikeltext ({url}): {e}", flush=True)
         return None
 
 models.Base.metadata.create_all(bind=database.engine)
@@ -910,15 +910,16 @@ def get_icons_dir() -> str:
     os.makedirs(base, exist_ok=True)
     return base
 
-def delete_local_feed_icon(feed_id: int):
+def delete_local_feed_icon(feed_id: int, username: Optional[str] = "system"):
     """Raderar den lokala ikonfilen när ett flöde tas bort."""
+    u_str = username or "system"
     try:
         icon_path = os.path.join(get_icons_dir(), f"feed_{feed_id}.png")
         if os.path.exists(icon_path):
             os.remove(icon_path)
-            print(f"[ICONS] Raderade lokal ikon för flöde #{feed_id}: {icon_path}", flush=True)
+            print(f"[ICON: {u_str}] Raderade lokal ikon för flöde #{feed_id}: {icon_path}", flush=True)
     except Exception as e:
-        print(f"[ICONS] Kunde inte radera lokal ikon för #{feed_id}: {e}", flush=True)
+        print(f"[ICON: {u_str}] Kunde inte radera lokal ikon för #{feed_id}: {e}", flush=True)
 
 def download_and_save_feed_icon_sync(feed: Optional[models.Feed], link: Optional[str] = None) -> Optional[str]:
     """
@@ -968,12 +969,12 @@ def download_and_save_feed_icon_sync(feed: Optional[models.Feed], link: Optional
                     if img.width > 192 or img.height > 192:
                         img.thumbnail((192, 192), Image.Resampling.LANCZOS)
                     img.save(target_path, format="PNG")
-                    print(f"[ICONS] Sparade och konverterade lokal ikon för #{feed.id} ({feed.title or domain}) -> {target_path}", flush=True)
+                    print(f"[ICON: system] Sparade och konverterade lokal ikon för #{feed.id} ({feed.title or domain}) -> {target_path}", flush=True)
                     return target_path
                 except Exception:
                     with open(target_path, "wb") as f:
                         f.write(resp.content)
-                    print(f"[ICONS] Sparade rå ikon för #{feed.id} ({feed.title or domain}) -> {target_path}", flush=True)
+                    print(f"[ICON: system] Sparade rå ikon för #{feed.id} ({feed.title or domain}) -> {target_path}", flush=True)
                     return target_path
         except Exception:
             continue
@@ -999,9 +1000,9 @@ def ensure_all_feed_icons_cached():
             try:
                 download_and_save_feed_icon_sync(f)
             except Exception as e:
-                print(f"[ICONS] Fel vid cachning av ikon för flöde #{f.id}: {e}", flush=True)
+                print(f"[ICON: system] Fel vid cachning av ikon för flöde #{f.id}: {e}", flush=True)
     except Exception as ex:
-        print(f"[ICONS] Fel i ensure_all_feed_icons_cached: {ex}", flush=True)
+        print(f"[ICON: system] Fel i ensure_all_feed_icons_cached: {ex}", flush=True)
     finally:
         db.close()
 
@@ -1242,21 +1243,29 @@ async def polling_loop():
             current_time = int(time.time())
             
             for feed in feeds:
-                # polling_interval is in minutes
-                interval_sec = feed.polling_interval * 60
-                
-                # Check if it's time to poll
-                if current_time - feed.last_polled >= interval_sec:
-                    await manager.send_personal_message(f"POLLING_START:{feed.id}", feed.user_id)
-                    try:
-                        # Kör nätverksanropet i en egen tråd för att inte blockera event-loopen
-                        items = await asyncio.to_thread(rss_parser.fetch_feed_items, feed.url, feed.title)
-                    except Exception as e:
-                        print(f"Failed to fetch feed {feed.id}: {e}", flush=True)
-                        items = []
+                try:
+                    feed_id = getattr(feed, "id", None)
+                    if not feed_id:
+                        continue
+                    feed_exists = db.query(models.Feed.id).filter(models.Feed.id == feed_id).first()
+                    if not feed_exists:
+                        continue
+
+                    # polling_interval is in minutes
+                    interval_sec = (feed.polling_interval or 15) * 60
                     
-                    is_initial_poll = (feed.last_polled == 0 or feed.last_polled is None)
-                    new_articles = []
+                    # Check if it's time to poll
+                    if current_time - (feed.last_polled or 0) >= interval_sec:
+                        await manager.send_personal_message(f"POLLING_START:{feed.id}", feed.user_id)
+                        try:
+                            # Kör nätverksanropet i en egen tråd för att inte blockera event-loopen
+                            items = await asyncio.to_thread(rss_parser.fetch_feed_items, feed.url, feed.title)
+                        except Exception as e:
+                            print(f"[POLL: system] Kunde inte hämta flöde #{feed.id}: {e}", flush=True)
+                            items = []
+                        
+                        is_initial_poll = (feed.last_polled == 0 or feed.last_polled is None)
+                        new_articles = []
                     
                     if items and (not feed.icon_url or not feed.icon_url.strip()):
                         first_icon = items[0].get("feed_icon")
@@ -1342,7 +1351,7 @@ async def polling_loop():
                                 for a in push_eligible[:-6]:
                                     a.allow_push = 0
                                 db.commit()
-                                print(f"[ANTI-BURST: {feed_username}] '{feed_title}': {len(push_eligible)} artiklar. Begränsar push till de 6 nyaste.", flush=True)
+                                print(f"[POLL: {feed_username}] [ANTI-BURST] '{feed_title}': {len(push_eligible)} artiklar. Begränsar push till de 6 nyaste.", flush=True)
 
                         print(f"[POLL: {feed_username}] {feed_title}: {art_count_str} ({id_range})", flush=True)
                         ai_wake_event.set()
@@ -1375,7 +1384,7 @@ async def polling_loop():
                                         matched_keywords=art_matched_kws
                                     )
                                 except Exception as mqtt_err:
-                                    print(f"[MQTT] Fel vid publicering av artikel {art.id} för {feed_username}: {mqtt_err}", flush=True)
+                                    print(f"[MQTT: {feed_username}] Fel vid publicering av artikel #{art.id}: {mqtt_err}", flush=True)
 
                         # 2. Rå-pushnotiser (endast om användaren inte har AI aktiverat)
                         if not is_initial_poll:
@@ -1402,10 +1411,10 @@ async def polling_loop():
                                     if kw_texts:
                                         search_text = f"{art.title or ''} {art.summary or ''}".lower()
                                         matched_kws = [k for k in kw_texts if k in search_text]
-                                        if matched_kws:
-                                            should_notify = True
-                                            notify_title = f"Bevakningsord ({matched_kws[0]}): {art.title}"
-                                            notify_body = art.summary or art.title
+                                    if matched_kws:
+                                        should_notify = True
+                                        notify_title = f"Bevakningsord ({matched_kws[0]}): {art.title}"
+                                        notify_body = art.summary or art.title
                                             
                                     if should_notify:
                                         feed_icon = get_feed_icon_url(feed, art.link)
@@ -1432,8 +1441,14 @@ async def polling_loop():
                     # Spread out the polling to avoid bursts of notifications
                     import random
                     await asyncio.sleep(random.uniform(5.0, 15.0))
+                except Exception as feed_err:
+                    err_name = type(feed_err).__name__
+                    err_str = str(feed_err)
+                    if "ObjectDeletedError" in err_name or "has been deleted" in err_str:
+                        continue
+                    print(f"[POLL: system] Fel vid hantering av flöde #{getattr(feed, 'id', '?')}: {feed_err}", flush=True)
         except Exception as e:
-            print(f"Polling error: {e}", flush=True)
+            print(f"[POLL: system] Polling error: {e}", flush=True)
         finally:
             db.close()
         
@@ -2012,7 +2027,7 @@ async def ai_processing_loop():
                         print("====================================================================", flush=True)
                     else:
                         print(
-                            f"[AI: {u_display}] {item['source'] or 'RSS'} #{item['id']} | {category} | {priority.upper()} ({prio_score}p){prio_tag}{cluster_info_str} | {dur}s | \"{item['title']}\"",
+                            f"[AI  : {u_display}] {item['source'] or 'RSS'} #{item['id']} | {category} | {priority.upper()} ({prio_score}p){prio_tag}{cluster_info_str} | {dur}s | \"{item['title']}\"",
                             flush=True
                         )
 
@@ -2025,7 +2040,7 @@ async def ai_processing_loop():
                     # LM Studio svarade inte för denna artikel
                     is_online = await asyncio.to_thread(ai_service.check_lm_studio_health)
                     if not is_online:
-                        print(f"[AI] LM Studio svarar inte (offline/pausar). Försöker igen senare för artikel {item['id']}", flush=True)
+                        print(f"[AI  : system] LM Studio svarar inte (offline/pausar). Försöker igen senare för artikel {item['id']}", flush=True)
                         await asyncio.sleep(10)
                         break
                     else:
@@ -2034,9 +2049,9 @@ async def ai_processing_loop():
 
                         if attempts < 3:
                             ai_retry_after[item["id"]] = time.time() + 45
-                            print(f"[AI] Artikel #{item['id']} ('{item['title'][:45]}...') misslyckades vid försök {attempts}/3. Schemalägger automatiskt återförsök om 45 sekunder.", flush=True)
+                            print(f"[AI  : {u_display}] Artikel #{item['id']} ('{item['title'][:45]}...') misslyckades vid försök {attempts}/3. Schemalägger automatiskt återförsök om 45 sekunder.", flush=True)
                         else:
-                            print(f"[AI] Varning: 3 automatiska försök misslyckades för artikel #{item['id']}. Tilldelar standardvärden så kön inte blockeras.", flush=True)
+                            print(f"[AI  : {u_display}] Varning: 3 automatiska försök misslyckades för artikel #{item['id']}. Tilldelar standardvärden så kön inte blockeras.", flush=True)
                             db_fallback = database.SessionLocal()
                             try:
                                 db_fallback.query(models.Article).filter(models.Article.id == item["id"]).update({
@@ -2251,7 +2266,7 @@ def delete_feed(feed_id: int, db: Session = Depends(database.get_db), current_us
         raise HTTPException(status_code=404, detail="Feed not found")
     db.delete(feed)
     db.commit()
-    delete_local_feed_icon(feed_id)
+    delete_local_feed_icon(feed_id, current_user.username)
     return {"status": "ok"}
 
 @app.get("/keywords", response_model=List[schemas.KeywordResponse])
@@ -3637,7 +3652,7 @@ def scrape_article(
         display_name = art.feed.title or art.feed.url
             
     name_str = display_name if display_name else "Okänt flöde"
-    print(f"Scraping started for feed: {name_str}", flush=True)
+    print(f"[SCRP: {current_username}] Startade skrapning för {name_str}", flush=True)
     
     extracted = extract_clean_article_text(url, timeout=10)
     if extracted:
