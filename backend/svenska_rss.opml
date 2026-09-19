@@ -144,7 +144,6 @@
     <outline text="Kollega" type="rss" created="Tue, 05 May 2026 22:05:19 +0200" xmlUrl="https://kollega.se/rss.xml" description="Unionen" htmlUrl="http://www.kollega.se" version="RSS2" />
     <outline text="Kommunalarbetaren" type="rss" created="Tue, 05 May 2026 22:05:19 +0200" xmlUrl="https://arbetet.se/ka/feed" description="Kommunal (LO Mediehus)" htmlUrl="https://arbetet.se/ka/feed" version="RSS2" />
     <outline text="Kristianstadsbladet" type="rss" created="Tue, 05 May 2026 22:05:19 +0200" xmlUrl="https://www.kristianstadsbladet.se/feed.xml" description="Gota Media AB" htmlUrl="https://www.kristianstadsbladet.se" version="RSS2" />
-    <outline text="Krisinformation" type="rss" created="Sat, 12 Sep 2026 08:21:00 +0200" xmlUrl="https://www.krisinformation.se/nyheter/?rss=true" description="Myndigheten för samhällsskydd och beredskap (MSB)" htmlUrl="https://www.krisinformation.se" version="RSS2" />
     <outline text="Kritiska EU-fakta" type="rss" created="Tue, 05 May 2026 22:05:19 +0200" xmlUrl="https://nejtilleu.se/kef/feed" description="Folkrörelsen Nej till EU" htmlUrl="https://nejtilleu.se/kef" version="RSS2" />
     <outline text="KT-Kuriren" type="rss" created="Tue, 05 May 2026 22:05:19 +0200" xmlUrl="https://www.kt-kuriren.se/feed" description="NWT Media AB" htmlUrl="https://www.kt-kuriren.se" version="RSS2" />
     <outline text="Kvällsstunden" type="rss" created="Tue, 05 May 2026 22:05:19 +0200" xmlUrl="https://kvallsstunden.se/feed" description="Tidningshuset Kvällsstunden AB" htmlUrl="https://kvallsstunden.se" version="RSS2" />
@@ -336,6 +335,10 @@
       <outline type="rss" text="Trosa Evenemang" title="Trosa Evenemang" xmlUrl="https://trosa.com/events/feed/" category="Kommun &amp; Lokalt" description="Evenemang och upplevelser i Trosa" htmlUrl="https://trosa.com"/>
       <outline type="rss" text="TROSA Notiser" title="TROSA Notiser" xmlUrl="https://www.trosa.se/notiser/feed/" category="Kommun &amp; Lokalt" description="Officiella notiser från Trosa kommun" htmlUrl="https://www.trosa.se"/>
       <outline type="rss" text="TROSA Nyheter" title="TROSA Nyheter" xmlUrl="https://www.trosa.se/feed/" category="Kommun &amp; Lokalt" description="Aktuella nyheter och information från Trosa kommun" htmlUrl="https://www.trosa.se"/>
+    </outline>
+    <outline text="Blåljus &amp; Krisinformation" title="Blåljus &amp; Krisinformation">
+      <outline type="rss" text="Krisinformation" title="Krisinformation" xmlUrl="https://www.krisinformation.se/nyheter/?rss=true" category="Blåljus &amp; Krisinformation" description="Viktiga meddelanden och krisinformation från svenska myndigheter (MSB)" htmlUrl="https://www.krisinformation.se"/>
+      <outline type="rss" text="Polisen Händelser" title="Polisen Händelser" xmlUrl="https://polisen.se/aktuellt/rss/hela-landet/handelser-i-hela-landet/" category="Blåljus &amp; Krisinformation" description="Polisens officiella händelserapportering för hela landet" htmlUrl="https://polisen.se"/>
     </outline>
   </body>
 </opml>

@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.09',
+    date: '2026-09-19',
+    title: 'Dedikerad kategori för Blåljus & Krisinformation och uppdaterat Krisinformation-flöde',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Kategori Blåljus & Krisinformation i flödeskatalogen',
+        description: 'Strukturerat om flödeskatalogen (OPML) med en renodlad kategori för Blåljus & Krisinformation innehållande Krisinformation (MSB) och Polisen Händelser.'
+      },
+      {
+        type: 'feature',
+        title: 'Uppdaterat Krisinformation-flöde',
+        description: 'Säkerställt att källan Krisinformation använder det officiella nyhetsflödet https://www.krisinformation.se/nyheter/?rss=true både i katalogen och i introduktionsguiden.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.08',
     date: '2026-09-19',
     title: 'Nya lokala flöden i katalogen: Trosa kommun och evenemang',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',
