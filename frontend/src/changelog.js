@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.01',
+    date: '2026-09-19',
+    title: 'Export av flöden med aktiveringsstatus och inställningar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Export till standardiserad OPML 2.0',
+        description: 'Exportera samtliga prenumererade RSS-flöden till en universell OPML 2.0-fil berikad med anpassade attribut för aktiveringsstatus, dashboard-synlighet, notiser, AI-skrapning och polling-intervall.'
+      },
+      {
+        type: 'feature',
+        title: 'Fullständig JSON-databackup',
+        description: 'Möjlighet att ladda ner en komplett strukturerad JSON-säkerhetskopia av alla flöden och dess anpassade inställningar direkt från flödeshanteraren.'
+      }
+    ]
+  },
+  {
     version: '2026.09.18.11',
     date: '2026-09-18',
     title: 'Klickbar borttagning av gillade ämnen i intresseprofilen',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

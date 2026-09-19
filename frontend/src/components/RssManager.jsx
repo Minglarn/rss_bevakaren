@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Trash2, List, Edit2, Check, X, Link as LinkIcon, 
   Activity, Globe, Search, Library, Eye, CheckSquare, 
-  Square, Filter, FolderPlus, EyeOff, Layers
+  Square, Filter, FolderPlus, EyeOff, Layers, Download,
+  ChevronDown, FileCode, FileText
 } from 'lucide-react';
 import api from '../api';
 import { resolveFeedIcon } from '../utils/textUtils';
@@ -48,6 +49,51 @@ const RssManager = ({ embedded = false }) => {
   const [previewFeed, setPreviewFeed] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+
+  // Export av flöden
+  const [exportingFormat, setExportingFormat] = useState(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setShowExportMenu(false);
+      }
+    };
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showExportMenu]);
+
+  const handleExport = async (format) => {
+    try {
+      setExportingFormat(format);
+      const endpoint = format === 'json' ? '/feeds/export/json' : '/feeds/export/opml';
+      const res = await api.get(endpoint, { responseType: 'blob' });
+      const extension = format === 'json' ? 'json' : 'opml';
+      const mimeType = format === 'json' ? 'application/json' : 'application/xml';
+      const dateStr = new Date().toISOString().slice(0, 10);
+      
+      const blob = new Blob([res.data], { type: mimeType });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', `rss-bevakaren-floden-${dateStr}.${extension}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      setShowExportMenu(false);
+    } catch (err) {
+      console.error("Kunde inte exportera flöden:", err);
+    } finally {
+      setExportingFormat(null);
+    }
+  };
 
   const fetchFeeds = async () => {
     try {
@@ -255,26 +301,144 @@ const RssManager = ({ embedded = false }) => {
           <h2 style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.75rem', margin: 0, fontSize: embedded ? '1.4rem' : '1.8rem' }}>
             <List size={embedded ? 22 : 28} style={{ color: 'var(--primary)' }} /> Hantera flöden
           </h2>
-          <button 
-            onClick={() => setShowAddForm(!showAddForm)}
-            style={{
-              padding: '0.55rem 1.1rem',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color)',
-              backgroundColor: showAddForm ? 'var(--bg-app)' : 'var(--bg-card)',
-              color: 'var(--text-main)',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              transition: 'all 0.2s'
-            }}
-          >
-            {showAddForm ? <X size={16} /> : <Plus size={16} style={{ color: 'var(--primary)' }} />}
-            {showAddForm ? 'Dölj formulär' : 'Lägg till eget flöde'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {/* Exportera flöden */}
+            <div style={{ position: 'relative' }} ref={exportMenuRef}>
+              <button 
+                type="button"
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                disabled={feeds.length === 0 || exportingFormat !== null}
+                style={{
+                  padding: '0.55rem 1rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: showExportMenu ? 'var(--bg-app)' : 'var(--bg-card)',
+                  color: feeds.length === 0 ? 'var(--text-muted)' : 'var(--text-main)',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  cursor: feeds.length === 0 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  opacity: feeds.length === 0 ? 0.6 : 1,
+                  transition: 'all 0.2s'
+                }}
+                title={feeds.length === 0 ? 'Du har inga flöden att exportera' : 'Exportera dina flöden med aktiveringsstatus och inställningar'}
+              >
+                <Download size={16} style={{ color: 'var(--primary)' }} />
+                {exportingFormat ? 'Exporterar...' : 'Exportera'}
+                <ChevronDown 
+                  size={14} 
+                  style={{ 
+                    color: 'var(--text-muted)', 
+                    transform: showExportMenu ? 'rotate(180deg)' : 'none', 
+                    transition: 'transform 0.2s' 
+                  }} 
+                />
+              </button>
+
+              {showExportMenu && (
+                <div 
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 'calc(100% + 6px)',
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '10px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                    padding: '0.5rem',
+                    minWidth: '260px',
+                    zIndex: 100,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.25rem'
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleExport('opml')}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      gap: '0.2rem',
+                      padding: '0.65rem 0.75rem',
+                      borderRadius: '7px',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      color: 'var(--text-main)',
+                      width: '100%',
+                      transition: 'background-color 0.15s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-app)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 600, fontSize: '0.88rem' }}>
+                      <FileCode size={15} style={{ color: 'var(--primary)' }} />
+                      OPML 2.0 (Rekommenderas)
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                      Universellt RSS-format berikat med aktiveringsstatus, dashboard-val och intervall
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleExport('json')}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      gap: '0.2rem',
+                      padding: '0.65rem 0.75rem',
+                      borderRadius: '7px',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      color: 'var(--text-main)',
+                      width: '100%',
+                      transition: 'background-color 0.15s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-app)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 600, fontSize: '0.88rem' }}>
+                      <FileText size={15} style={{ color: '#10b981' }} />
+                      JSON-backup
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                      Fullständig datastruktur med alla användaranpassade inställningar
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button 
+              onClick={() => setShowAddForm(!showAddForm)}
+              style={{
+                padding: '0.55rem 1.1rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: showAddForm ? 'var(--bg-app)' : 'var(--bg-card)',
+                color: 'var(--text-main)',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                transition: 'all 0.2s'
+              }}
+            >
+              {showAddForm ? <X size={16} /> : <Plus size={16} style={{ color: 'var(--primary)' }} />}
+              {showAddForm ? 'Dölj formulär' : 'Lägg till eget flöde'}
+            </button>
+          </div>
         </div>
 
         {/* Segmenterad flikväljare */}

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Request, Response
 from fastapi.responses import StreamingResponse, FileResponse
 import asyncio
 import time
@@ -2206,6 +2206,90 @@ def get_opml_feeds(current_user: models.User = Depends(auth.get_current_user)):
     except Exception as e:
         print(f"Error parsing OPML: {e}")
     return feeds
+
+@app.get("/feeds/export/opml")
+def export_feeds_opml(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    import xml.sax.saxutils as saxutils
+    feeds = db.query(models.Feed).filter(models.Feed.user_id == current_user.id).order_by(models.Feed.title.asc()).all()
+    
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    date_filename = datetime.now().strftime("%Y-%m-%d")
+    
+    xml_lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<opml version="2.0">',
+        '  <head>',
+        '    <title>RSS-Bevakaren - Exporterade flöden</title>',
+        f'    <dateCreated>{now_str}</dateCreated>',
+        f'    <ownerName>{saxutils.escape(current_user.username or "")}</ownerName>',
+        '    <docs>http://opml.org/spec2.opml</docs>',
+        '  </head>',
+        '  <body>'
+    ]
+    
+    for f in feeds:
+        title = saxutils.quoteattr(f.title or f.url or "RSS-flöde")
+        xml_url = saxutils.quoteattr(f.url or "")
+        is_active = "1" if (bool(f.include_in_dashboard) and bool(f.notify_enabled)) else "0"
+        inc_dash = "1" if bool(f.include_in_dashboard) else "0"
+        notif_en = "1" if bool(f.notify_enabled) else "0"
+        scrape_en = "1" if bool(f.scrape_enabled) else "0"
+        interval = str(f.polling_interval or 60)
+        icon = saxutils.quoteattr(f.icon_url or "")
+        
+        xml_lines.append(
+            f'    <outline type="rss" text={title} title={title} xmlUrl={xml_url} '
+            f'active="{is_active}" includeInDashboard="{inc_dash}" '
+            f'notifyEnabled="{notif_en}" scrapeEnabled="{scrape_en}" '
+            f'pollingInterval="{interval}" iconUrl={icon} />'
+        )
+        
+    xml_lines.append('  </body>')
+    xml_lines.append('</opml>')
+    
+    opml_data = "\n".join(xml_lines)
+    return Response(
+        content=opml_data,
+        media_type="application/xml; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="rss-bevakaren-floden-{date_filename}.opml"'
+        }
+    )
+
+@app.get("/feeds/export/json")
+def export_feeds_json(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    feeds = db.query(models.Feed).filter(models.Feed.user_id == current_user.id).order_by(models.Feed.title.asc()).all()
+    date_filename = datetime.now().strftime("%Y-%m-%d")
+    
+    export_payload = {
+        "version": "2026.09.19.01",
+        "exported_at": datetime.now().isoformat(),
+        "user": current_user.username,
+        "feed_count": len(feeds),
+        "feeds": [
+            {
+                "id": f.id,
+                "title": f.title,
+                "url": f.url,
+                "is_active": bool(f.include_in_dashboard) and bool(f.notify_enabled),
+                "include_in_dashboard": bool(f.include_in_dashboard),
+                "notify_enabled": bool(f.notify_enabled),
+                "scrape_enabled": bool(f.scrape_enabled),
+                "polling_interval_minutes": f.polling_interval or 60,
+                "icon_url": f.icon_url or ""
+            }
+            for f in feeds
+        ]
+    }
+    
+    json_data = json.dumps(export_payload, ensure_ascii=False, indent=2)
+    return Response(
+        content=json_data,
+        media_type="application/json; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="rss-bevakaren-floden-{date_filename}.json"'
+        }
+    )
 
 @app.post("/feeds/batch")
 def create_feeds_batch(payload: dict, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
