@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.23',
+    date: '2026-09-19',
+    title: 'Kritisk buggfix för polling-isolering och databasrensning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Isolering av flödesinläsning',
+        description: 'Löste problem där artiklar från föregående flöde kunde sparas under efterföljande flöden om tidsintervallet inte passerats.'
+      },
+      {
+        type: 'fix',
+        title: 'Automatisk databasrensning vid uppstart',
+        description: 'Rensar automatiskt bort felaktigt korskopplade artiklar och tillhörande embeddings så att gamla artiklar inte dyker upp som olästa i fel flöden.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.22',
     date: '2026-09-19',
     title: 'Enhetlig och kolumnjusterad loggning med användarkoppling',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

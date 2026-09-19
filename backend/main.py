@@ -186,6 +186,30 @@ def ensure_db_migrations():
         except Exception as e:
             print(f"[DB] Migration notice for articles: {e}", flush=True)
 
+        # Rensa felaktigt läckta artiklar och deras embeddings orsakade av polling-buggen
+        try:
+            conn.execute(text("""
+                DELETE FROM article_embeddings 
+                WHERE article_id IN (
+                    SELECT a.id FROM articles a
+                    JOIN feeds f ON a.feed_id = f.id
+                    WHERE a.link LIKE '%notateslaapp.com%' AND f.url NOT LIKE '%notateslaapp%'
+                )
+            """))
+            clean_res = conn.execute(text("""
+                DELETE FROM articles 
+                WHERE id IN (
+                    SELECT a.id FROM articles a
+                    JOIN feeds f ON a.feed_id = f.id
+                    WHERE a.link LIKE '%notateslaapp.com%' AND f.url NOT LIKE '%notateslaapp%'
+                )
+            """))
+            conn.commit()
+            if clean_res.rowcount and clean_res.rowcount > 0:
+                print(f"[DB] Rensade bort {clean_res.rowcount} felaktigt korskopplade Tesla-artiklar.", flush=True)
+        except Exception as e:
+            print(f"[DB] Fel vid rensning av korskopplade artiklar: {e}", flush=True)
+
         try:
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS daily_digests (
@@ -1255,17 +1279,20 @@ async def polling_loop():
                     interval_sec = (feed.polling_interval or 15) * 60
                     
                     # Check if it's time to poll
-                    if current_time - (feed.last_polled or 0) >= interval_sec:
-                        await manager.send_personal_message(f"POLLING_START:{feed.id}", feed.user_id)
-                        try:
-                            # Kör nätverksanropet i en egen tråd för att inte blockera event-loopen
-                            items = await asyncio.to_thread(rss_parser.fetch_feed_items, feed.url, feed.title)
-                        except Exception as e:
-                            print(f"[POLL: system] Kunde inte hämta flöde #{feed.id}: {e}", flush=True)
-                            items = []
-                        
-                        is_initial_poll = (feed.last_polled == 0 or feed.last_polled is None)
-                        new_articles = []
+                    if current_time - (feed.last_polled or 0) < interval_sec:
+                        continue
+
+                    items = []
+                    new_articles = []
+                    is_initial_poll = (feed.last_polled == 0 or feed.last_polled is None)
+
+                    await manager.send_personal_message(f"POLLING_START:{feed.id}", feed.user_id)
+                    try:
+                        # Kör nätverksanropet i en egen tråd för att inte blockera event-loopen
+                        items = await asyncio.to_thread(rss_parser.fetch_feed_items, feed.url, feed.title)
+                    except Exception as e:
+                        print(f"[POLL: system] Kunde inte hämta flöde #{feed.id}: {e}", flush=True)
+                        items = []
                     
                     if items and (not feed.icon_url or not feed.icon_url.strip()):
                         first_icon = items[0].get("feed_icon")
