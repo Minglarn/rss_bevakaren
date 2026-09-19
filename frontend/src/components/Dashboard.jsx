@@ -1749,7 +1749,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         {/* ClickBait-varning */}
                         {shouldShowAi && Boolean(item.is_clickbait) && (
                           <span 
-                            onClick={(e) => handleDismissClickbait(item.id, e)}
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -1759,13 +1758,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                               padding: '0.12rem 0.45rem',
                               borderRadius: '4px',
                               fontSize: '0.7rem',
-                              fontWeight: 700,
-                              cursor: 'pointer'
+                              fontWeight: 700
                             }} 
-                            title={item.clickbait_reason ? `${item.clickbait_reason} (Klicka för att ta bort varning)` : "Klicka för att ta bort ClickBait-varning"}
+                            title={item.clickbait_reason || "Artikeln är flaggad som ClickBait"}
                           >
                             <AlertTriangle size={12} /> ClickBait
-                            <X size={12} style={{ opacity: 0.85 }} />
                           </span>
                         )}
                       </div>
@@ -1829,7 +1826,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
                         {shouldShowAi && Boolean(item.is_clickbait) && (
                           <span 
-                            onClick={(e) => handleDismissClickbait(item.id, e)}
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -1841,13 +1837,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                               borderRadius: '6px',
                               fontSize: '0.72rem',
                               fontWeight: 700,
-                              letterSpacing: '0.3px',
-                              cursor: 'pointer'
+                              letterSpacing: '0.3px'
                             }} 
-                            title={item.clickbait_reason ? `${item.clickbait_reason} (Klicka för att ta bort varning)` : "Klicka för att ta bort ClickBait-varning"}
+                            title={item.clickbait_reason || "Artikeln är flaggad som ClickBait"}
                           >
                             <AlertTriangle size={12} /> ClickBait-varning
-                            <X size={12} style={{ opacity: 0.85 }} />
                           </span>
                         )}
 
@@ -2155,17 +2149,18 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                                   color: '#ffffff',
                                   border: 'none',
                                   borderRadius: '4px',
-                                  padding: '0.25rem 0.55rem',
+                                  padding: '0.22rem 0.5rem',
                                   fontSize: '0.74rem',
                                   fontWeight: 600,
                                   cursor: 'pointer',
                                   flexShrink: 0,
+                                  whiteSpace: 'nowrap',
                                   transition: 'opacity 0.2s'
                                 }}
                                 title="Ta bort ClickBait-varningen och återställ artikelns prioritetspoäng"
                               >
-                                <X size={13} />
-                                Ta bort ClickBait-varning
+                                <X size={12} />
+                                Ta bort varning
                               </button>
                             </div>
                           )}

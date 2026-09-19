@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.18',
+    date: '2026-09-19',
+    title: 'Renodlad ClickBait-hantering och kompakt åtgärdsknapp',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Borttaget kryss i toppbaren',
+        description: 'ClickBait-indikatorn i artikelkortets toppbar visar nu enbart status utan dubblerad klickfunktion eller kryss.'
+      },
+      {
+        type: 'improvement',
+        title: 'Kompakt knapp i ClickBait-rutan',
+        description: 'Möjligheten att ta bort ClickBait-varningen finns nu samlad i artikelns röda ruta med en renodlad, kompakt knapp som ger mer utrymme för förklaringstexten.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.17',
     date: '2026-09-19',
     title: 'Optimerad verktygsrad och förstorade flödesikoner i Hantera flöden',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'improvement',
