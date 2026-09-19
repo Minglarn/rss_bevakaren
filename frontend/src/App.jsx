@@ -264,11 +264,11 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       <div 
         className="desktop-sidebar"
         style={{
-          width: isCollapsed ? '80px' : '260px',
+          width: isCollapsed ? '72px' : '250px',
           backgroundColor: 'var(--bg-card)',
           borderRight: '1px solid var(--border-color)',
           flexDirection: 'column',
-          padding: '1.5rem 0',
+          padding: '0.75rem 0',
           transition: 'width 0.3s ease',
           position: 'sticky',
           top: 0,
@@ -281,14 +281,14 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           onClick={() => setIsCollapsed(!isCollapsed)}
           style={{
             position: 'absolute',
-            right: '-16px',
-            top: '2rem',
-            width: '32px',
-            height: '32px',
+            right: '-14px',
+            top: '1.25rem',
+            width: '28px',
+            height: '28px',
             borderRadius: '50%',
             backgroundColor: 'var(--primary)',
             color: 'white',
-            border: '4px solid var(--bg-app)',
+            border: '3px solid var(--bg-app)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -297,34 +297,34 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             zIndex: 200
           }}
         >
-          {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
 
         <div style={{ 
-          padding: isCollapsed ? '0 1rem' : '0 1.5rem', 
-          marginBottom: '1.25rem', 
+          padding: isCollapsed ? '0 0.5rem' : '0 0.85rem', 
+          marginBottom: '0.5rem', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: isCollapsed ? 'center' : 'flex-start',
-          gap: '0.75rem', 
+          gap: '0.6rem', 
           color: 'var(--primary)' 
         }}>
-          <Rss size={28} />
+          <Rss size={24} />
           {!isCollapsed && (
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>RSS Monitor</h2>
+              <h2 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-main)', fontWeight: 700 }}>RSS Monitor</h2>
               <button 
                 onClick={() => window.dispatchEvent(new CustomEvent('openWhatsNew'))}
                 style={{ 
                   background: 'none', 
                   border: 'none', 
                   padding: 0, 
-                  fontSize: '0.7rem', 
+                  fontSize: '0.68rem', 
                   color: 'var(--text-muted)',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
+                  gap: '3px',
                   transition: 'color 0.15s ease'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
@@ -338,22 +338,23 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           )}
         </div>
 
-        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.2rem', padding: '0 0.75rem', overflowY: 'auto', overflowX: 'hidden' }}>
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.1rem', padding: '0 0.45rem', overflowY: 'auto', overflowX: 'hidden' }}>
           <Link to="/" style={{
-            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
-            borderRadius: '8px', textDecoration: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.5rem', padding: '0.25rem 0.55rem',
+            borderRadius: '6px', textDecoration: 'none',
             color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-muted)',
             backgroundColor: location.pathname === '/' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-            fontWeight: location.pathname === '/' ? 600 : 400
+            fontWeight: location.pathname === '/' ? 600 : 400,
+            fontSize: '0.84rem'
           }}>
-            <Rss size={19} /> {!isCollapsed && "Nyhetsflöde"}
+            <Rss size={16} /> {!isCollapsed && "Nyhetsflöde"}
             {!isCollapsed && myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
               <span style={{ 
                 marginLeft: 'auto', 
                 backgroundColor: '#ef4444', 
                 color: 'white', 
-                fontSize: '0.7rem', 
-                padding: '0.1rem 0.4rem', 
+                fontSize: '0.65rem', 
+                padding: '0.05rem 0.35rem', 
                 borderRadius: '10px', 
                 fontWeight: 'bold' 
               }}>
@@ -363,20 +364,21 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           </Link>
           {prioEnabled && (
             <Link to="/prio" style={{
-              display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
-              borderRadius: '8px', textDecoration: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.5rem', padding: '0.25rem 0.55rem',
+              borderRadius: '6px', textDecoration: 'none',
               color: location.pathname === '/prio' ? '#f97316' : 'var(--text-muted)',
               backgroundColor: location.pathname === '/prio' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
-              fontWeight: location.pathname === '/prio' ? 600 : 400
+              fontWeight: location.pathname === '/prio' ? 600 : 400,
+              fontSize: '0.84rem'
             }}>
-              <Flame size={19} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Feed"}
+              <Flame size={16} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Feed"}
               {!isCollapsed && prioUnreadCount > 0 && (
                 <span style={{ 
                   marginLeft: 'auto', 
                   backgroundColor: '#f97316', 
                   color: 'white', 
-                  fontSize: '0.7rem', 
-                  padding: '0.1rem 0.4rem', 
+                  fontSize: '0.65rem', 
+                  padding: '0.05rem 0.35rem', 
                   borderRadius: '10px', 
                   fontWeight: 'bold' 
                 }}>
@@ -386,30 +388,32 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             </Link>
           )}
           <Link to="/briefing" style={{
-            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
-            borderRadius: '8px', textDecoration: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.5rem', padding: '0.25rem 0.55rem',
+            borderRadius: '6px', textDecoration: 'none',
             color: location.pathname === '/briefing' ? 'var(--primary)' : 'var(--text-muted)',
             backgroundColor: location.pathname === '/briefing' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-            fontWeight: location.pathname === '/briefing' ? 600 : 400
+            fontWeight: location.pathname === '/briefing' ? 600 : 400,
+            fontSize: '0.84rem'
           }}>
-            <FileText size={19} /> {!isCollapsed && "Morgon- & Kvällsrapport"}
+            <FileText size={16} /> {!isCollapsed && "Morgon- & Kvällsrapport"}
           </Link>
           <Link to="/chat" style={{
-            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
-            borderRadius: '8px', textDecoration: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.5rem', padding: '0.25rem 0.55rem',
+            borderRadius: '6px', textDecoration: 'none',
             color: location.pathname === '/chat' ? 'var(--primary)' : 'var(--text-muted)',
             backgroundColor: location.pathname === '/chat' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
             fontWeight: location.pathname === '/chat' ? 600 : 400,
+            fontSize: '0.84rem',
             position: 'relative'
           }}>
-            <MessageSquare size={19} /> {!isCollapsed && "AI Chatt"}
+            <MessageSquare size={16} /> {!isCollapsed && "AI Chatt"}
             {isAiChatLoading && (
               <span 
                 title="AI genererar svar..."
                 style={{
                   marginLeft: isCollapsed ? 'auto' : 'auto',
-                  width: '8px',
-                  height: '8px',
+                  width: '7px',
+                  height: '7px',
                   borderRadius: '50%',
                   backgroundColor: 'var(--primary)',
                   boxShadow: '0 0 8px var(--primary)',
@@ -420,22 +424,23 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             )}
           </Link>
           <Link to="/settings" style={{
-            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.65rem', padding: '0.45rem 0.75rem',
-            borderRadius: '8px', textDecoration: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.5rem', padding: '0.25rem 0.55rem',
+            borderRadius: '6px', textDecoration: 'none',
             color: location.pathname === '/settings' ? 'var(--primary)' : 'var(--text-muted)',
             backgroundColor: location.pathname === '/settings' ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-            fontWeight: location.pathname === '/settings' ? 600 : 400
+            fontWeight: location.pathname === '/settings' ? 600 : 400,
+            fontSize: '0.84rem'
           }}>
-            <SettingsIcon size={19} /> {!isCollapsed && "Inställningar"}
+            <SettingsIcon size={16} /> {!isCollapsed && "Inställningar"}
           </Link>
 
           {/* Feeds List */}
           {!isCollapsed && myFeeds.length > 0 && (
-            <div style={{ marginTop: '1.25rem' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem', paddingLeft: '0.75rem' }}>
+            <div style={{ marginTop: '0.45rem' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.15rem', paddingLeft: '0.5rem' }}>
                 Mina flöden
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                 {myFeeds.map(feed => {
                   const isActive = new URLSearchParams(location.search).get('feedId') === String(feed.id);
                   return (
@@ -443,37 +448,38 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
                     to={`/?feedId=${feed.id}`} 
                     key={feed.id} 
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0.75rem',
+                      display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.15rem 0.5rem',
                       color: isActive ? 'var(--primary)' : 'var(--text-main)', 
-                      fontSize: '0.875rem',
+                      fontSize: '0.8rem',
+                      lineHeight: '1.2',
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       textDecoration: 'none',
                       backgroundColor: isActive ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-                      borderRadius: '6px',
+                      borderRadius: '5px',
                       fontWeight: isActive ? 600 : 400
                     }}
                   >
                     <img 
                       src={resolveFeedIcon(feed.icon_url)} 
                       alt="" 
-                      style={{ width: 15, height: 15, borderRadius: '3px', objectFit: 'contain', flexShrink: 0 }} 
+                      style={{ width: 14, height: 14, borderRadius: '3px', objectFit: 'contain', flexShrink: 0 }} 
                       onError={(e) => { 
                         if (!e.currentTarget.src.endsWith('/default-feed-icon.png')) {
                           e.currentTarget.onerror = null;
                           e.currentTarget.src = '/default-feed-icon.png';
                         }
-                      }}
+                      }} 
                     />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       {feed.title}
-                      {pollingFeeds.has(feed.id) && <RefreshCw size={11} className="spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />}
+                      {pollingFeeds.has(feed.id) && <RefreshCw size={10} className="spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />}
                     </span>
                     {!isCollapsed && feed.unread_count > 0 && (
                       <span style={{ 
                         backgroundColor: '#ef4444', 
                         color: 'white', 
-                        fontSize: '0.65rem', 
-                        padding: '0.05rem 0.35rem', 
+                        fontSize: '0.62rem', 
+                        padding: '0.02rem 0.3rem', 
                         borderRadius: '10px', 
                         fontWeight: 'bold',
                         marginLeft: 'auto'
@@ -489,18 +495,18 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           )}
         </nav>
 
-        <div style={{ padding: '0 1rem', marginTop: 'auto' }}>
+        <div style={{ padding: '0 0.5rem', marginTop: 'auto', paddingTop: '0.35rem' }}>
           <button 
             onClick={onLogout}
             style={{
               width: '100%',
-              display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.75rem 1rem',
-              borderRadius: '8px', border: 'none', background: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.5rem', padding: '0.35rem 0.55rem',
+              borderRadius: '6px', border: 'none', background: 'none',
               color: '#ef4444', cursor: 'pointer', textAlign: 'left',
-              fontSize: '1rem'
+              fontSize: '0.85rem'
             }}
           >
-            <LogOut size={20} /> {!isCollapsed && "Logga ut"}
+            <LogOut size={16} /> {!isCollapsed && "Logga ut"}
           </button>
         </div>
       </div>

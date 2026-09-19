@@ -1,9 +1,27 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.19',
+    date: '2026-09-19',
+    title: 'Kompakt sidopanel med 50% minskade marginaler och paddings',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Kompaktare sidopanelslayout',
+        description: 'Minskat vertikala marginaler, paddings och radhöjder i sidopanelen med över 50% så att avsevärt fler flöden ryms på skärmen utan onödig scrollning.'
+      },
+      {
+        type: 'improvement',
+        title: 'Trimmade navigeringslänkar och rubriker',
+        description: 'Optimerat avstånd och ikonstorlekar för huvudmeny, sektionsrubriker och utloggningsknappen.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.18',
     date: '2026-09-19',
     title: 'Renodlad ClickBait-hantering och kompakt åtgärdsknapp',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'improvement',
