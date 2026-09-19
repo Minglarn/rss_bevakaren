@@ -5,7 +5,7 @@ import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
 import ShareModal from './ShareModal';
-import PrioOnboardingModal from './PrioOnboardingModal';
+import OnboardingWizard from './OnboardingWizard';
 import AIReasoningModal from './AIReasoningModal';
 import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
 import { useFeeds } from '../App';
@@ -348,7 +348,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             const catNames = res.data.categories.map(c => typeof c === 'object' ? c.name : c).filter(Boolean);
             setCategories(['All', ...catNames]);
           }
-          if (prioEnabled && isPrioMode && res.data.onboarding_completed === false) {
+          if (res.data.onboarding_completed === false) {
             setShowOnboarding(true);
           }
         }
@@ -361,8 +361,15 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     const handleConfigUpdate = () => {
       fetchCategories();
     };
+    const handleOpenOnboarding = () => {
+      setShowOnboarding(true);
+    };
     window.addEventListener('aiConfigUpdated', handleConfigUpdate);
-    return () => window.removeEventListener('aiConfigUpdated', handleConfigUpdate);
+    window.addEventListener('openOnboarding', handleOpenOnboarding);
+    return () => {
+      window.removeEventListener('aiConfigUpdated', handleConfigUpdate);
+      window.removeEventListener('openOnboarding', handleOpenOnboarding);
+    };
   }, [isPrioMode]);
   
   const [readItems, setReadItems] = useState(new Set());
@@ -2660,12 +2667,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       />
 
 
-      {/* Onboarding för Prio Flöde */}
-      <PrioOnboardingModal
+      {/* Installationsguide för nyinstallerad applikation */}
+      <OnboardingWizard
         isOpen={showOnboarding}
         onClose={() => setShowOnboarding(false)}
-        onSaved={() => {
+        onCompleted={() => {
           fetchFeeds();
+          window.dispatchEvent(new Event('feedsUpdated'));
         }}
       />
     </div>

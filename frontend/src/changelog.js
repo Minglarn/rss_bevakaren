@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.05',
+    date: '2026-09-19',
+    title: 'Interaktiv installationsguide (Onboarding Wizard) med skippa-funktion',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Flerstegsguide för nyinstallationer',
+        description: 'En visuell och pedagogisk kom-igång-guide som hjälper nya användare att snabbt välja svenska flödespaket, kontrollera lokal AI-anslutning och forma sin personliga nyhetsprofil.'
+      },
+      {
+        type: 'feature',
+        title: 'Frågebatteri för personlig intresseprofil och kategoriviktning',
+        description: 'Alla kategorier startar på ett neutralt mellanläge (6/10). Genom 4 enkla frågor genereras en skräddarsydd profil där favoritområden lyfts och oönskade ämnen dämpas automatiskt.'
+      },
+      {
+        type: 'feature',
+        title: 'Möjlighet att när som helst skippa guiden och köra om den från Inställningar',
+        description: 'Tydlig möjlighet att hoppa över introduktionen i samtliga steg utan att tvingas göra val, samt en dedikerad knapp i Inställningar för att återköra guiden vid behov.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.04',
     date: '2026-09-19',
     title: 'Komplett säkerhetskopiering av SAMTLIGA inställningar i hela systemet',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',

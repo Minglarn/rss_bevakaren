@@ -1,18 +1,19 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.17.07-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.19.05-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
 
 ![Dashboard Screenshot](screenshot_1.jpg)
 
-RSS-Bevakaren är ett modernt, självhostat system för att övervaka, filtrera, prioritera och presentera RSS- och Atom-flöden i realtid. Systemet kombinerar en robust Python-backend, en responsiv React-frontend och en kraftfull lokal AI-motor för automatisk analys, sammanfattning, Clickbait-detektering och händelseprioritering.
+RSS-Bevakaren är ett modernt, självhostat system för att övervaka, filtrera, prioritera och presentera RSS- och Atom-flöden i realtid. Systemet kombinerar en robust Python-backend, en responsiv React-frontend och en kraftfull lokal AI-motor för automatisk analys, sammanfattning, ClickBait-detektering och händelseprioritering.
 
 ---
 
 ## Huvudfunktioner
 
+- **Interaktiv installationsguide (Onboarding Wizard):** Flerstegsguide vid nyinstallation som hjälper användaren att välja rekommenderade svenska flödespaket, kontrollera lokal AI-anslutning och forma sin personliga nyhetsprofil och kategoriviktning utifrån ett enkelt frågebatteri (med möjlighet att skippa eller köra om när som helst).
 - **Gilla- & Ogilla-system (Adaptiv intresseprofil):** Interaktiv röstning direkt på händelsekorten (Tumme upp / Tumme ner). Att gilla en artikel tränar upp en personlig intresseprofil som prioriterar upp framtida liknande ämnen (+10p bonus per matchande tagg). Att ogilla en artikel sänker poängen (-15p) för liknande ämnen. Artikellåsning (skydd mot databasrensning) styrs separat via den dedikerade Lås-knappen.
 - **Favoritfilter ("Gillade"):** Ett dedikerat filter i navigeringsfältet för att omedelbart visa alla dina gillade och sparade artiklar.
 - **Nyhetsklustring och dubletthantering (Topic Clustering):** Intelligent semantisk och heuristisk gruppering av artiklar från olika redaktioner som rapporterar om samma händelse (t.ex. SVT, DN, Aftonbladet). Visar länkade källbrickor och gör det möjligt att markera hela händelser som lästa med ett klick. Styrs centralt via Inställningar -> Utseende och är aktiv som standard.
@@ -113,7 +114,19 @@ Under **Inställningar -> AI-analys & Prompt -> Kategoriviktning och prioritet**
    - När du lägger till en kategori uppdateras språkmodellens systemprompt automatiskt i bakgrunden, vilket gör att AI:n omedelbart börjar klassificera nya artiklar mot dina egna kategorier.
    - Du ställer in din önskade vikt (0–10) med reglaget för din nya kategori.
    - Du kan även ta bort kategorier du inte vill ha eller när som helst klicka *"Återställ standardvikter"*.
-   - **Anpassad systemprompt:** Granska och redigera den aktiva systemprompten direkt i webbgränssnittet. Du kan justera ton, kategoridefinitioner, Clickbait-kriterier eller språkinställningar direkt.
+   - **Anpassad systemprompt:** Granska och redigera den aktiva systemprompten direkt i webbgränssnittet. Du kan justera ton, kategoridefinitioner, ClickBait-kriterier eller språkinställningar direkt.
+
+---
+
+## Installationsguide (Onboarding Wizard)
+
+När applikationen startas första gången för en ny användare öppnas en interaktiv flerstegsguide automatiskt:
+
+1. **Rekommenderade svenska flöden:** Välj bland kurerade temapaket (*Riksnyheter*, *Teknik & IT*, *Ekonomi & Finans*, *Blåljus & Krisinformation*, samt *Motor & Elbilar*). Du kan välja hela paket eller enskilda redaktioner med ett klick.
+2. **Lokal AI-kontroll:** Testar anslutningen till din lokala språkmodell (LM Studio) i realtid, visar tillgängliga modeller och låter dig välja önskat format för push-notiser (kompakt 1-mening vs fullständig sammanfattning).
+3. **Frågebatteri för personlig intresseprofil:** Alla kategorier startar på en neutral baslinje (6/10 inom standardspannet 5–7). Fyra enkla frågor anpassar automatiskt kategorivikterna och prioritetströskeln efter vad du vill läsa respektive dämpa.
+4. **Förhandsgranskning & Finjustering:** Visar den framräknade profilen i ett överskådligt reglagekort där du kan finjustera innan bevakningen aktiveras.
+5. **Skippa eller kör om:** Guiden har en tydlig *"Hoppa över introduktionen"*-knapp i alla steg som sparar standardinställningar. Guiden kan när som helst startas om från **Inställningar** (under flikarna *Allmänt* eller *AI-analys*).
 
 ---
 
