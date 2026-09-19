@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.19.06',
+    date: '2026-09-19',
+    title: 'Centrerad inloggningsvy, helskärmsbakgrund och svenskt gränssnitt',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Horisontell och vertikal helskärmscentrering',
+        description: 'Åtgärdade flex-kollaps i inloggningsvyn där formuläret trycktes fast till vänster i en smal kolumn. Inloggningsrutan expanderar nu till full bredd och centreras harmoniskt i mitten av skärmen.'
+      },
+      {
+        type: 'ui',
+        title: 'Sömlös bakgrundsfärg',
+        description: 'Eliminerat den skarpa vertikala bakgrundskanten genom att låta inloggningsskärmen omfamna applikationens globala, mjuka gradienter över 100 % av skärmytan.'
+      },
+      {
+        type: 'ui',
+        title: 'Svenska texter och symboler',
+        description: 'Översatt hela inloggningsrutan till ren svenska (RSS-Bevakaren, Användarnamn, Lösenord och Logga in) med modern laddningsindikator.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.05',
     date: '2026-09-19',
     title: 'Interaktiv installationsguide (Onboarding Wizard) med skippa-funktion',
-    badge: 'Senaste',
+    badge: '',
     highlights: [
       {
         type: 'feature',
