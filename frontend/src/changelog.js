@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.19',
+    date: '2026-09-20',
+    title: 'Historiskt importtak och förtydligad flödesinläsning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Åsidosättning av tidsbegränsning vid importtak',
+        description: 'När ett flöde läggs till med ett angivet maxantal artiklar åsidosätter systemet den generella skyddsgränsen för artikelålder så att äldre historiska artiklar hämtas in upp till angivet antal.'
+      },
+      {
+        type: 'design',
+        title: 'Utgråat importtak och förklarande gränssnitt',
+        description: 'Förtydligat fältet för Max artiklar vid skapande av flöde med en pedagogisk hjälprad. I flödeslistan och mobilkorten visas inställningen som en utgråad, informativ bricka då regeln främst avser den initiala inläsningen.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.18',
     date: '2026-09-20',
     title: 'Balanserade marginaler och förbättrad läsbarhet',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'design',

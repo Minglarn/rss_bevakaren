@@ -642,17 +642,21 @@ const RssManager = ({ embedded = false }) => {
                     style={{ width: '100%', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
                   />
                 </div>
-                <div style={{ flex: '0 1 120px' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Max artiklar</label>
+                <div style={{ flex: '0 1 140px' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Max art. (import)</label>
                   <input 
                     type="number" 
                     min="0"
-                    placeholder="0 = alla"
-                    title="Högsta antal artiklar att läsa in per hämtning (0 = alla/obegränsat)"
+                    placeholder="0 = tidsgräns"
+                    title="Gäller vid initial inläsning. Åsidosätter den globala tidsbegränsningen för att läsa in äldre artiklar upp till detta antal. Lämna 0 för att följa tidsgränsen."
                     value={maxItems === 0 ? '' : maxItems}
                     onChange={(e) => setMaxItems(parseInt(e.target.value, 10) || 0)}
                     style={{ width: '100%', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
                   />
+                </div>
+                
+                <div style={{ width: '100%', fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '-0.35rem', marginBottom: '0.35rem', lineHeight: '1.4' }}>
+                  Max artiklar vid import: Åsidosätter den globala tidsbegränsningen (t.ex. 24/48h) för att läsa in äldre historik vid tillägg. Därefter bevakas flödet löpande.
                 </div>
                 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: '1', minWidth: '350px', flexWrap: 'wrap', paddingBottom: '0.5rem' }}>
@@ -1175,7 +1179,7 @@ const RssManager = ({ embedded = false }) => {
                 <div className="rss-table-header">
                   <div>Källa / Flöde</div>
                   <div className="rss-table-col-center" title="Uppdateringsintervall i minuter">Intervall</div>
-                  <div className="rss-table-col-center" title="Max antal artiklar att läsa in per hämtning (0 = obegränsat)">Max art.</div>
+                  <div className="rss-table-col-center" title="Max artiklar vid initial import (gällde vid första inläsningen)">Importtak</div>
                   <div className="rss-table-col-center" title="Hämta artiklar automatiskt i bakgrunden">Hämta</div>
                   <div className="rss-table-col-center" title="Visa artiklar i nyhetsflödet">I flöde</div>
                   <div className="rss-table-col-center" title="ClickBait-granskning med AI">ClickBait</div>
@@ -1226,8 +1230,8 @@ const RssManager = ({ embedded = false }) => {
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Max art:</span>
-                              <div className="rss-pill-input">
+                              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Importtak:</span>
+                              <div className="rss-pill-input" title="Max artiklar vid import. Ändring till ett positivt värde triggar en ny hämtning som åsidosätter tidsbegränsningen.">
                                 <input 
                                   type="number" 
                                   min="0" 
@@ -1350,31 +1354,24 @@ const RssManager = ({ embedded = false }) => {
                           </div>
                         </div>
 
-                        {/* 3. Max artiklar */}
+                        {/* 3. Max artiklar / Importtak (gällde initial import, utgråad för befintliga flöden) */}
                         <div className="rss-desktop-only" style={{ justifyContent: 'center' }}>
-                          <div className="rss-pill-input" title="Max antal artiklar att hämta per pollning (0 = obegränsat/systemstandard)">
-                            <input
-                              type="number"
-                              min="0"
-                              placeholder="0"
-                              defaultValue={feed.max_items || 0}
-                              key={`max-${feed.id}-${feed.max_items}`}
-                              onBlur={(e) => {
-                                const newVal = parseInt(e.target.value, 10) || 0;
-                                if (newVal !== (feed.max_items || 0)) {
-                                  api.put(`/feeds/${feed.id}`, { 
-                                    title: feed.title, 
-                                    url: feed.url, 
-                                    polling_interval: feed.polling_interval, 
-                                    max_items: newVal,
-                                    scrape_enabled: feed.scrape_enabled, 
-                                    include_in_dashboard: feed.include_in_dashboard, 
-                                    clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true 
-                                  }).then(fetchFeeds);
-                                }
-                              }}
-                            />
-                            <span>st</span>
+                          <div 
+                            className="rss-pill-input rss-pill-disabled" 
+                            style={{ 
+                              opacity: 0.45, 
+                              cursor: 'not-allowed', 
+                              backgroundColor: 'transparent',
+                              border: '1px dashed var(--border-color)',
+                              padding: '0.2rem 0.55rem',
+                              justifyContent: 'center',
+                              minWidth: '55px'
+                            }}
+                            title="Gällde vid initial inläsning (åsidosatte tidsbegränsningen). Flödet bevakas nu löpande."
+                          >
+                            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.02em' }}>
+                              {feed.max_items > 0 ? `${feed.max_items} st` : '—'}
+                            </span>
                           </div>
                         </div>
 
@@ -1607,30 +1604,23 @@ const RssManager = ({ embedded = false }) => {
                               </div>
 
                               <div className="rss-mobile-val-item">
-                                <span>Max art:</span>
-                                <div className="rss-pill-input">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    placeholder="0"
-                                    defaultValue={feed.max_items || 0}
-                                    key={`m-max-${feed.id}-${feed.max_items}`}
-                                    onBlur={(e) => {
-                                      const newVal = parseInt(e.target.value, 10) || 0;
-                                      if (newVal !== (feed.max_items || 0)) {
-                                        api.put(`/feeds/${feed.id}`, { 
-                                          title: feed.title, 
-                                          url: feed.url, 
-                                          polling_interval: feed.polling_interval, 
-                                          max_items: newVal,
-                                          scrape_enabled: feed.scrape_enabled, 
-                                          include_in_dashboard: feed.include_in_dashboard, 
-                                          clickbait_enabled: feed.clickbait_enabled !== undefined ? feed.clickbait_enabled : true 
-                                        }).then(fetchFeeds);
-                                      }
-                                    }}
-                                  />
-                                  <span>st</span>
+                                <span style={{ opacity: 0.65 }}>Importtak:</span>
+                                <div 
+                                  className="rss-pill-input rss-pill-disabled" 
+                                  style={{ 
+                                    opacity: 0.45, 
+                                    cursor: 'not-allowed', 
+                                    backgroundColor: 'transparent',
+                                    border: '1px dashed var(--border-color)',
+                                    padding: '0.15rem 0.45rem',
+                                    justifyContent: 'center',
+                                    minWidth: '46px'
+                                  }}
+                                  title="Gällde vid initial inläsning (åsidosatte tidsbegränsningen). Flödet bevakas nu löpande."
+                                >
+                                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                                    {feed.max_items > 0 ? `${feed.max_items} st` : '—'}
+                                  </span>
                                 </div>
                               </div>
                             </div>

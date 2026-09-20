@@ -1387,10 +1387,13 @@ async def polling_loop():
                     max_age_hours = int(user_ai.max_article_age_hours if (user_ai and user_ai.max_article_age_hours) else os.environ.get("AI_MAX_ARTICLE_AGE_HOURS", "48"))
                     cutoff_pub_ts = current_time - (max_age_hours * 3600)
 
-                    # Om flödet har ett specificerat max antal artiklar, begränsa till detta
+                    # Om flödet har ett specificerat max antal artiklar, begränsa till detta och åsidosätt tidsbegränsningen
                     parsed_items = items
-                    if getattr(feed, 'max_items', 0) and feed.max_items > 0:
-                        parsed_items = parsed_items[:feed.max_items]
+                    custom_max_items = getattr(feed, 'max_items', 0) or 0
+                    override_age_limit = bool(custom_max_items > 0)
+
+                    if override_age_limit:
+                        parsed_items = parsed_items[:custom_max_items]
                     elif is_initial_poll and parsed_items and all((it.get("published_ts") or 0) == 0 for it in parsed_items[:5]):
                         # Om flödet saknar tidsstämplar begränsar vi initial import till max 25 nyaste
                         parsed_items = parsed_items[:25]
@@ -1404,8 +1407,10 @@ async def polling_loop():
 
                         # Strikt kontroll av verklig publiceringstid:
                         # Ignorera historiska artiklar som är äldre än max_age_hours (t.ex. 48h)
-                        if pub_ts > 0 and pub_ts < cutoff_pub_ts:
-                            continue
+                        # Användaroverride: Om flödet har ett angett max_items åsidosätts tidsbegränsningen
+                        if not override_age_limit:
+                            if pub_ts > 0 and pub_ts < cutoff_pub_ts:
+                                continue
 
                         # Use link or title as GUID if GUID is missing
                         guid = item.get("link") or item.get("title")
@@ -1759,10 +1764,16 @@ async def ai_processing_loop():
                     pass
 
                 # 1. Arkivera/hoppa automatiskt över gamla artiklar (> max_age_hours baserat på published_ts eller received_ts) och artiklar som redan är lästa
+                custom_feed_ids = [f_id[0] for f_id in db_init.query(models.Feed.id).filter(models.Feed.max_items > 0).all()]
+                
                 db_init.query(models.Article).filter(
                     or_(models.Article.ai_processed == 0, models.Article.ai_processed == None),
                     or_(
-                        and_(models.Article.published_ts > 0, models.Article.published_ts < cutoff_ts),
+                        and_(
+                            models.Article.published_ts > 0, 
+                            models.Article.published_ts < cutoff_ts,
+                            or_(~models.Article.feed_id.in_(custom_feed_ids), models.Article.received_ts < cutoff_ts) if custom_feed_ids else True
+                        ),
                         and_(or_(models.Article.published_ts == 0, models.Article.published_ts == None), models.Article.received_ts < cutoff_ts),
                         models.Article.is_read == 1
                     )
@@ -2365,7 +2376,11 @@ def update_feed(feed_id: int, feed: schemas.FeedCreate, db: Session = Depends(da
     if hasattr(feed, 'clickbait_enabled') and feed.clickbait_enabled is not None:
         db_feed.clickbait_enabled = int(feed.clickbait_enabled)
     if hasattr(feed, 'max_items') and feed.max_items is not None:
-        db_feed.max_items = int(feed.max_items)
+        old_max = getattr(db_feed, 'max_items', 0) or 0
+        new_max = int(feed.max_items)
+        db_feed.max_items = new_max
+        if new_max > 0 and new_max != old_max:
+            db_feed.last_polled = 0
     db.commit()
     db.refresh(db_feed)
     if mqtt_service.MQTT_ENABLED:
