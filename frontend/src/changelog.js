@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.04',
+    date: '2026-09-20',
+    title: 'Standardisering av Home Assistant button-card med temavariabler',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Responsivt Home Assistant-kort',
+        description: 'Uppdaterat custom:button-card att använda standardiserade CSS-temavariabler (--ha-card-background, --primary-text-color, --primary-color m.fl.) så att kortet anpassar sig sömlöst efter både ljust och mörkt tema.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.03',
     date: '2026-09-20',
     title: 'Dokumentation för Home Assistant button-card och utökad MQTT-specifikation',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'docs',

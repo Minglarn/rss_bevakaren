@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.20.03-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.20.04-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -325,12 +325,13 @@ tap_action:
   url_path: "[[[ return entity.attributes.link; ]]]"
 styles:
   card:
-    - background-color: "#171d2c"
-    - border: "2px solid #7c4dff"
-    - border-radius: "14px"
+    - background: "var(--ha-card-background, var(--card-background-color, var(--primary-background-color)))"
+    - border: "1px solid var(--ha-card-border-color, var(--divider-color, rgba(127, 127, 127, 0.2)))"
+    - border-radius: "var(--ha-card-border-radius, 12px)"
+    - box-shadow: "var(--ha-card-box-shadow, none)"
     - padding: "0px"
     - overflow: "hidden"
-    - color: "#ffffff"
+    - color: "var(--primary-text-color)"
     - text-align: "left"
     - cursor: "pointer"
   grid:
@@ -341,53 +342,53 @@ custom_fields:
   main: >
     [[[
       const a = entity.attributes;
-      if (!a.title) return '<div style="padding:16px; color:#888;">Ingen händelse mottagen än.</div>';
+      if (!a.title) return '<div style="padding: 16px; color: var(--secondary-text-color);">Ingen händelse mottagen än.</div>';
       
       let tagsHtml = '';
       if (a.tags && Array.isArray(a.tags)) {
-        tagsHtml = a.tags.map(t => `<span style="background:#1a2538; color:#7e9bbd; border:1px solid #2b3e5c; font-size:11px; padding:3px 9px; border-radius:12px; margin-right:5px; margin-bottom:5px; display:inline-block; white-space:nowrap;"># ${t}</span>`).join('');
+        tagsHtml = a.tags.map(t => `<span style="background: var(--secondary-background-color, rgba(127, 127, 127, 0.1)); color: var(--secondary-text-color); border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.2)); font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-right: 4px; margin-bottom: 4px; display: inline-block; white-space: nowrap;"># ${t}</span>`).join('');
       }
 
       const iconHtml = a.feed_icon 
-        ? `<img src="${a.feed_icon}" style="width: 20px; height: 20px; border-radius: 4px; object-fit: contain; background: rgba(255,255,255,0.12); padding: 2px;" />` 
+        ? `<img src="${a.feed_icon}" style="width: 20px; height: 20px; border-radius: 4px; object-fit: contain; background: var(--secondary-background-color, rgba(127, 127, 127, 0.15)); padding: 2px;" />` 
         : `<span>RSS</span>`;
 
       return `
         <div>
-          <!-- Top Header med flödesikon -->
-          <div style="background-color: #7c4dff; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 14px; color: #ffffff;">
+          <!-- Header (följer HA primärfärg) -->
+          <div style="background-color: var(--primary-color, #03a9f4); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 14px; color: var(--text-primary-color, #ffffff);">
             <div style="display: flex; align-items: center; gap: 8px;">
               ${iconHtml}
               <span>${a.source || 'RSS'}</span>
             </div>
-            ${a.prio_score ? `<span style="background: rgba(0,0,0,0.25); padding: 2px 8px; border-radius: 10px; font-size: 11px;">${a.prio_score}p</span>` : ''}
+            ${a.prio_score ? `<span style="background: rgba(0,0,0,0.2); color: inherit; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">${a.prio_score}p</span>` : ''}
           </div>
 
-          <!-- Body -->
+          <!-- Innehåll -->
           <div style="padding: 14px;">
-            <div style="font-size: 16px; font-weight: 700; line-height: 1.35; margin-bottom: 6px; color: #ffffff; white-space: normal;">
+            <div style="font-size: 15px; font-weight: 700; line-height: 1.4; margin-bottom: 6px; color: var(--primary-text-color); white-space: normal;">
               ${a.title}
             </div>
             
-            <div style="font-size: 12px; color: #8292a8; margin-bottom: 12px; white-space: normal;">
+            <div style="font-size: 12px; color: var(--secondary-text-color); margin-bottom: 10px; white-space: normal;">
               Publ: ${a.published || ''}
             </div>
 
-            <div style="background: #0f1522; padding: 12px; border-radius: 8px; font-size: 13.5px; line-height: 1.5; color: #d6e2f0; border: 1px solid #202b40; margin-bottom: 12px; white-space: normal; word-break: break-word;">
+            <div style="background: var(--secondary-background-color, rgba(127, 127, 127, 0.08)); padding: 12px; border-radius: 8px; font-size: 13.5px; line-height: 1.5; color: var(--primary-text-color); border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.15)); margin-bottom: 12px; white-space: normal; word-break: break-word;">
               ${a.summary || ''}
             </div>
 
-            <!-- Tags -->
-            <div style="display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 4px; white-space: normal;">
-              <span style="background:#241e17; color:#f59e0b; border:1px solid #573807; font-size:11px; padding:3px 9px; border-radius:12px; margin-right:5px; margin-bottom:5px; font-weight:600; display:inline-block; white-space:nowrap;">
+            <!-- Taggar & Kategori -->
+            <div style="display: flex; flex-wrap: wrap; align-items: center; white-space: normal;">
+              <span style="background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.15); color: var(--primary-color, #03a9f4); border: 1px solid rgba(var(--rgb-primary-color, 3, 169, 244), 0.3); font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-right: 4px; margin-bottom: 4px; font-weight: 600; display: inline-block; white-space: nowrap;">
                 ${a.category || ''}
               </span>
               ${tagsHtml}
             </div>
           </div>
 
-          <!-- Bottom Footer -->
-          <div style="background-color: #7c4dff; padding: 8px; text-align: center; font-size: 13px; font-weight: 600; color: #ffffff; white-space: normal;">
+          <!-- Footer -->
+          <div style="background: var(--secondary-background-color, rgba(127, 127, 127, 0.08)); border-top: 1px solid var(--divider-color, rgba(127, 127, 127, 0.15)); padding: 8px; text-align: center; font-size: 12.5px; font-weight: 600; color: var(--primary-color, #03a9f4); white-space: normal;">
             Klicka för att öppna artikeln
           </div>
         </div>
