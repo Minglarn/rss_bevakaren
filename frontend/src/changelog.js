@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.11',
+    date: '2026-09-20',
+    title: 'Generiska användarnamn i Home Assistant-dokumentationen',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'docs',
+        title: 'Tydligare fleranvändarexempel',
+        description: 'Förtydligat i README.md att exemplen för Home Assistant Auto-Discovery är generiska mallar (användare1, användare2) som dynamiskt anpassas efter systemets faktiska användarnamn.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.10',
     date: '2026-09-20',
     title: 'Säkerhetsgranskning och hårdning av hemligheter',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

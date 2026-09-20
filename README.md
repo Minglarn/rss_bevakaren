@@ -86,9 +86,11 @@ docker compose up -d
 RSS-Bevakaren har fullt stöd för **MQTT Auto-Discovery**. När `MQTT_ENABLED=true` är aktiverat skapas och uppdateras alla sensorer automatiskt i Home Assistant utan behov av manuell YAML-konfiguration.
 
 ### Fleranvändarstöd i Home Assistant
-Home Assistant grupperar sensorerna under separata enheter per användare:
-- **Enhet: RSS-Bevakaren (admin)** med sensor `sensor.rss_admin_prio` och alla admins flödessensorer.
-- **Enhet: RSS-Bevakaren (mari)** med sensor `sensor.rss_mari_prio` och alla maris flödessensorer.
+Om systemet har flera användare grupperar Home Assistant automatiskt sensorerna under separata enheter per användarkonto. Exempel:
+- **Enhet: RSS-Bevakaren (användare1):** med sensor `sensor.rss_anvandare1_prio` samt kontots alla flödessensorer.
+- **Enhet: RSS-Bevakaren (användare2):** med sensor `sensor.rss_anvandare2_prio` samt kontots alla flödessensorer.
+
+> **Obs:** Ovanstående är ett exempel. Sensorernas ID anpassas automatiskt efter de faktiska användarnamnen som skapas i RSS-Bevakaren (t.ex. `sensor.rss_<användarnamn>_prio`).
 
 ### Färdigt Dashboard-kort (custom:button-card)
 Detta kort anpassar sig automatiskt efter Home Assistants tema (mörkt/ljust) och visar källans logotyp, rubrik, artikelbild, AI-sammanfattning, poäng och taggar. Klick på kortet öppnar artikeln direkt hos källan:
@@ -266,4 +268,4 @@ Varje publicerat MQTT-meddelande innehåller en komplett JSON-nyttolast:
 
 ## Versionshantering
 
-Projektet tillämpar strikt kalenderbaserad versionshantering (CalVer), exempelvis `2026.09.20.09`. Versionsnumret uppdateras inför varje leverans för att garantera full spårbarhet mellan källkod, container-taggar och ändringslogg.
+Projektet tillämpar strikt kalenderbaserad versionshantering (CalVer), exempelvis `2026.09.20.11`. Versionsnumret uppdateras inför varje leverans för att garantera full spårbarhet mellan källkod, container-taggar och ändringslogg.
