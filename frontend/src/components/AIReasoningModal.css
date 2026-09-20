@@ -118,12 +118,12 @@
 
 /* Rullningsbart innehåll - Solid med optimerade moderna marginaler */
 .ai-modal-body {
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1.15rem;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 0.6rem;
   flex: 1;
   background-color: #ffffff;
 }
@@ -154,67 +154,7 @@
   letter-spacing: -0.01em;
 }
 
-/* Poängkort (Hero) - Komprimerad */
-.ai-modal-score-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.85rem;
-  padding: 0.85rem 1.15rem;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(59, 130, 246, 0.04) 100%);
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
-  flex-wrap: wrap;
-  position: relative;
-  overflow: hidden;
-}
-
-.ai-modal-score-card.is-prio {
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.14) 0%, rgba(234, 88, 12, 0.05) 100%);
-  border-color: rgba(249, 115, 22, 0.35);
-}
-
-.ai-modal-score-card.is-normal {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.05) 100%);
-  border-color: rgba(59, 130, 246, 0.3);
-}
-
-.ai-modal-score-card.is-low {
-  background: linear-gradient(135deg, rgba(148, 163, 184, 0.1) 0%, rgba(100, 116, 139, 0.04) 100%);
-  border-color: var(--border-color, rgba(0, 0, 0, 0.1));
-}
-
-.ai-modal-score-number-group {
-  display: flex;
-  align-items: baseline;
-  gap: 0.35rem;
-}
-
-.ai-modal-score-big {
-  font-size: 2.1rem;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-
-.ai-modal-score-max {
-  font-size: 0.88rem;
-  color: var(--text-muted, #64748b);
-  font-weight: 600;
-}
-
-.ai-modal-prio-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 5px 12px;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-}
-
-/* Enhetlig Matris & Beräkning */
+/* Integrerad poängrad i matrisens topp */
 .ai-modal-matrix-section {
   display: flex;
   flex-direction: column;
@@ -223,28 +163,89 @@
 .ai-modal-matrix-card {
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 11px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.ai-modal-matrix-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #ffffff;
+}
+
+.ai-modal-matrix-top.is-prio {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(234, 88, 12, 0.02) 100%);
+  border-bottom-color: rgba(249, 115, 22, 0.2);
+}
+
+.ai-modal-matrix-top.is-normal {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(37, 99, 235, 0.02) 100%);
+  border-bottom-color: rgba(59, 130, 246, 0.2);
+}
+
+.ai-modal-matrix-top.is-low {
+  background-color: #ffffff;
+}
+
+.ai-modal-matrix-score-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.ai-modal-matrix-score-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.ai-modal-matrix-score-val {
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.ai-modal-matrix-score-max {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+}
+
+.ai-modal-prio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
 }
 
 /* Poängpelare */
 .ai-modal-pillars-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.55rem;
-  padding: 0.65rem;
+  gap: 0.45rem;
+  padding: 0.5rem;
 }
 
 .ai-modal-pillar-card {
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 9px;
-  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .ai-modal-pillar-name {
@@ -368,21 +369,27 @@
   line-height: 1.45;
 }
 
-/* Diagnostik & Metadata - Optimerat rutnät */
+/* Diagnostik & Metadata - 3 jämna kolumner */
 .ai-modal-diagnostics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+}
+
+@media (max-width: 540px) {
+  .ai-modal-diagnostics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ai-modal-diagnostic-chip {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.55rem 0.75rem;
+  gap: 0.5rem;
+  padding: 0.42rem 0.6rem;
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 9px;
+  border-radius: 8px;
 }
 
 .ai-modal-diagnostic-icon {
@@ -539,19 +546,24 @@
   background-color: rgba(255, 255, 255, 0.12);
 }
 
-.theme-dark .ai-modal-score-card.is-prio {
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.22) 0%, rgba(234, 88, 12, 0.08) 100%);
-  border-color: rgba(249, 115, 22, 0.5);
+.theme-dark .ai-modal-matrix-top {
+  background-color: #0f172a !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
-.theme-dark .ai-modal-score-card.is-normal {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.06) 100%);
-  border-color: rgba(59, 130, 246, 0.4);
+.theme-dark .ai-modal-matrix-top.is-prio {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.18) 0%, rgba(234, 88, 12, 0.04) 100%) !important;
+  border-bottom-color: rgba(249, 115, 22, 0.35);
 }
 
-.theme-dark .ai-modal-score-card.is-low {
-  background: linear-gradient(135deg, rgba(148, 163, 184, 0.14) 0%, rgba(100, 116, 139, 0.05) 100%);
-  border-color: rgba(255, 255, 255, 0.12);
+.theme-dark .ai-modal-matrix-top.is-normal {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(37, 99, 235, 0.04) 100%) !important;
+  border-bottom-color: rgba(59, 130, 246, 0.3);
+}
+
+.theme-dark .ai-modal-matrix-top.is-low {
+  background-color: #0f172a !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 /* ==========================================================================

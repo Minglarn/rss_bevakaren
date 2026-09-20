@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.17',
+    date: '2026-09-20',
+    title: 'Kompakt och renodlat AI-analysfönster',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Integrerad prioritetspoäng',
+        description: 'Bantat bort det stora fullbreddskortet för totalpoäng och integrerat poängen och prioriteringsbrickan direkt i toppen av poängmatrisen.'
+      },
+      {
+        type: 'improvement',
+        title: 'Borttagning av duplicerad information',
+        description: 'Rensat bort rutan Hämtad till systemet (som redan finns under artikelrubriken) och tagit bort den upprepade grundberäkningsraden.'
+      },
+      {
+        type: 'design',
+        title: '3-kolumns diagnostik och slanka marginaler',
+        description: 'Jämn 3-kolumnsfördelning för AI-diagnostiken och tightade marginaler för en modern och samlad vy utan onödig tom rymd.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.16',
     date: '2026-09-20',
     title: 'Stabilitetsfix för AI-analysfönstret',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

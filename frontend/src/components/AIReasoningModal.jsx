@@ -229,16 +229,7 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
                   href={item.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                    fontSize: '0.78rem',
-                    color: 'var(--primary, #3b82f6)',
-                    textDecoration: 'none',
-                    marginTop: '0.2rem',
-                    width: 'fit-content'
-                  }}
+                  className="ai-modal-article-link"
                 >
                   <span>Öppna originalartikel</span>
                   <ExternalLink size={12} />
@@ -246,59 +237,53 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
               )}
 
               {(pubDateFormatted || recDateFormatted) && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem', marginTop: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                <div className="ai-modal-article-meta">
                   {pubDateFormatted && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <div className="ai-modal-meta-item">
                       <Clock size={12} style={{ color: 'var(--primary, #3b82f6)' }} />
-                      <span>Publicerad: <strong style={{ color: 'var(--text-main)' }}>{pubDateFormatted}</strong></span>
+                      <span>Publicerad: <strong>{pubDateFormatted}</strong></span>
                     </div>
                   )}
                   {recDateFormatted && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <div className="ai-modal-meta-item">
                       <Clock size={12} style={{ color: '#10b981' }} />
-                      <span>Hämtad: <strong style={{ color: 'var(--text-main)' }}>{recDateFormatted}</strong></span>
+                      <span>Hämtad: <strong>{recDateFormatted}</strong></span>
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Total prioritetspoäng (Hero-kort) */}
-            <div className={`ai-modal-score-card ${prioInfo.className}`}>
-              <div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>
-                  Total prioritetspoäng
-                </div>
-                <div className="ai-modal-score-number-group">
-                  <span className="ai-modal-score-big" style={{ color: prioInfo.color }}>
-                    {score}
-                  </span>
-                  <span className="ai-modal-score-max">
-                    / 100 poäng
-                  </span>
-                </div>
-              </div>
-
-              <div
-                className="ai-modal-prio-badge"
-                style={{
-                  backgroundColor: prioInfo.badgeBg,
-                  color: prioInfo.color
-                }}
-              >
-                <Flame size={15} />
-                <span>{prioInfo.label}</span>
-              </div>
-            </div>
-
-            {/* Sammansatt poängmatris & beräkning */}
+            {/* Sammansatt poängmatris & beräkning med integrerad totalpoäng */}
             <div className="ai-modal-matrix-section">
-              <div className="ai-modal-section-label" style={{ marginBottom: '0.4rem' }}>
+              <div className="ai-modal-section-label">
                 <Sparkles size={13} style={{ color: 'var(--primary, #6366f1)' }} />
-                <span>Sammansatt poängmatris & beräkning</span>
+                <span>Sammansatt poängmatris & prioritering</span>
               </div>
 
               <div className="ai-modal-matrix-card">
+                {/* Kompakt integrerad poängrad */}
+                <div className={`ai-modal-matrix-top ${prioInfo.className}`}>
+                  <div className="ai-modal-matrix-score-group">
+                    <span className="ai-modal-matrix-score-label">Prioritetspoäng:</span>
+                    <span className="ai-modal-matrix-score-val" style={{ color: prioInfo.color }}>
+                      {score}
+                    </span>
+                    <span className="ai-modal-matrix-score-max">/ 100</span>
+                  </div>
+
+                  <div
+                    className="ai-modal-prio-badge"
+                    style={{
+                      backgroundColor: prioInfo.badgeBg,
+                      color: prioInfo.color
+                    }}
+                  >
+                    <Flame size={13} />
+                    <span>{prioInfo.label}</span>
+                  </div>
+                </div>
+
                 {/* 3 Pelare */}
                 <div className="ai-modal-pillars-grid">
                   {/* Pelare 1: Kategori */}
@@ -370,68 +355,59 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
                   </div>
                 </div>
 
-                {/* Integrerad motivering och justeringar */}
-                <div className="ai-modal-matrix-footer">
-                  {parsedReason.type === 'matrix' ? (
-                    <div className="ai-modal-calc-wrap">
-                      <div className="ai-modal-calc-row">
-                        <span className="ai-modal-calc-label">Grundberäkning:</span>
-                        <span className="ai-modal-calc-base-text">{parsedReason.baseSummary}</span>
+                {/* Justeringar - Visas endast om det finns justeringar, bevakningsord eller särskild motivering */}
+                {parsedReason.type === 'matrix' && parsedReason.adjustments.length > 0 && (
+                  <div className="ai-modal-matrix-footer">
+                    <div className="ai-modal-calc-row">
+                      <span className="ai-modal-calc-label">Justeringar:</span>
+                      <div className="ai-modal-calc-badges">
+                        {parsedReason.adjustments.map((adj, idx) => (
+                          <span
+                            key={idx}
+                            className={`ai-modal-calc-badge ${adj.type === 'positive' ? 'is-pos' : 'is-neg'}`}
+                          >
+                            {adj.text}
+                          </span>
+                        ))}
                       </div>
-
-                      {parsedReason.adjustments.length > 0 ? (
-                        <div className="ai-modal-calc-row">
-                          <span className="ai-modal-calc-label">Justeringar:</span>
-                          <div className="ai-modal-calc-badges">
-                            {parsedReason.adjustments.map((adj, idx) => (
-                              <span
-                                key={idx}
-                                className={`ai-modal-calc-badge ${adj.type === 'positive' ? 'is-pos' : 'is-neg'}`}
-                              >
-                                {adj.text}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="ai-modal-calc-none">
-                          Inga aktiva profiljusteringar eller avdrag.
-                        </div>
-                      )}
                     </div>
-                  ) : parsedReason.type === 'keyword' ? (
+                  </div>
+                )}
+
+                {parsedReason.type === 'keyword' && (
+                  <div className="ai-modal-matrix-footer">
                     <div className="ai-modal-calc-row">
                       <span className="ai-modal-calc-label">Prioritering:</span>
                       <span className="ai-modal-calc-badge is-keyword">
                         Bevakningsord: {parsedReason.text} (100p direktträff)
                       </span>
                     </div>
-                  ) : parsedReason.type === 'user_prio' ? (
+                  </div>
+                )}
+
+                {parsedReason.type === 'user_prio' && (
+                  <div className="ai-modal-matrix-footer">
                     <div className="ai-modal-calc-row">
                       <span className="ai-modal-calc-label">Prioritering:</span>
                       <span className="ai-modal-calc-badge is-pos">
                         Manuellt prioriterad: {parsedReason.text}
                       </span>
                     </div>
-                  ) : (
-                    <div className="ai-modal-calc-text">
-                      {parsedReason.text}
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Diagnostik & Metadata */}
+            {/* Diagnostik & Metadata - Exakt 3 jämna boxar (Hämtad till systemet borttagen då den redan står under artikeln) */}
             <div>
-              <div className="ai-modal-section-label" style={{ marginBottom: '0.5rem' }}>
+              <div className="ai-modal-section-label">
                 Diagnostik & Metadata
               </div>
 
               <div className="ai-modal-diagnostics-grid">
                 {/* AI-modell */}
                 <div className="ai-modal-diagnostic-chip">
-                  <Cpu size={16} className="ai-modal-diagnostic-icon" style={{ color: '#8b5cf6' }} />
+                  <Cpu size={15} className="ai-modal-diagnostic-icon" style={{ color: '#8b5cf6' }} />
                   <div>
                     <div className="ai-modal-diagnostic-label">AI-modell</div>
                     <div className="ai-modal-diagnostic-val" style={{ wordBreak: 'break-all' }}>
@@ -442,7 +418,7 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
 
                 {/* Analystid i sekunder */}
                 <div className="ai-modal-diagnostic-chip">
-                  <Clock size={16} className="ai-modal-diagnostic-icon" style={{ color: 'var(--text-muted)' }} />
+                  <Clock size={15} className="ai-modal-diagnostic-icon" style={{ color: 'var(--text-muted)' }} />
                   <div>
                     <div className="ai-modal-diagnostic-label">Analystid i LLM</div>
                     <div className="ai-modal-diagnostic-val">
@@ -454,9 +430,9 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
                 {/* ClickBait-granskning */}
                 <div className="ai-modal-diagnostic-chip">
                   {isClickbait ? (
-                    <AlertTriangle size={16} className="ai-modal-diagnostic-icon" style={{ color: '#ef4444' }} />
+                    <AlertTriangle size={15} className="ai-modal-diagnostic-icon" style={{ color: '#ef4444' }} />
                   ) : (
-                    <CheckCircle2 size={16} className="ai-modal-diagnostic-icon" style={{ color: '#10b981' }} />
+                    <CheckCircle2 size={15} className="ai-modal-diagnostic-icon" style={{ color: '#10b981' }} />
                   )}
                   <div>
                     <div className="ai-modal-diagnostic-label">ClickBait-analys</div>
@@ -466,27 +442,14 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
                   </div>
                 </div>
 
-                {/* Kluster och bekräftelse */}
+                {/* Kluster och bekräftelse vid behov */}
                 {clusterSize > 1 && (
                   <div className="ai-modal-diagnostic-chip">
-                    <Layers size={16} className="ai-modal-diagnostic-icon" style={{ color: '#3b82f6' }} />
+                    <Layers size={15} className="ai-modal-diagnostic-icon" style={{ color: '#3b82f6' }} />
                     <div>
                       <div className="ai-modal-diagnostic-label">Flerkällsbekräftelse</div>
                       <div className="ai-modal-diagnostic-val">
                         {clusterSize} oberoende källor
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Hämtad till systemet */}
-                {recDateFormatted && (
-                  <div className="ai-modal-diagnostic-chip">
-                    <Clock size={16} className="ai-modal-diagnostic-icon" style={{ color: '#0ea5e9' }} />
-                    <div>
-                      <div className="ai-modal-diagnostic-label">Hämtad till systemet</div>
-                      <div className="ai-modal-diagnostic-val">
-                        {recDateFormatted}
                       </div>
                     </div>
                   </div>
