@@ -7,7 +7,7 @@
 
 ![Dashboard](screenshot_1.png)
 
-RSS-Bevakaren är en modern, självhostad nyhetsaggregator för RSS-, Atom- och WordPress-flöden med inbyggd lokal AI-motor. Systemet filtrerar bort brus, sammanfattar artiklar, avslöjar ClickBait, prioriterar viktiga nyheter och integreras sömlöst med Home Assistant via MQTT Auto-Discovery.
+RSS-Bevakaren är en modern, självhostad nyhetsaggregator för RSS-, Atom- och WordPress-flöden med stöd för lokal AI via LM Studio, Ollama eller valfri OpenAI-kompatibel motor. Systemet filtrerar bort brus, sammanfattar artiklar, avslöjar ClickBait, prioriterar viktiga nyheter och integreras sömlöst med Home Assistant via MQTT Auto-Discovery.
 
 ---
 
@@ -30,7 +30,7 @@ services:
       - APP_USERNAME=admin,anvandare2
       - APP_PASSWORD=ditt_sakna_losenord,andra_losenordet
       
-      # Lokal AI via LM Studio eller valfritt OpenAI-kompatibelt API (valfritt)
+      # Lokal AI via LM Studio, Ollama eller valfritt OpenAI-kompatibelt API (valfritt)
       - LM_STUDIO_URL=http://192.168.1.50:1234/v1/chat/completions
       - LM_STUDIO_TIMEOUT=120
       - AI_MAX_ARTICLE_AGE_HOURS=24
@@ -69,7 +69,7 @@ docker compose up -d
 
 ## Huvudfunktioner
 
-- **Lokal AI-sammanfattning:** Sammanfattar inkommande artiklar i realtid via lokala modeller (t.ex. Google Gemma via LM Studio) utan dataläckage till externa molntjänster.
+- **Lokal AI-sammanfattning:** Sammanfattar inkommande artiklar i realtid genom anslutning till din lokala AI-motor (t.ex. Google Gemma via LM Studio eller Ollama) – helt privat utan dataläckage till externa molntjänster.
 - **ClickBait-avslöjare:** Sensationella eller undanhållande rubriker flaggas automatiskt och AI-sammanfattningen lyfter direkt fram vad artikeln faktiskt handlar om.
 - **Intelligent Prio-flöde:** Händelser poängsätts (0–100p) baserat på nyhetsvärde, akuthet, faktasubstans och dina egna intresseområden.
 - **Adaptiv intresseprofil (Gilla / Ogilla):** Genom att klicka tumme upp eller ner på artiklar tränas din personliga profil för att automatiskt lyfta respektive dämpa liknande ämnen.
