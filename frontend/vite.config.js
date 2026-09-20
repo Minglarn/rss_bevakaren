@@ -13,9 +13,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon-180x180.png', 'badge.png', 'favicon.png', 'icon-192x192.png', 'icon-512x512.png'],
       manifest: {
-        name: 'RSS Bevakaren',
-        short_name: 'RSS Bevakaren',
-        description: 'Your modern and fast RSS reader',
+        name: 'RSS-Bevakaren',
+        short_name: 'RSS-Bevakaren',
+        description: 'Din personliga RSS-bevakare med lokal AI',
         theme_color: '#121212',
         background_color: '#121212',
         display: 'standalone',

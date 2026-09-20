@@ -1,5 +1,5 @@
 {
-  "short_name": "RSS Bevakaren",
+  "short_name": "RSS-Bevakaren",
   "name": "RSS-Bevakaren",
   "icons": [
     {
@@ -38,5 +38,5 @@
   "display": "standalone",
   "scope": "/",
   "theme_color": "#2563eb",
-  "description": "Your personal RSS monitor"
+  "description": "Din personliga RSS-bevakare med lokal AI"
 }

@@ -348,7 +348,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           <Rss size={24} />
           {!isCollapsed && (
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-main)', fontWeight: 700 }}>RSS Monitor</h2>
+              <h2 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-main)', fontWeight: 700 }}>RSS-Bevakaren</h2>
               <button 
                 onClick={() => window.dispatchEvent(new CustomEvent('openWhatsNew'))}
                 style={{ 
