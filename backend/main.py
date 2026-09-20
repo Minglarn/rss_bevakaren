@@ -412,7 +412,7 @@ def get_version():
         return "unknown"
 
 VERSION = get_version()
-LAST_UPDATE = "2026-09-18"
+LAST_UPDATE = "2026-09-20"
 
 def normalize_user_categories(cats_raw: Any) -> List[Dict[str, Any]]:
     """Säkerställer att kategorier returneras som en lista av dicts: [{'name': '...', 'weight': X}, ...]."""
@@ -2310,6 +2310,13 @@ def create_feed(feed: schemas.FeedCreate, db: Session = Depends(database.get_db)
     except Exception as icon_err:
         print(f"[ICONS] Kunde inte ladda ner ikon vid skapande av flöde #{db_feed.id}: {icon_err}", flush=True)
 
+    # Publicera automatiskt till Home Assistant MQTT Auto-Discovery
+    if mqtt_service.MQTT_ENABLED:
+        try:
+            mqtt_service.publish_ha_discovery_for_feed(db_feed, username=current_user.username, user_id=current_user.id)
+        except Exception as ha_err:
+            print(f"[MQTT] Fel vid publicering av HA discovery för flöde #{db_feed.id}: {ha_err}", flush=True)
+
     # Convert integer to boolean for response
     db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
     db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
@@ -2361,6 +2368,11 @@ def update_feed(feed_id: int, feed: schemas.FeedCreate, db: Session = Depends(da
         db_feed.max_items = int(feed.max_items)
     db.commit()
     db.refresh(db_feed)
+    if mqtt_service.MQTT_ENABLED:
+        try:
+            mqtt_service.publish_ha_discovery_for_feed(db_feed, username=current_user.username, user_id=current_user.id)
+        except Exception:
+            pass
     db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
     db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
     db_feed.notify_enabled = bool(db_feed.notify_enabled)
@@ -2373,9 +2385,16 @@ def delete_feed(feed_id: int, db: Session = Depends(database.get_db), current_us
     feed = db.query(models.Feed).filter(models.Feed.id == feed_id, models.Feed.user_id == current_user.id).first()
     if not feed:
         raise HTTPException(status_code=404, detail="Feed not found")
+    feed_title = feed.title
+    feed_id_val = feed.id
     db.delete(feed)
     db.commit()
-    delete_local_feed_icon(feed_id, current_user.username)
+    delete_local_feed_icon(feed_id_val, current_user.username)
+    if mqtt_service.MQTT_ENABLED:
+        try:
+            mqtt_service.remove_ha_discovery_for_feed(feed_title, username=current_user.username, user_id=current_user.id, feed_id=feed_id_val)
+        except Exception as ha_err:
+            print(f"[MQTT] Fel vid avregistrering av HA discovery för #{feed_id_val}: {ha_err}", flush=True)
     return {"status": "ok"}
 
 @app.get("/keywords", response_model=List[schemas.KeywordResponse])
@@ -2672,6 +2691,12 @@ async def import_feeds(
     if added_count > 0:
         db.commit()
         asyncio.create_task(asyncio.to_thread(ensure_all_feed_icons_cached))
+        if mqtt_service.MQTT_ENABLED:
+            try:
+                for db_feed in db.query(models.Feed).filter(models.Feed.user_id == current_user.id, models.Feed.url.in_(existing_urls)).all():
+                    mqtt_service.publish_ha_discovery_for_feed(db_feed, username=current_user.username, user_id=current_user.id)
+            except Exception:
+                pass
 
     return {
         "status": "ok",
@@ -2985,6 +3010,12 @@ def create_feeds_batch(payload: dict, db: Session = Depends(database.get_db), cu
     if added_count > 0:
         db.commit()
         asyncio.create_task(asyncio.to_thread(ensure_all_feed_icons_cached))
+        if mqtt_service.MQTT_ENABLED:
+            try:
+                for db_feed in db.query(models.Feed).filter(models.Feed.user_id == current_user.id, models.Feed.url.in_(existing_urls)).all():
+                    mqtt_service.publish_ha_discovery_for_feed(db_feed, username=current_user.username, user_id=current_user.id)
+            except Exception:
+                pass
         
     return {"status": "ok", "added_count": added_count}
 

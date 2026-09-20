@@ -299,8 +299,29 @@ Varje meddelande som publiceras innehåller en strukturerad JSON-nyttolast med f
 
 ### Home Assistant Integration
 
-#### 1. MQTT-sensor (configuration.yaml)
-Konfigurera en sensor som lyssnar på ditt personliga PRIO-flöde och sparar artikelattributen:
+#### Automatisk upptäckt (MQTT Auto-Discovery) - Rekommenderas
+
+RSS-Bevakaren har inbyggt stöd för Home Assistant MQTT Discovery. När `MQTT_ENABLED=true` är påslaget behöver du **inte** konfigurera några sensorer manuellt i `configuration.yaml`!
+
+##### Hur fleranvändarstöd fungerar mot Home Assistant
+I Home Assistant grupperas sensorer under "Enheter" (Devices). RSS-Bevakaren skapar automatiskt en separat och isolerad enhet för varje användare:
+- **Enhet: RSS-Bevakaren (admin)**
+  - Sensor: `sensor.rss_admin_prio` (Senaste Prio för admin)
+  - Sensorer: `sensor.rss_admin_{flöde}` (Varje enskilt flöde som admin bevakar)
+- **Enhet: RSS-Bevakaren (mari)**
+  - Sensor: `sensor.rss_mari_prio` (Senaste Prio för mari)
+  - Sensorer: `sensor.rss_mari_{flöde}` (Varje enskilt flöde som mari bevakar)
+
+**Fördelar:**
+1. **Noll krockar:** Även om flera användare bevakar samma flöde (t.ex. Aftonbladet eller SVT) får varje användare en unik sensor och topic kopplad till sitt konto.
+2. **Individuella dashboards:** Användare kan lägga in sina egna personliga larmkort i Home Assistant baserat på sin specifika `sensor.rss_{användare}_prio`.
+3. **Automatisk livscykel:** När du lägger till ett flöde i RSS-bevakaren dyker det direkt upp i Home Assistant. När ett flöde raderas avregistreras sensorn automatiskt.
+4. **Tillgänglighetsstatus (Online/Offline):** Sensorerna är kopplade till systemets status. Vid omstart sätts sensorerna till otillgängliga och återaktiveras så fort RSS-bevakaren ansluter igen.
+
+---
+
+#### 1. Alternativ manuell MQTT-sensor (configuration.yaml)
+Om du av något skäl föredrar manuell YAML-konfiguration istället för Auto-Discovery:
 
 ```yaml
 mqtt:
@@ -312,11 +333,11 @@ mqtt:
 ```
 
 #### 2. Snyggt Dashboard-kort med Flödesikon (custom:button-card)
-Detta kort visar källans officiella logotyp/ikon i topplisten, prioritetspoäng, rubrik, publiceringstid, AI-sammanfattning, kategori och taggar. Klick på kortet öppnar artikeln direkt hos källan:
+Detta kort visar källans officiella logotyp/ikon i topplisten, prioritetspoäng, rubrik, publiceringstid, AI-sammanfattning, kategori och taggar. Klick på kortet öppnar artikeln direkt hos källan. Anpassa `entity` efter ditt användarnamn i Auto-Discovery (t.ex. `sensor.rss_admin_prio` eller `sensor.rss_mari_prio`):
 
 ```yaml
 type: custom:button-card
-entity: sensor.rss_senaste_prio
+entity: sensor.rss_admin_prio
 show_name: false
 show_icon: false
 show_state: false

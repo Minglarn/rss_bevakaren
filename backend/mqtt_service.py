@@ -18,6 +18,11 @@ MQTT_CLIENT_ID = os.environ.get("MQTT_CLIENT_ID", f"rss_bevakaren_{int(time.time
 MQTT_RETAIN = os.environ.get("MQTT_RETAIN", "true").strip().lower() in ("true", "1", "yes", "on")
 MQTT_QOS = int(os.environ.get("MQTT_QOS", "1").strip() or 1)
 
+# Home Assistant MQTT Auto-Discovery inställningar
+MQTT_DISCOVERY_ENABLED_ENV = os.environ.get("MQTT_DISCOVERY_ENABLED", "true").strip().lower()
+MQTT_DISCOVERY_ENABLED = MQTT_DISCOVERY_ENABLED_ENV in ("true", "1", "yes", "y", "on")
+MQTT_DISCOVERY_PREFIX = os.environ.get("MQTT_DISCOVERY_PREFIX", "homeassistant").strip().strip("/")
+
 # Global MQTT-klient
 _client: Optional[mqtt.Client] = None
 _is_connected: bool = False
@@ -69,6 +74,166 @@ def slugify_feed_title(title: Optional[str]) -> str:
     s = s.strip('_')
     return s if s else "flode"
 
+def get_ha_device_dict(user_slug: str, username: str) -> Dict[str, Any]:
+    """
+    Genererar en isolerad Home Assistant Device-definition per RSS-bevakaren-användare.
+    Detta gör att varje användare i Home Assistant får en egen Device med sina egna flöden och prio-sensorer.
+    """
+    return {
+        "identifiers": [f"rss_bevakaren_{user_slug}"],
+        "name": f"RSS-Bevakaren ({username})",
+        "model": "RSS-Bevakaren AI",
+        "manufacturer": "RSS-Bevakaren",
+        "sw_version": "2026.09.20.05"
+    }
+
+def publish_ha_discovery_prio(username: Optional[str] = None, user_id: Optional[int] = None):
+    """
+    Publicerar Home Assistant MQTT Auto-Discovery för användarens personliga prio-sensor.
+    Topic: {discovery_prefix}/sensor/rss_{user_slug}/prio/config
+    """
+    global _client, _is_connected
+    if not MQTT_ENABLED or not MQTT_DISCOVERY_ENABLED or _client is None:
+        return
+        
+    resolved_username = username or (f"user_{user_id}" if user_id else "default")
+    user_slug = slugify_username(resolved_username)
+    discovery_topic = f"{MQTT_DISCOVERY_PREFIX}/sensor/rss_{user_slug}/prio/config"
+    state_topic = f"{MQTT_TOPIC_PREFIX}/{user_slug}/prio"
+    avail_topic = f"{MQTT_TOPIC_PREFIX}/status"
+
+    config_payload = {
+        "name": "Senaste Prio",
+        "object_id": f"rss_{user_slug}_prio",
+        "unique_id": f"rss_{user_slug}_prio",
+        "state_topic": state_topic,
+        "value_template": "{{ value_json.title }}",
+        "json_attributes_topic": state_topic,
+        "icon": "mdi:star",
+        "availability_topic": avail_topic,
+        "payload_available": "online",
+        "payload_not_available": "offline",
+        "device": get_ha_device_dict(user_slug, resolved_username)
+    }
+
+    try:
+        _client.publish(discovery_topic, json.dumps(config_payload, ensure_ascii=False), qos=1, retain=True)
+        print(f"[MQTT: {user_slug}] Publicerade HA Auto-Discovery för prio -> '{discovery_topic}'", flush=True)
+    except Exception as e:
+        print(f"[MQTT: {user_slug}] Fel vid HA Discovery för prio: {e}", flush=True)
+
+def publish_ha_discovery_for_feed(
+    feed: Any,
+    username: Optional[str] = None,
+    user_id: Optional[int] = None
+):
+    """
+    Publicerar Home Assistant MQTT Auto-Discovery för ett specifikt flöde tillhörande en specifik användare.
+    Topic: {discovery_prefix}/sensor/rss_{user_slug}/{feed_slug}/config
+    """
+    global _client, _is_connected
+    if not MQTT_ENABLED or not MQTT_DISCOVERY_ENABLED or _client is None:
+        return
+
+    resolved_user_id = user_id or getattr(feed, "user_id", None)
+    resolved_username = username
+    if not resolved_username and hasattr(feed, "owner") and feed.owner:
+        resolved_username = getattr(feed.owner, "username", None)
+    resolved_username = resolved_username or (f"user_{resolved_user_id}" if resolved_user_id else "default")
+    user_slug = slugify_username(resolved_username)
+
+    feed_id = getattr(feed, "id", None)
+    feed_title = getattr(feed, "title", None) or "RSS"
+    feed_slug = slugify_feed_title(feed_title)
+    
+    unique_id = f"rss_{user_slug}_{feed_slug}_{feed_id}" if feed_id else f"rss_{user_slug}_{feed_slug}"
+    object_id = f"rss_{user_slug}_{feed_slug}"
+    
+    discovery_topic = f"{MQTT_DISCOVERY_PREFIX}/sensor/rss_{user_slug}/{feed_slug}/config"
+    state_topic = f"{MQTT_TOPIC_PREFIX}/{user_slug}/feeds/{feed_slug}"
+    avail_topic = f"{MQTT_TOPIC_PREFIX}/status"
+
+    config_payload = {
+        "name": feed_title,
+        "object_id": object_id,
+        "unique_id": unique_id,
+        "state_topic": state_topic,
+        "value_template": "{{ value_json.title }}",
+        "json_attributes_topic": state_topic,
+        "icon": "mdi:rss",
+        "availability_topic": avail_topic,
+        "payload_available": "online",
+        "payload_not_available": "offline",
+        "device": get_ha_device_dict(user_slug, resolved_username)
+    }
+
+    try:
+        _client.publish(discovery_topic, json.dumps(config_payload, ensure_ascii=False), qos=1, retain=True)
+        print(f"[MQTT: {user_slug}] Publicerade HA Auto-Discovery för '{feed_title}' -> '{discovery_topic}'", flush=True)
+    except Exception as e:
+        print(f"[MQTT: {user_slug}] Fel vid HA Discovery för '{feed_title}': {e}", flush=True)
+
+def remove_ha_discovery_for_feed(
+    feed_title: str,
+    username: Optional[str] = None,
+    user_id: Optional[int] = None,
+    feed_id: Optional[int] = None
+):
+    """
+    Raderar en flödessensor från Home Assistant genom att skicka ett tomt retain-meddelande till dess discovery-topic.
+    """
+    global _client, _is_connected
+    if not MQTT_ENABLED or not MQTT_DISCOVERY_ENABLED or _client is None:
+        return
+
+    resolved_username = username or (f"user_{user_id}" if user_id else "default")
+    user_slug = slugify_username(resolved_username)
+    feed_slug = slugify_feed_title(feed_title)
+    
+    discovery_topic = f"{MQTT_DISCOVERY_PREFIX}/sensor/rss_{user_slug}/{feed_slug}/config"
+    try:
+        _client.publish(discovery_topic, "", qos=1, retain=True)
+        print(f"[MQTT: {user_slug}] Avregistrerade HA Auto-Discovery för '{feed_title}' -> '{discovery_topic}'", flush=True)
+    except Exception as e:
+        print(f"[MQTT: {user_slug}] Fel vid avregistrering av HA Discovery för '{feed_title}': {e}", flush=True)
+
+def sync_all_ha_discoveries(db_session=None):
+    """
+    Synkroniserar Home Assistant Auto-Discovery för samtliga användare och deras flöden.
+    Körs automatiskt vid MQTT-anslutning samt kan anropas explicit.
+    """
+    global _client, _is_connected
+    if not MQTT_ENABLED or not MQTT_DISCOVERY_ENABLED or _client is None or not _is_connected:
+        return
+
+    should_close = False
+    if db_session is None:
+        try:
+            import database
+            db_session = database.SessionLocal()
+            should_close = True
+        except Exception as e:
+            print(f"[MQTT] Kunde inte öppna DB-session för HA Auto-Discovery sync: {e}", flush=True)
+            return
+
+    try:
+        import models
+        users = db_session.query(models.User).all()
+        total_feeds = 0
+        for u in users:
+            u_name = u.username or f"user_{u.id}"
+            publish_ha_discovery_prio(username=u_name, user_id=u.id)
+            user_feeds = db_session.query(models.Feed).filter(models.Feed.user_id == u.id).all()
+            total_feeds += len(user_feeds)
+            for f in user_feeds:
+                publish_ha_discovery_for_feed(feed=f, username=u_name, user_id=u.id)
+        print(f"[MQTT] HA Auto-Discovery synkroniserad för {len(users)} användare ({total_feeds} flöden).", flush=True)
+    except Exception as e:
+        print(f"[MQTT] Fel vid synkronisering av HA Auto-Discovery: {e}", flush=True)
+    finally:
+        if should_close and db_session:
+            db_session.close()
+
 def _on_connect(client, userdata, flags, rc, properties=None):
     global _is_connected
     if rc == 0 or rc == mqtt.MQTT_ERR_SUCCESS:
@@ -77,6 +242,9 @@ def _on_connect(client, userdata, flags, rc, properties=None):
         # Publicera online-status som retained meddelande
         status_topic = f"{MQTT_TOPIC_PREFIX}/status"
         client.publish(status_topic, "online", qos=1, retain=True)
+        # Synkronisera Home Assistant Auto-Discovery för alla användare och flöden
+        if MQTT_DISCOVERY_ENABLED:
+            sync_all_ha_discoveries()
     else:
         _is_connected = False
         print(f"[MQTT] Anslutning misslyckades med felkod {rc}", flush=True)

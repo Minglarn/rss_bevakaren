@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.05',
+    date: '2026-09-20',
+    title: 'Home Assistant MQTT Auto-Discovery med stöd för flera användare',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Home Assistant MQTT Auto-Discovery',
+        description: 'Sensorer registreras automatiskt i Home Assistant utan behov av manuell YAML-konfiguration. Stöd för både enskilda flöden och prioriterade händelser.'
+      },
+      {
+        type: 'feature',
+        title: 'Fleranvändarstöd och enhetsisolering',
+        description: 'Varje användare i RSS-bevakaren tilldelas en egen isolerad Device i Home Assistant med unika sensorer och topics utan risk för krockar.'
+      },
+      {
+        type: 'improvement',
+        title: 'Automatisk livscykel och tillgänglighet',
+        description: 'Flöden som raderas i RSS-bevakaren avregistreras automatiskt i Home Assistant. Tillgänglighetsstatus (online/offline) speglas direkt.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.04',
     date: '2026-09-20',
     title: 'Standardisering av Home Assistant button-card med temavariabler',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
