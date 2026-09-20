@@ -46,13 +46,12 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
   const pubDateFormatted = formatDateTime(item.published_ts || item.published);
   const recDateFormatted = formatDateTime(item.received_ts);
 
-  // Strukturerar och tolkar beräkningsmotiveringen för tydligare visning
-  const parsedReason = React.useMemo(() => {
-    if (!reason || !reason.trim()) {
+  const parseReason = (rawReason) => {
+    if (!rawReason || !rawReason.trim()) {
       return { type: 'empty', text: 'Ingen beräkningsinformation tillgänglig.' };
     }
 
-    const matrixMatch = reason.match(/^Poängmatris\s+(\d+p)\s*\((.*)\)$/i);
+    const matrixMatch = rawReason.match(/^Poängmatris\s+(\d+p)\s*\((.*)\)$/i);
     if (matrixMatch) {
       const rawContent = matrixMatch[2];
       const parts = [];
@@ -104,25 +103,27 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
       };
     }
 
-    if (reason.startsWith('Träff på bevakningsord:')) {
+    if (rawReason.startsWith('Träff på bevakningsord:')) {
       return {
         type: 'keyword',
-        text: reason.replace('Träff på bevakningsord:', '').trim()
+        text: rawReason.replace('Träff på bevakningsord:', '').trim()
       };
     }
 
-    if (reason.startsWith('Prioriterad av användaren:')) {
+    if (rawReason.startsWith('Prioriterad av användaren:')) {
       return {
         type: 'user_prio',
-        text: reason.replace('Prioriterad av användaren:', '').trim()
+        text: rawReason.replace('Prioriterad av användaren:', '').trim()
       };
     }
 
     return {
       type: 'text',
-      text: reason
+      text: rawReason
     };
-  }, [reason]);
+  };
+
+  const parsedReason = parseReason(reason);
 
   const getPriorityInfo = () => {
     if (priority === 'high' || score >= 75) {

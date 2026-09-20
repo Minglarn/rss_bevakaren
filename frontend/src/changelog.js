@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.16',
+    date: '2026-09-20',
+    title: 'Stabilitetsfix för AI-analysfönstret',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Åtgärdat React Hook Error #310',
+        description: 'Ersatt villkorlig useMemo-hook med en ren hjälpfunktion i AI-analysfönstret, vilket eliminerar renderingskraschen när modalen öppnas eller renderas om.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.15',
     date: '2026-09-20',
     title: 'Moderniserad och sammanslagen poängmatris i AI-analysen',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
