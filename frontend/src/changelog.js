@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.06',
+    date: '2026-09-20',
+    title: 'Felsäkert Home Assistant button-card med null-skydd',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Felsäker mallhantering i Home Assistant',
+        description: 'Lagt till defensiva kontroller för entity och attributes i custom:button-card för att förhindra ButtonCardJSTemplateError om entiteten inte har laddats eller är otillgänglig.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.05',
     date: '2026-09-20',
     title: 'Home Assistant MQTT Auto-Discovery med stöd för flera användare',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

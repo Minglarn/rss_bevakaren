@@ -343,7 +343,7 @@ show_icon: false
 show_state: false
 tap_action:
   action: url
-  url_path: "[[[ return entity.attributes.link; ]]]"
+  url_path: "[[[ return (entity && entity.attributes && entity.attributes.link) ? entity.attributes.link : '#'; ]]]"
 styles:
   card:
     - background: "var(--ha-card-background, var(--card-background-color, var(--primary-background-color)))"
@@ -362,6 +362,9 @@ styles:
 custom_fields:
   main: >
     [[[
+      if (!entity || !entity.attributes) {
+        return '<div style="padding: 16px; color: var(--secondary-text-color);">Väntar på händelse eller så är entiteten inte tillgänglig... Kontrollera att entitetsnamnet stämmer i kortet.</div>';
+      }
       const a = entity.attributes;
       if (!a.title) return '<div style="padding: 16px; color: var(--secondary-text-color);">Ingen händelse mottagen än.</div>';
       
