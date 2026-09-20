@@ -389,7 +389,6 @@ def publish_article(
         feed_icon = f"https://www.google.com/s2/favicons?domain={feed_domain}&sz=128"
 
     feed_id = getattr(feed, "id", None)
-    feed_icon_path = f"/api/feed-icons/{feed_id}.png" if feed_id else ""
 
     # Konstruera ren och komplett JSON-nyttolast med användarkontext
     payload = {
@@ -401,9 +400,7 @@ def publish_article(
         "feed_slug": feed_slug,
         "feed_id": feed_id,
         "feed_icon": feed_icon,
-        "feed_icon_path": feed_icon_path,
         "feed_domain": feed_domain,
-        "icon": feed_icon,
         "category": getattr(article, "category", "") or "Övrigt",
         "summary": getattr(article, "ai_summary", "") or getattr(article, "summary", "") or "",
         "short_summary": getattr(article, "ai_short_summary", "") or "",
