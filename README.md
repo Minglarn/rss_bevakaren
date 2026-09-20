@@ -7,7 +7,7 @@
 
 ![Dashboard](screenshot_1.png)
 
-RSS-Bevakaren är en modern, självhostad nyhetsaggregator för RSS- och Atom-flöden med inbyggd lokal AI-motor. Systemet filtrerar bort brus, sammanfattar artiklar, avslöjar ClickBait, prioriterar viktiga nyheter och integreras sömlöst med Home Assistant via MQTT Auto-Discovery.
+RSS-Bevakaren är en modern, självhostad nyhetsaggregator för RSS-, Atom- och WordPress-flöden med inbyggd lokal AI-motor. Systemet filtrerar bort brus, sammanfattar artiklar, avslöjar ClickBait, prioriterar viktiga nyheter och integreras sömlöst med Home Assistant via MQTT Auto-Discovery.
 
 ---
 
@@ -77,6 +77,7 @@ docker compose up -d
 - **Dagens Briefing:** Automatisk morgon- och kvällsrapport (kl 07:00 och 18:00) som sammanfattar nyhetsläget med text och inbyggd talsyntes.
 - **Interaktiv AI-chatt (RAG):** Ställ frågor på naturligt språk till ditt samlade nyhetsarkiv med källhänvisningar och direktlänkar.
 - **Inbyggd svensk RSS-katalog:** Över 300 förkonfigurerade svenska nyhetskällor, lokaltidningar, myndighetsflöden och branschtidskrifter redo för ett-klicks-prenumeration.
+- **Bred flödeskompatibilitet (RSS, Atom & WordPress):** Fullt stöd för standard RSS 2.0, Atom samt alla WordPress-baserade webbplatser (ange webbplatsens URL eller `/feed`). Parsern extraherar automatiskt omslagsbilder, mediainnehåll och redaktionella taggar.
 - **PWA & Web Push:** Installera som app på mobil eller dator med stöd för direkta pushnotiser vid viktiga larm.
 - **Fleranvändarstöd:** Flera användare kan dela samma instans med fullständig isolering av flöden, filter och notiser.
 
