@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.20.13-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.20.14-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -276,4 +276,4 @@ Varje publicerat MQTT-meddelande innehåller en komplett JSON-nyttolast:
 
 ## Versionshantering
 
-Projektet tillämpar strikt kalenderbaserad versionshantering (CalVer), exempelvis `2026.09.20.13`. Versionsnumret uppdateras inför varje leverans för att garantera full spårbarhet mellan källkod, container-taggar och ändringslogg.
+Projektet tillämpar strikt kalenderbaserad versionshantering (CalVer), exempelvis `2026.09.20.14`. Versionsnumret uppdateras inför varje leverans för att garantera full spårbarhet mellan källkod, container-taggar och ändringslogg.

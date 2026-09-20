@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.14',
+    date: '2026-09-20',
+    title: 'Namnkorrigering och optimerad MQTT-nyttolast',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Namnstandardisering',
+        description: 'Sidopanelen och app-manifestet har uppdaterats för att genomgående visa det officiella namnet RSS-Bevakaren.'
+      },
+      {
+        type: 'improvement',
+        title: 'Optimerad MQTT-nyttolast',
+        description: 'Rensat bort de överflödiga ikon-nycklarna feed_icon_path och icon till förmån för renodlad användning av den publika HTTPS-adressen feed_icon.'
+      },
+      {
+        type: 'docs',
+        title: 'Tydligare AI- och flödesstöd',
+        description: 'Uppdaterat README med ny instrumentpanelsbild, bekräftat WordPress-stöd och tydliggjort anslutning till externa lokala AI-motorer som LM Studio och Ollama.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.13',
     date: '2026-09-20',
     title: 'Förhandsvisning och kollapserbar kod för Home Assistant button-card',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'docs',
