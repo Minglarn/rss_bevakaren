@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.02',
+    date: '2026-09-20',
+    title: 'Flödesikon inkluderad i MQTT-nyttolasten för Home Assistant',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Flödesikon i MQTT',
+        description: 'Lagt till feed_icon (publik 128px favicon), feed_icon_path och feed_domain i MQTT-meddelanden för direkt visning i Home Assistant och externa klienter.'
+      },
+      {
+        type: 'improvement',
+        title: 'Säker och nätverksoberoende ikonhantering',
+        description: 'Använder högupplöst HTTPS-favicon som fungerar oavsett om Home Assistant körs lokalt på samma nätverk eller nås via fjärranslutning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.01',
     date: '2026-09-20',
     title: 'Automatisk återställning och omladdning av flödesikoner',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

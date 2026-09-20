@@ -193,6 +193,36 @@ def publish_article(
         except Exception:
             parsed_tags = [t.strip() for t in tags_val.split(",") if t.strip()]
 
+    # Lös ut flödesdomän och ikon för Home Assistant och externa klienter
+    feed_domain = ""
+    target_url = getattr(feed, "url", "") or getattr(article, "link", "") or ""
+    if target_url:
+        try:
+            from urllib.parse import urlparse
+            feed_domain = urlparse(target_url).netloc.lower().replace("www.", "")
+        except Exception:
+            pass
+
+    feed_icon = ""
+    saved_icon = getattr(feed, "icon_url", None)
+    if saved_icon and str(saved_icon).strip().startswith(("http://", "https://")):
+        s_clean = str(saved_icon).strip()
+        icon_domain = ""
+        try:
+            from urllib.parse import urlparse
+            icon_domain = urlparse(s_clean).netloc.lower().replace("www.", "")
+        except Exception:
+            pass
+        is_safe_cdn = any(cdn in icon_domain for cdn in ["google", "wordpress", "wp.com", "feedburner", "ytimg", "cloudinary"])
+        if not feed_domain or not icon_domain or is_safe_cdn or feed_domain in icon_domain or icon_domain in feed_domain:
+            feed_icon = s_clean
+
+    if not feed_icon and feed_domain:
+        feed_icon = f"https://www.google.com/s2/favicons?domain={feed_domain}&sz=128"
+
+    feed_id = getattr(feed, "id", None)
+    feed_icon_path = f"/api/feed-icons/{feed_id}.png" if feed_id else ""
+
     # Konstruera ren och komplett JSON-nyttolast med användarkontext
     payload = {
         "id": article_id,
@@ -201,7 +231,11 @@ def publish_article(
         "title": getattr(article, "title", "") or "",
         "source": feed_title,
         "feed_slug": feed_slug,
-        "feed_id": getattr(feed, "id", None),
+        "feed_id": feed_id,
+        "feed_icon": feed_icon,
+        "feed_icon_path": feed_icon_path,
+        "feed_domain": feed_domain,
+        "icon": feed_icon,
         "category": getattr(article, "category", "") or "Övrigt",
         "summary": getattr(article, "ai_summary", "") or getattr(article, "summary", "") or "",
         "short_summary": getattr(article, "ai_short_summary", "") or "",
