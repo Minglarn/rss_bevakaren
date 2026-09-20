@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.20.10-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.20.13-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -94,7 +94,14 @@ Om systemet har flera användare (konfigureras via `APP_USERNAME` och `APP_PASSW
 > **Obs:** Ovanstående är ett exempel. Sensorernas ID anpassas automatiskt efter de faktiska användarnamn som anges i `APP_USERNAME` (t.ex. `sensor.rss_<användarnamn>_prio`).
 
 ### Färdigt Dashboard-kort (custom:button-card)
-Detta kort anpassar sig automatiskt efter Home Assistants tema (mörkt/ljust) och visar källans logotyp, rubrik, artikelbild, AI-sammanfattning, poäng och taggar. Klick på kortet öppnar artikeln direkt hos källan:
+Detta kort anpassar sig automatiskt efter Home Assistants tema (mörkt/ljust) och visar källans logotyp, rubrik, artikelbild, AI-sammanfattning, poäng och taggar. Klick på kortet öppnar artikeln direkt hos källan.
+
+<p align="center">
+  <img src="ha_button_card.png" alt="Home Assistant Button Card" width="380" />
+</p>
+
+<details>
+<summary><b>Klicka för att visa YAML-koden för custom:button-card</b></summary>
 
 ```yaml
 type: custom:button-card
@@ -181,13 +188,14 @@ custom_fields:
           </div>
 
           <!-- Footer -->
-          <div style="background: var(--secondary-background-color, rgba(127, 127, 127, 0.08)); border-top: 1px solid var(--divider-color, rgba(127, 127, 127, 0.15)); padding: 8px; text-align: center; font-size: 12.5px; font-weight: 600; color: var(--primary-color, #03a9f4); white-space: normal;">
+          <div style="background: var(--secondary-background-color, rgba(127, 127, 127, 0.08)); border-top: 1px solid var(--divider-color, rgba(127, 127, 0.15)); padding: 8px; text-align: center; font-size: 12.5px; font-weight: 600; color: var(--primary-color, #03a9f4); white-space: normal;">
             Klicka för att öppna artikeln
           </div>
         </div>
       `;
     ]]]
 ```
+</details>
 
 ---
 
@@ -269,4 +277,4 @@ Varje publicerat MQTT-meddelande innehåller en komplett JSON-nyttolast:
 
 ## Versionshantering
 
-Projektet tillämpar strikt kalenderbaserad versionshantering (CalVer), exempelvis `2026.09.20.12`. Versionsnumret uppdateras inför varje leverans för att garantera full spårbarhet mellan källkod, container-taggar och ändringslogg.
+Projektet tillämpar strikt kalenderbaserad versionshantering (CalVer), exempelvis `2026.09.20.13`. Versionsnumret uppdateras inför varje leverans för att garantera full spårbarhet mellan källkod, container-taggar och ändringslogg.

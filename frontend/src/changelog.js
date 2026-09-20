@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.13',
+    date: '2026-09-20',
+    title: 'Förhandsvisning och kollapserbar kod för Home Assistant button-card',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'docs',
+        title: 'Kortförhandsvisning och smidigare dokumentation',
+        description: 'Lagt till en skärmbild av Home Assistant-kortet och gjort YAML-koden för custom:button-card kollapserbar i README.md för förbättrad läsbarhet.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.12',
     date: '2026-09-20',
     title: 'Fleranvändarkonfiguration i Docker Compose',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'docs',
