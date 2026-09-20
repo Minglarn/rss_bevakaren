@@ -116,14 +116,14 @@
   color: var(--text-main, #0f172a);
 }
 
-/* Rullningsbart innehåll - Solid med optimerade moderna marginaler */
+/* Rullningsbart innehåll - Solid med balanserade, moderna marginaler */
 .ai-modal-body {
-  padding: 0.75rem 1.15rem;
+  padding: 1.15rem 1.4rem;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.95rem;
   flex: 1;
   background-color: #ffffff;
 }
@@ -132,7 +132,7 @@
 .ai-modal-article-section {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem;
 }
 
 .ai-modal-section-label {
@@ -144,10 +144,11 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  margin-bottom: 0.35rem;
 }
 
 .ai-modal-article-title {
-  font-size: 1.02rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-main, #0f172a);
   line-height: 1.4;
@@ -163,7 +164,7 @@
 .ai-modal-matrix-card {
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 11px;
+  border-radius: 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -173,7 +174,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0.8rem;
+  padding: 0.7rem 1.05rem;
   border-bottom: 1px solid #e2e8f0;
   background-color: #ffffff;
 }
@@ -195,11 +196,11 @@
 .ai-modal-matrix-score-group {
   display: flex;
   align-items: baseline;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .ai-modal-matrix-score-label {
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--text-muted, #64748b);
   text-transform: uppercase;
@@ -207,14 +208,14 @@
 }
 
 .ai-modal-matrix-score-val {
-  font-size: 1.45rem;
+  font-size: 1.55rem;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
 }
 
 .ai-modal-matrix-score-max {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-muted, #64748b);
 }
@@ -222,10 +223,10 @@
 .ai-modal-prio-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 3px 10px;
+  gap: 0.35rem;
+  padding: 5px 12px;
   border-radius: 999px;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.2px;
 }
@@ -234,28 +235,28 @@
 .ai-modal-pillars-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.45rem;
-  padding: 0.5rem;
+  gap: 0.65rem;
+  padding: 0.75rem;
 }
 
 .ai-modal-pillar-card {
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.45rem 0.65rem;
+  border-radius: 9px;
+  padding: 0.65rem 0.8rem;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
 .ai-modal-pillar-name {
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   color: var(--text-muted, #64748b);
   font-weight: 600;
 }
 
 .ai-modal-pillar-val {
-  font-size: 1.08rem;
+  font-size: 1.12rem;
   font-weight: 800;
   color: var(--text-main, #0f172a);
 }
@@ -369,11 +370,11 @@
   line-height: 1.45;
 }
 
-/* Diagnostik & Metadata - 3 jämna kolumner */
+/* Diagnostik & Metadata - 3 jämna kolumner med balanserad luft */
 .ai-modal-diagnostics-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.45rem;
+  gap: 0.65rem;
 }
 
 @media (max-width: 540px) {
@@ -385,11 +386,11 @@
 .ai-modal-diagnostic-chip {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.42rem 0.6rem;
+  gap: 0.65rem;
+  padding: 0.6rem 0.8rem;
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 9px;
 }
 
 .ai-modal-diagnostic-icon {
@@ -397,13 +398,13 @@
 }
 
 .ai-modal-diagnostic-label {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--text-muted, #64748b);
   font-weight: 500;
 }
 
 .ai-modal-diagnostic-val {
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   font-weight: 700;
   color: var(--text-main, #0f172a);
 }
@@ -412,11 +413,11 @@
 .ai-modal-tags-wrap {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.5rem;
 }
 
 .ai-modal-tag-chip {
-  padding: 4px 10px;
+  padding: 4px 11px;
   border-radius: 6px;
   font-size: 0.78rem;
   background-color: #f8fafc;

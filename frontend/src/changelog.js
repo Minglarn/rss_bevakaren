@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.18',
+    date: '2026-09-20',
+    title: 'Balanserade marginaler och förbättrad läsbarhet',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'design',
+        title: 'Ökade marginaler och andrum',
+        description: 'Justerat marginaler och inre avstånd (padding) till nästan standardnivå i AI-analysfönstret för en mer harmonisk, luftig och behaglig läsupplevelse utan att förlora den integrerade strukturen.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.17',
     date: '2026-09-20',
     title: 'Kompakt och renodlat AI-analysfönster',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
