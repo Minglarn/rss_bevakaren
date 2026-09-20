@@ -116,14 +116,14 @@
   color: var(--text-main, #0f172a);
 }
 
-/* Rullningsbart innehåll - Solid */
+/* Rullningsbart innehåll - Solid med optimerade moderna marginaler */
 .ai-modal-body {
-  padding: 1.25rem 1.4rem;
+  padding: 1rem 1.25rem;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.8rem;
   flex: 1;
   background-color: #ffffff;
 }
@@ -132,14 +132,14 @@
 .ai-modal-article-section {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .ai-modal-section-label {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.5px;
   color: var(--text-muted, #64748b);
   display: flex;
   align-items: center;
@@ -147,21 +147,21 @@
 }
 
 .ai-modal-article-title {
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 700;
   color: var(--text-main, #0f172a);
-  line-height: 1.45;
+  line-height: 1.4;
   letter-spacing: -0.01em;
 }
 
-/* Poängkort (Hero) */
+/* Poängkort (Hero) - Komprimerad */
 .ai-modal-score-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1.15rem 1.35rem;
-  border-radius: 14px;
+  gap: 0.85rem;
+  padding: 0.85rem 1.15rem;
+  border-radius: 12px;
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(59, 130, 246, 0.04) 100%);
   border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
   flex-wrap: wrap;
@@ -187,18 +187,18 @@
 .ai-modal-score-number-group {
   display: flex;
   align-items: baseline;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .ai-modal-score-big {
-  font-size: 2.35rem;
+  font-size: 2.1rem;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
 }
 
 .ai-modal-score-max {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   color: var(--text-muted, #64748b);
   font-weight: 600;
 }
@@ -206,41 +206,64 @@
 .ai-modal-prio-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 6px 14px;
+  gap: 0.35rem;
+  padding: 5px 12px;
   border-radius: 999px;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.3px;
+}
+
+/* Enhetlig Matris & Beräkning */
+.ai-modal-matrix-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-modal-matrix-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Poängpelare */
 .ai-modal-pillars-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
+  gap: 0.55rem;
+  padding: 0.65rem;
 }
 
 .ai-modal-pillar-card {
-  background-color: #f8fafc;
+  background-color: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 0.85rem 0.95rem;
+  border-radius: 9px;
+  padding: 0.6rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .ai-modal-pillar-name {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   color: var(--text-muted, #64748b);
   font-weight: 600;
 }
 
 .ai-modal-pillar-val {
-  font-size: 1.15rem;
+  font-size: 1.08rem;
   font-weight: 800;
   color: var(--text-main, #0f172a);
+}
+
+.ai-modal-pillar-subval {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 500;
+  margin-left: 2px;
 }
 
 .ai-modal-pillar-bar-bg {
@@ -248,7 +271,7 @@
   border-radius: 999px;
   background-color: #e2e8f0;
   overflow: hidden;
-  margin: 3px 0;
+  margin: 2px 0;
 }
 
 .ai-modal-pillar-bar-fill {
@@ -258,38 +281,108 @@
 }
 
 .ai-modal-pillar-desc {
-  font-size: 0.73rem;
+  font-size: 0.71rem;
   color: var(--text-muted, #64748b);
+  line-height: 1.3;
+}
+
+/* Integrerad beräkning & motivering */
+.ai-modal-matrix-footer {
+  border-top: 1px solid #e2e8f0;
+  background-color: rgba(241, 245, 249, 0.6);
+  padding: 0.6rem 0.85rem;
+  font-size: 0.82rem;
+}
+
+.ai-modal-calc-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ai-modal-calc-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ai-modal-calc-label {
+  font-size: 0.71rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted, #64748b);
+  flex-shrink: 0;
+}
+
+.ai-modal-calc-base-text {
+  font-size: 0.82rem;
+  color: var(--text-main, #0f172a);
+  font-weight: 600;
+}
+
+.ai-modal-calc-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ai-modal-calc-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
   line-height: 1.35;
 }
 
-/* Resonemangsruta */
-.ai-modal-reason-box {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-left: 3.5px solid var(--primary, #6366f1);
-  border-radius: 10px;
-  padding: 0.95rem 1.15rem;
-  font-size: 0.9rem;
-  color: var(--text-main, #0f172a);
-  line-height: 1.55;
+.ai-modal-calc-badge.is-pos {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
-/* Diagnostik & Metadata */
+.ai-modal-calc-badge.is-neg {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.ai-modal-calc-badge.is-keyword {
+  background-color: rgba(249, 115, 22, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(249, 115, 22, 0.25);
+}
+
+.ai-modal-calc-none {
+  color: var(--text-muted, #64748b);
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+.ai-modal-calc-text {
+  color: var(--text-main, #0f172a);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+/* Diagnostik & Metadata - Optimerat rutnät */
 .ai-modal-diagnostics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
 }
 
 .ai-modal-diagnostic-chip {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.7rem 0.9rem;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 9px;
 }
 
 .ai-modal-diagnostic-icon {
@@ -297,13 +390,13 @@
 }
 
 .ai-modal-diagnostic-label {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--text-muted, #64748b);
   font-weight: 500;
 }
 
 .ai-modal-diagnostic-val {
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-main, #0f172a);
 }
@@ -402,8 +495,17 @@
   border-color: rgba(255, 255, 255, 0.08);
 }
 
+.theme-dark .ai-modal-matrix-card {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .ai-modal-matrix-footer {
+  background-color: rgba(15, 23, 42, 0.95);
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
 .theme-dark .ai-modal-pillar-card,
-.theme-dark .ai-modal-reason-box,
 .theme-dark .ai-modal-diagnostic-chip,
 .theme-dark .ai-modal-tag-chip,
 .theme-dark .ai-modal-btn-secondary {
@@ -413,6 +515,24 @@
 
 .theme-dark .ai-modal-btn-secondary:hover:not(:disabled) {
   background-color: #1a2744 !important;
+}
+
+.theme-dark .ai-modal-calc-badge.is-pos {
+  background-color: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.theme-dark .ai-modal-calc-badge.is-neg {
+  background-color: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.theme-dark .ai-modal-calc-badge.is-keyword {
+  background-color: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.3);
 }
 
 .theme-dark .ai-modal-pillar-bar-bg {

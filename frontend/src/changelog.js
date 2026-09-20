@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.15',
+    date: '2026-09-20',
+    title: 'Moderniserad och sammanslagen poängmatris i AI-analysen',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Sammanslagen poängmatris och beräkning',
+        description: 'Slagit ihop de tre analyspelarna och modellens beräkningsmotivering till ett enhetligt, visuellt integrerat kort. Eliminerat duplicerad text och skapat färgkodade brickor för intresseprofiler, bonusar och ClickBait-avdrag.'
+      },
+      {
+        type: 'design',
+        title: 'Komprimerad och modern modal-layout',
+        description: 'Minskat onödiga marginaler och mellanrum i AI-analysfönstret för ett tightare och mer lättöverskådligt gränssnitt med fullt stöd för både ljust och mörkt tema.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.14',
     date: '2026-09-20',
     title: 'Namnkorrigering och optimerad MQTT-nyttolast',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
