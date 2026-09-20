@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.07',
+    date: '2026-09-20',
+    title: 'Feber tillagd i den inbyggda RSS-katalogen',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Feber i katalogen',
+        description: 'Lagt till Feber (https://feber.se/rss/) under kategorin Teknik & IT i den inbyggda svenska RSS-katalogen för enkel snabbprenumeration.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.06',
     date: '2026-09-20',
     title: 'Felsäkert Home Assistant button-card med null-skydd',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
