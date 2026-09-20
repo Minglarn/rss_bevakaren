@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.12',
+    date: '2026-09-20',
+    title: 'Fleranvändarkonfiguration i Docker Compose',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'docs',
+        title: 'Tydlig fleranvändarsyntax i compose',
+        description: 'Tydliggjort hur flera konton definieras med kommatecken i APP_USERNAME och APP_PASSWORD i såväl docker-compose.yml som snabbstarten i README.md.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.11',
     date: '2026-09-20',
     title: 'Generiska användarnamn i Home Assistant-dokumentationen',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'docs',

@@ -26,8 +26,9 @@ services:
     environment:
       - TZ=Europe/Stockholm
       - DATABASE_URL=sqlite:////data/rss.db
-      - APP_USERNAME=admin
-      - APP_PASSWORD=ditt_sakna_losenord
+      # Fleranvändarstöd: Separera användarnamn och lösenord med kommatecken för flera konton
+      - APP_USERNAME=admin,anvandare2
+      - APP_PASSWORD=ditt_sakna_losenord,andra_losenordet
       
       # Lokal AI via LM Studio eller valfritt OpenAI-kompatibelt API (valfritt)
       - LM_STUDIO_URL=http://192.168.1.50:1234/v1/chat/completions
@@ -86,11 +87,11 @@ docker compose up -d
 RSS-Bevakaren har fullt stöd för **MQTT Auto-Discovery**. När `MQTT_ENABLED=true` är aktiverat skapas och uppdateras alla sensorer automatiskt i Home Assistant utan behov av manuell YAML-konfiguration.
 
 ### Fleranvändarstöd i Home Assistant
-Om systemet har flera användare grupperar Home Assistant automatiskt sensorerna under separata enheter per användarkonto. Exempel:
-- **Enhet: RSS-Bevakaren (användare1):** med sensor `sensor.rss_anvandare1_prio` samt kontots alla flödessensorer.
-- **Enhet: RSS-Bevakaren (användare2):** med sensor `sensor.rss_anvandare2_prio` samt kontots alla flödessensorer.
+Om systemet har flera användare (konfigureras via `APP_USERNAME` och `APP_PASSWORD` separerat med kommatecken) grupperar Home Assistant automatiskt sensorerna under separata enheter per användarkonto. Exempel med `admin` och `anvandare2`:
+- **Enhet: RSS-Bevakaren (admin):** med sensor `sensor.rss_admin_prio` samt kontots alla flödessensorer.
+- **Enhet: RSS-Bevakaren (anvandare2):** med sensor `sensor.rss_anvandare2_prio` samt kontots alla flödessensorer.
 
-> **Obs:** Ovanstående är ett exempel. Sensorernas ID anpassas automatiskt efter de faktiska användarnamnen som skapas i RSS-Bevakaren (t.ex. `sensor.rss_<användarnamn>_prio`).
+> **Obs:** Ovanstående är ett exempel. Sensorernas ID anpassas automatiskt efter de faktiska användarnamn som anges i `APP_USERNAME` (t.ex. `sensor.rss_<användarnamn>_prio`).
 
 ### Färdigt Dashboard-kort (custom:button-card)
 Detta kort anpassar sig automatiskt efter Home Assistants tema (mörkt/ljust) och visar källans logotyp, rubrik, artikelbild, AI-sammanfattning, poäng och taggar. Klick på kortet öppnar artikeln direkt hos källan:
@@ -268,4 +269,4 @@ Varje publicerat MQTT-meddelande innehåller en komplett JSON-nyttolast:
 
 ## Versionshantering
 
-Projektet tillämpar strikt kalenderbaserad versionshantering (CalVer), exempelvis `2026.09.20.11`. Versionsnumret uppdateras inför varje leverans för att garantera full spårbarhet mellan källkod, container-taggar och ändringslogg.
+Projektet tillämpar strikt kalenderbaserad versionshantering (CalVer), exempelvis `2026.09.20.12`. Versionsnumret uppdateras inför varje leverans för att garantera full spårbarhet mellan källkod, container-taggar och ändringslogg.
