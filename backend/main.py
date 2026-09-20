@@ -210,6 +210,37 @@ def ensure_db_migrations():
         except Exception as e:
             print(f"[DB] Fel vid rensning av korskopplade artiklar: {e}", flush=True)
 
+        # Rensa felaktiga korskopplade ikoner orsakade av tidigare polling-läckage
+        try:
+            from urllib.parse import urlparse
+            icons_dir = get_icons_dir()
+            res_feeds = conn.execute(text("SELECT id, url, icon_url FROM feeds")).fetchall()
+            mismatched_ids = []
+            for fid, f_url, f_icon in res_feeds:
+                if f_icon and str(f_icon).strip() and f_url and str(f_url).strip():
+                    try:
+                        d_feed = urlparse(str(f_url)).netloc.lower().replace("www.", "")
+                        d_icon = urlparse(str(f_icon)).netloc.lower().replace("www.", "")
+                        is_safe_cdn = any(cdn in d_icon for cdn in ["google", "wordpress", "wp.com", "feedburner", "ytimg", "cloudinary"])
+                        if d_feed and d_icon and not is_safe_cdn and (d_feed not in d_icon and d_icon not in d_feed):
+                            mismatched_ids.append(fid)
+                    except Exception:
+                        pass
+
+            if mismatched_ids:
+                print(f"[DB] Hittade {len(mismatched_ids)} flöden med felaktigt korskopplade ikoner. Nollställer och rensar cache...", flush=True)
+                for fid in mismatched_ids:
+                    conn.execute(text(f"UPDATE feeds SET icon_url = '' WHERE id = {fid}"))
+                    icon_path = os.path.join(icons_dir, f"feed_{fid}.png")
+                    if os.path.exists(icon_path):
+                        try:
+                            os.remove(icon_path)
+                        except Exception:
+                            pass
+                conn.commit()
+        except Exception as e:
+            print(f"[DB] Fel vid automatisk sanering av flödesikoner: {e}", flush=True)
+
         try:
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS daily_digests (
@@ -963,16 +994,25 @@ def download_and_save_feed_icon_sync(feed: Optional[models.Feed], link: Optional
     domain = ""
     if target_url:
         try:
-            domain = urlparse(target_url).netloc
+            domain = urlparse(target_url).netloc.lower().replace("www.", "")
         except Exception:
             pass
 
     candidates = []
-    # 1. Befintlig sparad extern icon_url om den är giltig http/https
+    # 1. Befintlig sparad extern icon_url om den är giltig http/https och matchar flödets domän
     if getattr(feed, "icon_url", None) and feed.icon_url.strip().startswith(("http://", "https://")):
-        candidates.append(feed.icon_url.strip())
+        icon_domain = ""
+        try:
+            icon_domain = urlparse(feed.icon_url.strip()).netloc.lower().replace("www.", "")
+        except Exception:
+            pass
+        is_safe_cdn = any(cdn in icon_domain for cdn in ["google", "wordpress", "wp.com", "feedburner", "ytimg", "cloudinary"])
+        if not domain or not icon_domain or is_safe_cdn or domain in icon_domain or icon_domain in domain:
+            candidates.append(feed.icon_url.strip())
+        else:
+            print(f"[ICON: system] Ignorerade felmatchad sparad ikon för #{feed.id} ({feed.title or domain}): {icon_domain} != {domain}", flush=True)
     
-    # 2. Google Favicon Service (128x128 PNG)
+    # 2. Google Favicon Service (128x128 PNG) och DuckDuckGo
     if domain:
         candidates.append(f"https://www.google.com/s2/favicons?domain={domain}&sz=128")
         candidates.append(f"https://icons.duckduckgo.com/ip3/{domain}.ico")
@@ -1031,9 +1071,10 @@ def ensure_all_feed_icons_cached():
         db.close()
 
 def get_feed_icon_url(feed: Optional[models.Feed], link: Optional[str] = None) -> str:
-    """Returnerar den lokala URL:en för flödets ikon (/api/feed-icons/{id}.png), eller default."""
+    """Returnerar den lokala URL:en för flödets ikon (/api/feed-icons/{id}.png?v=...), eller default."""
     if feed and getattr(feed, "id", None):
-        return f"/api/feed-icons/{feed.id}.png"
+        v = getattr(feed, "last_polled", 0) or getattr(feed, "id", 0)
+        return f"/api/feed-icons/{feed.id}.png?v={v}"
     return "/default-feed-icon.png"
 
 @app.get("/feed-icons/{feed_id}.png")
@@ -1044,19 +1085,52 @@ def serve_feed_icon(feed_id: int, db: Session = Depends(database.get_db)):
     target_path = os.path.join(icons_dir, f"feed_{feed_id}.png")
 
     if os.path.exists(target_path) and os.path.getsize(target_path) > 100:
-        return FileResponse(target_path, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+        return FileResponse(target_path, media_type="image/png", headers={"Cache-Control": "public, max-age=3600, must-revalidate"})
 
     feed = db.query(models.Feed).filter(models.Feed.id == feed_id).first()
     if feed:
         saved_path = download_and_save_feed_icon_sync(feed)
         if saved_path and os.path.exists(saved_path) and os.path.getsize(saved_path) > 100:
-            return FileResponse(saved_path, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+            return FileResponse(saved_path, media_type="image/png", headers={"Cache-Control": "public, max-age=3600, must-revalidate"})
 
     def_path = get_default_icon_path()
     if def_path and os.path.exists(def_path):
         return FileResponse(def_path, media_type="image/png", headers={"Cache-Control": "public, max-age=3600"})
 
     raise HTTPException(status_code=404, detail="Icon not found")
+
+@app.post("/feeds/refresh-icons")
+@app.post("/api/feeds/refresh-icons")
+def refresh_all_feed_icons(
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """
+    Rensar och laddar ner alla flödesikoner på nytt för den inloggade användaren.
+    """
+    feeds = db.query(models.Feed).filter(models.Feed.user_id == current_user.id).all()
+    icons_dir = get_icons_dir()
+    
+    refreshed = 0
+    now_ts = int(time.time())
+    for feed in feeds:
+        feed.icon_url = ""
+        feed.last_polled = now_ts
+        icon_path = os.path.join(icons_dir, f"feed_{feed.id}.png")
+        if os.path.exists(icon_path):
+            try:
+                os.remove(icon_path)
+            except Exception:
+                pass
+        try:
+            download_and_save_feed_icon_sync(feed)
+            refreshed += 1
+        except Exception as e:
+            print(f"[ICON: {current_user.username}] Fel vid hämtning av ikon för #{feed.id}: {e}", flush=True)
+            
+    db.commit()
+    print(f"[ICON: {current_user.username}] Återställde och hämtade om ikoner för {refreshed} flöden.", flush=True)
+    return {"status": "ok", "refreshed_count": refreshed}
 
 def send_push_notification_to_user(
     db: Session,
@@ -1297,8 +1371,16 @@ async def polling_loop():
                     if items and (not feed.icon_url or not feed.icon_url.strip()):
                         first_icon = items[0].get("feed_icon")
                         if first_icon:
-                            feed.icon_url = first_icon
-                            db.commit()
+                            from urllib.parse import urlparse
+                            try:
+                                f_dom = urlparse(feed.url or "").netloc.lower().replace("www.", "")
+                                i_dom = urlparse(first_icon).netloc.lower().replace("www.", "")
+                                is_safe_cdn = any(cdn in i_dom for cdn in ["google", "wordpress", "wp.com", "feedburner", "ytimg", "cloudinary"])
+                                if not f_dom or is_safe_cdn or f_dom in i_dom or i_dom in f_dom:
+                                    feed.icon_url = first_icon
+                                    db.commit()
+                            except Exception:
+                                pass
                     
                     # Hämta användarens maxålder för artiklar (t.ex. 48h från AI_MAX_ARTICLE_AGE_HOURS)
                     user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == feed.user_id).first()

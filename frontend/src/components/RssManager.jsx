@@ -4,7 +4,7 @@ import {
   Plus, Trash2, List, Edit2, Check, X, Link as LinkIcon, 
   Activity, Globe, Search, Library, Eye, CheckSquare, 
   Square, Filter, FolderPlus, EyeOff, Layers, Download,
-  ChevronDown, FileCode, FileText, Upload
+  ChevronDown, FileCode, FileText, Upload, RefreshCw
 } from 'lucide-react';
 import api from '../api';
 import { resolveFeedIcon } from '../utils/textUtils';
@@ -40,6 +40,27 @@ const RssManager = ({ embedded = false }) => {
   const [editClickbaitEnabled, setEditClickbaitEnabled] = useState(true);
   const [deletingFeedId, setDeletingFeedId] = useState(null);
   const [feedSearch, setFeedSearch] = useState('');
+
+  // Ikonuppdatering
+  const [isRefreshingIcons, setIsRefreshingIcons] = useState(false);
+  const [iconRefreshMessage, setIconRefreshMessage] = useState('');
+
+  const handleRefreshIcons = async () => {
+    try {
+      setIsRefreshingIcons(true);
+      setIconRefreshMessage('');
+      const res = await api.post('/feeds/refresh-icons');
+      await fetchFeeds();
+      const count = res?.data?.refreshed_count ?? feeds.length;
+      setIconRefreshMessage(`Flödesikoner har återställts och hämtats på nytt (${count} flöden).`);
+      setTimeout(() => setIconRefreshMessage(''), 6000);
+    } catch (err) {
+      setIconRefreshMessage('Kunde inte uppdatera ikoner: ' + (err.response?.data?.detail || err.message || err));
+      setTimeout(() => setIconRefreshMessage(''), 6000);
+    } finally {
+      setIsRefreshingIcons(false);
+    }
+  };
 
   // Katalogsökning, filter och flerval
   const [searchTerm, setSearchTerm] = useState('');
@@ -1061,20 +1082,59 @@ const RssManager = ({ embedded = false }) => {
       {activeTab === 'my_feeds' && (
         <div>
           {feeds.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '0.6rem 1rem', marginBottom: '1.25rem' }}>
-              <Search size={18} style={{ color: 'var(--text-muted)', marginRight: '0.75rem' }} />
-              <input 
-                type="text" 
-                placeholder="Sök bland dina bevakade flöden..." 
-                value={feedSearch}
-                onChange={(e) => setFeedSearch(e.target.value)}
-                style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', color: 'var(--text-main)', fontSize: '0.95rem' }}
-              />
-              {feedSearch && (
-                <button onClick={() => setFeedSearch('')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0, display: 'flex' }}>
-                  <X size={16} />
-                </button>
-              )}
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '0.6rem 1rem', flex: 1, minWidth: '220px' }}>
+                <Search size={18} style={{ color: 'var(--text-muted)', marginRight: '0.75rem' }} />
+                <input 
+                  type="text" 
+                  placeholder="Sök bland dina bevakade flöden..." 
+                  value={feedSearch}
+                  onChange={(e) => setFeedSearch(e.target.value)}
+                  style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', color: 'var(--text-main)', fontSize: '0.95rem' }}
+                />
+                {feedSearch && (
+                  <button onClick={() => setFeedSearch('')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0, display: 'flex' }}>
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleRefreshIcons}
+                disabled={isRefreshingIcons}
+                title="Radera gamla sparade ikoner och hämta rena favicons för alla dina flöden"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  padding: '0.6rem 1rem',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  fontSize: '0.85rem',
+                  fontWeight: 500,
+                  cursor: isRefreshingIcons ? 'not-allowed' : 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <RefreshCw size={15} className={isRefreshingIcons ? 'spin' : ''} />
+                {isRefreshingIcons ? 'Hämtar ikoner...' : 'Hämta om ikoner'}
+              </button>
+            </div>
+          )}
+
+          {iconRefreshMessage && (
+            <div style={{
+              padding: '0.65rem 1rem',
+              borderRadius: '8px',
+              background: 'rgba(34, 197, 94, 0.1)',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+              color: 'var(--text-main)',
+              fontSize: '0.85rem',
+              marginBottom: '1.25rem'
+            }}>
+              {iconRefreshMessage}
             </div>
           )}
 

@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.01',
+    date: '2026-09-20',
+    title: 'Automatisk återställning och omladdning av flödesikoner',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Automatisk domänvalidering för flödesikoner',
+        description: 'Säkerställt att externa ikoner valideras mot flödets faktiska domän innan de sparas eller laddas ner, vilket eliminerar risken för omkastade ikoner.'
+      },
+      {
+        type: 'feature',
+        title: 'Knapp för att hämta om ikoner',
+        description: 'Lagt till en knapp "Hämta om ikoner" i flödeshanteraren som nollställer felaktiga ikoner och hämtar nya, rena favicons från respektive domän.'
+      },
+      {
+        type: 'improvement',
+        title: 'Automatisk databassanering vid uppstart',
+        description: 'Backend upptäcker och nollställer automatiskt flödesikoner som sparats med fel domän vid serverstart.'
+      }
+    ]
+  },
+  {
     version: '2026.09.19.24',
     date: '2026-09-19',
     title: 'Buggfix vid borttagning av ClickBait-varning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
