@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.03',
+    date: '2026-09-20',
+    title: 'Dokumentation för Home Assistant button-card och utökad MQTT-specifikation',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'docs',
+        title: 'Komplett Home Assistant-integration',
+        description: 'Uppdaterat README med sensor-konfiguration och fullständigt custom:button-card med källans officiella flödesikon och anpassad layout.'
+      },
+      {
+        type: 'docs',
+        title: 'Uppdaterad MQTT-dataspecifikation',
+        description: 'Dokumenterat de nya fälten feed_icon, feed_icon_path, feed_domain och icon i fältreferenstabellen och exempelnyttolasten.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.02',
     date: '2026-09-20',
     title: 'Flödesikon inkluderad i MQTT-nyttolasten för Home Assistant',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

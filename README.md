@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.19.11-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.20.03-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -240,6 +240,10 @@ Varje meddelande som publiceras innehåller en strukturerad JSON-nyttolast med f
   "source": "CarUp",
   "feed_slug": "carup",
   "feed_id": 4,
+  "feed_icon": "https://www.google.com/s2/favicons?domain=carup.se&sz=128",
+  "feed_icon_path": "/api/feed-icons/4.png",
+  "feed_domain": "carup.se",
+  "icon": "https://www.google.com/s2/favicons?domain=carup.se&sz=128",
   "summary": "Nya EU-siffror visar att laddhybrider släpper ut betydligt mer koldioxid än vad biltillverkarna tidigare uppgett. Detta innebär att tusentals nya bilar kommer att drabbas av betydligt högre skatter baserat på de faktiska utsläppen.",
   "short_summary": "Nya EU-siffror medför kraftigt höjd fordonsskatt för laddhybrider.",
   "raw_summary": "Nya EU-siffror visar att laddhybrider släpper ut mer...",
@@ -270,6 +274,10 @@ Varje meddelande som publiceras innehåller en strukturerad JSON-nyttolast med f
 | `source` | sträng | Visningsnamn på flödeskällan (t.ex. `Polisen`, `CarUp`, `SVT Nyheter`). |
 | `feed_slug` | sträng | Sanerat ID som matchar flödets MQTT-underämne. |
 | `feed_id` | heltal | Numeriskt ID för det bevakade flödet. |
+| `feed_icon` | sträng | Högupplöst publik favicon-URL (128x128 PNG) för källan (fungerar direkt i Home Assistant och appar). |
+| `feed_icon_path` | sträng | Lokal relativ sökväg till källans sparade PNG-ikon (`/api/feed-icons/{id}.png`). |
+| `feed_domain` | sträng | Flödets rena domännamn (t.ex. `polisen.se`, `carup.se`). |
+| `icon` | sträng | Alias till `feed_icon` för maximal kompatibilitet i dashboards. |
 | `summary` | sträng | AI-sammanfattning upp till 3 meningar (eller RSS-beskrivning om AI är avstängt). |
 | `short_summary` | sträng | Kompakt AI-sammanfattning (1–1,5 meningar, max 20 ord) optimerad för snabba mobilnotiser och displayer. |
 | `raw_summary` | sträng | Ursprunglig sammanfattning/ingress från källans RSS-flöde. |
@@ -289,9 +297,106 @@ Varje meddelande som publiceras innehåller en strukturerad JSON-nyttolast med f
 
 ---
 
-### Automatiseringsexempel för Home Assistant
+### Home Assistant Integration
 
-Få direkta aviseringar i mobilen när en högprioriterad händelse inträffar för din användare:
+#### 1. MQTT-sensor (configuration.yaml)
+Konfigurera en sensor som lyssnar på ditt personliga PRIO-flöde och sparar artikelattributen:
+
+```yaml
+mqtt:
+  sensor:
+    - name: "RSS Senaste Prio"
+      state_topic: "rss_bevakaren/admin/prio"
+      value_template: "{{ value_json.title }}"
+      json_attributes_topic: "rss_bevakaren/admin/prio"
+```
+
+#### 2. Snyggt Dashboard-kort med Flödesikon (custom:button-card)
+Detta kort visar källans officiella logotyp/ikon i topplisten, prioritetspoäng, rubrik, publiceringstid, AI-sammanfattning, kategori och taggar. Klick på kortet öppnar artikeln direkt hos källan:
+
+```yaml
+type: custom:button-card
+entity: sensor.rss_senaste_prio
+show_name: false
+show_icon: false
+show_state: false
+tap_action:
+  action: url
+  url_path: "[[[ return entity.attributes.link; ]]]"
+styles:
+  card:
+    - background-color: "#171d2c"
+    - border: "2px solid #7c4dff"
+    - border-radius: "14px"
+    - padding: "0px"
+    - overflow: "hidden"
+    - color: "#ffffff"
+    - text-align: "left"
+    - cursor: "pointer"
+  grid:
+    - grid-template-areas: '"main"'
+    - grid-template-columns: "1fr"
+    - grid-template-rows: "1fr"
+custom_fields:
+  main: >
+    [[[
+      const a = entity.attributes;
+      if (!a.title) return '<div style="padding:16px; color:#888;">Ingen händelse mottagen än.</div>';
+      
+      let tagsHtml = '';
+      if (a.tags && Array.isArray(a.tags)) {
+        tagsHtml = a.tags.map(t => `<span style="background:#1a2538; color:#7e9bbd; border:1px solid #2b3e5c; font-size:11px; padding:3px 9px; border-radius:12px; margin-right:5px; margin-bottom:5px; display:inline-block; white-space:nowrap;"># ${t}</span>`).join('');
+      }
+
+      const iconHtml = a.feed_icon 
+        ? `<img src="${a.feed_icon}" style="width: 20px; height: 20px; border-radius: 4px; object-fit: contain; background: rgba(255,255,255,0.12); padding: 2px;" />` 
+        : `<span>RSS</span>`;
+
+      return `
+        <div>
+          <!-- Top Header med flödesikon -->
+          <div style="background-color: #7c4dff; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 14px; color: #ffffff;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              ${iconHtml}
+              <span>${a.source || 'RSS'}</span>
+            </div>
+            ${a.prio_score ? `<span style="background: rgba(0,0,0,0.25); padding: 2px 8px; border-radius: 10px; font-size: 11px;">${a.prio_score}p</span>` : ''}
+          </div>
+
+          <!-- Body -->
+          <div style="padding: 14px;">
+            <div style="font-size: 16px; font-weight: 700; line-height: 1.35; margin-bottom: 6px; color: #ffffff; white-space: normal;">
+              ${a.title}
+            </div>
+            
+            <div style="font-size: 12px; color: #8292a8; margin-bottom: 12px; white-space: normal;">
+              Publ: ${a.published || ''}
+            </div>
+
+            <div style="background: #0f1522; padding: 12px; border-radius: 8px; font-size: 13.5px; line-height: 1.5; color: #d6e2f0; border: 1px solid #202b40; margin-bottom: 12px; white-space: normal; word-break: break-word;">
+              ${a.summary || ''}
+            </div>
+
+            <!-- Tags -->
+            <div style="display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 4px; white-space: normal;">
+              <span style="background:#241e17; color:#f59e0b; border:1px solid #573807; font-size:11px; padding:3px 9px; border-radius:12px; margin-right:5px; margin-bottom:5px; font-weight:600; display:inline-block; white-space:nowrap;">
+                ${a.category || ''}
+              </span>
+              ${tagsHtml}
+            </div>
+          </div>
+
+          <!-- Bottom Footer -->
+          <div style="background-color: #7c4dff; padding: 8px; text-align: center; font-size: 13px; font-weight: 600; color: #ffffff; white-space: normal;">
+            Klicka för att öppna artikeln
+          </div>
+        </div>
+      `;
+    ]]]
+```
+
+#### 3. Automatisering: Direkta pushnotiser vid PRIO
+Få direkta aviseringar i Home Assistant Companion-appen när en högprioriterad händelse publiceras:
 
 ```yaml
 automation:
