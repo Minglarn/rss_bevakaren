@@ -1,9 +1,45 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.20.10',
+    date: '2026-09-20',
+    title: 'Säkerhetsgranskning och hårdning av hemligheter',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Förebyggande av hemlighetsläckor',
+        description: 'Genomfört fullständig säkerhetsgranskning av kodbasen: rensat specifika IP-adresser i docker-compose.yml, implementerat dynamiskt genererad och persistent JWT-hemlighet samt förstärkt .gitignore för databaser och nycklar.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.20.09',
+    date: '2026-09-20',
+    title: 'Moderniserad och pedagogisk dokumentation',
+    highlights: [
+      {
+        type: 'docs',
+        title: 'Överskådlig README',
+        description: 'Strukturerat om README.md för bättre läsbarhet: direkt Snabbstart, samlad Docker Compose, ny dashboard-skärmbild och utfällbara sektioner för avancerade tekniska detaljer.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.20.08',
+    date: '2026-09-20',
+    title: 'Stöd för artikelbild i Home Assistant button-card',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Artikelbild i kortet',
+        description: 'Lagt till visning av artikelns huvudbild (image_url) i Home Assistant custom:button-card med anpassad maxhöjd och responsiv bildskalning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.07',
     date: '2026-09-20',
     title: 'Feber tillagd i den inbyggda RSS-katalogen',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

@@ -1,339 +1,97 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.20.04-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.20.10-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
 
-![Dashboard Screenshot](screenshot_1.jpg)
+![Dashboard](screenshot_1.png)
 
-RSS-Bevakaren är ett modernt, självhostat system för att övervaka, filtrera, prioritera och presentera RSS- och Atom-flöden i realtid. Systemet kombinerar en robust Python-backend, en responsiv React-frontend och en kraftfull lokal AI-motor för automatisk analys, sammanfattning, ClickBait-detektering och händelseprioritering.
+RSS-Bevakaren är en modern, självhostad nyhetsaggregator för RSS- och Atom-flöden med inbyggd lokal AI-motor. Systemet filtrerar bort brus, sammanfattar artiklar, avslöjar ClickBait, prioriterar viktiga nyheter och integreras sömlöst med Home Assistant via MQTT Auto-Discovery.
+
+---
+
+## Snabbstart med Docker Compose
+
+Skapa en `docker-compose.yml` på din server:
+
+```yaml
+services:
+  backend:
+    image: ghcr.io/minglarn/rss_bevakaren_backend:latest
+    ports:
+      - "8094:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      - TZ=Europe/Stockholm
+      - DATABASE_URL=sqlite:////data/rss.db
+      - APP_USERNAME=admin
+      - APP_PASSWORD=ditt_sakna_losenord
+      
+      # Lokal AI via LM Studio eller valfritt OpenAI-kompatibelt API (valfritt)
+      - LM_STUDIO_URL=http://192.168.1.50:1234/v1/chat/completions
+      - LM_STUDIO_TIMEOUT=120
+      - AI_MAX_ARTICLE_AGE_HOURS=24
+      
+      # Home Assistant & MQTT (valfritt, avstängt som standard)
+      - MQTT_ENABLED=false
+      - MQTT_BROKER=192.168.1.50
+      - MQTT_PORT=1883
+      - MQTT_USERNAME=                # Lämna tomt om brokern tillåter anonym anslutning
+      - MQTT_PASSWORD=                # Lämna tomt om brokern tillåter anonym anslutning
+      - MQTT_TOPIC_PREFIX=rss_bevakaren
+      - MQTT_DISCOVERY_ENABLED=true   # Aktiverar Home Assistant MQTT Auto-Discovery
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/minglarn/rss_bevakaren_frontend:latest
+    ports:
+      - "8093:80"
+    environment:
+      - TZ=Europe/Stockholm
+      - VITE_API_URL=http://din-server-ip:8094
+    restart: unless-stopped
+    depends_on:
+      - backend
+```
+
+Starta tjänsten:
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Öppna `http://din-server-ip:8093` i webbläsaren för att logga in.
 
 ---
 
 ## Huvudfunktioner
 
-- **Interaktiv installationsguide (Onboarding Wizard):** Flerstegsguide vid nyinstallation som hjälper användaren att välja rekommenderade svenska flödespaket, kontrollera lokal AI-anslutning och forma sin personliga nyhetsprofil och kategoriviktning utifrån ett enkelt frågebatteri (med möjlighet att skippa eller köra om när som helst).
-- **Gilla- & Ogilla-system (Adaptiv intresseprofil):** Interaktiv röstning direkt på händelsekorten (Tumme upp / Tumme ner). Att gilla en artikel tränar upp en personlig intresseprofil som prioriterar upp framtida liknande ämnen (+10p bonus per matchande tagg). Att ogilla en artikel sänker poängen (-15p) för liknande ämnen. Artikellåsning (skydd mot databasrensning) styrs separat via den dedikerade Lås-knappen.
-- **Favoritfilter ("Gillade"):** Ett dedikerat filter i navigeringsfältet för att omedelbart visa alla dina gillade och sparade artiklar.
-- **Nyhetsklustring och dubletthantering (Topic Clustering):** Intelligent semantisk och heuristisk gruppering av artiklar från olika redaktioner som rapporterar om samma händelse (t.ex. SVT, DN, Aftonbladet). Visar länkade källbrickor och gör det möjligt att markera hela händelser som lästa med ett klick. Styrs centralt via Inställningar -> Utseende och är aktiv som standard.
-- **Dagens Briefing & Eget Rapportflöde (AI Digest):** Automatisk morgon- och kvällsrapport (kl 07:00 och 18:00) av nyhetsläget sammanställd via lokal AI. Fungerar som ett eget renodlat flöde på desktop och mobil med full historik, arkivbläddring, talsyntesuppläsning och direkt kopiering.
-- **Interaktiv AI-nyhetschatt & Hybrid RAG:** Fullskärms konversationsgränssnitt som drivs av en lokal LM Studio-instans eller valfritt OpenAI-kompatibelt API. Ställ frågor på naturligt språk ("Vilka allvarliga olyckor har rapporterats senaste dygnet?", "Sammanfatta nyheter inom politik") och få svar med källhänvisningar och direktlänkar.
-- **Fleranvändararkitektur:** Säker autentisering med JWT-tokens där varje användare har sina egna flöden, filter och personliga AI-preferenser.
-- **Flödeshantering:** Lägg till, organisera och ta bort RSS- och Atom-flöden. Inbyggt stöd för i stort sett alla standard-RSS/Atom-specifikationer och WordPress-flöden.
-- **Två visningslägen (AI-flöde & Klassisk RSS):** Välj mellan ett AI-berikat flöde med koncisa sammanfattningar eller en snabb, minimalistisk råtextvy.
-- **Clickbait-detektering och Anti-Clickbait:** Intelligent identifiering av sensationella och undanhållande rubriker. AI-sammanfattningen avslöjar fakta direkt, varningsbrickor flaggar artikeln och Clickbait nedprioriteras automatiskt från prio-flödet.
-- **AI-skelettladdning & Mjuka övergångar:** Nya artiklar visar en diskret laddningsindikator medan AI-analys pågår och tonar in mjukt utan layoutskiftningar.
-- **Robust timeout & Offline-fallback:** Om din lokala LLM (t.ex. LM Studio) är offline eller tar för lång tid faller artiklar automatiskt tillbaka till RSS-originaltexten efter 45 sekunder, eller direkt med ett klick.
-- **Dedikerat Prio-flöde:** Realtidsprioritering baserad på dina anpassade regler, bevakade sökord och kategorivikter.
-- **Läs hela artiklar och dela:** Skrapa och läs fullständiga artiklar direkt i appen, dela via enhetens inbyggda delningsmeny, SMS eller WhatsApp, samt kopiera länkar med ett klick.
-- **PWA & Web Push:** Progressiv webbapplikation med direkta push-notiser på både dator och mobil, även när webbläsaren är stängd.
-- **Automatisk nattlig städning:** Automatisk databasrensning för att rensa bort gammal olåst historik efter en konfigurerbar tidsperiod.
+- **Lokal AI-sammanfattning:** Sammanfattar inkommande artiklar i realtid via lokala modeller (t.ex. Google Gemma via LM Studio) utan dataläckage till externa molntjänster.
+- **ClickBait-avslöjare:** Sensationella eller undanhållande rubriker flaggas automatiskt och AI-sammanfattningen lyfter direkt fram vad artikeln faktiskt handlar om.
+- **Intelligent Prio-flöde:** Händelser poängsätts (0–100p) baserat på nyhetsvärde, akuthet, faktasubstans och dina egna intresseområden.
+- **Adaptiv intresseprofil (Gilla / Ogilla):** Genom att klicka tumme upp eller ner på artiklar tränas din personliga profil för att automatiskt lyfta respektive dämpa liknande ämnen.
+- **Ämnesklustring:** Artiklar från flera olika redaktioner som rapporterar om samma händelse buntas automatiskt ihop till ett gemensamt kluster.
+- **Dagens Briefing:** Automatisk morgon- och kvällsrapport (kl 07:00 och 18:00) som sammanfattar nyhetsläget med text och inbyggd talsyntes.
+- **Interaktiv AI-chatt (RAG):** Ställ frågor på naturligt språk till ditt samlade nyhetsarkiv med källhänvisningar och direktlänkar.
+- **Inbyggd svensk RSS-katalog:** Över 300 förkonfigurerade svenska nyhetskällor, lokaltidningar, myndighetsflöden och branschtidskrifter redo för ett-klicks-prenumeration.
+- **PWA & Web Push:** Installera som app på mobil eller dator med stöd för direkta pushnotiser vid viktiga larm.
+- **Fleranvändarstöd:** Flera användare kan dela samma instans med fullständig isolering av flöden, filter och notiser.
 
 ---
 
-## AI-motor och prioriteringssystem
+## Home Assistant Integration
 
-RSS-Bevakaren har en inbyggd AI-pipeline som ansluter till lokala språkmodeller (såsom LM Studio, Ollama eller LocalAI) eller valfria OpenAI-kompatibla API-slutpunkter.
+RSS-Bevakaren har fullt stöd för **MQTT Auto-Discovery**. När `MQTT_ENABLED=true` är aktiverat skapas och uppdateras alla sensorer automatiskt i Home Assistant utan behov av manuell YAML-konfiguration.
 
-### Rekommenderade modeller (eget bruk och verifierat test)
+### Fleranvändarstöd i Home Assistant
+Home Assistant grupperar sensorerna under separata enheter per användare:
+- **Enhet: RSS-Bevakaren (admin)** med sensor `sensor.rss_admin_prio` och alla admins flödessensorer.
+- **Enhet: RSS-Bevakaren (mari)** med sensor `sensor.rss_mari_prio` och alla maris flödessensorer.
 
-Systemet är anpassat och optimerat för följande lokala modeller:
-
-- **Språkmodell (LLM för analys, sammanfattning och ClickBait-detektering):** `google/gemma-4-12b-qat`  
-  Ger snabb inferens och god förståelse för svenskt nyhetsspråk samt ClickBait-identifiering.
-- **Embeddingsmodell (Semantisk vektorsökning och hybrid-RAG):** `text-embedding-nomic-embed-text-v1.5`  
-  Levererar 768-dimensionella vektorer med stark förmåga att matcha användarfrågor mot artikelinnehåll.
-
-### Hur poängsystemet och prioriteringen fungerar
-
-Prioriteringen i RSS-Bevakaren styrs inte enbart av en enskild kategori, utan av en **sammansatt poängmatris (0–100 poäng)**. Detta förhindrar att vardagliga smånotiser i dina favoritkategorier felaktigt blir högprioriterade, samtidigt som stora och bekräftade nyheter alltid lyfts fram.
-
-Varje inkommande artikel poängsätts enligt tre huvudkomponenter:
-
-1. **Ditt kategori-intresse (30 % av poängen):**
-   - Styrs av ditt personliga reglage (0–10) för artiklarnas kategori.
-   - En kategori med vikt 8 ger 24 poäng som grundplatta ($8 \times 10 \times 0.30$).
-2. **Händelsens akuthet och nyhetsvärde (40 % av poängen):**
-   - Bedöms av AI:n i realtid (`urgency_score`, 1–10).
-   - Skiljer vardagliga händelser (1–3) från stora samhällshändelser eller extraordinära brytpunkter (8–10).
-3. **Innehållets faktasubstans och djup (30 % av poängen):**
-   - Bedöms av AI:n (`substance_score`, 1–10).
-   - Skiljer ytliga notiser och rykten (1–3) från faktatäta rapporter och genomarbetade analyser (7–10).
-
-$$\text{Grundpoäng} = (\text{Kategorivikt} \times 10 \times 0.30) + (\text{Akuthet} \times 10 \times 0.40) + (\text{Substans} \times 10 \times 0.30)$$
-
-#### Specialregler och bonusar
-- **PRIO-tröskel ($\ge 75$ poäng):** Artiklar som når 75 poäng eller mer får status `HIGH` och visas i det dedikerade PRIO-flödet med orange märkning.
-- **Intresseprofil (Gilla):** Om du har gillat tidigare artiklar inom samma ämne/tagg läggs en personlig intressebonus på **+10 poäng** till (upp till **+20 poäng** vid flera träffar).
-- **Oönskade ämnen (Ogilla):** Om artikeln matchar ett ämne/tagg du tidigare har ogillat görs ett avdrag på **-15 poäng**.
-- **Flerkällsbekräftelse (Kluster):** Om samma händelse rapporteras av **2 oberoende källor** läggs **+10 poäng** till. Om **3 eller fler källor** rapporterar läggs **+15 poäng** till. Detta lyfter automatiskt bekräftade stora händelser.
-- **ClickBait-avdrag (-25 poäng):** Artiklar med sensationella eller undanhållande rubriker får ett automatiskt avdrag på 25 poäng för att hålla PRIO-flödet rent från skräp.
-- **Bevakningsord (Garanterad 100 % PRIO):** Om artikeln matchar ett av dina egna bevakningsord får den omedelbart **100 poäng och Hög prioritet**, oavsett kategori.
-- **Ignorerad kategori (Vikt 0):** Om du sätter en kategoris vikt till 0 blockeras den alltid (0 poäng) och når aldrig PRIO.
-
-#### Konkret exempel: Egen kategori "Elpriser" vs Bevakningsord
-Om du till exempel lägger till den egna kategorin **Elpriser** med intressevikt **9**:
-
-1. **Hur AI vet att den ska kontrollera detta:**
-   - Kategorin *Elpriser* skickas med i systemprompten till språkmodellen.
-   - När en artikel om spotpriser, elskatt eller reaktorstopp anländer förstår AI:n innebörden och tilldelar artikeln kategorin `Elpriser`.
-2. **Hur poängen räknas ut:**
-   - **Kategorivikt:** 9 ger $9 \times 10 \times 0.30 = \mathbf{27\text{ poäng}}$.
-   - **Akuthet:** Om det är en stor händelse med akuthet 8 får den $8 \times 10 \times 0.40 = \mathbf{32\text{ poäng}}$.
-   - **Substans:** En faktatät artikel med substans 8 ger $8 \times 10 \times 0.30 = \mathbf{24\text{ poäng}}$.
-   - **Resultat:** $27 + 32 + 24 = \mathbf{83\text{ poäng}}$ -> Artikeln passerar tröskeln ($\ge 75$) och får orange **PRIO**-bricka.
-   - Är det däremot bara en liten vardagsnotis om elpriser (Akuthet 2, Substans 3) blir poängen $27 + 8 + 9 = \mathbf{44\text{ poäng}}$ och hamnar i det normala flödet.
-3. **Kategori vs Bevakningsord:**
-   - **Kategori (Elpriser):** Semantisk förståelse. Artikeln behöver inte innehålla det exakta ordet "elpriser" för att fångas upp.
-   - **Bevakningsord (Elpriser):** Hård regel. Om ordet "elpriser" bokstavligen förekommer i texten får artikeln **100 poäng och direkt pushnotis** utan att ens behöva invänta AI-bedömning.
-
----
-
-### Hur kategorier definieras (Standard och Egna)
-
-Under **Inställningar -> AI-analys & Prompt -> Kategoriviktning och prioritet**:
-
-1. **Standardkategorier:**
-   Systemet levereras med en genomtänkt uppsättning standardkategorier med förvalda intressevikter:
-   - *Teknik* (9/10)
-   - *Lokalt* (8/10)
-   - *Blåljus* (7/10)
-   - *Motor* (7/10)
-   - *Vetenskap & Hälsa* (7/10)
-   - *Inrikes* (6/10)
-   - *Ekonomi* (5/10)
-   - *Utrikes* (5/10)
-   - *Nöje & Kultur* (5/10)
-   - *Politik* (4/10)
-   - *Övrigt* (3/10)
-   - *Sport* (1/10)
-
-2. **Lägga till helt egna kategorier:**
-   - Du kan när som helst lägga till egna kategorier via formuläret *"Lägg till kategori"* (t.ex. `Försvar`, `Klimat`, `Fastigheter`, `AI & Rymd`).
-   - När du lägger till en kategori uppdateras språkmodellens systemprompt automatiskt i bakgrunden, vilket gör att AI:n omedelbart börjar klassificera nya artiklar mot dina egna kategorier.
-   - Du ställer in din önskade vikt (0–10) med reglaget för din nya kategori.
-   - Du kan även ta bort kategorier du inte vill ha eller när som helst klicka *"Återställ standardvikter"*.
-   - **Anpassad systemprompt:** Granska och redigera den aktiva systemprompten direkt i webbgränssnittet. Du kan justera ton, kategoridefinitioner, ClickBait-kriterier eller språkinställningar direkt.
-
----
-
-## Installationsguide (Onboarding Wizard)
-
-När applikationen startas första gången för en ny användare öppnas en interaktiv flerstegsguide automatiskt:
-
-1. **Rekommenderade svenska flöden:** Välj bland kurerade temapaket (*Riksnyheter*, *Teknik & IT*, *Ekonomi & Finans*, *Blåljus & Krisinformation*, samt *Motor & Elbilar*). Du kan välja hela paket eller enskilda redaktioner med ett klick.
-2. **Lokal AI-kontroll:** Testar anslutningen till din lokala språkmodell (LM Studio) i realtid, visar tillgängliga modeller och låter dig välja önskat format för push-notiser (kompakt 1-mening vs fullständig sammanfattning).
-3. **Frågebatteri för personlig intresseprofil:** Alla kategorier startar på en neutral baslinje (6/10 inom standardspannet 5–7). Fyra enkla frågor anpassar automatiskt kategorivikterna och prioritetströskeln efter vad du vill läsa respektive dämpa.
-4. **Förhandsgranskning & Finjustering:** Visar den framräknade profilen i ett överskådligt reglagekort där du kan finjustera innan bevakningen aktiveras.
-5. **Skippa eller kör om:** Guiden har en tydlig *"Hoppa över introduktionen"*-knapp i alla steg som sparar standardinställningar. Guiden kan när som helst startas om från **Inställningar** (under flikarna *Allmänt* eller *AI-analys*).
-
----
-
-## Visningslägen: AI-flöde vs Klassisk RSS
-
-Konfigurera ditt föredragna visningsläge under **Inställningar -> Utseende**:
-
-- **AI-flöde (Sammanfattningar & Taggar):** Visar AI-sammanfattningar, kategoritaggar, Clickbait-varningar och prioritetsindikatorer. Obearbetade artiklar visar ett skelettladdningsläge (*Analyserar med AI...*).
-- **Klassiskt RSS-flöde (Råtext utan AI):** Ett snabbt och avskalat flöde som visar ursprunglig ingresstext från RSS-flödet utan AI-bearbetning.
-
-Oavsett inställning finns **PRIO-flödet** alltid tillgängligt i navigeringen för att följa högprioriterade händelser.
-
----
-
-## Interaktiv AI-nyhetsassistent & Semantisk Hybrid-RAG
-
-RSS-Bevakaren har ett dedikerat konversationsgränssnitt (**AI Chatt**) som nås via menyn. Du kan interagera direkt med dina bevakade nyhetsartiklar via naturligt språk:
-
-### Arkitektur & Funktioner
-
-1. **Konversationsbaserad nyhetsfrågeställning (RAG):**
-   - Ställ komplexa frågor på svenska eller engelska (t.ex. *"Vilka allvarliga olyckor har rapporterats senaste dygnet?"*, *"Vad rapporteras om räntan och börsen?"* eller *"Hitta alla artiklar om elbilar och sammanfatta läget"*).
-   - Assistenten sammanställer sakliga och sammanhängande översikter baserade direkt på dina inkomna artiklar.
-
-2. **Semantisk vektorsökning (Nomic Embeddings v1.5):**
-   - Inkommande artiklar vektoriseras automatiskt med lokala embeddingsmodeller (såsom `text-embedding-nomic-embed-text-v1.5` i LM Studio).
-   - Fångar kontextuell betydelse och synonymer (768 dimensioner), vilket överbryggar skillnader mellan användarens frågor och redaktionernas rubriker.
-
-3. **SQLite Vektorlagring & Snabb Cosinuslikhet:**
-   - Vektorer sparas i SQLite som binära float32-blobbar (`article_embeddings`-tabellen) med atomära garantier.
-   - Vektorrankningen använder optimerade numpy-rutiner för cosinuslikhet över databasarkivet.
-
-4. **Hybrid återfinningsstrategi:**
-   - Kombinerar högdimensionell semantisk sökning med textmatchning och nyckelordssökning i SQLite.
-   - Garanterar precision för specifika namn, siffror och förkortningar vid sidan av begreppsmässiga träffar.
-
-5. **Tydliga källhänvisningar:**
-   - Varje svar visar interaktiva, expanderbara källhänvisningar med information om flöde, rubrik, publiceringsdatum och prioritet.
-   - Innehåller direktlänkar för att läsa ursprungsartikeln hos källan.
-
-6. **Dynamiska uppföljningsfrågor:**
-   - Efter varje svar analyserar AI:n fakta och formulerar 4 relevanta uppföljningsfrågor.
-   - Visas som klickbara snabbvalsbrickor direkt under svaret.
-
-7. **Beständig bakgrundschatt (`AiChatContext`):**
-   - Byggd på en global React Context (`AiChatContext`).
-   - Svarsgenerering fortsätter utan avbrott även om du byter flik i appen.
-   - En pulserande aktivitetsindikator i sidomenyn signalerar när AI bearbetar ett svar.
-   - Fullständig konversationshistorik bevaras under sessionen via `sessionStorage`.
-
-8. **Automatisk fallback:**
-   - Om embeddingsmodellen inte är aktiv växlar assistenten automatiskt till fulltextsökning på nyckelord utan avbrott.
-
----
-
-## MQTT-integration & Hemautomation
-
-RSS-Bevakaren har inbyggt stöd för publicering via MQTT. När funktionen aktiveras skickas varje inkommande artikel och prioriterad händelse i realtid till din MQTT-broker (såsom Eclipse Mosquitto, Home Assistant eller Node-RED). Systemet är fullt uppdelat per användare, vilket gör att varje användare får sina egna dedikerade ämnen (topics).
-
-### Konfiguration i docker-compose.yml
-
-Lägg till följande miljövariabler för `backend`-tjänsten i `docker-compose.yml`:
-
-```yaml
-services:
-  backend:
-    environment:
-      # MQTT-integration (valfritt, inaktiverat som standard)
-      - MQTT_ENABLED=true
-      - MQTT_BROKER=192.168.1.50
-      - MQTT_PORT=1883
-      - MQTT_USERNAME=ditt_användarnamn   # Valfritt: lämna tomt om brokern tillåter anonym anslutning
-      - MQTT_PASSWORD=ditt_lösenord       # Valfritt: lämna tomt om brokern tillåter anonym anslutning
-      - MQTT_TOPIC_PREFIX=rss_bevakaren
-      - MQTT_CLIENT_ID=rss_bevakaren_backend
-      - MQTT_RETAIN=true                  # Behåll senaste meddelandet i brokern (persistent över omstarter)
-      - MQTT_QOS=0
-```
-
-### Ämnesarkitektur (Topic Hierarchy)
-
-MQTT-tjänsten använder en ren och förutsägbar hierarki uppdelad per användare:
-
-| Ämne (Topic) | Beskrivning | Retained |
-|---|---|---|
-| `{prefix}/status` | Systemets globala anslutningsstatus via LWT (Last Will and Testament). Skickar `"online"` vid anslutning och `"offline"` om backend avslutas eller startar om. | Ja |
-| `{prefix}/{användare}/feeds/{feed_slug}` | Individuell ström för varje användares bevakade flöden (t.ex. `rss_bevakaren/admin/feeds/polisen_skane_lan` eller `rss_bevakaren/wife/feeds/svt_nyheter`). Specialtecken saneras automatiskt. | Ja (standard: true) |
-| `{prefix}/{användare}/prio` | Dedikerad kanal för användarens högprioriterade händelser. Artiklar med hög prioritet eller som matchar användarens egna bevakningsord publiceras här. | Ja (standard: true) |
-
-När `MQTT_RETAIN=true` är aktiverat ligger de senaste artikelhändelserna kvar i MQTT-brokern över omstarter, vilket gör att anslutna system (såsom Home Assistant) omedelbart har tillgång till det senaste meddelandet utan att vänta på nya artiklar. Vid avstängning eller omstart skickar LWT-mekanismen automatiskt `"offline"` till `{prefix}/status`.
-
-#### Rekommenderade prenumerationsmönster
-- **Allt för specifik användare:** `rss_bevakaren/admin/#`
-- **Endast admins prioriterade larm:** `rss_bevakaren/admin/prio`
-- **Alla flöden för en specifik användare:** `rss_bevakaren/admin/feeds/+`
-- **Prioriterade larm för ALLA användare:** `rss_bevakaren/+/prio`
-- **Samtliga händelser i hela systemet:** `rss_bevakaren/#`
-
----
-
-### Detaljerad JSON-dataspecifikation
-
-Varje meddelande som publiceras innehåller en strukturerad JSON-nyttolast med fullständig händelse- och användarmetadata:
-
-```json
-{
-  "id": 1420,
-  "user": "admin",
-  "user_id": 1,
-  "title": "Chocksiffrorna: Nu höjs bilskatten med 1300%",
-  "source": "CarUp",
-  "feed_slug": "carup",
-  "feed_id": 4,
-  "feed_icon": "https://www.google.com/s2/favicons?domain=carup.se&sz=128",
-  "feed_icon_path": "/api/feed-icons/4.png",
-  "feed_domain": "carup.se",
-  "icon": "https://www.google.com/s2/favicons?domain=carup.se&sz=128",
-  "summary": "Nya EU-siffror visar att laddhybrider släpper ut betydligt mer koldioxid än vad biltillverkarna tidigare uppgett. Detta innebär att tusentals nya bilar kommer att drabbas av betydligt högre skatter baserat på de faktiska utsläppen.",
-  "short_summary": "Nya EU-siffror medför kraftigt höjd fordonsskatt för laddhybrider.",
-  "raw_summary": "Nya EU-siffror visar att laddhybrider släpper ut mer...",
-  "link": "https://carup.se/chocksiffrorna-nu-hojs-bilskatten-med-1300/",
-  "image_url": "https://carup.se/wp-content/uploads/2026/09/laddhybrid-skatt.jpg",
-  "published": "Tue, 09 Sep 2026 17:15:00 +0200",
-  "published_ts": 1788983700,
-  "received_ts": 1788983750,
-  "is_prio": true,
-  "prio_score": 85,
-  "prio_reason": "Träff på bevakningsord: bilskatt",
-  "matched_keywords": ["bilskatt"],
-  "is_clickbait": true,
-  "clickbait_reason": "Rubriken döljer att det handlar om justerade utsläppsvärden för laddhybrider.",
-  "category": "Ekonomi",
-  "tags": ["bilskatt", "laddhybrider", "utsläpp", "EU", "ekonomi"]
-}
-```
-
-#### Fältreferens
-
-| Fält | Typ | Beskrivning |
-|---|---|---|
-| `id` | heltal | Unikt artikel-ID i databasen. |
-| `user` | sträng | Sanerat användarnamn som äger flödet/bevakningen (t.ex. `admin`, `wife`). |
-| `user_id` | heltal | Användarens numeriska ID i databasen. |
-| `title` | sträng | Artikelns fullständiga rubrik. |
-| `source` | sträng | Visningsnamn på flödeskällan (t.ex. `Polisen`, `CarUp`, `SVT Nyheter`). |
-| `feed_slug` | sträng | Sanerat ID som matchar flödets MQTT-underämne. |
-| `feed_id` | heltal | Numeriskt ID för det bevakade flödet. |
-| `feed_icon` | sträng | Högupplöst publik favicon-URL (128x128 PNG) för källan (fungerar direkt i Home Assistant och appar). |
-| `feed_icon_path` | sträng | Lokal relativ sökväg till källans sparade PNG-ikon (`/api/feed-icons/{id}.png`). |
-| `feed_domain` | sträng | Flödets rena domännamn (t.ex. `polisen.se`, `carup.se`). |
-| `icon` | sträng | Alias till `feed_icon` för maximal kompatibilitet i dashboards. |
-| `summary` | sträng | AI-sammanfattning upp till 3 meningar (eller RSS-beskrivning om AI är avstängt). |
-| `short_summary` | sträng | Kompakt AI-sammanfattning (1–1,5 meningar, max 20 ord) optimerad för snabba mobilnotiser och displayer. |
-| `raw_summary` | sträng | Ursprunglig sammanfattning/ingress från källans RSS-flöde. |
-| `link` | sträng | Direkt webbadress till originalartikeln. |
-| `image_url` | sträng | Bildadress om flödet tillhandahåller en artikelbild. |
-| `published` | sträng | Publiceringsdatum som sträng från källan. |
-| `published_ts`| heltal | UNIX-tidsstämpel för publicering. |
-| `received_ts` | heltal | UNIX-tidsstämpel (sekunder) när artikeln togs emot. |
-| `is_prio` | boolean | `true` om artikeln kvalificerar sig som prioriterad (eller matchat bevakningsord). |
-| `prio_score` | heltal | Relevanspoäng från `0` till `100`. |
-| `prio_reason` | sträng | Motivering för poängen eller träff på bevakningsord. |
-| `matched_keywords` | lista[sträng] | Lista med bevakade sökord som matchats för användaren. |
-| `is_clickbait`| boolean | `true` om AI identifierat Clickbait-taktik i rubriken. |
-| `clickbait_reason` | sträng | Förklaring av vad rubriken undanhöll och bekräftelse på att fakta lyfts fram. |
-| `category` | sträng | AI-klassificerad kategori (t.ex. `Blåljus`, `Ekonomi`, `Teknik`, `Lokalt`). |
-| `tags` | lista[sträng] | AI-genererade ämnestaggar för snabb indelning. |
-
----
-
-### Home Assistant Integration
-
-#### Automatisk upptäckt (MQTT Auto-Discovery) - Rekommenderas
-
-RSS-Bevakaren har inbyggt stöd för Home Assistant MQTT Discovery. När `MQTT_ENABLED=true` är påslaget behöver du **inte** konfigurera några sensorer manuellt i `configuration.yaml`!
-
-##### Hur fleranvändarstöd fungerar mot Home Assistant
-I Home Assistant grupperas sensorer under "Enheter" (Devices). RSS-Bevakaren skapar automatiskt en separat och isolerad enhet för varje användare:
-- **Enhet: RSS-Bevakaren (admin)**
-  - Sensor: `sensor.rss_admin_prio` (Senaste Prio för admin)
-  - Sensorer: `sensor.rss_admin_{flöde}` (Varje enskilt flöde som admin bevakar)
-- **Enhet: RSS-Bevakaren (mari)**
-  - Sensor: `sensor.rss_mari_prio` (Senaste Prio för mari)
-  - Sensorer: `sensor.rss_mari_{flöde}` (Varje enskilt flöde som mari bevakar)
-
-**Fördelar:**
-1. **Noll krockar:** Även om flera användare bevakar samma flöde (t.ex. Aftonbladet eller SVT) får varje användare en unik sensor och topic kopplad till sitt konto.
-2. **Individuella dashboards:** Användare kan lägga in sina egna personliga larmkort i Home Assistant baserat på sin specifika `sensor.rss_{användare}_prio`.
-3. **Automatisk livscykel:** När du lägger till ett flöde i RSS-bevakaren dyker det direkt upp i Home Assistant. När ett flöde raderas avregistreras sensorn automatiskt.
-4. **Tillgänglighetsstatus (Online/Offline):** Sensorerna är kopplade till systemets status. Vid omstart sätts sensorerna till otillgängliga och återaktiveras så fort RSS-bevakaren ansluter igen.
-
----
-
-#### 1. Alternativ manuell MQTT-sensor (configuration.yaml)
-Om du av något skäl föredrar manuell YAML-konfiguration istället för Auto-Discovery:
-
-```yaml
-mqtt:
-  sensor:
-    - name: "RSS Senaste Prio"
-      state_topic: "rss_bevakaren/admin/prio"
-      value_template: "{{ value_json.title }}"
-      json_attributes_topic: "rss_bevakaren/admin/prio"
-```
-
-#### 2. Snyggt Dashboard-kort med Flödesikon (custom:button-card)
-Detta kort visar källans officiella logotyp/ikon i topplisten, prioritetspoäng, rubrik, publiceringstid, AI-sammanfattning, kategori och taggar. Klick på kortet öppnar artikeln direkt hos källan. Anpassa `entity` efter ditt användarnamn i Auto-Discovery (t.ex. `sensor.rss_admin_prio` eller `sensor.rss_mari_prio`):
+### Färdigt Dashboard-kort (custom:button-card)
+Detta kort anpassar sig automatiskt efter Home Assistants tema (mörkt/ljust) och visar källans logotyp, rubrik, artikelbild, AI-sammanfattning, poäng och taggar. Klick på kortet öppnar artikeln direkt hos källan:
 
 ```yaml
 type: custom:button-card
@@ -363,7 +121,7 @@ custom_fields:
   main: >
     [[[
       if (!entity || !entity.attributes) {
-        return '<div style="padding: 16px; color: var(--secondary-text-color);">Väntar på händelse eller så är entiteten inte tillgänglig... Kontrollera att entitetsnamnet stämmer i kortet.</div>';
+        return '<div style="padding: 16px; color: var(--secondary-text-color);">Väntar på händelse eller så är entiteten inte tillgänglig...</div>';
       }
       const a = entity.attributes;
       if (!a.title) return '<div style="padding: 16px; color: var(--secondary-text-color);">Ingen händelse mottagen än.</div>';
@@ -377,9 +135,15 @@ custom_fields:
         ? `<img src="${a.feed_icon}" style="width: 20px; height: 20px; border-radius: 4px; object-fit: contain; background: var(--secondary-background-color, rgba(127, 127, 127, 0.15)); padding: 2px;" />` 
         : `<span>RSS</span>`;
 
+      const mainImageHtml = (a.image_url && a.image_url.trim() !== "")
+        ? `<div style="width: 100%; max-height: 200px; overflow: hidden; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--divider-color, rgba(127, 127, 127, 0.15));">
+             <img src="${a.image_url}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+           </div>`
+        : '';
+
       return `
         <div>
-          <!-- Header (följer HA primärfärg) -->
+          <!-- Header -->
           <div style="background-color: var(--primary-color, #03a9f4); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 14px; color: var(--text-primary-color, #ffffff);">
             <div style="display: flex; align-items: center; gap: 8px;">
               ${iconHtml}
@@ -390,6 +154,8 @@ custom_fields:
 
           <!-- Innehåll -->
           <div style="padding: 14px;">
+            ${mainImageHtml}
+
             <div style="font-size: 15px; font-weight: 700; line-height: 1.4; margin-bottom: 6px; color: var(--primary-text-color); white-space: normal;">
               ${a.title}
             </div>
@@ -420,89 +186,84 @@ custom_fields:
     ]]]
 ```
 
-#### 3. Automatisering: Direkta pushnotiser vid PRIO
-Få direkta aviseringar i Home Assistant Companion-appen när en högprioriterad händelse publiceras:
-
-```yaml
-automation:
-  - alias: "RSS Prio Händelselarm (Admin)"
-    trigger:
-      - platform: mqtt
-        topic: "rss_bevakaren/admin/prio"
-    action:
-      - service: notify.notify
-        data:
-          title: "{{ trigger.payload_json.source }}: {{ trigger.payload_json.title }}"
-          message: "{{ trigger.payload_json.summary }}"
-          data:
-            url: "{{ trigger.payload_json.link }}"
-            clickAction: "{{ trigger.payload_json.link }}"
-            tag: "rss_prio_{{ trigger.payload_json.id }}"
-```
-
 ---
 
-## Arkitektur
+## Avancerade detaljer
 
-Applikationen är uppbyggd som två lätta mikrotjänster:
+<details>
+<summary><b>Klicka för att läsa: Hur fungerar AI-prioriteringen? (0–100 poäng)</b></summary>
 
-- **Backend:** Python med FastAPI, SQLAlchemy, schemaläggning för bakgrundsuppgifter, paho-mqtt för meddelandehantering och SQLite för lagring.
-- **Frontend:** Modern Single Page Application (SPA) byggd med React, Vite, Framer Motion och Lucide-ikoner.
-- **Drift:** Docker-avbilder i flera steg som publiceras till GitHub Container Registry (GHCR).
+### Poängberäkning
+Varje artikel bedöms utifrån tre grundfaktorer:
+1. **Ditt kategori-intresse (30 %):** Baserat på dina egna viktreglage (0–10) i inställningarna.
+2. **Akuthet & Nyhetsvärde (40 %):** AI-bedömning av händelsens allvar och brytpunkt.
+3. **Faktasubstans & Djup (30 %):** Skiljer korta rykten från genomarbetad journalistik.
 
----
+### Bonusar & Justeringar
+- **PRIO-tröskel:** Artiklar som når minst 75 poäng märks med orange PRIO-etikett och skickas till prio-strömmen.
+- **Bevakningsord:** Exakta träffar på dina sökord ger direkt 100 poäng och omedelbar avisering.
+- **Gilla / Ogilla:** Gillade ämnen ger +10p bonus vid framtida matchningar. Ogillade ämnen får -15p avdrag.
+- **Flerkällsbekräftelse:** Om 2 källor rapporterar om samma sak ges +10p. 3 eller fler ger +15p.
+- **ClickBait-avdrag:** Sensationella rubriker får ett automatiskt avdrag på 25 poäng.
 
-## Drift med Docker Compose
+### Rekommenderade modeller
+- **LLM:** `google/gemma-4-12b-qat` (snabb inferens och stark svensk språkförståelse).
+- **Embeddings:** `text-embedding-nomic-embed-text-v1.5` (768 dimensioner för hybrid-RAG).
+</details>
 
-Skapa en `docker-compose.yml`-fil på din server:
+<details>
+<summary><b>Klicka för att läsa: Teknisk MQTT JSON-specifikation</b></summary>
 
-```yaml
-services:
-  backend:
-    image: ghcr.io/minglarn/rss_bevakaren_backend:latest
-    ports:
-      - "8094:8000"
-    volumes:
-      - ./data:/data
-    environment:
-      - TZ=Europe/Stockholm
-      - DATABASE_URL=sqlite:////data/rss.db
-      - APP_USERNAME=admin
-      - APP_PASSWORD=ditt_säkra_lösenord
-      - LM_STUDIO_URL=http://192.168.1.50:1234/v1/chat/completions
-      - LM_STUDIO_TIMEOUT=120
-      - AI_MAX_ARTICLE_AGE_HOURS=24
-      # MQTT-integration (valfritt)
-      - MQTT_ENABLED=false
-      - MQTT_BROKER=192.168.1.50
-      - MQTT_PORT=1883
-      - MQTT_TOPIC_PREFIX=rss_bevakaren
-      - MQTT_RETAIN=true
-    restart: unless-stopped
+Varje publicerat MQTT-meddelande innehåller en komplett JSON-nyttolast:
 
-  frontend:
-    image: ghcr.io/minglarn/rss_bevakaren_frontend:latest
-    ports:
-      - "8093:80"
-    environment:
-      - TZ=Europe/Stockholm
-      - VITE_API_URL=http://din-server-ip:8094
-    restart: unless-stopped
-    depends_on:
-      - backend
+```json
+{
+  "id": 1420,
+  "user": "admin",
+  "user_id": 1,
+  "title": "Chocksiffrorna: Nu höjs bilskatten med 1300%",
+  "source": "CarUp",
+  "feed_slug": "carup",
+  "feed_id": 4,
+  "feed_icon": "https://www.google.com/s2/favicons?domain=carup.se&sz=128",
+  "feed_icon_path": "/api/feed-icons/4.png",
+  "feed_domain": "carup.se",
+  "icon": "https://www.google.com/s2/favicons?domain=carup.se&sz=128",
+  "summary": "Nya EU-siffror visar att laddhybrider släpper ut mer koldioxid än tidigare uppgett.",
+  "short_summary": "Nya EU-siffror medför kraftigt höjd fordonsskatt för laddhybrider.",
+  "raw_summary": "Ursprunglig ingress...",
+  "link": "https://carup.se/...",
+  "image_url": "https://carup.se/.../bild.jpg",
+  "published": "Tue, 09 Sep 2026 17:15:00 +0200",
+  "published_ts": 1788983700,
+  "received_ts": 1788983750,
+  "is_prio": true,
+  "prio_score": 85,
+  "prio_reason": "Träff på bevakningsord: bilskatt",
+  "matched_keywords": ["bilskatt"],
+  "is_clickbait": true,
+  "clickbait_reason": "Rubriken döljer vad skattehöjningen gäller.",
+  "category": "Ekonomi",
+  "tags": ["bilskatt", "laddhybrider", "utsläpp"]
+}
 ```
 
-Starta tjänsterna:
-```bash
-docker-compose pull
-docker-compose up -d
-```
+### Ämneshierarki
+- `{prefix}/status`: Global anslutningsstatus (`online` / `offline`).
+- `{prefix}/{användare}/feeds/{feed_slug}`: Flödesspecifik ström.
+- `{prefix}/{användare}/prio`: Högprioriterade händelser för respektive användare.
+</details>
 
-Öppna `http://din-server-ip:8093` i webbläsaren och logga in.
+<details>
+<summary><b>Klicka för att läsa: Arkitektur & Mikrotjänster</b></summary>
+
+- **Backend:** Python med FastAPI, SQLAlchemy, SQLite, paho-mqtt, Schemalagda bakgrundstrådar.
+- **Frontend:** Single Page Application (SPA) byggd med React, Vite, Framer Motion, Tailwind/Vanilla CSS och Lucide-ikoner.
+- **Drift:** Docker-containrar via GitHub Container Registry (GHCR).
+</details>
 
 ---
 
 ## Versionshantering
 
-Projektet tillämpar strikt kalenderbaserad versionshantering (CalVer), exempelvis `2026.09.11.05`.
-Versionsnumret uppdateras inför varje leverans, vilket garanterar full spårbarhet mellan källkod, container-taggar och ändringslogg.
+Projektet tillämpar strikt kalenderbaserad versionshantering (CalVer), exempelvis `2026.09.20.09`. Versionsnumret uppdateras inför varje leverans för att garantera full spårbarhet mellan källkod, container-taggar och ändringslogg.

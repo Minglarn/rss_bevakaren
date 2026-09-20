@@ -8,7 +8,31 @@ from sqlalchemy.orm import Session
 import os
 import models, schemas, database
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "supersecretkey_change_in_production")
+def get_or_create_jwt_secret() -> str:
+    env_key = os.environ.get("SECRET_KEY", "").strip()
+    if env_key and env_key != "supersecretkey_change_in_production":
+        return env_key
+    
+    key_path = "/data/jwt_secret.key" if os.path.exists("/data") else "jwt_secret.key"
+    if os.path.exists(key_path):
+        try:
+            with open(key_path, "r", encoding="utf-8") as f:
+                k = f.read().strip()
+                if k:
+                    return k
+        except Exception:
+            pass
+
+    import secrets
+    new_key = secrets.token_hex(32)
+    try:
+        with open(key_path, "w", encoding="utf-8") as f:
+            f.write(new_key)
+    except Exception:
+        pass
+    return new_key
+
+SECRET_KEY = get_or_create_jwt_secret()
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30 # 30 dagar (förlängs rullande via sliding session)
 

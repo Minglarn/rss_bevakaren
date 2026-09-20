@@ -4,10 +4,17 @@ __pycache__/
 venv/
 env/
 .env
+.env.*
 /data/
+*.db
+*.sqlite
+*.sqlite3
 rss.db
 vapid_keys.json
 backend/vapid_keys.json
+jwt_secret.key
+*.key
+*.pem
 
 # Frontend
 node_modules/
