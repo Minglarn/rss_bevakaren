@@ -319,7 +319,7 @@ const BriefingView = () => {
             boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
             transition: 'all 0.15s ease'
           }}
-          title="Generera en färsk briefing nu via LM Studio"
+          title="Generera en färsk briefing nu via AI"
         >
           <RefreshCw size={14} className={generating ? 'spin' : ''} />
           <span>{generating ? 'Analyserar...' : 'Generera ny nu'}</span>
@@ -457,7 +457,7 @@ const BriefingView = () => {
                         backgroundColor: 'rgba(0, 0, 0, 0.25)', 
                         color: 'rgba(255, 255, 255, 0.95)' 
                       }}>
-                        {selectedDigest.digest_type === 'ai_generated' ? 'AI (LM Studio)' : 'Regelbaserad'}
+                        {selectedDigest.digest_type === 'ai_generated' ? 'AI-genererad' : 'Regelbaserad'}
                       </span>
                     </div>
 

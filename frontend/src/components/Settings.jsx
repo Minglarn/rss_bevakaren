@@ -433,14 +433,15 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       setIsLoadingAi(true);
       const res = await api.get('/ai/config');
       setAiConfig(res.data);
+      const serverName = res.data.server_type || 'AI-servern';
       if (res.data.is_healthy) {
-        toast.success(`Ansluten till LM Studio! ${res.data.available_models?.length || 0} modeller tillgängliga.`);
+        toast.success(`Ansluten till ${serverName}! ${res.data.available_models?.length || 0} modeller tillgängliga.`);
       } else {
-        toast.error('Kunde inte nå LM Studio.');
+        toast.error(`Kunde inte nå ${serverName}.`);
       }
     } catch (err) {
       console.error("Kunde inte hämta AI-konfiguration", err);
-      toast.error('Fel vid test av anslutning till LM Studio.');
+      toast.error('Fel vid test av anslutning till AI-servern.');
     } finally {
       setIsLoadingAi(false);
     }
@@ -1180,7 +1181,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         max_article_age_hours: aiConfig.max_article_age_hours || 24
       });
       if (res.data) setAiConfig(res.data);
-      toast.success(cleanModel ? `AI-modell sparad: ${cleanModel}` : 'AI-modell återställd till LM Studio standard.');
+      const serverName = res.data?.server_type || aiConfig.server_type || 'AI';
+      toast.success(cleanModel ? `AI-modell sparad: ${cleanModel}` : `AI-modell återställd till ${serverName} standard.`);
       window.dispatchEvent(new Event('aiConfigUpdated'));
     } catch (err) {
       console.error("Kunde inte spara AI-modell:", err);
@@ -4024,7 +4026,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                           <Server size={14} style={{ color: '#f97316' }} /> Driftnotiser vid AI-avbrott (Endast administratör)
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                          Skickar en pushnotis om LM Studio är onåbart i mer än 45 sekunder, samt när anslutningen återställts.
+                          Skickar en pushnotis om AI-servern är onåbar i mer än 45 sekunder, samt när anslutningen återställts.
                         </div>
                       </div>
                       <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
@@ -4491,7 +4493,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)', opacity: aiConfig.prio_enabled ? 1 : 0.7 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sparkles size={20} style={{ color: '#f97316' }} /> LM Studio-status
+                <Sparkles size={20} style={{ color: '#f97316' }} /> {aiConfig.server_type || 'AI-motor'}-status
               </h3>
               <button 
                 onClick={handleCheckConnection}
@@ -4511,7 +4513,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Anslutningsstatus</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: aiConfig.is_healthy ? '#16a34a' : '#ef4444' }}>
                   <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: aiConfig.is_healthy ? '#16a34a' : '#ef4444', display: 'inline-block' }}></span>
-                  {aiConfig.is_healthy ? 'Ansluten till LM Studio' : 'Offline / Ingen anslutning'}
+                  {aiConfig.is_healthy ? `Ansluten till ${aiConfig.server_type || 'AI-servern'}` : 'Offline / Ingen anslutning'}
                 </div>
               </div>
 
@@ -4598,7 +4600,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   <Bell size={15} style={{ color: '#f97316' }} /> Driftnotiser vid AI-avbrott (Endast administratör)
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                  Skickar en pushnotis till administratören om LM Studio är onåbart i mer än 45 sekunder, samt när anslutningen återställts.
+                  Skickar en pushnotis till administratören om AI-servern är onåbar i mer än 45 sekunder, samt när anslutningen återställts.
                 </div>
               </div>
               <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
@@ -4948,7 +4950,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
-                    Här ser du den råa systemprompten som skickas till LM Studio vid analys.
+                    Här ser du den råa systemprompten som skickas till AI-motorn vid analys.
                   </p>
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <button 

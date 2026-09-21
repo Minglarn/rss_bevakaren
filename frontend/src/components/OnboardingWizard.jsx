@@ -573,7 +573,7 @@ const OnboardingWizard = ({ isOpen, onClose, onCompleted }) => {
                     Steg 2: Kontrollera din lokala AI-motor
                   </h3>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    RSS-Bevakaren använder lokal AI (LM Studio eller motsvarande) för sammanfattningar, taggar och prioritering helt privat på din egen maskin.
+                    RSS-Bevakaren använder lokal AI (Ollama, LM Studio eller motsvarande) för sammanfattningar, taggar och prioritering helt privat på din egen maskin.
                   </p>
                 </div>
 
@@ -608,7 +608,7 @@ const OnboardingWizard = ({ isOpen, onClose, onCompleted }) => {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
                         <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-main)' }}>
-                          {aiHealthy ? 'Ansluten till LM Studio' : 'LM Studio är för närvarande offline'}
+                          {aiHealthy ? 'Ansluten till AI-motorn' : 'AI-motorn är för närvarande offline'}
                         </span>
                         <span 
                           style={{
@@ -626,7 +626,7 @@ const OnboardingWizard = ({ isOpen, onClose, onCompleted }) => {
                       <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
                         {aiHealthy 
                           ? 'AI-motorn är redo att börja analysera och prioritera nyheter direkt.'
-                          : 'Du kan fortsätta ändå. Systemet fungerar som en blixtsnabb RSS-läsare, och AI-analysen startar automatiskt i bakgrunden så fort du startar LM Studio på din dator.'}
+                          : 'Du kan fortsätta ändå. Systemet fungerar som en blixtsnabb RSS-läsare, och AI-analysen startar automatiskt i bakgrunden så fort du startar din lokala AI-server.'}
                       </p>
                     </div>
                   </div>
@@ -642,7 +642,7 @@ const OnboardingWizard = ({ isOpen, onClose, onCompleted }) => {
                       }}
                     >
                       <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                        Vald språkmodell i LM Studio
+                        Vald språkmodell
                       </label>
                       <select
                         value={selectedModel}

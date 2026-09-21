@@ -159,9 +159,24 @@ def load_categories() -> List[str]:
     config = load_ai_config()
     return config.get("categories", DEFAULT_CATEGORIES)
 
+def get_ai_server_type() -> str:
+    """Identifierar vilken typ av AI-server/inferensmotor som används baserat på AI_URL."""
+    url = (AI_URL or "").lower()
+    if ":11434" in url or "ollama" in url:
+        return "Ollama"
+    if ":1234" in url or "lmstudio" in url or "lm_studio" in url:
+        return "LM Studio"
+    if "api.openai.com" in url or "openai" in url:
+        return "OpenAI"
+    if ":8000" in url or "vllm" in url:
+        return "vLLM"
+    if ":8080" in url or "llama-server" in url or "llamacpp" in url:
+        return "llama.cpp"
+    return "AI-motorn"
+
 def get_models_endpoint() -> str:
-    """Extraherar /v1/models endpoint baserat på LM_STUDIO_URL."""
-    url = LM_STUDIO_URL.strip()
+    """Extraherar /v1/models endpoint baserat på AI_URL."""
+    url = AI_URL.strip()
     if "/chat/completions" in url:
         return url.replace("/chat/completions", "/models")
     return "http://localhost:1234/v1/models"
@@ -326,6 +341,7 @@ HEALTH_CACHE_TTL = 15.0  # sekunder
 MODELS_CACHE_TTL = 30.0  # sekunder
 
 _last_health_log_time: float = 0.0
+_last_logged_models: Optional[List[str]] = None
 
 def check_lm_studio_health(force_refresh: bool = False) -> bool:
     """Kontrollerar snabbt om AI-servern svarar med TTL-cachning för att undvika trådblockering vid offline eller hög last."""
@@ -352,7 +368,7 @@ def check_lm_studio_health(force_refresh: bool = False) -> bool:
 
 def get_available_models(force_refresh: bool = False) -> List[str]:
     """Hämtar alla tillgängliga chatt-/textmodeller från AI-servern med TTL-cachning."""
-    global _models_cache, _health_cache
+    global _models_cache, _health_cache, _last_logged_models
     now = time.time()
     if not force_refresh and (now - _models_cache["ts"]) < MODELS_CACHE_TTL:
         return list(_models_cache["models"])
@@ -370,7 +386,9 @@ def get_available_models(force_refresh: bool = False) -> List[str]:
                     result.append(m_id)
             _models_cache = {"models": result, "ts": now}
             _health_cache = {"status": True, "ts": now}
-            print(f"[AI Server] Tillgängliga modeller på {endpoint} ({len(result)} st): {result}", flush=True)
+            if _last_logged_models is None or sorted(result) != sorted(_last_logged_models):
+                _last_logged_models = list(result)
+                print(f"[AI Server] Tillgängliga modeller på {endpoint} ({len(result)} st): {result}", flush=True)
             return result
         else:
             print(f"[AI Server Fel] Kunde inte hämta modeller från {endpoint} (HTTP {res.status_code}): {res.text[:250]}", flush=True)
@@ -1023,9 +1041,6 @@ def analyze_article(
             max_words=short_summary_max_words,
             max_sentences=short_summary_max_sentences
         )
-
-        cb_info = f"Ja ({clickbait_reason})" if is_clickbait else "Nej"
-        print(f"[AI Service] Analys klar för '{title[:40]}' med modell '{model}' på {dur}s (Kategori: {category}, Poäng: {prio_score}p, ClickBait: {cb_info})", flush=True)
 
         return {
             "category": category,

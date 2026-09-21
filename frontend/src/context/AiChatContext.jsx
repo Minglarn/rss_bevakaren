@@ -17,6 +17,7 @@ export const AiChatProvider = ({ children }) => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [activeModel, setActiveModel] = useState('');
+  const [serverType, setServerType] = useState('AI-motorn');
   const [aiHealthy, setAiHealthy] = useState(true);
 
   // Spara historik i sessionStorage vid ändringar
@@ -28,15 +29,18 @@ export const AiChatProvider = ({ children }) => {
     }
   }, [messages]);
 
-  // Kontrollera LM Studio hälsa vid start
+  // Kontrollera AI-serverns hälsa vid start
   useEffect(() => {
     const checkHealth = async () => {
       try {
         const res = await api.get('/ai/config');
         if (res.data) {
           setAiHealthy(res.data.is_healthy);
-          if (res.data.lm_studio_model) {
-            setActiveModel(res.data.lm_studio_model);
+          if (res.data.server_type) {
+            setServerType(res.data.server_type);
+          }
+          if (res.data.ai_model || res.data.lm_studio_model) {
+            setActiveModel(res.data.ai_model || res.data.lm_studio_model);
           } else if (res.data.available_models && res.data.available_models.length > 0) {
             setActiveModel(res.data.available_models[0]);
           }
@@ -216,7 +220,7 @@ export const AiChatProvider = ({ children }) => {
           if (last && last.role === 'assistant') {
             list[list.length - 1] = {
               ...last,
-              content: 'Kunde inte kommunicera med AI-tjänsten. Kontrollera att LM Studio körs och är tillgänglig på det lokala nätverket.',
+              content: `Kunde inte kommunicera med AI-tjänsten. Kontrollera att ${serverType} körs och är tillgänglig på det lokala nätverket.`,
               sources: [],
               model: 'Fel',
               isError: true,
@@ -247,6 +251,7 @@ export const AiChatProvider = ({ children }) => {
       isLoading,
       activeModel,
       setActiveModel,
+      serverType,
       aiHealthy,
       sendMessage,
       clearMessages

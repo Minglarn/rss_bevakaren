@@ -1,9 +1,48 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.21.05',
+    date: '2026-09-21',
+    title: 'Initieringsfix för ikonsanering och minskat loggbrus för AI',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'bugfix',
+        title: 'Löst startfel för ikonsanering i databasinitieringen',
+        description: 'Funktionen get_icons_dir() flyttades före databasmigreringarna vilket eliminerar NameError vid uppstart och säkerställer att felaktigt korskopplade flödesikoner kan saneras korrekt.'
+      },
+      {
+        type: 'improvement',
+        title: 'Minskat loggbrus för AI-modeller och rensade dubbletter',
+        description: 'Tillgängliga AI-modeller loggas nu enbart när en förändring sker mot föregående kontroll istället för var 30:e sekund, och överflödig dubblettlogg vid artikelanalys har tagits bort.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.21.04',
+    date: '2026-09-21',
+    title: 'Dynamisk AI-motoridentifiering och korrekta statusmeddelanden',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Automatisk detektering av inferensmotor (Ollama, LM Studio)',
+        description: 'Systemet identifierar nu automatiskt om den anslutna AI-servern är Ollama, LM Studio, OpenAI eller annan motor, och exponerar servertypen dynamiskt till gränssnittet.'
+      },
+      {
+        type: 'improvement',
+        title: 'Dynamiska och korrekta status- och förloppstexter i Nyhetschatten',
+        description: 'Den tidigare hårdkodade texten "LM Studio" i chattens bearbetningsindikator och fotnot har ersatts med den faktiskt identifierade inferensmotorn, så att det inte står felaktigt LM Studio när Ollama eller annan motor används.'
+      },
+      {
+        type: 'improvement',
+        title: 'Neutral och konsekvent AI-terminologi i inställningar och onboarding',
+        description: 'Gränssnittet i inställningar, onboarding och sammanfattningar anpassar nu etiketter och notistexter efter den aktiva motorn istället för att förutsätta LM Studio.'
+      }
+    ]
+  },
+  {
     version: '2026.09.21.03',
     date: '2026-09-21',
     title: 'Intelligent konversation i Nyhetschatten och transparent AI-loggning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

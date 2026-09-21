@@ -94,6 +94,7 @@ export default function AiChat() {
     messages,
     isLoading,
     activeModel,
+    serverType,
     aiHealthy,
     sendMessage,
     clearMessages
@@ -619,7 +620,7 @@ export default function AiChat() {
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           <Loader2 size={15} className="spin" style={{ color: 'var(--primary)', flexShrink: 0 }} />
                           {msg.progress !== null && msg.progress > 0 
-                            ? "Bearbetar artikelunderlag i LM Studio..." 
+                            ? `Bearbetar artikelunderlag i ${serverType || 'AI-motorn'}...` 
                             : "Hämtar och matchar relevanta artiklar..."}
                         </span>
                         <span style={{ fontWeight: 700, color: 'var(--primary)', fontVariantNumeric: 'tabular-nums', flexShrink: 0, fontSize: '0.85rem' }}>
@@ -1010,7 +1011,7 @@ export default function AiChat() {
           </button>
         </div>
         <div style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-          Svar genereras lokalt av LM Studio baserat på dina sparade RSS-artiklar.
+          Svar genereras lokalt av {serverType || 'AI-motorn'} baserat på dina sparade RSS-artiklar.
         </div>
       </div>
     </div>

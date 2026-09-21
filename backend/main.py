@@ -64,6 +64,12 @@ def extract_clean_article_text(url: str, timeout: int = 8) -> Optional[str]:
 
 models.Base.metadata.create_all(bind=database.engine)
 
+def get_icons_dir() -> str:
+    """Returnerar och säkerställer katalogen för lokala flödesikoner."""
+    base = "/data/icons" if os.path.exists("/data") else os.path.join(os.getcwd(), "data", "icons")
+    os.makedirs(base, exist_ok=True)
+    return base
+
 def ensure_db_migrations():
     with database.engine.connect() as conn:
         try:
@@ -958,12 +964,6 @@ def parse_device_name(ua: Optional[str]) -> str:
         browser_name = "Opera"
 
     return f"{os_name} ({browser_name})"
-
-def get_icons_dir() -> str:
-    """Returnerar och säkerställer katalogen för lokala flödesikoner."""
-    base = "/data/icons" if os.path.exists("/data") else os.path.join(os.getcwd(), "data", "icons")
-    os.makedirs(base, exist_ok=True)
-    return base
 
 def delete_local_feed_icon(feed_id: int, username: Optional[str] = "system"):
     """Raderar den lokala ikonfilen när ett flöde tas bort."""
@@ -3449,6 +3449,7 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
         art.prio_reason = f"Träff på bevakningsord: {kw_str}"
 
     db.commit()
+    print(f"[AI  : {current_user.username}] #{art.id} | {art.category} | {art.priority.upper()} ({art.prio_score}p) | {art.ai_duration_s}s | \"{art.title}\"", flush=True)
 
     # Uppdatera även semantisk embedding via LM Studio
     try:
@@ -3639,6 +3640,7 @@ def get_ai_config(
             lm_studio_model="",
             ai_url=ai_service.AI_URL,
             ai_model="",
+            server_type=ai_service.get_ai_server_type(),
             available_models=available_models,
             is_healthy=ai_service.check_lm_studio_health(),
             push_include_title=True,
@@ -3680,6 +3682,7 @@ def get_ai_config(
         lm_studio_model=user_ai.selected_model or "",
         ai_url=ai_service.AI_URL,
         ai_model=user_ai.selected_model or "",
+        server_type=ai_service.get_ai_server_type(),
         available_models=available_models,
         is_healthy=ai_service.check_lm_studio_health(),
         push_include_title=bool(user_ai.push_include_title if user_ai.push_include_title is not None else 1),
@@ -3792,6 +3795,7 @@ def update_ai_config(
         lm_studio_model=user_ai.selected_model or "",
         ai_url=ai_service.AI_URL,
         ai_model=user_ai.selected_model or "",
+        server_type=ai_service.get_ai_server_type(),
         available_models=available_models,
         is_healthy=ai_service.check_lm_studio_health(),
         push_include_title=bool(user_ai.push_include_title if user_ai.push_include_title is not None else 1),

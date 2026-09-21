@@ -166,6 +166,7 @@ class AIConfigResponse(BaseModel):
     lm_studio_model: str = ""
     ai_url: str = ""
     ai_model: str = ""
+    server_type: str = "AI-motorn"
     available_models: List[str] = []
     is_healthy: bool = False
     push_include_title: bool = True
