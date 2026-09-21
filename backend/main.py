@@ -3626,8 +3626,10 @@ def get_ai_config(
             onboarding_completed=False,
             prio_enabled=False,
             prio_notify_only=False,
-            lm_studio_url=ai_service.LM_STUDIO_URL,
+            lm_studio_url=ai_service.AI_URL,
             lm_studio_model="",
+            ai_url=ai_service.AI_URL,
+            ai_model="",
             available_models=available_models,
             is_healthy=ai_service.check_lm_studio_health(),
             push_include_title=True,
@@ -3665,8 +3667,10 @@ def get_ai_config(
         onboarding_completed=bool(user_ai.onboarding_completed),
         prio_enabled=bool(user_ai.prio_enabled),
         prio_notify_only=bool(user_ai.prio_notify_only),
-        lm_studio_url=ai_service.LM_STUDIO_URL,
+        lm_studio_url=ai_service.AI_URL,
         lm_studio_model=user_ai.selected_model or "",
+        ai_url=ai_service.AI_URL,
+        ai_model=user_ai.selected_model or "",
         available_models=available_models,
         is_healthy=ai_service.check_lm_studio_health(),
         push_include_title=bool(user_ai.push_include_title if user_ai.push_include_title is not None else 1),
@@ -3717,8 +3721,10 @@ def update_ai_config(
         user_ai.prio_threshold = max(50, min(95, config.prio_threshold))
     if config.onboarding_completed is not None:
         user_ai.onboarding_completed = 1 if config.onboarding_completed else 0
-    if config.lm_studio_model is not None:
-        user_ai.selected_model = config.lm_studio_model.strip()
+    
+    target_model = config.ai_model if config.ai_model is not None else config.lm_studio_model
+    if target_model is not None:
+        user_ai.selected_model = target_model.strip()
 
     if config.push_include_title is not None:
         user_ai.push_include_title = 1 if config.push_include_title else 0
@@ -3773,8 +3779,10 @@ def update_ai_config(
         onboarding_completed=bool(user_ai.onboarding_completed),
         prio_enabled=bool(user_ai.prio_enabled),
         prio_notify_only=bool(user_ai.prio_notify_only),
-        lm_studio_url=ai_service.LM_STUDIO_URL,
+        lm_studio_url=ai_service.AI_URL,
         lm_studio_model=user_ai.selected_model or "",
+        ai_url=ai_service.AI_URL,
+        ai_model=user_ai.selected_model or "",
         available_models=available_models,
         is_healthy=ai_service.check_lm_studio_health(),
         push_include_title=bool(user_ai.push_include_title if user_ai.push_include_title is not None else 1),

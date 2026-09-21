@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.21.01',
+    date: '2026-09-21',
+    title: 'Standardiserade AI-variabler och Ollama-dokumentation',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Standardiserade miljövariabler för lokal AI',
+        description: 'Infört AI_URL, AI_MODEL och AI_TIMEOUT som ersätter de tidigare LM Studio-specifika variablerna. Fullständig bakåtkompatibilitet bibehålls för befintliga installationer.'
+      },
+      {
+        type: 'documentation',
+        title: 'Utförlig integrationsguide för Ollama & LM Studio',
+        description: 'Uppdaterat README och docker-compose med tydliga instruktioner för att ansluta Ollama via dess inbyggda OpenAI-kompatibla API, inklusive nätverkskonfiguration och modellhantering.'
+      }
+    ]
+  },
+  {
     version: '2026.09.20.19',
     date: '2026-09-20',
     title: 'Historiskt importtak och förtydligad flödesinläsning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

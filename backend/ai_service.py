@@ -6,11 +6,18 @@ import requests
 import numpy as np
 from typing import Optional, Dict, Any, List, Callable, Tuple
 
-LM_STUDIO_URL = os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1/chat/completions")
-LM_STUDIO_MODEL = os.environ.get("LM_STUDIO_MODEL", "")
-LM_STUDIO_EMBEDDING_MODEL = os.environ.get("LM_STUDIO_EMBEDDING_MODEL", "text-embedding-nomic-embed-text-v1.5")
-LM_STUDIO_TIMEOUT = int(os.environ.get("LM_STUDIO_TIMEOUT", "120"))
-LM_STUDIO_MAX_TOKENS = int(os.environ.get("LM_STUDIO_MAX_TOKENS", "8192"))
+AI_URL = os.environ.get("AI_URL", os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1/chat/completions"))
+AI_MODEL = os.environ.get("AI_MODEL", os.environ.get("LM_STUDIO_MODEL", ""))
+AI_EMBEDDING_MODEL = os.environ.get("AI_EMBEDDING_MODEL", os.environ.get("LM_STUDIO_EMBEDDING_MODEL", "text-embedding-nomic-embed-text-v1.5"))
+AI_TIMEOUT = int(os.environ.get("AI_TIMEOUT", os.environ.get("LM_STUDIO_TIMEOUT", "120")))
+AI_MAX_TOKENS = int(os.environ.get("AI_MAX_TOKENS", os.environ.get("LM_STUDIO_MAX_TOKENS", "8192")))
+
+# Bakåtkompatibla alias för befintliga integrationer
+LM_STUDIO_URL = AI_URL
+LM_STUDIO_MODEL = AI_MODEL
+LM_STUDIO_EMBEDDING_MODEL = AI_EMBEDDING_MODEL
+LM_STUDIO_TIMEOUT = AI_TIMEOUT
+LM_STUDIO_MAX_TOKENS = AI_MAX_TOKENS
 
 DEFAULT_CATEGORIES_WITH_WEIGHTS = [
     {"name": "Blåljus", "weight": 7},
@@ -1006,19 +1013,19 @@ def analyze_article(
         }
     except requests.exceptions.ConnectTimeout:
         dur = round(time.time() - t0, 2)
-        print(f"[AI Service] Kunde inte upprätta anslutning till LM Studio på {LM_STUDIO_URL} efter {dur}s (ConnectTimeout)", flush=True)
+        print(f"[AI Service] Kunde inte upprätta anslutning till AI-servern på {AI_URL} efter {dur}s (ConnectTimeout)", flush=True)
         return None
     except requests.exceptions.ReadTimeout:
         dur = round(time.time() - t0, 2)
-        print(f"[AI Service] Timeout vid generering: LM Studio svarade inte inom {dur}s (ReadTimeout, gräns {LM_STUDIO_TIMEOUT}s)", flush=True)
+        print(f"[AI Service] Timeout vid generering: AI-servern svarade inte inom {dur}s (ReadTimeout, gräns {AI_TIMEOUT}s)", flush=True)
         return None
     except requests.exceptions.ConnectionError:
         dur = round(time.time() - t0, 2)
-        print(f"[AI Service] LM Studio är inte nåbart på {LM_STUDIO_URL} (offline efter {dur}s)", flush=True)
+        print(f"[AI Service] AI-servern är inte nåbar på {AI_URL} (offline efter {dur}s)", flush=True)
         return None
     except requests.exceptions.Timeout:
         dur = round(time.time() - t0, 2)
-        print(f"[AI Service] Timeout mot LM Studio efter {dur}s (gräns {LM_STUDIO_TIMEOUT}s)", flush=True)
+        print(f"[AI Service] Timeout mot AI-servern efter {dur}s (gräns {AI_TIMEOUT}s)", flush=True)
         return None
     except Exception as e:
         dur = round(time.time() - t0, 2)
@@ -1362,21 +1369,21 @@ def chat_with_news(
         return clean_ai_response_and_extract_followups(raw_reply, sources, used_model)
     except requests.exceptions.ConnectTimeout:
         return {
-            "reply": f"Kunde inte upprätta anslutning till LM Studio på {LM_STUDIO_URL}. Kontrollera att LM Studio är startat och att servern körs.",
+            "reply": f"Kunde inte upprätta anslutning till AI-servern på {AI_URL}. Kontrollera att servern (Ollama / LM Studio) körs och att nätverksåtkomst är tillåten.",
             "sources": sources,
             "model": model or "Offline",
             "follow_ups": []
         }
     except requests.exceptions.ReadTimeout:
         return {
-            "reply": f"LM Studio svarade inte inom tidsgränsen ({LM_STUDIO_TIMEOUT}s). Modellen kan vara överbelastad eller genererar ett för långt svar.",
+            "reply": f"AI-servern svarade inte inom tidsgränsen ({AI_TIMEOUT}s). Modellen kan vara överbelastad eller genererar ett för långt svar.",
             "sources": sources,
             "model": model or "Timeout",
             "follow_ups": []
         }
     except requests.exceptions.ConnectionError:
         return {
-            "reply": f"LM Studio är offline eller onåbar på {LM_STUDIO_URL}.",
+            "reply": f"AI-servern är offline eller onåbar på {AI_URL}.",
             "sources": sources,
             "model": model or "Offline",
             "follow_ups": []
@@ -1518,10 +1525,10 @@ def stream_chat_with_news(
                         except Exception:
                             pass
         except requests.exceptions.ConnectTimeout:
-            yield f"data: {json.dumps({'type': 'error', 'message': f'Kunde inte ansluta till LM Studio på {LM_STUDIO_URL}. Kontrollera att servern är igång.'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Kunde inte ansluta till AI-servern på {AI_URL}. Kontrollera att servern är igång.'})}\n\n"
             return
         except requests.exceptions.ReadTimeout:
-            yield f"data: {json.dumps({'type': 'error', 'message': f'LM Studio svarade inte inom tidsgränsen ({LM_STUDIO_TIMEOUT}s).'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': f'AI-servern svarade inte inom tidsgränsen ({AI_TIMEOUT}s).'})}\n\n"
             return
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': f'Ett fel uppstod: {e}'})}\n\n"

@@ -4535,19 +4535,19 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       cursor: 'pointer'
                     }}
                   >
-                    <option value="">LM Studio standard (Automatiskt)</option>
+                    <option value="">Standard (Automatiskt)</option>
                     {aiConfig.available_models.map(m => (
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </select>
                 ) : (
                   <div style={{ fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {aiConfig.lm_studio_model || 'LM Studio standard'}
+                    {aiConfig.ai_model || aiConfig.lm_studio_model || 'Standardmodell'}
                   </div>
                 )}
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
                   {aiConfig.available_models?.length 
-                    ? `${aiConfig.available_models.length} modeller tillgängliga i LM Studio` 
+                    ? `${aiConfig.available_models.length} modeller tillgängliga på AI-servern` 
                     : 'Inga modeller hittades'}
                 </div>
               </div>

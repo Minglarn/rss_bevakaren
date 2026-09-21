@@ -139,6 +139,8 @@ class AIConfigUpdate(BaseModel):
     prio_enabled: Optional[bool] = None
     prio_notify_only: Optional[bool] = None
     lm_studio_model: Optional[str] = None
+    ai_model: Optional[str] = None
+    ai_url: Optional[str] = None
     push_include_title: Optional[bool] = None
     push_include_image: Optional[bool] = None
     push_include_summary: Optional[bool] = None
@@ -162,6 +164,8 @@ class AIConfigResponse(BaseModel):
     prio_notify_only: bool = False
     lm_studio_url: str = ""
     lm_studio_model: str = ""
+    ai_url: str = ""
+    ai_model: str = ""
     available_models: List[str] = []
     is_healthy: bool = False
     push_include_title: bool = True

@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.20.19-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.21.01-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -30,9 +30,10 @@ services:
       - APP_USERNAME=admin,anvandare2
       - APP_PASSWORD=ditt_sakna_losenord,andra_losenordet
       
-      # Lokal AI via LM Studio, Ollama eller valfritt OpenAI-kompatibelt API (valfritt)
-      - LM_STUDIO_URL=http://192.168.1.50:1234/v1/chat/completions
-      - LM_STUDIO_TIMEOUT=120
+      # Lokal AI via Ollama, LM Studio eller valfri OpenAI-kompatibel motor
+      - AI_URL=http://192.168.1.50:11434/v1/chat/completions # :11434 för Ollama, :1234 för LM Studio
+      - AI_MODEL=gemma2:9b            # Krävs för Ollama, valfritt för LM Studio
+      - AI_TIMEOUT=120
       - AI_MAX_ARTICLE_AGE_HOURS=24
       
       # Home Assistant & MQTT (valfritt, avstängt som standard)
@@ -80,6 +81,58 @@ docker compose up -d
 - **Bred flödeskompatibilitet (RSS, Atom & WordPress):** Fullt stöd för standard RSS 2.0, Atom samt alla WordPress-baserade webbplatser (ange webbplatsens URL eller `/feed`). Parsern extraherar automatiskt omslagsbilder, mediainnehåll och redaktionella taggar.
 - **PWA & Web Push:** Installera som app på mobil eller dator med stöd för direkta pushnotiser vid viktiga larm.
 - **Fleranvändarstöd:** Flera användare kan dela samma instans med fullständig isolering av flöden, filter och notiser.
+
+---
+
+## Anslut lokal AI: Ollama & LM Studio
+
+RSS-Bevakaren använder OpenAIs standardiserade API-specifikation (`/v1/chat/completions`, `/v1/models`, `/v1/embeddings`), vilket innebär full kompatibilitet med både **Ollama**, **LM Studio** eller valfri annan lokal OpenAI-kompatibel motor.
+
+Miljövariablerna konfigureras med `AI_URL`, `AI_MODEL` och `AI_TIMEOUT` (tidigare `LM_STUDIO_*` stöds fortfarande fullt ut för bakåtkompatibilitet).
+
+### Alternativ 1: Ollama
+
+Ollama har inbyggt stöd för OpenAIs API på port `11434`.
+
+1. **Hämta modeller i Ollama:**
+   ```bash
+   # Rekommenderad modell för svensk nyhetsanalys och sammanfattning
+   ollama pull gemma2:9b
+   
+   # Valfritt: för vektor-embeddings och artikelklustring
+   ollama pull nomic-embed-text
+   ```
+
+2. **Viktigt: Tillåt nätverksåtkomst (`OLLAMA_HOST`):**
+   Som standard lyssnar Ollama endast på `127.0.0.1`. Om RSS-Bevakaren körs i Docker eller på en annan maskin på nätverket måste Ollama tillåtas ta emot externa anslutningar:
+   - **Windows:** Lägg till systemvariabeln `OLLAMA_HOST` med värdet `0.0.0.0` (eller `0.0.0.0:11434`) under Systemegenskaper -> Miljövariabler och starta om Ollama.
+   - **Linux / Docker:** Starta med miljövariabeln `OLLAMA_HOST=0.0.0.0:11434`.
+
+3. **Konfigurera i `docker-compose.yml`:**
+   ```yaml
+   - AI_URL=http://192.168.1.50:11434/v1/chat/completions
+   - AI_MODEL=gemma2:9b  # Ange namnet på din pullade modell
+   - AI_TIMEOUT=120
+   ```
+
+### Alternativ 2: LM Studio
+
+LM Studio kör sin lokala inferensserver på standardporten `1234`.
+
+1. **Starta servern i LM Studio:**
+   - Öppna fliken **Local Server** (dubbelpilen).
+   - Välj önskad modell (t.ex. `gemma-2-9b-it` eller `google/gemma-4-12b-qat`).
+   - Klicka på **Start Server**. Säkerställ att CORS och nätverksåtkomst är aktiverat om servern anropas från en annan maskin.
+
+2. **Konfigurera i `docker-compose.yml`:**
+   ```yaml
+   - AI_URL=http://192.168.1.50:1234/v1/chat/completions
+   - AI_MODEL=  # Lämna tomt för att automatiskt använda aktiv modell i LM Studio
+   - AI_TIMEOUT=120
+   ```
+
+### Bakåtkompatibilitet
+Om du har en befintlig installation med `LM_STUDIO_URL`, `LM_STUDIO_MODEL` eller `LM_STUDIO_TIMEOUT` fortsätter dessa att fungera utan att du behöver ändra något.
 
 ---
 
