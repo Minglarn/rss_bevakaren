@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.21.10',
+    date: '2026-09-21',
+    title: 'Admin-hantering av flöden och steglöst reglage för ordgräns i sammanfattningar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Administration av flöden per användare',
+        description: 'Administratörer kan nu visa, lägga till och ta bort RSS-flöden direkt för andra registrerade användare i systemet via Admin-fliken.'
+      },
+      {
+        type: 'improvement',
+        title: 'Mjukt och steglöst ordgräns-reglage (5 till 50 ord)',
+        description: 'Reglaget för max antal ord i korta AI-sammanfattningar stöder nu finjustering från 5 till 50 ord i steg om 1 ord, kompletterat med snabbvalsknappar för 5, 10, 20, 35 och 50 ord.'
+      }
+    ]
+  },
+  {
     version: '2026.09.21.09',
     date: '2026-09-21',
     title: 'Förbättrad flödesikonavkänning och stöd för RSS-underdomäner och medie-CDN',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

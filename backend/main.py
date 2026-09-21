@@ -4839,6 +4839,144 @@ def admin_delete_user(
     db.commit()
     return {"status": "ok", "message": f"Användaren '{target.username}' har raderats."}
 
+@app.get("/admin/users/{user_id}/feeds", response_model=List[schemas.FeedResponse])
+def admin_get_user_feeds(
+    user_id: int,
+    db: Session = Depends(database.get_db),
+    admin: models.User = Depends(auth.get_current_admin_user)
+):
+    """Returnerar samtliga flöden för en specifik användare."""
+    target = db.query(models.User).filter(models.User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Användaren hittades inte.")
+    
+    feeds = db.query(models.Feed).filter(models.Feed.user_id == target.id).all()
+    feed_responses = []
+    for feed in feeds:
+        unread_count = db.query(models.Article).filter(
+            models.Article.feed_id == feed.id,
+            (models.Article.is_read == 0) | (models.Article.is_read == None)
+        ).count()
+        feed_responses.append({
+            "id": feed.id,
+            "user_id": feed.user_id,
+            "url": feed.url,
+            "title": feed.title,
+            "polling_interval": feed.polling_interval,
+            "scrape_enabled": bool(feed.scrape_enabled),
+            "include_in_dashboard": bool(feed.include_in_dashboard),
+            "notify_enabled": bool(feed.notify_enabled),
+            "clickbait_enabled": bool(getattr(feed, 'clickbait_enabled', 1) if getattr(feed, 'clickbait_enabled', 1) is not None else True),
+            "max_items": getattr(feed, 'max_items', 0) or 0,
+            "icon_url": get_feed_icon_url(feed),
+            "unread_count": unread_count
+        })
+    return feed_responses
+
+@app.post("/admin/users/{user_id}/feeds", response_model=schemas.FeedResponse)
+def admin_create_user_feed(
+    user_id: int,
+    feed: schemas.FeedCreate,
+    db: Session = Depends(database.get_db),
+    admin: models.User = Depends(auth.get_current_admin_user)
+):
+    """Skapar ett nytt flöde för en specifik användare."""
+    target = db.query(models.User).filter(models.User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Användaren hittades inte.")
+    
+    clean_url = (feed.url or "").strip()
+    if not clean_url:
+        raise HTTPException(status_code=400, detail="Flödes-URL kan inte vara tom.")
+    feed.url = clean_url
+
+    icon_url = (feed.icon_url or "").strip()
+    if not feed.title or not feed.title.strip() or not icon_url:
+        import feedparser
+        parsed = feedparser.parse(feed.url)
+        if not feed.title or not feed.title.strip():
+            if parsed.feed and "title" in parsed.feed:
+                feed.title = parsed.feed.title
+            else:
+                feed.title = feed.url
+        if not icon_url:
+            icon_url = rss_parser.extract_feed_icon(parsed, feed.url)
+            
+    if not icon_url:
+        icon_url = get_feed_icon_url(None, feed.url)
+
+    polling_interval = feed.polling_interval
+    if not polling_interval or polling_interval == 60:
+        import random
+        polling_interval = random.randint(10, 30)
+
+    initial_clickbait = 1
+    if is_official_or_exempt_feed(feed.title, feed.url, None):
+        initial_clickbait = 0
+    elif getattr(feed, 'clickbait_enabled', None) is not None:
+        initial_clickbait = 1 if feed.clickbait_enabled else 0
+
+    db_feed = models.Feed(
+        url=feed.url, 
+        title=feed.title, 
+        polling_interval=polling_interval, 
+        scrape_enabled=int(feed.scrape_enabled), 
+        include_in_dashboard=int(feed.include_in_dashboard), 
+        notify_enabled=int(feed.notify_enabled), 
+        clickbait_enabled=initial_clickbait,
+        max_items=getattr(feed, 'max_items', 0) or 0,
+        icon_url=icon_url,
+        user_id=target.id
+    )
+    db.add(db_feed)
+    db.commit()
+    db.refresh(db_feed)
+    try:
+        download_and_save_feed_icon_sync(db_feed)
+    except Exception as icon_err:
+        print(f"[ICONS] Kunde inte ladda ner ikon vid skapande av flöde #{db_feed.id}: {icon_err}", flush=True)
+
+    if mqtt_service.MQTT_ENABLED:
+        try:
+            mqtt_service.publish_ha_discovery_for_feed(db_feed, username=target.username, user_id=target.id)
+        except Exception as ha_err:
+            print(f"[MQTT] Fel vid publicering av HA discovery för flöde #{db_feed.id}: {ha_err}", flush=True)
+
+    db_feed.scrape_enabled = bool(db_feed.scrape_enabled)
+    db_feed.include_in_dashboard = bool(db_feed.include_in_dashboard)
+    db_feed.notify_enabled = bool(db_feed.notify_enabled)
+    db_feed.clickbait_enabled = bool(db_feed.clickbait_enabled)
+    db_feed.max_items = getattr(db_feed, 'max_items', 0) or 0
+    return db_feed
+
+@app.delete("/admin/users/{user_id}/feeds/{feed_id}", response_model=dict)
+def admin_delete_user_feed(
+    user_id: int,
+    feed_id: int,
+    db: Session = Depends(database.get_db),
+    admin: models.User = Depends(auth.get_current_admin_user)
+):
+    """Tar bort ett flöde från en specifik användare."""
+    target = db.query(models.User).filter(models.User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Användaren hittades inte.")
+        
+    feed = db.query(models.Feed).filter(models.Feed.id == feed_id, models.Feed.user_id == target.id).first()
+    if not feed:
+        raise HTTPException(status_code=404, detail="Flödet hittades inte för denna användare.")
+        
+    feed_title = feed.title
+    feed_id_val = feed.id
+    db.delete(feed)
+    db.commit()
+    delete_local_feed_icon(feed_id_val, target.username)
+    if mqtt_service.MQTT_ENABLED:
+        try:
+            mqtt_service.remove_ha_discovery_for_feed(feed_title, username=target.username, user_id=target.id, feed_id=feed_id_val)
+        except Exception as ha_err:
+            print(f"[MQTT] Fel vid avregistrering av HA discovery för #{feed_id_val}: {ha_err}", flush=True)
+    return {"status": "ok", "message": f"Flödet '{feed_title}' har raderats från användare {target.username}."}
+
 @app.post("/admin/database/clear-articles")
 def admin_clear_articles(
     payload: dict,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, BellOff, Plus, Trash2, ShieldAlert, ShieldCheck, UserPlus, Users, Key, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, ArrowUpRight, AlertTriangle, ExternalLink, Search, Download, Upload, Compass } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, BellOff, Plus, Trash2, ShieldAlert, ShieldCheck, UserPlus, Users, Key, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, ArrowUpRight, AlertTriangle, ExternalLink, Search, Download, Upload, Compass, Rss } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
@@ -76,6 +76,12 @@ const Settings = ({ onLogout, currentUser }) => {
   const [passwordChangeUserId, setPasswordChangeUserId] = useState(null);
   const [newPasswordForUser, setNewPasswordForUser] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [expandedUserFeeds, setExpandedUserFeeds] = useState({});
+  const [adminUserFeeds, setAdminUserFeeds] = useState({});
+  const [loadingUserFeeds, setLoadingUserFeeds] = useState({});
+  const [newFeedUrlPerUser, setNewFeedUrlPerUser] = useState({});
+  const [isAddingFeedForUser, setIsAddingFeedForUser] = useState({});
+  const [isDeletingFeedForUser, setIsDeletingFeedForUser] = useState({});
   const [isPurgingDb, setIsPurgingDb] = useState(false);
   const [isClearingArticles, setIsClearingArticles] = useState(false);
   const [isVacuuming, setIsVacuuming] = useState(false);
@@ -744,6 +750,66 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     } catch (err) {
       console.error("Kunde inte radera användare:", err);
       toast.error(err.response?.data?.detail || 'Kunde inte radera användaren.');
+    }
+  };
+
+  const handleToggleUserFeeds = (userId) => {
+    const nextState = !expandedUserFeeds[userId];
+    setExpandedUserFeeds(prev => ({ ...prev, [userId]: nextState }));
+    if (nextState && !adminUserFeeds[userId]) {
+      fetchAdminUserFeeds(userId);
+    }
+  };
+
+  const fetchAdminUserFeeds = async (userId) => {
+    try {
+      setLoadingUserFeeds(prev => ({ ...prev, [userId]: true }));
+      const res = await api.get(`/admin/users/${userId}/feeds`);
+      setAdminUserFeeds(prev => ({ ...prev, [userId]: res.data }));
+    } catch (err) {
+      console.error(`Kunde inte hämta flöden för användare ${userId}:`, err);
+      toast.error(err.response?.data?.detail || 'Kunde inte hämta användarens flöden.');
+    } finally {
+      setLoadingUserFeeds(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
+  const handleAdminAddFeed = async (userId) => {
+    const rawUrl = newFeedUrlPerUser[userId]?.trim();
+    if (!rawUrl) {
+      toast.error('Ange en giltig flödesadress (URL).');
+      return;
+    }
+    try {
+      setIsAddingFeedForUser(prev => ({ ...prev, [userId]: true }));
+      await api.post(`/admin/users/${userId}/feeds`, { url: rawUrl });
+      toast.success('Flödet lades till!');
+      setNewFeedUrlPerUser(prev => ({ ...prev, [userId]: '' }));
+      await fetchAdminUserFeeds(userId);
+      fetchAdminUsers();
+    } catch (err) {
+      console.error(`Kunde inte lägga till flöde för användare ${userId}:`, err);
+      toast.error(err.response?.data?.detail || 'Kunde inte lägga till flödet.');
+    } finally {
+      setIsAddingFeedForUser(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
+  const handleAdminDeleteFeed = async (userId, feed) => {
+    if (!window.confirm(`Vill du verkligen ta bort flödet "${feed.title || feed.url}" från denna användare?`)) {
+      return;
+    }
+    try {
+      setIsDeletingFeedForUser(prev => ({ ...prev, [feed.id]: true }));
+      await api.delete(`/admin/users/${userId}/feeds/${feed.id}`);
+      toast.success(`Flödet "${feed.title || feed.url}" har raderats.`);
+      await fetchAdminUserFeeds(userId);
+      fetchAdminUsers();
+    } catch (err) {
+      console.error(`Kunde inte radera flöde ${feed.id}:`, err);
+      toast.error(err.response?.data?.detail || 'Kunde inte radera flödet.');
+    } finally {
+      setIsDeletingFeedForUser(prev => ({ ...prev, [feed.id]: false }));
     }
   };
 
@@ -3961,9 +4027,9 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                               </label>
                               <input
                                 type="range"
-                                min="10"
-                                max="45"
-                                step="5"
+                                min="5"
+                                max="50"
+                                step="1"
                                 value={aiConfig.short_summary_max_words || 20}
                                 onChange={(e) => {
                                   const val = Number(e.target.value);
@@ -3974,58 +4040,33 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                                 onKeyUp={(e) => handleUpdateShortSummaryLimits(e.target.value, aiConfig.short_summary_max_sentences)}
                                 style={{ width: '100%', accentColor: '#f97316', cursor: 'pointer' }}
                               />
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateShortSummaryLimits(10, aiConfig.short_summary_max_sentences)}
-                                  style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    padding: '0.15rem 0.35rem',
-                                    borderRadius: '4px',
-                                    fontSize: 'inherit',
-                                    color: (aiConfig.short_summary_max_words || 20) === 10 ? '#f97316' : 'var(--text-muted)',
-                                    fontWeight: (aiConfig.short_summary_max_words || 20) === 10 ? 700 : 400,
-                                    backgroundColor: (aiConfig.short_summary_max_words || 20) === 10 ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  10 ord
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateShortSummaryLimits(20, aiConfig.short_summary_max_sentences)}
-                                  style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    padding: '0.15rem 0.35rem',
-                                    borderRadius: '4px',
-                                    fontSize: 'inherit',
-                                    color: (aiConfig.short_summary_max_words || 20) === 20 ? '#f97316' : 'var(--text-muted)',
-                                    fontWeight: (aiConfig.short_summary_max_words || 20) === 20 ? 700 : 400,
-                                    backgroundColor: (aiConfig.short_summary_max_words || 20) === 20 ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  20 ord (standard)
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateShortSummaryLimits(45, aiConfig.short_summary_max_sentences)}
-                                  style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    padding: '0.15rem 0.35rem',
-                                    borderRadius: '4px',
-                                    fontSize: 'inherit',
-                                    color: (aiConfig.short_summary_max_words || 20) === 45 ? '#f97316' : 'var(--text-muted)',
-                                    fontWeight: (aiConfig.short_summary_max_words || 20) === 45 ? 700 : 400,
-                                    backgroundColor: (aiConfig.short_summary_max_words || 20) === 45 ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  45 ord
-                                </button>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.2rem', flexWrap: 'wrap', fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                                {[
+                                  { words: 5, label: '5' },
+                                  { words: 10, label: '10' },
+                                  { words: 20, label: '20 (std)' },
+                                  { words: 35, label: '35' },
+                                  { words: 50, label: '50' }
+                                ].map((item) => (
+                                  <button
+                                    key={item.words}
+                                    type="button"
+                                    onClick={() => handleUpdateShortSummaryLimits(item.words, aiConfig.short_summary_max_sentences)}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      padding: '0.15rem 0.3rem',
+                                      borderRadius: '4px',
+                                      fontSize: 'inherit',
+                                      color: (aiConfig.short_summary_max_words || 20) === item.words ? '#f97316' : 'var(--text-muted)',
+                                      fontWeight: (aiConfig.short_summary_max_words || 20) === item.words ? 700 : 400,
+                                      backgroundColor: (aiConfig.short_summary_max_words || 20) === item.words ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    {item.label}
+                                  </button>
+                                ))}
                               </div>
                             </div>
 
@@ -5255,6 +5296,28 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button
                           type="button"
+                          onClick={() => handleToggleUserFeeds(u.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.35rem 0.65rem',
+                            borderRadius: '6px',
+                            border: expandedUserFeeds[u.id] ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                            backgroundColor: expandedUserFeeds[u.id] ? 'rgba(37, 99, 235, 0.1)' : 'var(--bg-card)',
+                            color: expandedUserFeeds[u.id] ? 'var(--primary)' : 'var(--text-main)',
+                            fontSize: '0.8rem',
+                            fontWeight: 500,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Rss size={13} />
+                          <span>Flöden ({u.feed_count})</span>
+                          {expandedUserFeeds[u.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() => {
                             if (isChangingPwd) {
                               setPasswordChangeUserId(null);
@@ -5377,6 +5440,181 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                         >
                           {isChangingPassword ? 'Sparar...' : 'Spara nytt lösenord'}
                         </button>
+                      </div>
+                    )}
+
+                    {/* Expanderbar sektion: Användarens RSS-flöden */}
+                    {expandedUserFeeds[u.id] && (
+                      <div style={{
+                        marginTop: '0.5rem',
+                        padding: '1rem',
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.85rem'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-main)' }}>
+                            <Rss size={15} style={{ color: 'var(--primary)' }} />
+                            <span>Flöden för {u.username}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => fetchAdminUserFeeds(u.id)}
+                            disabled={loadingUserFeeds[u.id]}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              padding: '0.25rem 0.55rem',
+                              borderRadius: '4px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-app)',
+                              color: 'var(--text-muted)',
+                              fontSize: '0.75rem',
+                              cursor: loadingUserFeeds[u.id] ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            <RefreshCw size={12} className={loadingUserFeeds[u.id] ? 'spin' : ''} />
+                            {loadingUserFeeds[u.id] ? 'Hämtar...' : 'Uppdatera'}
+                          </button>
+                        </div>
+
+                        {/* Lägg till flöde för denna användare */}
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <input
+                            type="url"
+                            placeholder="https://exempel.se/rss.xml"
+                            value={newFeedUrlPerUser[u.id] || ''}
+                            onChange={(e) => setNewFeedUrlPerUser(prev => ({ ...prev, [u.id]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAdminAddFeed(u.id);
+                              }
+                            }}
+                            style={{
+                              flex: 1,
+                              minWidth: '220px',
+                              padding: '0.45rem 0.75rem',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-app)',
+                              color: 'var(--text-main)',
+                              fontSize: '0.82rem'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAdminAddFeed(u.id)}
+                            disabled={isAddingFeedForUser[u.id] || !(newFeedUrlPerUser[u.id]?.trim())}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '0.45rem 0.85rem',
+                              borderRadius: '6px',
+                              border: 'none',
+                              backgroundColor: 'var(--primary)',
+                              color: 'white',
+                              fontSize: '0.82rem',
+                              fontWeight: 600,
+                              cursor: isAddingFeedForUser[u.id] || !(newFeedUrlPerUser[u.id]?.trim()) ? 'not-allowed' : 'pointer',
+                              opacity: isAddingFeedForUser[u.id] || !(newFeedUrlPerUser[u.id]?.trim()) ? 0.6 : 1
+                            }}
+                          >
+                            <Plus size={14} />
+                            {isAddingFeedForUser[u.id] ? 'Lägger till...' : 'Lägg till flöde'}
+                          </button>
+                        </div>
+
+                        {/* Lista över sparade flöden */}
+                        {loadingUserFeeds[u.id] && !adminUserFeeds[u.id] ? (
+                          <div style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                            Hämtar flöden...
+                          </div>
+                        ) : (adminUserFeeds[u.id] || []).length === 0 ? (
+                          <div style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic' }}>
+                            Användaren har inga sparade flöden ännu.
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', maxHeight: '320px', overflowY: 'auto' }}>
+                            {(adminUserFeeds[u.id] || []).map((feed) => (
+                              <div
+                                key={feed.id}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '0.75rem',
+                                  padding: '0.5rem 0.75rem',
+                                  borderRadius: '6px',
+                                  backgroundColor: 'var(--bg-app)',
+                                  border: '1px solid var(--border-color)'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
+                                  {feed.icon_url ? (
+                                    <img
+                                      src={resolveFeedIcon(feed.icon_url)}
+                                      alt=""
+                                      style={{ width: '18px', height: '18px', borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }}
+                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                  ) : (
+                                    <Rss size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                  )}
+                                  <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {feed.title || 'Namnlöst flöde'}
+                                    </div>
+                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {feed.url}
+                                    </div>
+                                  </div>
+                                  {feed.unread_count > 0 && (
+                                    <span style={{
+                                      fontSize: '0.68rem',
+                                      padding: '0.1rem 0.4rem',
+                                      borderRadius: '10px',
+                                      backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                                      color: 'var(--primary)',
+                                      fontWeight: 600,
+                                      flexShrink: 0
+                                    }}>
+                                      {feed.unread_count} olästa
+                                    </span>
+                                  )}
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleAdminDeleteFeed(u.id, feed)}
+                                  disabled={isDeletingFeedForUser[feed.id]}
+                                  title="Ta bort flöde från användare"
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    padding: '0.3rem 0.55rem',
+                                    borderRadius: '5px',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                                    color: '#ef4444',
+                                    fontSize: '0.75rem',
+                                    cursor: isDeletingFeedForUser[feed.id] ? 'not-allowed' : 'pointer',
+                                    flexShrink: 0
+                                  }}
+                                >
+                                  <Trash2 size={12} />
+                                  <span>{isDeletingFeedForUser[feed.id] ? 'Tar bort...' : 'Ta bort'}</span>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
