@@ -878,7 +878,7 @@ def analyze_article(
         dur = 0.0
         raw_message = ""
 
-        print(f"[AI Service] Skickar analys för '{title[:45]}...' till modell '{model}' på {AI_URL}...", flush=True)
+        print(f"[AI Service] Skickar analys för '{title[:45]}...' till modell '{model}'...", flush=True)
 
         # 1. Försök först med nativ strömning för realtids-progress av GPU prompt-bearbetning (LM Studio)
         native_url = get_native_chat_endpoint()
@@ -1478,7 +1478,7 @@ def chat_with_news(
 
     model = model_override or AI_MODEL or ""
     q_type = "Hälsning/Konversation" if ctx.get("is_conversational") else f"Nyhetssökning ({len(sources)} källor)"
-    print(f"[AI Chat] Mottog chattfråga: '{clean_msg[:45]}...' ({q_type}) till modell '{model}' på {AI_URL}...", flush=True)
+    print(f"[AI Chat] Mottog chattfråga: '{clean_msg[:45]}...' ({q_type}) till modell '{model}'...", flush=True)
 
     payload = {
         "model": model,
@@ -1571,7 +1571,7 @@ def stream_chat_with_news(
 
     model = model_override or AI_MODEL or ""
     q_type = "Hälsning/Konversation" if is_conv else f"Nyhetssökning ({len(sources)} källor)"
-    print(f"[AI Chat] Strömmande chattfråga: '{clean_msg[:45]}...' ({q_type}) till modell '{model}' på {AI_URL}...", flush=True)
+    print(f"[AI Chat] Strömmande chattfråga: '{clean_msg[:45]}...' ({q_type}) till modell '{model}'...", flush=True)
 
     native_url = get_native_chat_endpoint()
 

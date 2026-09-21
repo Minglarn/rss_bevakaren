@@ -8,6 +8,25 @@ class UserCreate(BaseModel):
 class UserResponse(BaseModel):
     id: int
     username: str
+    is_admin: bool = False
+
+    class Config:
+        from_attributes = True
+
+class AdminUserCreate(BaseModel):
+    username: str
+    password: str
+    is_admin: bool = False
+
+class AdminUserUpdate(BaseModel):
+    password: Optional[str] = None
+    is_admin: Optional[bool] = None
+
+class AdminUserResponse(BaseModel):
+    id: int
+    username: str
+    is_admin: bool
+    feed_count: int = 0
 
     class Config:
         from_attributes = True
@@ -18,6 +37,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+    is_admin: Optional[bool] = False
 
 class FeedBase(BaseModel):
     url: str

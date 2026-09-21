@@ -756,13 +756,34 @@ const App = () => {
     return localStorage.getItem('username');
   });
 
+  const [currentUser, setCurrentUser] = useState(null);
   const [prioEnabled, setPrioEnabled] = useState(() => localStorage.getItem('rss_prio_enabled') === 'true');
+
+  // Hämta aktuell användarprofil (inklusive is_admin)
+  useEffect(() => {
+    if (!token) {
+      setCurrentUser(null);
+      return;
+    }
+    const fetchCurrentUser = async () => {
+      try {
+        const res = await api.get('/users/me');
+        if (res.data) {
+          setCurrentUser(res.data);
+        }
+      } catch (e) {
+        console.warn('Kunde inte hämta användarprofil', e);
+      }
+    };
+    fetchCurrentUser();
+  }, [token]);
 
   // Lyssna på globalt sessionExpired-event från 401-interceptorn
   useEffect(() => {
     const handleSessionExpired = () => {
       setToken(null);
       setUsername(null);
+      setCurrentUser(null);
       setPrioEnabled(false);
       toast.error('Din inloggningssession har löpt ut. Vänligen logga in igen.');
     };
@@ -809,6 +830,7 @@ const App = () => {
     localStorage.removeItem('rss_prio_enabled');
     setToken(null);
     setUsername(null);
+    setCurrentUser(null);
     setPrioEnabled(false);
   };
 
@@ -889,7 +911,7 @@ const App = () => {
               <Route path="/ai" element={<Navigate to="/prio" replace />} />
               <Route path="/manage" element={<Navigate to="/settings?tab=manage" replace />} />
               <Route path="/interests" element={<Navigate to="/settings?tab=interests" replace />} />
-              <Route path="/settings" element={<Settings onLogout={handleLogout} />} />
+              <Route path="/settings" element={<Settings onLogout={handleLogout} currentUser={currentUser} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AppLayout>

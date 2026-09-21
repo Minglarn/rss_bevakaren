@@ -1,9 +1,48 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.21.07',
+    date: '2026-09-21',
+    title: 'Ollama driftoptimering och minskat loggbrus vid AI-inferens',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Dokumentation och driftoptimering för Ollama',
+        description: 'Utförlig dokumentation för miljövariablerna OLLAMA_KEEP_ALIVE=-1 och OLLAMA_MAX_LOADED_MODELS=2 för att motverka oavsiktliga urladdningar av modeller och VRAM-växling.'
+      },
+      {
+        type: 'improvement',
+        title: 'Minskat loggbrus vid AI-anrop',
+        description: 'Borttaget URL-brus från loggutskrifter vid sammanfattningsanalys och AI-chatt för renare och mer lättlästa backend-loggar.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.21.06',
+    date: '2026-09-21',
+    title: 'Dedikerad Admin-panel och rollbaserad behörighetskontroll (RBAC)',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Dedikerad Admin-flik i Inställningar',
+        description: 'En säker administratörsflik har införts i inställningarna som enbart visas för användare med administratörsrättigheter.'
+      },
+      {
+        type: 'security',
+        title: 'Rollbaserad behörighet och skyddade API-endpoints',
+        description: 'Kritiska systemoperationer som databasrensning, tömning av databasen, databasoptimering (VACUUM) samt val av AI-modell är nu strikt behörighetsskyddade i backend med HTTP 403-spärr.'
+      },
+      {
+        type: 'feature',
+        title: 'Komplett användaradministration',
+        description: 'Administratörer kan nu direkt i gränssnittet lista befintliga användare, skapa nya användarkonton, återställa lösenord, tilldela administratörsstatus och ta bort konton.'
+      }
+    ]
+  },
+  {
     version: '2026.09.21.05',
     date: '2026-09-21',
     title: 'Initieringsfix för ikonsanering och minskat loggbrus för AI',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'bugfix',

@@ -138,6 +138,24 @@ def ensure_db_migrations():
             print(f"[DB] Migration notice for user_ai_settings: {e}", flush=True)
 
         try:
+            res_users = conn.execute(text("PRAGMA table_info(users)"))
+            user_cols = [row[1] for row in res_users.fetchall()]
+            if user_cols:
+                if "is_admin" not in user_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0"))
+                    conn.commit()
+                    print("[DB] Added is_admin column to users", flush=True)
+
+                # Se till att användaren 'admin' eller första användaren får administratörsstatus
+                conn.execute(text("UPDATE users SET is_admin = 1 WHERE lower(username) = 'admin'"))
+                admin_count = conn.execute(text("SELECT COUNT(*) FROM users WHERE is_admin = 1")).scalar()
+                if admin_count == 0:
+                    conn.execute(text("UPDATE users SET is_admin = 1 WHERE id = (SELECT MIN(id) FROM users)"))
+                conn.commit()
+        except Exception as e:
+            print(f"[DB] Migration notice for users: {e}", flush=True)
+
+        try:
             res_art = conn.execute(text("PRAGMA table_info(articles)"))
             art_cols = [row[1] for row in res_art.fetchall()]
             if art_cols:
@@ -785,6 +803,7 @@ async def startup_event():
     
     usernames_env = os.environ.get("APP_USERNAME", "")
     passwords_env = os.environ.get("APP_PASSWORD", "")
+    admin_env = os.environ.get("APP_ADMIN_USER", "admin").strip().lower()
     
     if usernames_env and passwords_env:
         usernames = [u.strip() for u in usernames_env.split(",") if u.strip()]
@@ -792,21 +811,32 @@ async def startup_event():
         
         for i, username in enumerate(usernames):
             password = passwords[i] if i < len(passwords) else "changeme"
+            is_adm = 1 if (username.lower() == admin_env or (i == 0 and not any(u.lower() == admin_env for u in usernames))) else 0
             
             user = db.query(models.User).filter(models.User.username == username).first()
             if not user:
                 hashed_password = auth.get_password_hash(password)
-                new_user = models.User(username=username, password_hash=hashed_password)
+                new_user = models.User(username=username, password_hash=hashed_password, is_admin=is_adm)
                 db.add(new_user)
             else:
                 if not auth.verify_password(password, user.password_hash):
                     user.password_hash = auth.get_password_hash(password)
+                if is_adm == 1 and not user.is_admin:
+                    user.is_admin = 1
     else:
         if db.query(models.User).count() == 0:
             hashed_password = auth.get_password_hash("admin")
-            default_user = models.User(username="admin", password_hash=hashed_password)
+            default_user = models.User(username="admin", password_hash=hashed_password, is_admin=1)
             db.add(default_user)
             
+    # Säkerställ att minst en användare i systemet alltid är administratör
+    if db.query(models.User).count() > 0:
+        active_admin = db.query(models.User).filter(models.User.is_admin == 1).first()
+        if not active_admin:
+            first_user = db.query(models.User).order_by(models.User.id.asc()).first()
+            if first_user:
+                first_user.is_admin = 1
+
     db.commit()
     db.close()
     
@@ -2229,7 +2259,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         )
     access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth.create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": user.username, "is_admin": bool(user.is_admin)}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
  
@@ -2238,13 +2268,17 @@ def refresh_access_token(current_user: models.User = Depends(auth.get_current_us
     """Förlänger sessionen (sliding session) för en aktiv inloggad användare."""
     access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth.create_access_token(
-        data={"sub": current_user.username}, expires_delta=access_token_expires
+        data={"sub": current_user.username, "is_admin": bool(current_user.is_admin)}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/users/me", response_model=schemas.UserResponse)
 def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
-    return current_user
+    return schemas.UserResponse(
+        id=current_user.id,
+        username=current_user.username,
+        is_admin=bool(current_user.is_admin)
+    )
 
 @app.get("/feeds", response_model=List[schemas.FeedResponse])
 def get_feeds(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
@@ -4595,19 +4629,207 @@ def dismiss_clickbait(
     }
 
 @app.post("/system/purge")
-def purge_system(days: int = 30, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+def purge_system(days: int = 30, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_admin_user)):
+    """Kräver administratörsbehörighet: Rensa artiklar äldre än givet antal dagar."""
     cutoff_ts = int(time.time()) - (days * 24 * 60 * 60)
-    query = db.query(models.Article).join(models.Feed).filter(
-        models.Feed.user_id == current_user.id,
+    query = db.query(models.Article).filter(
         models.Article.received_ts < cutoff_ts,
         or_(models.Article.is_locked == 0, models.Article.is_locked == None)
     )
     count = query.count()
     if count > 0:
         article_ids = [a.id for a in query.all()]
+        db.query(models.ArticleEmbedding).filter(models.ArticleEmbedding.article_id.in_(article_ids)).delete(synchronize_session=False)
         db.query(models.Article).filter(models.Article.id.in_(article_ids)).delete(synchronize_session=False)
         db.commit()
     return {"status": "ok", "deleted": count}
+
+# ==========================================
+# ADMINISTRATÖRSPANEL & RBAC ENDPOINTS
+# ==========================================
+
+@app.get("/admin/users", response_model=List[schemas.AdminUserResponse])
+def admin_get_users(
+    db: Session = Depends(database.get_db),
+    admin: models.User = Depends(auth.get_current_admin_user)
+):
+    """Returnerar samtliga användarkonton för administratören."""
+    users = db.query(models.User).order_by(models.User.id.asc()).all()
+    res = []
+    for u in users:
+        f_count = db.query(models.Feed).filter(models.Feed.user_id == u.id).count()
+        res.append(schemas.AdminUserResponse(
+            id=u.id,
+            username=u.username,
+            is_admin=bool(u.is_admin),
+            feed_count=f_count
+        ))
+    return res
+
+@app.post("/admin/users", response_model=schemas.AdminUserResponse)
+def admin_create_user(
+    req: schemas.AdminUserCreate,
+    db: Session = Depends(database.get_db),
+    admin: models.User = Depends(auth.get_current_admin_user)
+):
+    """Skapa ett nytt användarkonto från adminpanelen."""
+    clean_username = req.username.strip()
+    if not clean_username:
+        raise HTTPException(status_code=400, detail="Användarnamn kan inte vara tomt.")
+    if len(req.password) < 4:
+        raise HTTPException(status_code=400, detail="Lösenordet måste innehålla minst 4 tecken.")
+    
+    existing = db.query(models.User).filter(func.lower(models.User.username) == clean_username.lower()).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Användarnamnet '{clean_username}' är redan upptaget.")
+    
+    hashed_pwd = auth.get_password_hash(req.password)
+    new_u = models.User(
+        username=clean_username,
+        password_hash=hashed_pwd,
+        is_admin=1 if req.is_admin else 0
+    )
+    db.add(new_u)
+    db.commit()
+    db.refresh(new_u)
+
+    # Skapa även standardinställningar för den nya användaren
+    new_ai = models.UserAISettings(user_id=new_u.id)
+    db.add(new_ai)
+    db.commit()
+
+    return schemas.AdminUserResponse(
+        id=new_u.id,
+        username=new_u.username,
+        is_admin=bool(new_u.is_admin),
+        feed_count=0
+    )
+
+@app.patch("/admin/users/{user_id}", response_model=schemas.AdminUserResponse)
+def admin_update_user(
+    user_id: int,
+    req: schemas.AdminUserUpdate,
+    db: Session = Depends(database.get_db),
+    admin: models.User = Depends(auth.get_current_admin_user)
+):
+    """Uppdatera lösenord eller adminstatus för en användare."""
+    target = db.query(models.User).filter(models.User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Användaren hittades inte.")
+    
+    if req.is_admin is not None:
+        if target.id == admin.id and not req.is_admin:
+            other_admins = db.query(models.User).filter(models.User.id != admin.id, models.User.is_admin == 1).count()
+            if other_admins == 0:
+                raise HTTPException(status_code=400, detail="Du kan inte avlägsna dina egna administratörsrättigheter då du är systemets enda administratör.")
+        target.is_admin = 1 if req.is_admin else 0
+
+    if req.password is not None and req.password.strip():
+        if len(req.password.strip()) < 4:
+            raise HTTPException(status_code=400, detail="Lösenordet måste innehålla minst 4 tecken.")
+        target.password_hash = auth.get_password_hash(req.password.strip())
+
+    db.commit()
+    db.refresh(target)
+    f_count = db.query(models.Feed).filter(models.Feed.user_id == target.id).count()
+    return schemas.AdminUserResponse(
+        id=target.id,
+        username=target.username,
+        is_admin=bool(target.is_admin),
+        feed_count=f_count
+    )
+
+@app.delete("/admin/users/{user_id}")
+def admin_delete_user(
+    user_id: int,
+    db: Session = Depends(database.get_db),
+    admin: models.User = Depends(auth.get_current_admin_user)
+):
+    """Radera en användare och associerad data."""
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail="Du kan inte radera ditt eget administratörskonto.")
+    
+    target = db.query(models.User).filter(models.User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Användaren hittades inte.")
+    
+    # Rensa användarens feeds och artiklar
+    feeds = db.query(models.Feed).filter(models.Feed.user_id == user_id).all()
+    for f in feeds:
+        db.query(models.Article).filter(models.Article.feed_id == f.id).delete(synchronize_session=False)
+        db.delete(f)
+    
+    db.query(models.Keyword).filter(models.Keyword.user_id == user_id).delete(synchronize_session=False)
+    db.query(models.PushSubscription).filter(models.PushSubscription.user_id == user_id).delete(synchronize_session=False)
+    db.query(models.UserAISettings).filter(models.UserAISettings.user_id == user_id).delete(synchronize_session=False)
+    db.query(models.DailyDigest).filter(models.DailyDigest.user_id == user_id).delete(synchronize_session=False)
+
+    db.delete(target)
+    db.commit()
+    return {"status": "ok", "message": f"Användaren '{target.username}' har raderats."}
+
+@app.post("/admin/database/clear-articles")
+def admin_clear_articles(
+    payload: dict,
+    db: Session = Depends(database.get_db),
+    admin: models.User = Depends(auth.get_current_admin_user)
+):
+    """Töm artiklar från databasen (antingen enbart olåsta eller samtliga)."""
+    mode = payload.get("mode", "unlocked")
+    query = db.query(models.Article)
+    if mode == "unlocked":
+        query = query.filter(or_(models.Article.is_locked == 0, models.Article.is_locked == None))
+    
+    deleted_count = query.count()
+    if deleted_count > 0:
+        art_ids = [a.id for a in query.all()]
+        db.query(models.ArticleEmbedding).filter(models.ArticleEmbedding.article_id.in_(art_ids)).delete(synchronize_session=False)
+        db.query(models.Article).filter(models.Article.id.in_(art_ids)).delete(synchronize_session=False)
+        db.commit()
+    return {"status": "ok", "deleted": deleted_count, "mode": mode}
+
+@app.post("/admin/database/vacuum")
+def admin_vacuum_database(
+    db: Session = Depends(database.get_db),
+    admin: models.User = Depends(auth.get_current_admin_user)
+):
+    """Optimerar databasen genom att köra SQLite VACUUM."""
+    try:
+        connection = db.connection().connection
+        old_isolation = connection.isolation_level
+        connection.isolation_level = None
+        cursor = connection.cursor()
+        cursor.execute("VACUUM")
+        connection.isolation_level = old_isolation
+        
+        db_size = 0
+        for path in ["/data/rss.db", "backend/rss.db", "rss.db"]:
+            if os.path.exists(path):
+                db_size = os.path.getsize(path)
+                break
+            
+        return {
+            "status": "ok",
+            "message": "Databasen har optimerats och defragmenterats framgångsrikt.",
+            "database_size_bytes": db_size
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Kunde inte köra VACUUM: {e}")
+
+@app.post("/admin/ai/model")
+def admin_set_system_ai_model(
+    payload: dict,
+    db: Session = Depends(database.get_db),
+    admin: models.User = Depends(auth.get_current_admin_user)
+):
+    """Ställ in global standardmodell för AI-analys för alla användare."""
+    new_model = (payload.get("model") or "").strip()
+    users_ai = db.query(models.UserAISettings).all()
+    for u_ai in users_ai:
+        u_ai.selected_model = new_model
+    db.commit()
+    return {"status": "ok", "selected_model": new_model, "affected_users": len(users_ai)}
+
 
 @app.post("/ai/chat", response_model=schemas.ChatResponse)
 async def ai_chat_endpoint(

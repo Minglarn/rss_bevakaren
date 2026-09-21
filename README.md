@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.21.03-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.21.07-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -103,10 +103,29 @@ Ollama har inbyggt stöd för OpenAIs API på port `11434`.
    ollama pull nomic-embed-text
    ```
 
-2. **Viktigt: Tillåt nätverksåtkomst (`OLLAMA_HOST`):**
-   Som standard lyssnar Ollama endast på `127.0.0.1`. Om RSS-Bevakaren körs i Docker eller på en annan maskin på nätverket måste Ollama tillåtas ta emot externa anslutningar:
-   - **Windows:** Lägg till systemvariabeln `OLLAMA_HOST` med värdet `0.0.0.0` (eller `0.0.0.0:11434`) under Systemegenskaper -> Miljövariabler och starta om Ollama.
-   - **Linux / Docker:** Starta med miljövariabeln `OLLAMA_HOST=0.0.0.0:11434`.
+2. **Viktigt: Miljövariabler för Ollama-servern:**
+   För optimal prestanda, snabb respons och för att förhindra att modeller ständigt laddas ur i förtid bör följande miljövariabler konfigureras på maskinen där Ollama körs:
+   - `OLLAMA_HOST=0.0.0.0` (eller `0.0.0.0:11434`): Tillåter anslutningar från RSS-Bevakaren och Docker. Som standard lyssnar Ollama annars enbart på `127.0.0.1`.
+   - `OLLAMA_KEEP_ALIVE=-1`: Håller modellen laddad permanent i minnet (VRAM). Standard i Ollama är annars att modellen laddas ur efter 5 minuters inaktivitet.
+   - `OLLAMA_MAX_LOADED_MODELS=2`: Tillåter att både textmodellen (`AI_MODEL`) och embedding-modellen (`AI_EMBEDDING_MODEL`) hålls i minnet samtidigt utan VRAM-växling.
+
+   **Så sätter du variablerna:**
+   - **Windows:** Lägg till variablerna under *Systemegenskaper -> Miljövariabler* (som system- eller användarvariabler) och starta om Ollama från aktivitetsfältet.
+   - **Linux (systemd):** Redigera tjänsten via `sudo systemctl edit ollama.service` och ange:
+     ```ini
+     [Service]
+     Environment="OLLAMA_HOST=0.0.0.0"
+     Environment="OLLAMA_KEEP_ALIVE=-1"
+     Environment="OLLAMA_MAX_LOADED_MODELS=2"
+     ```
+     Kör därefter `sudo systemctl daemon-reload && sudo systemctl restart ollama`.
+   - **Docker:** Lägg till dem direkt under `environment:` i din `docker-compose.yml` för Ollama-containern:
+     ```yaml
+     environment:
+       - OLLAMA_HOST=0.0.0.0
+       - OLLAMA_KEEP_ALIVE=-1
+       - OLLAMA_MAX_LOADED_MODELS=2
+     ```
 
 3. **Konfigurera i `docker-compose.yml`:**
    ```yaml

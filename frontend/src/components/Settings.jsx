@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, BellOff, Plus, Trash2, ShieldAlert, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, ArrowUpRight, AlertTriangle, ExternalLink, Search, Download, Upload, Compass } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, BellOff, Plus, Trash2, ShieldAlert, ShieldCheck, UserPlus, Users, Key, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, ArrowUpRight, AlertTriangle, ExternalLink, Search, Download, Upload, Compass } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
@@ -24,21 +24,65 @@ const formatEuropeanDateTime = (timestamp) => {
   });
 };
 
-const Settings = ({ onLogout }) => {
+const Settings = ({ onLogout, currentUser }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState(tabFromUrl || 'general');
+  const [localUser, setLocalUser] = useState(currentUser || null);
+
+  useEffect(() => {
+    if (currentUser) {
+      setLocalUser(currentUser);
+    } else {
+      api.get('/users/me')
+        .then(res => setLocalUser(res.data))
+        .catch(err => console.warn('Kunde inte läsa användarprofil i Settings', err));
+    }
+  }, [currentUser]);
+
+  const isAdmin = Boolean(localUser?.is_admin);
+  const [activeTab, setActiveTab] = useState(() => {
+    if (tabFromUrl === 'admin' && !isAdmin) return 'general';
+    return tabFromUrl || 'general';
+  });
 
   useEffect(() => {
     if (tabFromUrl && tabFromUrl !== activeTab) {
-      setActiveTab(tabFromUrl);
+      if (tabFromUrl === 'admin' && localUser && !isAdmin) {
+        toast.error('Åtkomst nekad: Administratörsbehörighet krävs.');
+        setActiveTab('general');
+        setSearchParams({ tab: 'general' });
+      } else {
+        setActiveTab(tabFromUrl);
+      }
     }
-  }, [tabFromUrl]);
+  }, [tabFromUrl, activeTab, localUser, isAdmin, setSearchParams]);
 
   const handleTabChange = (tab) => {
+    if (tab === 'admin' && !isAdmin) {
+      toast.error('Åtkomst nekad: Endast administratörer kan nå denna flik.');
+      return;
+    }
     setActiveTab(tab);
     setSearchParams({ tab });
   };
+
+  // Administratörspanel State
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [isLoadingAdminUsers, setIsLoadingAdminUsers] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newIsAdmin, setNewIsAdmin] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [passwordChangeUserId, setPasswordChangeUserId] = useState(null);
+  const [newPasswordForUser, setNewPasswordForUser] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isPurgingDb, setIsPurgingDb] = useState(false);
+  const [isClearingArticles, setIsClearingArticles] = useState(false);
+  const [isVacuuming, setIsVacuuming] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [clearMode, setClearMode] = useState('unlocked');
+  const [adminPurgeDays, setAdminPurgeDays] = useState(30);
+
   const [keywords, setKeywords] = useState([]);
   const [newKeyword, setNewKeyword] = useState('');
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -603,7 +647,162 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     if (activeTab === 'insights') {
       fetchSourceStats();
     }
-  }, [activeTab]);
+    if (activeTab === 'admin' && isAdmin) {
+      fetchAdminUsers();
+      fetchDbStats();
+      fetchAiConfig();
+    }
+  }, [activeTab, isAdmin]);
+
+  const fetchAdminUsers = async () => {
+    try {
+      setIsLoadingAdminUsers(true);
+      const res = await api.get('/admin/users');
+      if (res.data) {
+        setAdminUsers(res.data);
+      }
+    } catch (err) {
+      console.error("Kunde inte hämta användarlistan:", err);
+      toast.error('Kunde inte läsa in användarlistan.');
+    } finally {
+      setIsLoadingAdminUsers(false);
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    const cleanUser = newUsername.trim();
+    const cleanPass = newPassword.trim();
+    if (!cleanUser || !cleanPass) {
+      toast.error('Ange både användarnamn och lösenord.');
+      return;
+    }
+    if (cleanPass.length < 4) {
+      toast.error('Lösenordet måste vara minst 4 tecken långt.');
+      return;
+    }
+    try {
+      setIsCreatingUser(true);
+      const res = await api.post('/admin/users', {
+        username: cleanUser,
+        password: cleanPass,
+        is_admin: newIsAdmin
+      });
+      toast.success(`Användaren '${res.data.username}' har skapats!`);
+      setNewUsername('');
+      setNewPassword('');
+      setNewIsAdmin(false);
+      fetchAdminUsers();
+    } catch (err) {
+      console.error("Kunde inte skapa användare:", err);
+      toast.error(err.response?.data?.detail || 'Kunde inte skapa användaren.');
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
+  const handleChangePassword = async (userId) => {
+    const cleanPass = (newPasswordForUser || '').trim();
+    if (cleanPass.length < 4) {
+      toast.error('Lösenordet måste innehålla minst 4 tecken.');
+      return;
+    }
+    try {
+      setIsChangingPassword(true);
+      await api.patch(`/admin/users/${userId}`, { password: cleanPass });
+      toast.success('Lösenordet har uppdaterats framgångsrikt!');
+      setPasswordChangeUserId(null);
+      setNewPasswordForUser('');
+    } catch (err) {
+      console.error("Kunde inte ändra lösenord:", err);
+      toast.error(err.response?.data?.detail || 'Kunde inte uppdatera lösenordet.');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleToggleAdminStatus = async (user) => {
+    const nextStatus = !user.is_admin;
+    try {
+      await api.patch(`/admin/users/${user.id}`, { is_admin: nextStatus });
+      toast.success(`Status för '${user.username}' uppdaterad till ${nextStatus ? 'Administratör' : 'Vanlig användare'}.`);
+      fetchAdminUsers();
+    } catch (err) {
+      console.error("Kunde inte ändra behörighet:", err);
+      toast.error(err.response?.data?.detail || 'Kunde inte ändra behörighet.');
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (!window.confirm(`Är du helt säker på att du vill ta bort användaren '${user.username}' och all data? Åtgärden kan inte ångras.`)) {
+      return;
+    }
+    try {
+      await api.delete(`/admin/users/${user.id}`);
+      toast.success(`Användaren '${user.username}' har raderats.`);
+      fetchAdminUsers();
+    } catch (err) {
+      console.error("Kunde inte radera användare:", err);
+      toast.error(err.response?.data?.detail || 'Kunde inte radera användaren.');
+    }
+  };
+
+  const handleClearArticles = async (mode) => {
+    try {
+      setIsClearingArticles(true);
+      const res = await api.post('/admin/database/clear-articles', { mode });
+      toast.success(`Rensning slutförd! ${res.data.deleted} artiklar raderades.`);
+      setShowClearModal(false);
+      fetchDbStats(true);
+    } catch (err) {
+      console.error("Kunde inte tömma artiklar:", err);
+      toast.error(err.response?.data?.detail || 'Ett fel uppstod vid tömning av artiklar.');
+    } finally {
+      setIsClearingArticles(false);
+    }
+  };
+
+  const handleManualPurge = async (days) => {
+    try {
+      setIsPurgingDb(true);
+      const res = await api.post(`/system/purge?days=${days}`);
+      toast.success(`Rensning slutförd! ${res.data.deleted} gamla olåsta artiklar togs bort.`);
+      fetchDbStats(true);
+    } catch (err) {
+      console.error("Kunde inte köra manuell rensning:", err);
+      toast.error(err.response?.data?.detail || 'Kunde inte köra manuell rensning.');
+    } finally {
+      setIsPurgingDb(false);
+    }
+  };
+
+  const handleVacuumDatabase = async () => {
+    try {
+      setIsVacuuming(true);
+      const res = await api.post('/admin/database/vacuum');
+      const mb = (res.data.database_size_bytes / 1024 / 1024).toFixed(2);
+      toast.success(`Databasen städad och optimerad! Storlek: ${mb} MB`);
+      fetchDbStats(true);
+    } catch (err) {
+      console.error("Kunde inte köra VACUUM:", err);
+      toast.error(err.response?.data?.detail || 'Kunde inte optimera databasen.');
+    } finally {
+      setIsVacuuming(false);
+    }
+  };
+
+  const handleUpdateSystemModel = async (model) => {
+    const cleanModel = (model || '').trim();
+    try {
+      await api.post('/admin/ai/model', { model: cleanModel });
+      await handleUpdateModel(cleanModel);
+      toast.success(cleanModel ? `Global AI-modell sparad: ${cleanModel}` : 'Global AI-modell återställd till systemstandard.');
+    } catch (err) {
+      console.error("Kunde inte sätta global AI-modell:", err);
+      toast.error(err.response?.data?.detail || 'Kunde inte sätta global AI-modell.');
+    }
+  };
+
 
   useEffect(() => {
     const handleConfigUpdate = () => {
@@ -1299,7 +1498,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
   };
 
   return (
-    <div style={{ maxWidth: (activeTab === 'manage' || activeTab === 'interests' || activeTab === 'insights') ? '1000px' : '800px', margin: '0 auto' }}>
+    <div style={{ maxWidth: (activeTab === 'manage' || activeTab === 'interests' || activeTab === 'insights' || activeTab === 'admin') ? '1000px' : '800px', margin: '0 auto' }}>
       <h1 style={{ color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
         <SettingsIcon /> Inställningar
       </h1>
@@ -1354,6 +1553,18 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
         >
           <Sparkles size={16} /> AI-analys
         </button>
+        {isAdmin && (
+          <button 
+            onClick={() => handleTabChange('admin')}
+            className={`settings-tab-btn admin-tab ${activeTab === 'admin' ? 'active' : ''}`}
+            style={{
+              borderColor: activeTab === 'admin' ? '#ef4444' : 'rgba(239, 68, 68, 0.4)',
+              color: activeTab === 'admin' ? '#ef4444' : 'inherit'
+            }}
+          >
+            <ShieldAlert size={16} style={{ color: '#ef4444' }} /> Admin
+          </button>
+        )}
       </div>
 
       {activeTab === 'general' && (
@@ -5021,8 +5232,784 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 
         </motion.div>
       )}
+
+      {/* ADMINISTRATÖRSPANEL */}
+      {activeTab === 'admin' && isAdmin && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          {/* Admin Header Banner */}
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            padding: '1.25rem 1rem',
+            borderRadius: '12px',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '10px',
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                color: '#ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <ShieldAlert size={26} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <h2 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.25rem', fontWeight: 700 }}>
+                    Administratörspanel
+                  </h2>
+                  <span style={{
+                    fontSize: '0.72rem',
+                    padding: '0.15rem 0.5rem',
+                    borderRadius: '12px',
+                    fontWeight: 700,
+                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                  }}>
+                    ADMINISTRATÖR
+                  </span>
+                </div>
+                <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
+                  Exklusiv hantering av användarkonton, kritiska databasåtgärder, tömning och global AI-konfiguration.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                Inloggad som: <strong style={{ color: 'var(--text-main)' }}>{localUser?.username || 'admin'}</strong>
+              </span>
+            </div>
+          </div>
+
+          {/* Sektion 1: Användaradministration */}
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Users size={20} style={{ color: 'var(--primary)' }} />
+                <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem' }}>
+                  Användarkonton och behörigheter
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={fetchAdminUsers}
+                disabled={isLoadingAdminUsers}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
+                  cursor: isLoadingAdminUsers ? 'not-allowed' : 'pointer'
+                }}
+              >
+                <RefreshCw size={14} className={isLoadingAdminUsers ? 'spin' : ''} />
+                {isLoadingAdminUsers ? 'Laddar...' : 'Uppdatera lista'}
+              </button>
+            </div>
+
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+              Administrera vilka som har åtkomst till installationen, tilldela administratörsrättigheter och nollställ lösenord.
+            </p>
+
+            {/* Befintliga användare */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {isLoadingAdminUsers && adminUsers.length === 0 ? (
+                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  Hämtar användare...
+                </div>
+              ) : adminUsers.map((u) => {
+                const isSelf = u.id === localUser?.id;
+                const isChangingPwd = passwordChangeUserId === u.id;
+
+                return (
+                  <div 
+                    key={u.id}
+                    style={{
+                      padding: '1rem',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--bg-app)',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          backgroundColor: u.is_admin ? 'rgba(239, 68, 68, 0.15)' : 'rgba(37, 99, 235, 0.15)',
+                          color: u.is_admin ? '#ef4444' : 'var(--primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '0.9rem'
+                        }}>
+                          {u.username.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <strong style={{ color: 'var(--text-main)', fontSize: '0.95rem' }}>{u.username}</strong>
+                            {isSelf && (
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                (du)
+                              </span>
+                            )}
+                            <span style={{
+                              fontSize: '0.7rem',
+                              padding: '0.1rem 0.45rem',
+                              borderRadius: '4px',
+                              fontWeight: 600,
+                              backgroundColor: u.is_admin ? 'rgba(239, 68, 68, 0.15)' : 'rgba(100, 116, 139, 0.15)',
+                              color: u.is_admin ? '#ef4444' : 'var(--text-muted)'
+                            }}>
+                              {u.is_admin ? 'Administratör' : 'Användare'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                            {u.feed_count} aktiva prenumerationer
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Åtgärder per användare */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isChangingPwd) {
+                              setPasswordChangeUserId(null);
+                              setNewPasswordForUser('');
+                            } else {
+                              setPasswordChangeUserId(u.id);
+                              setNewPasswordForUser('');
+                            }
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.35rem 0.65rem',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-main)',
+                            fontSize: '0.8rem',
+                            fontWeight: 500,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Key size={13} />
+                          {isChangingPwd ? 'Avbryt lösenord' : 'Byt lösenord'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAdminStatus(u)}
+                          disabled={isSelf && u.is_admin}
+                          title={isSelf && u.is_admin ? 'Du kan inte ta bort din egen administratörsstatus.' : ''}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.35rem 0.65rem',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)',
+                            color: u.is_admin ? '#ef4444' : 'var(--primary)',
+                            fontSize: '0.8rem',
+                            fontWeight: 500,
+                            cursor: isSelf && u.is_admin ? 'not-allowed' : 'pointer',
+                            opacity: isSelf && u.is_admin ? 0.6 : 1
+                          }}
+                        >
+                          <ShieldCheck size={13} />
+                          {u.is_admin ? 'Ta bort admin' : 'Gör till admin'}
+                        </button>
+
+                        {!isSelf && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(u)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '0.35rem 0.65rem',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(239, 68, 68, 0.4)',
+                              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                              color: '#ef4444',
+                              fontSize: '0.8rem',
+                              fontWeight: 500,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Trash2 size={13} />
+                            Ta bort
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Inline lösenordsbyte */}
+                    {isChangingPwd && (
+                      <div style={{
+                        marginTop: '0.5rem',
+                        padding: '0.75rem',
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: '6px',
+                        border: '1px dashed var(--border-color)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        flexWrap: 'wrap'
+                      }}>
+                        <input
+                          type="password"
+                          placeholder="Nytt lösenord (minst 4 tecken)"
+                          value={newPasswordForUser}
+                          onChange={(e) => setNewPasswordForUser(e.target.value)}
+                          style={{
+                            flex: 1,
+                            minWidth: '200px',
+                            padding: '0.45rem 0.75rem',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-app)',
+                            color: 'var(--text-main)',
+                            fontSize: '0.85rem'
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleChangePassword(u.id)}
+                          disabled={isChangingPassword || !newPasswordForUser.trim()}
+                          style={{
+                            padding: '0.45rem 0.85rem',
+                            borderRadius: '6px',
+                            border: 'none',
+                            backgroundColor: 'var(--primary)',
+                            color: 'white',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {isChangingPassword ? 'Sparar...' : 'Spara nytt lösenord'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Skapa ny användare formulär */}
+            <div style={{
+              marginTop: '0.5rem',
+              padding: '1rem',
+              backgroundColor: 'var(--bg-app)',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)'
+            }}>
+              <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <UserPlus size={16} style={{ color: 'var(--primary)' }} /> Skapa nytt användarkonto
+              </div>
+
+              <form onSubmit={handleCreateUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="Användarnamn"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  style={{
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.88rem'
+                  }}
+                  required
+                />
+
+                <input
+                  type="password"
+                  placeholder="Lösenord"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  style={{
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.88rem'
+                  }}
+                  required
+                />
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.88rem', color: 'var(--text-main)' }}>
+                  <input
+                    type="checkbox"
+                    checked={newIsAdmin}
+                    onChange={(e) => setNewIsAdmin(e.target.checked)}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                  <span>Administratörsrättigheter</span>
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={isCreatingUser || !newUsername.trim() || !newPassword.trim()}
+                  style={{
+                    padding: '0.55rem 1rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: 'var(--primary)',
+                    color: 'white',
+                    fontSize: '0.88rem',
+                    fontWeight: 600,
+                    cursor: isCreatingUser ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {isCreatingUser ? 'Skapar konto...' : 'Skapa användare'}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Sektion 2: Kritiska Databasåtgärder */}
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Database size={20} style={{ color: '#ef4444' }} />
+              <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem' }}>
+                Kritiska databasåtgärder och tömning
+              </h3>
+            </div>
+
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+              Dessa operationer påverkar systemets databas direkt. Tömning och manuell rensning frigör lagringsutrymme men raderar artiklar permanent.
+            </p>
+
+            {/* KPI-kort */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+              <div style={{ padding: '0.85rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Totalt antal artiklar</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.2rem' }}>
+                  {dbStats ? dbStats.total_articles.toLocaleString('sv-SE') : '0'}
+                </div>
+              </div>
+
+              <div style={{ padding: '0.85rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Databasfilens storlek</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#8b5cf6', marginTop: '0.2rem' }}>
+                  {dbStats ? (dbStats.database_size_bytes / 1024 / 1024).toFixed(2) + ' MB' : '0.00 MB'}
+                </div>
+              </div>
+            </div>
+
+            {/* Åtgärd 1: Tömma databasen */}
+            <div style={{
+              padding: '1.1rem',
+              backgroundColor: 'rgba(239, 68, 68, 0.05)',
+              borderRadius: '8px',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}>
+              <div>
+                <strong style={{ color: '#ef4444', fontSize: '0.95rem' }}>Töm artiklar från databasen</strong>
+                <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.82rem', lineHeight: 1.4 }}>
+                  Radera artiklar från databasen. Du kan välja att enbart rensa olåsta artiklar (bokmärkta/låsta artiklar sparas) eller köra en fullständig nollställning av samtliga artiklar.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClearMode('unlocked');
+                    setShowClearModal(true);
+                  }}
+                  style={{
+                    padding: '0.55rem 1rem',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: '#ef4444',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Töm olåsta artiklar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClearMode('all');
+                    setShowClearModal(true);
+                  }}
+                  style={{
+                    padding: '0.55rem 1rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Töm ALLA artiklar i databasen
+                </button>
+              </div>
+            </div>
+
+            {/* Åtgärd 2: Manuell Purge (Rensa artiklar äldre än X dagar) */}
+            <div style={{
+              padding: '1.1rem',
+              backgroundColor: 'var(--bg-app)',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem'
+            }}>
+              <div>
+                <strong style={{ color: 'var(--text-main)', fontSize: '0.95rem' }}>Manuell artikelrensning</strong>
+                <p style={{ margin: '0.2rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                  Tar bort gamla olåsta artiklar som överskrider angivet antal dagar.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Äldre än</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={adminPurgeDays}
+                  onChange={(e) => setAdminPurgeDays(Math.max(1, parseInt(e.target.value) || 1))}
+                  style={{
+                    width: '60px',
+                    padding: '0.4rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    textAlign: 'center',
+                    fontSize: '0.85rem'
+                  }}
+                />
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>dagar</span>
+
+                <button
+                  type="button"
+                  onClick={() => handleManualPurge(adminPurgeDays)}
+                  disabled={isPurgingDb}
+                  style={{
+                    padding: '0.45rem 0.9rem',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: isPurgingDb ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {isPurgingDb ? 'Rensar...' : 'Kör rensning'}
+                </button>
+              </div>
+            </div>
+
+            {/* Åtgärd 3: Optimera databasfilen (VACUUM) */}
+            <div style={{
+              padding: '1.1rem',
+              backgroundColor: 'var(--bg-app)',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem'
+            }}>
+              <div>
+                <strong style={{ color: 'var(--text-main)', fontSize: '0.95rem' }}>Optimera databas (VACUUM)</strong>
+                <p style={{ margin: '0.2rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                  Defragmenterar och krymper SQLite-databasfilen på hårddisken efter att artiklar har raderats.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleVacuumDatabase}
+                disabled={isVacuuming}
+                style={{
+                  padding: '0.45rem 0.9rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: isVacuuming ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}
+              >
+                <HardDrive size={15} style={{ color: '#8b5cf6' }} />
+                {isVacuuming ? 'Optimerar...' : 'Kör VACUUM'}
+              </button>
+            </div>
+          </div>
+
+          {/* Sektion 3: Global AI- och systemkonfiguration */}
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Server size={20} style={{ color: 'var(--primary)' }} />
+              <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem' }}>
+                Global AI-modell och inferensserver
+              </h3>
+            </div>
+
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+              Konfigurera den gemensamma AI-motorn. Ändringar här slår igenom globalt för alla artiklar och sammanfattningar.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+              {/* Global AI-modell */}
+              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                  Aktiv AI-modell (Systemstandard)
+                </div>
+                {aiConfig.available_models && aiConfig.available_models.length > 0 ? (
+                  <select
+                    value={aiConfig.lm_studio_model || ''}
+                    onChange={(e) => handleUpdateSystemModel(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-main)',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '0.88rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="">Standard (Automatiskt)</option>
+                    {aiConfig.available_models.map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {aiConfig.ai_model || aiConfig.lm_studio_model || 'Standardmodell'}
+                  </div>
+                )}
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                  {aiConfig.available_models?.length 
+                    ? `${aiConfig.available_models.length} modeller identifierade på inferensservern` 
+                    : 'Inga modeller rapporterade'}
+                </div>
+              </div>
+
+              {/* Skyddsgräns artikelålder */}
+              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                  Maximal artikelålder för AI-analys
+                </div>
+                <select
+                  value={aiConfig.max_article_age_hours || 24}
+                  onChange={(e) => handleUpdateMaxArticleAgeHours(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    borderRadius: '6px',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '0.88rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value={6}>6 timmar</option>
+                  <option value={12}>12 timmar</option>
+                  <option value={24}>24 timmar (1 dygn)</option>
+                  <option value={48}>48 timmar (2 dygn)</option>
+                  <option value={72}>72 timmar (3 dygn)</option>
+                  <option value={168}>7 dagar (1 vecka)</option>
+                </select>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                  Äldre artiklar markeras utan att belasta AI-servern med analys
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Modal för Tömning av databasen */}
+          {showClearModal && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: '1rem'
+            }}>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                style={{
+                  backgroundColor: 'var(--bg-card)',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  maxWidth: '460px',
+                  width: '100%',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#ef4444' }}>
+                  <AlertTriangle size={24} />
+                  <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem' }}>
+                    Bekräfta tömning av databasen
+                  </h3>
+                </div>
+
+                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+                  {clearMode === 'all'
+                    ? 'Är du säker på att du vill radera ALLA artiklar i databasen? Detta rensar även låsta artiklar och vektorindex permanent.'
+                    : 'Är du säker på att du vill tömma alla olåsta artiklar från databasen? Bokmärkta/låsta artiklar kommer att bevaras.'}
+                </p>
+
+                <div style={{
+                  padding: '0.75rem',
+                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  fontSize: '0.82rem',
+                  color: '#ef4444',
+                  lineHeight: 1.4
+                }}>
+                  Denna åtgärd kan inte ångras. Nya artiklar kommer att hämtas in automatiskt vid nästa schemalagda flödesuppdatering.
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowClearModal(false)}
+                    disabled={isClearingArticles}
+                    style={{
+                      padding: '0.55rem 1rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.88rem',
+                      fontWeight: 500,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Avbryt
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleClearArticles(clearMode)}
+                    disabled={isClearingArticles}
+                    style={{
+                      padding: '0.55rem 1.25rem',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      fontSize: '0.88rem',
+                      fontWeight: 600,
+                      cursor: isClearingArticles ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {isClearingArticles ? 'Tömmer...' : 'Bekräfta och töm nu'}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+        </motion.div>
+      )}
     </div>
   );
 };
 
 export default Settings;
+
