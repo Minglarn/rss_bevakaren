@@ -32,7 +32,7 @@ services:
       
       # Lokal AI via Ollama, LM Studio eller valfri OpenAI-kompatibel motor
       - AI_URL=http://192.168.1.50:11434/v1/chat/completions # :11434 för Ollama, :1234 för LM Studio
-      - AI_MODEL=gemma2:9b            # Krävs för Ollama, valfritt för LM Studio
+      - AI_MODEL=google/gemma-4-12b-qat # Rekommenderad modell för både Ollama och LM Studio
       - AI_TIMEOUT=120
       - AI_MAX_ARTICLE_AGE_HOURS=24
       
