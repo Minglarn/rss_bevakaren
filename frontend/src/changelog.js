@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.21.08',
+    date: '2026-09-21',
+    title: 'Korrigering av inställning för max ordgräns i korta AI-sammanfattningar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Beständighet för gränsen för korta sammanfattningar',
+        description: 'Åtgärdat problem där reglaget för max antal ord och meningar i korta notiser återställdes till standardvärdet (20 ord) när övriga AI-inställningar sparades eller uppdaterades.'
+      },
+      {
+        type: 'improvement',
+        title: 'Mjukare reglage och direkta snabbval',
+        description: 'Skjutreglaget för antal ord har frikopplats från blockerande nätverksanrop under dragning, och snabbknappar för 10 ord, 20 ord och 45 ord har lagts till för omedelbara val.'
+      }
+    ]
+  },
+  {
     version: '2026.09.21.07',
     date: '2026-09-21',
     title: 'Ollama driftoptimering och minskat loggbrus vid AI-inferens',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

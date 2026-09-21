@@ -170,8 +170,8 @@ class AIConfigUpdate(BaseModel):
     max_article_age_hours: Optional[int] = None
     notify_ai_offline: Optional[bool] = None
     push_summary_type: Optional[str] = None
-    short_summary_max_words: Optional[int] = 20
-    short_summary_max_sentences: Optional[int] = 1
+    short_summary_max_words: Optional[int] = None
+    short_summary_max_sentences: Optional[int] = None
 
 class AIConfigResponse(BaseModel):
     prio_rules: str = ""

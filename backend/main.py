@@ -120,6 +120,22 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN ignored_liked_tags TEXT DEFAULT '[]'"))
                     conn.commit()
                     print("[DB] Added ignored_liked_tags column to user_ai_settings", flush=True)
+                if "notify_ai_offline" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN notify_ai_offline INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added notify_ai_offline column to user_ai_settings", flush=True)
+                if "push_summary_type" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN push_summary_type TEXT DEFAULT 'short'"))
+                    conn.commit()
+                    print("[DB] Added push_summary_type column to user_ai_settings", flush=True)
+                if "short_summary_max_words" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN short_summary_max_words INTEGER DEFAULT 20"))
+                    conn.commit()
+                    print("[DB] Added short_summary_max_words column to user_ai_settings", flush=True)
+                if "short_summary_max_sentences" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN short_summary_max_sentences INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added short_summary_max_sentences column to user_ai_settings", flush=True)
                 conn.execute(text("UPDATE user_ai_settings SET prio_enabled = 0 WHERE prio_enabled IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET prio_notify_only = 0 WHERE prio_notify_only IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET push_include_title = 1 WHERE push_include_title IS NULL"))
@@ -129,6 +145,10 @@ def ensure_db_migrations():
                 conn.execute(text("UPDATE user_ai_settings SET auto_purge_days = 30 WHERE auto_purge_days IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET auto_scrape_article_text = 1 WHERE auto_scrape_article_text IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET max_article_age_hours = 24 WHERE max_article_age_hours IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET notify_ai_offline = 1 WHERE notify_ai_offline IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET push_summary_type = 'short' WHERE push_summary_type IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET short_summary_max_words = 20 WHERE short_summary_max_words IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET short_summary_max_sentences = 1 WHERE short_summary_max_sentences IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET ignored_disliked_tags = '[]' WHERE ignored_disliked_tags IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET ignored_liked_tags = '[]' WHERE ignored_liked_tags IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET custom_system_prompt = NULL WHERE custom_system_prompt IS NOT NULL AND custom_system_prompt NOT LIKE '%SAKLIGA NYHETER%'"))
@@ -379,29 +399,6 @@ def ensure_db_migrations():
                     print("[DB] Added updated_at column to push_subscriptions", flush=True)
         except Exception as e:
             print(f"[DB] Migration notice for push_subscriptions: {e}", flush=True)
-
-        try:
-            res_ai_set = conn.execute(text("PRAGMA table_info(user_ai_settings)"))
-            ai_cols = [row[1] for row in res_ai_set.fetchall()]
-            if ai_cols:
-                if "notify_ai_offline" not in ai_cols:
-                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN notify_ai_offline INTEGER DEFAULT 1"))
-                    conn.commit()
-                    print("[DB] Added notify_ai_offline column to user_ai_settings", flush=True)
-                if "push_summary_type" not in ai_cols:
-                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN push_summary_type TEXT DEFAULT 'short'"))
-                    conn.commit()
-                    print("[DB] Added push_summary_type column to user_ai_settings", flush=True)
-                if "short_summary_max_words" not in ai_cols:
-                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN short_summary_max_words INTEGER DEFAULT 20"))
-                    conn.commit()
-                    print("[DB] Added short_summary_max_words column to user_ai_settings", flush=True)
-                if "short_summary_max_sentences" not in ai_cols:
-                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN short_summary_max_sentences INTEGER DEFAULT 1"))
-                    conn.commit()
-                    print("[DB] Added short_summary_max_sentences column to user_ai_settings", flush=True)
-        except Exception as e:
-            print(f"[DB] Migration notice for user_ai_settings: {e}", flush=True)
 
 ensure_db_migrations()
 
