@@ -70,6 +70,80 @@ def get_icons_dir() -> str:
     os.makedirs(base, exist_ok=True)
     return base
 
+GENERIC_ICON_CDNS = [
+    "google.", "gstatic.com", "wordpress.com", "wp.com", "feedburner.com",
+    "ytimg.com", "cloudinary.com", "duckduckgo.com", "cloudfront.net", "fastly.net",
+    "akamaihd.net", "twimg.com"
+]
+
+def clean_feed_domain(d: str) -> str:
+    """Tar bort www och tekniska RSS-prefix såsom feeds, rss, feed etc."""
+    if not d:
+        return ""
+    d = d.lower().replace("www.", "")
+    import re
+    return re.sub(r"^(feeds|feed|rss|syndication|xml|podcasts|podcast)\.", "", d)
+
+def get_domain_stem(dom: str) -> str:
+    """Extraherar domänens kärnnamn (t.ex. arstechnica från feeds.arstechnica.com eller bbc från feeds.bbci.co.uk)."""
+    if not dom:
+        return ""
+    dom = clean_feed_domain(dom)
+    parts = dom.split(".")
+    if len(parts) >= 2:
+        if parts[-2] in ("co", "com", "org", "edu", "gov", "net") and len(parts) >= 3:
+            return parts[-3]
+        return parts[-2]
+    return parts[0]
+
+def is_matching_icon_domain(feed_url: str, icon_url: str) -> bool:
+    """Validerar att en ikon hör till samma flöde/organisation och inte är en felmatchad extern ikon."""
+    if not feed_url or not icon_url:
+        return True
+    from urllib.parse import urlparse
+    try:
+        f_netloc = urlparse(feed_url).netloc.lower().replace("www.", "")
+        i_netloc = urlparse(icon_url).netloc.lower().replace("www.", "")
+        if not f_netloc or not i_netloc:
+            return True
+        if any(cdn in i_netloc for cdn in GENERIC_ICON_CDNS):
+            return True
+        f_clean = clean_feed_domain(f_netloc)
+        i_clean = clean_feed_domain(i_netloc)
+        if f_clean in i_clean or i_clean in f_clean:
+            return True
+        f_stem = get_domain_stem(f_netloc)
+        if len(f_stem) >= 3 and f_stem in i_netloc:
+            return True
+        if "bbc" in f_netloc and "bbc" in i_netloc:
+            return True
+        return False
+    except Exception:
+        return True
+
+def get_feed_domain_candidates(target_url: str, website_link: Optional[str] = None) -> list[str]:
+    """Genererar prioriterade domännamn för favicon-sökning, strippat från RSS-underdomäner."""
+    from urllib.parse import urlparse
+    domains = []
+    for u in [target_url, website_link]:
+        if not u:
+            continue
+        try:
+            raw_d = urlparse(u).netloc.lower().replace("www.", "")
+            if raw_d:
+                if raw_d not in domains:
+                    domains.append(raw_d)
+                clean_d = clean_feed_domain(raw_d)
+                if clean_d and clean_d not in domains:
+                    domains.append(clean_d)
+                if "bbci.co.uk" in raw_d or "bbcimg.co.uk" in raw_d:
+                    for bbc_d in ["bbc.co.uk", "bbc.com"]:
+                        if bbc_d not in domains:
+                            domains.append(bbc_d)
+        except Exception:
+            pass
+    return domains
+
 def ensure_db_migrations():
     with database.engine.connect() as conn:
         try:
@@ -256,17 +330,13 @@ def ensure_db_migrations():
 
         # Rensa felaktiga korskopplade ikoner orsakade av tidigare polling-läckage
         try:
-            from urllib.parse import urlparse
             icons_dir = get_icons_dir()
             res_feeds = conn.execute(text("SELECT id, url, icon_url FROM feeds")).fetchall()
             mismatched_ids = []
             for fid, f_url, f_icon in res_feeds:
                 if f_icon and str(f_icon).strip() and f_url and str(f_url).strip():
                     try:
-                        d_feed = urlparse(str(f_url)).netloc.lower().replace("www.", "")
-                        d_icon = urlparse(str(f_icon)).netloc.lower().replace("www.", "")
-                        is_safe_cdn = any(cdn in d_icon for cdn in ["google", "wordpress", "wp.com", "feedburner", "ytimg", "cloudinary"])
-                        if d_feed and d_icon and not is_safe_cdn and (d_feed not in d_icon and d_icon not in d_feed):
+                        if not is_matching_icon_domain(str(f_url), str(f_icon)):
                             mismatched_ids.append(fid)
                     except Exception:
                         pass
@@ -1028,21 +1098,21 @@ def download_and_save_feed_icon_sync(feed: Optional[models.Feed], link: Optional
     candidates = []
     # 1. Befintlig sparad extern icon_url om den är giltig http/https och matchar flödets domän
     if getattr(feed, "icon_url", None) and feed.icon_url.strip().startswith(("http://", "https://")):
-        icon_domain = ""
-        try:
-            icon_domain = urlparse(feed.icon_url.strip()).netloc.lower().replace("www.", "")
-        except Exception:
-            pass
-        is_safe_cdn = any(cdn in icon_domain for cdn in ["google", "wordpress", "wp.com", "feedburner", "ytimg", "cloudinary"])
-        if not domain or not icon_domain or is_safe_cdn or domain in icon_domain or icon_domain in domain:
-            candidates.append(feed.icon_url.strip())
+        raw_icon = feed.icon_url.strip()
+        if is_matching_icon_domain(target_url, raw_icon):
+            candidates.append(raw_icon)
         else:
+            try:
+                icon_domain = urlparse(raw_icon).netloc.lower().replace("www.", "")
+            except Exception:
+                icon_domain = ""
             print(f"[ICON: system] Ignorerade felmatchad sparad ikon för #{feed.id} ({feed.title or domain}): {icon_domain} != {domain}", flush=True)
     
-    # 2. Google Favicon Service (128x128 PNG) och DuckDuckGo
-    if domain:
-        candidates.append(f"https://www.google.com/s2/favicons?domain={domain}&sz=128")
-        candidates.append(f"https://icons.duckduckgo.com/ip3/{domain}.ico")
+    # 2. Google Favicon Service (128x128 PNG) och DuckDuckGo för flödesdomän och rensad huvuddomän
+    domain_candidates = get_feed_domain_candidates(target_url, link)
+    for d in domain_candidates:
+        candidates.append(f"https://www.google.com/s2/favicons?domain={d}&sz=128")
+        candidates.append(f"https://icons.duckduckgo.com/ip3/{d}.ico")
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -1141,7 +1211,19 @@ def refresh_all_feed_icons(
     refreshed = 0
     now_ts = int(time.time())
     for feed in feeds:
-        feed.icon_url = ""
+        if feed.icon_url and not is_matching_icon_domain(feed.url or "", feed.icon_url):
+            feed.icon_url = ""
+        
+        if (not feed.icon_url or not feed.icon_url.strip()) and feed.url:
+            try:
+                import feedparser
+                parsed = feedparser.parse(feed.url)
+                extracted = rss_parser.extract_feed_icon(parsed, feed.url)
+                if extracted and not extracted.startswith("/default-feed-icon") and is_matching_icon_domain(feed.url, extracted):
+                    feed.icon_url = extracted
+            except Exception:
+                pass
+
         feed.last_polled = now_ts
         icon_path = os.path.join(icons_dir, f"feed_{feed.id}.png")
         if os.path.exists(icon_path):
@@ -1397,17 +1479,9 @@ async def polling_loop():
                     
                     if items and (not feed.icon_url or not feed.icon_url.strip()):
                         first_icon = items[0].get("feed_icon")
-                        if first_icon:
-                            from urllib.parse import urlparse
-                            try:
-                                f_dom = urlparse(feed.url or "").netloc.lower().replace("www.", "")
-                                i_dom = urlparse(first_icon).netloc.lower().replace("www.", "")
-                                is_safe_cdn = any(cdn in i_dom for cdn in ["google", "wordpress", "wp.com", "feedburner", "ytimg", "cloudinary"])
-                                if not f_dom or is_safe_cdn or f_dom in i_dom or i_dom in f_dom:
-                                    feed.icon_url = first_icon
-                                    db.commit()
-                            except Exception:
-                                pass
+                        if first_icon and is_matching_icon_domain(feed.url or "", first_icon):
+                            feed.icon_url = first_icon
+                            db.commit()
                     
                     # Hämta användarens maxålder för artiklar (t.ex. 48h från AI_MAX_ARTICLE_AGE_HOURS)
                     user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == feed.user_id).first()

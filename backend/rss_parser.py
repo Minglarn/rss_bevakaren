@@ -26,10 +26,18 @@ def extract_feed_icon(parsed_feed, feed_url: str) -> str:
         except Exception:
             pass
 
-    # Fallback till domänens favicon
-    if not icon_url and feed_url:
+    # Fallback till domänens favicon med rensad huvuddomän
+    if not icon_url and (feed_url or (parsed_feed and hasattr(parsed_feed, 'feed'))):
         try:
-            domain = urlparse(feed_url).netloc
+            import re
+            site_url = ""
+            if parsed_feed and hasattr(parsed_feed, 'feed') and hasattr(parsed_feed.feed, 'get'):
+                site_url = parsed_feed.feed.get('link') or ""
+            target = site_url or feed_url
+            domain = urlparse(target).netloc.lower().replace("www.", "")
+            domain = re.sub(r'^(feeds|feed|rss|syndication|xml|podcasts|podcast)\.', '', domain)
+            if domain in ("bbci.co.uk", "bbcimg.co.uk"):
+                domain = "bbc.co.uk"
             if domain:
                 icon_url = f"https://icons.duckduckgo.com/ip3/{domain}.ico"
         except Exception:

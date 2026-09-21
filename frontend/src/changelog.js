@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.21.09',
+    date: '2026-09-21',
+    title: 'Förbättrad flödesikonavkänning och stöd för RSS-underdomäner och medie-CDN',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Korrekt hantering av tekniska underdomäner',
+        description: 'Favicon-tjänster anropas nu mot sajtens huvuddomän när flödeslänkar använder tekniska underdomäner som feeds.*, vilket eliminerar 404-fel för källor som Ars Technica och BBC News.'
+      },
+      {
+        type: 'fix',
+        title: 'Smartare mediadomän- och CDN-validering',
+        description: 'Säkerhetskontrollen för sparade flödesikoner godkänner nu officiella mediadomäner och bildnätverk som bbcimg.co.uk utan att felaktigt markera dem som felmatchade.'
+      }
+    ]
+  },
+  {
     version: '2026.09.21.08',
     date: '2026-09-21',
     title: 'Korrigering av inställning för max ordgräns i korta AI-sammanfattningar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
