@@ -1,9 +1,43 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.21.03',
+    date: '2026-09-21',
+    title: 'Intelligent konversation i Nyhetschatten och transparent AI-loggning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Intelligent avsiktsigenkänning i Nyhetschatten',
+        description: 'Enkla hälsningar, presentationer och artighetsfraser svaras nu på naturligt och pedagogiskt utan att dumpa in dussintals irrelevanta artikelkällor. Källor visas endast vid faktiska nyhetsfrågor.'
+      },
+      {
+        type: 'feature',
+        title: 'Transparent loggning för AI-modeller och felkoder',
+        description: 'Utförlig statusloggning vid uppstart och anrop för att omedelbart synliggöra vilka modeller som är tillgängliga, eventuella felkoder (såsom saknade modeller i Ollama eller anslutningsproblem) samt inferenstider.'
+      },
+      {
+        type: 'documentation',
+        title: 'Enhetlig modellrekommendation: google/gemma-4-12b-qat',
+        description: 'Standardiserat dokumentation och startkonfiguration så att google/gemma-4-12b-qat rekommenderas som primär modell för både Ollama och LM Studio.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.21.02',
+    date: '2026-09-21',
+    title: 'Dokumentation för samtidig text- och embeddingkörning i Ollama',
+    highlights: [
+      {
+        type: 'documentation',
+        title: 'Multi-modellstöd för Ollama',
+        description: 'Tydliggjort hur Ollama kan köra en generativ modell (t.ex. Gemma 2) och en text embedding-modell (t.ex. nomic-embed-text) parallellt i VRAM, minneskrav samt hur RSS-Bevakaren dirigerar förfrågningarna.'
+      }
+    ]
+  },
+  {
     version: '2026.09.21.01',
     date: '2026-09-21',
     title: 'Standardiserade AI-variabler och Ollama-dokumentation',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

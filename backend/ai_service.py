@@ -190,7 +190,7 @@ def get_native_chat_endpoint() -> str:
     return "http://localhost:1234/api/v1/chat"
 
 def get_text_embeddings(texts: List[str], is_query: bool = False, model: Optional[str] = None) -> Optional[List[List[float]]]:
-    """Genererar embeddings via LM Studio med Nomic prompt-prefix."""
+    """Genererar embeddings via AI-servern med Nomic prompt-prefix."""
     if not texts:
         return []
     
@@ -214,9 +214,13 @@ def get_text_embeddings(texts: List[str], is_query: bool = False, model: Optiona
             items.sort(key=lambda x: x.get("index", 0))
             return [item["embedding"] for item in items if "embedding" in item]
         else:
-            print(f"[AI Embeddings] LM Studio HTTP {res.status_code}: {res.text[:150]}", flush=True)
+            print(f"[AI Embeddings Fel] Servern på {endpoint} svarade med HTTP {res.status_code} för modell '{model_name}': {res.text[:250]}", flush=True)
+    except requests.exceptions.ConnectTimeout:
+        print(f"[AI Embeddings Fel] Timeout vid anslutning till {endpoint} för modell '{model_name}'.", flush=True)
+    except requests.exceptions.ConnectionError:
+        print(f"[AI Embeddings Fel] Kunde inte ansluta till {endpoint} (servern är onåbar).", flush=True)
     except Exception as e:
-        print(f"[AI Embeddings] Fel vid anrop till {endpoint}: {e}", flush=True)
+        print(f"[AI Embeddings Fel] Fel vid anrop till {endpoint} för modell '{model_name}': {e}", flush=True)
     
     return None
 
@@ -321,33 +325,41 @@ _models_cache: Dict[str, Any] = {"models": [], "ts": 0.0}
 HEALTH_CACHE_TTL = 15.0  # sekunder
 MODELS_CACHE_TTL = 30.0  # sekunder
 
+_last_health_log_time: float = 0.0
+
 def check_lm_studio_health(force_refresh: bool = False) -> bool:
-    """Kontrollerar snabbt om LM Studio svarar med TTL-cachning för att undvika trådblockering vid offline eller hög last."""
-    global _health_cache
+    """Kontrollerar snabbt om AI-servern svarar med TTL-cachning för att undvika trådblockering vid offline eller hög last."""
+    global _health_cache, _last_health_log_time
     now = time.time()
     if not force_refresh and (now - _health_cache["ts"]) < HEALTH_CACHE_TTL:
         return _health_cache["status"]
 
+    endpoint = get_models_endpoint()
     try:
-        endpoint = get_models_endpoint()
         res = requests.get(endpoint, timeout=2.5)
         healthy = (res.status_code == 200)
         _health_cache = {"status": healthy, "ts": now}
+        if not healthy and (now - _last_health_log_time) > 60:
+            _last_health_log_time = now
+            print(f"[AI Server Varning] Hälsokontroll mot {endpoint} gav HTTP {res.status_code}: {res.text[:200]}", flush=True)
         return healthy
-    except Exception:
+    except Exception as e:
         _health_cache = {"status": False, "ts": now}
+        if (now - _last_health_log_time) > 60:
+            _last_health_log_time = now
+            print(f"[AI Server Varning] Hälsokontroll mot {endpoint} misslyckades: {e}", flush=True)
         return False
 
 def get_available_models(force_refresh: bool = False) -> List[str]:
-    """Hämtar alla tillgängliga chatt-/textmodeller från LM Studio med TTL-cachning."""
+    """Hämtar alla tillgängliga chatt-/textmodeller från AI-servern med TTL-cachning."""
     global _models_cache, _health_cache
     now = time.time()
     if not force_refresh and (now - _models_cache["ts"]) < MODELS_CACHE_TTL:
         return list(_models_cache["models"])
 
+    endpoint = get_models_endpoint()
     try:
-        endpoint = get_models_endpoint()
-        res = requests.get(endpoint, timeout=3.0)
+        res = requests.get(endpoint, timeout=3.5)
         if res.status_code == 200:
             data = res.json()
             models_list = data.get("data", [])
@@ -358,17 +370,24 @@ def get_available_models(force_refresh: bool = False) -> List[str]:
                     result.append(m_id)
             _models_cache = {"models": result, "ts": now}
             _health_cache = {"status": True, "ts": now}
+            print(f"[AI Server] Tillgängliga modeller på {endpoint} ({len(result)} st): {result}", flush=True)
             return result
+        else:
+            print(f"[AI Server Fel] Kunde inte hämta modeller från {endpoint} (HTTP {res.status_code}): {res.text[:250]}", flush=True)
+    except requests.exceptions.ConnectTimeout:
+        print(f"[AI Server Fel] Timeout vid anslutning till {endpoint} för att lista modeller.", flush=True)
+    except requests.exceptions.ConnectionError as ce:
+        print(f"[AI Server Fel] Kunde inte ansluta till AI-servern på {endpoint}: {ce}", flush=True)
     except Exception as e:
-        print(f"[AI Service] Kunde inte hämta modeller från LM Studio: {e}", flush=True)
+        print(f"[AI Server Fel] Fel vid hämtning av modeller från {endpoint}: {e}", flush=True)
 
     _models_cache["ts"] = now
     return list(_models_cache["models"]) if _models_cache["models"] else []
 
 def get_active_model() -> str:
-    """Hämtar konfigurerad modell eller läser in aktiv modell från LM Studio."""
-    if LM_STUDIO_MODEL and LM_STUDIO_MODEL.strip():
-        return LM_STUDIO_MODEL.strip()
+    """Hämtar konfigurerad modell eller läser in aktiv modell från AI-servern."""
+    if AI_MODEL and AI_MODEL.strip():
+        return AI_MODEL.strip()
     
     available = get_available_models()
     if available:
@@ -841,7 +860,9 @@ def analyze_article(
         dur = 0.0
         raw_message = ""
 
-        # 1. Försök först med nativ strömning för realtids-progress av GPU prompt-bearbetning
+        print(f"[AI Service] Skickar analys för '{title[:45]}...' till modell '{model}' på {AI_URL}...", flush=True)
+
+        # 1. Försök först med nativ strömning för realtids-progress av GPU prompt-bearbetning (LM Studio)
         native_url = get_native_chat_endpoint()
         native_payload = {
             "model": model,
@@ -889,10 +910,11 @@ def analyze_article(
                     raw_message = "".join(accumulated)
                     parsed = extract_json_from_text(raw_message)
                     dur = round(time.time() - t0, 2)
-        except Exception as e:
-            print(f"[AI Service] Nativ /api/v1/chat gav fel ({e}), testar standard OpenAI fallback...", flush=True)
+        except Exception:
+            # Nativ endpoint stöds främst av LM Studio; vid Ollama används standard OpenAI-endpointen nedan
+            pass
 
-        # 2. Fallback till standard OpenAI /v1/chat/completions om nativ endpoint misslyckades eller inte gav giltig JSON
+        # 2. Standard OpenAI /v1/chat/completions (används för Ollama eller som fallback för LM Studio)
         if not parsed:
             payload = {
                 "model": model,
@@ -908,23 +930,29 @@ def analyze_article(
                 response = requests.post(LM_STUDIO_URL, json=payload, headers=headers, timeout=LM_STUDIO_TIMEOUT)
                 dur = round(time.time() - t0, 2)
                 if response.status_code != 200:
-                    print(f"[AI Service] LM Studio HTTP {response.status_code} efter {dur}s: {response.text[:200]}", flush=True)
+                    print(f"[AI Service Fel] AI-servern på {LM_STUDIO_URL} svarade med HTTP {response.status_code} efter {dur}s för modell '{model}': {response.text[:300]}", flush=True)
                     return None
                     
                 data = response.json()
                 choices = data.get("choices", [])
                 if not choices:
-                    print(f"[AI Service] Inga val returnerades från LM Studio efter {dur}s: {data}", flush=True)
+                    print(f"[AI Service Fel] Inga svar returnerades från AI-servern efter {dur}s för modell '{model}': {data}", flush=True)
                     return None
                     
                 raw_message = choices[0].get("message", {}).get("content", "")
                 parsed = extract_json_from_text(raw_message)
+            except requests.exceptions.ConnectTimeout:
+                print(f"[AI Service Fel] Timeout vid anslutning till {LM_STUDIO_URL} för modell '{model}'.", flush=True)
+                return None
+            except requests.exceptions.ReadTimeout:
+                print(f"[AI Service Fel] Timeout ({LM_STUDIO_TIMEOUT}s) vid analys av '{title[:40]}' med modell '{model}'. Modellen kan hålla på att läsas in i VRAM eller vara överbelastad.", flush=True)
+                return None
             except Exception as fb_err:
-                print(f"[AI Service] Fallback-anrop gav fel efter {round(time.time() - t0, 2)}s: {fb_err}", flush=True)
+                print(f"[AI Service Fel] Anrop mot {LM_STUDIO_URL} för modell '{model}' gav fel efter {round(time.time() - t0, 2)}s: {fb_err}", flush=True)
                 return None
 
         if not parsed:
-            print(f"[AI Service] Kunde inte parsa JSON från svaret ({len(raw_message)} tecken): {raw_message[:500]}", flush=True)
+            print(f"[AI Service Fel] Kunde inte parsa giltig JSON från modell '{model}' ({len(raw_message)} tecken): {raw_message[:300]}", flush=True)
             return None
                 
         # Normalisera kategori och matcha mot användarens definierade kategorier
@@ -996,6 +1024,9 @@ def analyze_article(
             max_sentences=short_summary_max_sentences
         )
 
+        cb_info = f"Ja ({clickbait_reason})" if is_clickbait else "Nej"
+        print(f"[AI Service] Analys klar för '{title[:40]}' med modell '{model}' på {dur}s (Kategori: {category}, Poäng: {prio_score}p, ClickBait: {cb_info})", flush=True)
+
         return {
             "category": category,
             "priority": priority,
@@ -1051,6 +1082,48 @@ def strip_emojis(text: str) -> str:
     )
     return emoji_pattern.sub("", text)
 
+def is_conversational_or_greeting(msg: str) -> bool:
+    """Avgör om användarens meddelande är en allmän hälsning, artighetsfras eller presentation utan specifik nyhetsfråga."""
+    m = msg.strip().lower()
+    # Rensa bort vanliga skiljetecken och citationstecken
+    m_clean = re.sub(r'[!?.,:;\"\'\(\)\-–—]', ' ', m)
+    m_clean = ' '.join(m_clean.split())
+    
+    if not m_clean:
+        return True
+        
+    greetings = {
+        "hej", "hejsan", "hallå", "halla", "tjena", "tja", "morsning", "morrn", "tjenare", "läget",
+        "god morgon", "god dag", "god middag", "god kväll", "godkväll",
+        "trevligt att råkas", "trevligt att träffas",
+        "hi", "hello", "hey",
+        "tack", "tack så mycket", "tackar", "tusen tack", "många tack", "tack ska du ha",
+        "vem är du", "vad är du", "vad kan du göra", "vad kan du hjälpa till med",
+        "vad gör du", "hur mår du", "hur mår du idag", "hur fungerar du", "hjälp",
+        "vad heter du", "presentera dig", "berätta om dig själv", "vad är detta",
+        "test", "testar", "okej", "ok", "bra", "toppen", "fint", "perfekt"
+    }
+    if m_clean in greetings:
+        return True
+        
+    greeting_prefixes = [
+        "hej på dig", "hallå där", "tjena mors", "god morgon på dig", "vem skapade dig", "vem har byggt dig"
+    ]
+    if any(m_clean == p or m_clean.startswith(f"{p} ") for p in greeting_prefixes):
+        return True
+        
+    return False
+
+def is_broad_news_query(msg_lower: str) -> bool:
+    """Avgör om frågan är en allmän överblick eller sammanfattning över nyhetsläget."""
+    broad_indicators = [
+        "vad har hänt", "vad händer", "senaste nytt", "senaste nyheterna", "sammanfatta nyheterna",
+        "sammanfatta läget", "dagens nyheter", "nyhetsöversikt", "översikt", "viktigaste händelserna",
+        "toppnyheter", "huvudnyheter", "alla händelser", "hur många händelser", "hur många artiklar",
+        "vad rapporteras", "dagens viktigaste", "vad är nytt"
+    ]
+    return any(ind in msg_lower for ind in broad_indicators)
+
 def prepare_chat_context(
     user_id: int,
     message: str,
@@ -1058,7 +1131,8 @@ def prepare_chat_context(
     db: Any = None
 ) -> Dict[str, Any]:
     """
-    Förbereder kontext, källor och prompter för RAG-chatt via semantisk sökning i SQLite.
+    Förbereder kontext, källor och prompter för RAG-chatt.
+    Skiljer intelligent mellan enkla hälsningar/konversationer, övergripande nyhetsrapporter och specifika ämnessökningar.
     """
     from datetime import datetime, timedelta
     from sqlalchemy import or_, and_, desc
@@ -1068,7 +1142,47 @@ def prepare_chat_context(
     clean_msg = message.strip()
     msg_lower = clean_msg.lower()
 
-    # 1. Identifiera tidsintervall
+    # 1. Konversationskontroll (Hälsning, presentation eller tack)
+    if is_conversational_or_greeting(clean_msg):
+        system_prompt = (
+            "Du är en skarp, saklig och hjälpsam svenskspråkig nyhetsassistent för RSS-Bevakaren.\n"
+            "Användaren har skickat en allmän hälsning, presentation, tack eller konversationsfras.\n\n"
+            "Riktlinjer:\n"
+            "1. Svara ALLTID på god, vänlig och naturlig svenska.\n"
+            "2. Det är STRIKT FÖRBJUDET att använda emojis i hela svaret.\n"
+            "3. Hälsa artigt tillbaka och presentera dig kort som RSS-Bevakarens AI-assistent.\n"
+            "4. Förklara kort och pedagogiskt vad du kan hjälpa till med (t.ex. att söka och fördjupa dig i sparade nyhetsflöden, hitta artiklar om specifika orter eller händelser samt sammanfatta dagens nyhetsläge).\n"
+            "5. Räkna INTE upp några specifika nyhetshändelser, siffror eller artiklar i svaret eftersom användaren inte har ställt någon nyhetsfråga än.\n"
+            "6. OBLIGATORISKT - 4 FÖLJDKÖ: Avsluta ALLTID ditt svar med exakt 4 inspirerande och konkreta förslag på nyhetsfrågor som användaren kan ställa för att utforska sina flöden.\n"
+            "Formatera dessa 4 frågor allra sist i svaret inneslutna i taggarna <foljdfragor> på följande format:\n"
+            "<foljdfragor>\n"
+            "- Vad är de viktigaste nyheterna i Sverige och världen idag?\n"
+            "- Finns det några akuta blåljushändelser eller olyckor rapporterade?\n"
+            "- Sammanfatta de senaste ekonominyheterna och börsläget.\n"
+            "- Vilka är de mest omtalade teknik- och vetenskapsnyheterna just nu?\n"
+            "</foljdfragor>"
+        )
+
+        messages = [{"role": "system", "content": system_prompt}]
+        for h in history[-6:]:
+            r = h.get("role", "")
+            c = h.get("content", "")
+            if r in ("user", "assistant") and c:
+                messages.append({"role": r, "content": c})
+        messages.append({"role": "user", "content": clean_msg})
+
+        return {
+            "sources": [],
+            "total_period_count": 0,
+            "system_prompt": system_prompt,
+            "user_query_content": clean_msg,
+            "messages": messages,
+            "clean_msg": clean_msg,
+            "context_str": "",
+            "is_conversational": True
+        }
+
+    # 2. Identifiera tidsintervall för nyhetsfråga
     now = datetime.now()
     start_ts = None
     end_ts = None
@@ -1086,7 +1200,7 @@ def prepare_chat_context(
     else:
         start_ts = int((now - timedelta(hours=72)).timestamp())
 
-    # 2. Identifiera sökord (filtrera bort vanliga stoppord)
+    # 3. Identifiera sökord (filtrera bort stoppord)
     stopwords = {
         "hur", "många", "vad", "vilka", "vem", "när", "var", "varför", "är", "var", 
         "skedde", "hände", "det", "den", "som", "att", "och", "eller", "i", "på", 
@@ -1097,13 +1211,13 @@ def prepare_chat_context(
     raw_words = re.findall(r'\b[a-zåäöA-ZÅÄÖ0-9_-]+\b', msg_lower)
     keywords = [w for w in raw_words if len(w) > 2 and w not in stopwords]
 
-    # 3. Databasfråga mot användarens flöden med semantisk Hybrid RAG
     articles = []
     total_period_count = 0
+    broad_query = is_broad_news_query(msg_lower)
+
     if db:
         base_query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == user_id)
         
-        # Applicera tidsintervall
         time_filters = []
         if start_ts:
             time_filters.append(or_(
@@ -1123,54 +1237,63 @@ def prepare_chat_context(
         except Exception:
             total_period_count = 0
 
-        # Försök semantisk vektorsökning via LM Studio Nomic Embeddings
-        q_embs = get_text_embeddings([clean_msg], is_query=True)
-        semantic_success = False
+        if broad_query:
+            # Övergripande sammanfattningsfråga: Välj de viktigaste och nyaste artiklarna (max 25 st)
+            articles = base_query.order_by(
+                desc(models.Article.prio_score),
+                desc(models.Article.published_ts)
+            ).limit(25).all()
+        else:
+            # Specifik sökning: Semantisk ranking + nyckelordsfilter
+            q_embs = get_text_embeddings([clean_msg], is_query=True)
+            semantic_success = False
 
-        if q_embs and len(q_embs) > 0 and len(q_embs[0]) > 0:
-            try:
-                q_vec = np.array(q_embs[0], dtype=np.float32)
-                q_norm = float(np.linalg.norm(q_vec))
+            if q_embs and len(q_embs) > 0 and len(q_embs[0]) > 0:
+                try:
+                    q_vec = np.array(q_embs[0], dtype=np.float32)
+                    q_norm = float(np.linalg.norm(q_vec))
 
-                # Hämta kandidatartiklar för tidsperioden (upp till 200 artiklar)
-                candidates = base_query.order_by(desc(models.Article.published_ts), desc(models.Article.received_ts)).limit(200).all()
+                    candidates = base_query.order_by(desc(models.Article.published_ts)).limit(150).all()
+                    if candidates:
+                        missing = [c for c in candidates[:15] if not c.embedding]
+                        if missing:
+                            batch_embed_articles(missing, db)
 
-                if candidates:
-                    missing = [c for c in candidates[:20] if not c.embedding]
-                    if missing:
-                        batch_embed_articles(missing, db)
+                        scored_articles = []
+                        for art in candidates:
+                            sim_score = 0.0
+                            if art.embedding and art.embedding.vector:
+                                try:
+                                    cand_vec = np.frombuffer(art.embedding.vector, dtype=np.float32)
+                                    cand_norm = float(np.linalg.norm(cand_vec))
+                                    if q_norm > 0 and cand_norm > 0:
+                                        sim_score = float(np.dot(q_vec, cand_vec) / (q_norm * cand_norm))
+                                except Exception:
+                                    pass
 
-                    scored_articles = []
-                    for art in candidates:
-                        sim_score = 0.40
-                        if art.embedding and art.embedding.vector:
-                            try:
-                                cand_vec = np.frombuffer(art.embedding.vector, dtype=np.float32)
-                                cand_norm = float(np.linalg.norm(cand_vec))
-                                if q_norm > 0 and cand_norm > 0:
-                                    sim_score = float(np.dot(q_vec, cand_vec) / (q_norm * cand_norm))
-                            except Exception:
-                                pass
+                            kw_bonus = 0.0
+                            if keywords:
+                                text_blob = f"{art.title or ''} {art.summary or ''} {art.ai_summary or ''} {art.category or ''}".lower()
+                                for kw in keywords[:5]:
+                                    if kw in text_blob:
+                                        kw_bonus += 0.12
 
-                        kw_bonus = 0.0
-                        if keywords:
-                            text_blob = f"{art.title or ''} {art.summary or ''} {art.ai_summary or ''} {art.category or ''}".lower()
-                            for kw in keywords[:5]:
-                                if kw in text_blob:
-                                    kw_bonus += 0.08
+                            prio_bonus = 0.03 if (art.priority == "high" or (art.prio_score or 0) >= 75) else 0.0
+                            total_score = sim_score + kw_bonus + prio_bonus
 
-                        prio_bonus = 0.04 if (art.priority == "high" or (art.prio_score or 0) >= 75) else 0.0
-                        total_score = sim_score + kw_bonus + prio_bonus
-                        scored_articles.append((total_score, art))
+                            # Kvalitetsspärr: Endast artiklar med faktisk relevans (eller direkt sökordsmatch)
+                            if total_score >= 0.50 or kw_bonus > 0:
+                                scored_articles.append((total_score, art))
 
-                    scored_articles.sort(key=lambda x: x[0], reverse=True)
-                    articles = [item[1] for item in scored_articles[:60]]
-                    semantic_success = True
-            except Exception as e:
-                print(f"[AI Chat] Fel vid semantisk ranking: {e}", flush=True)
+                        if scored_articles:
+                            scored_articles.sort(key=lambda x: x[0], reverse=True)
+                            articles = [item[1] for item in scored_articles[:25]]
+                            semantic_success = True
+                except Exception as e:
+                    print(f"[AI Chat] Fel vid semantisk ranking: {e}", flush=True)
 
-        if not semantic_success:
-            if keywords:
+            if not semantic_success and keywords:
+                # Nyckelordsmatchning mot sparade artiklar
                 kw_conditions = []
                 for kw in keywords[:5]:
                     kw_conditions.extend([
@@ -1180,27 +1303,16 @@ def prepare_chat_context(
                         models.Article.tags.ilike(f"%{kw}%"),
                         models.Article.category.ilike(f"%{kw}%")
                     ])
-                kw_query = base_query.filter(or_(*kw_conditions)).order_by(desc(models.Article.published_ts), desc(models.Article.received_ts))
-                articles = kw_query.limit(80).all()
+                articles = base_query.filter(or_(*kw_conditions)).order_by(
+                    desc(models.Article.published_ts),
+                    desc(models.Article.received_ts)
+                ).limit(25).all()
 
-            if len(articles) < 20:
-                existing_ids = {a.id for a in articles}
-                fallback_query = db.query(models.Article).join(models.Feed).filter(models.Feed.user_id == user_id)
-                if time_filters:
-                    fallback_query = fallback_query.filter(and_(*time_filters))
-                fallback_articles = fallback_query.order_by(desc(models.Article.published_ts), desc(models.Article.received_ts)).limit(80).all()
-                for fa in fallback_articles:
-                    if fa.id not in existing_ids:
-                        articles.append(fa)
-                        existing_ids.add(fa.id)
-                    if len(articles) >= 80:
-                        break
+        articles.sort(key=lambda x: (x.published_ts or 0, x.received_ts or 0), reverse=True)
 
-            articles.sort(key=lambda x: (x.published_ts or 0, x.received_ts or 0), reverse=True)
-
-    # 4. Skapa käll-lista för frontend (upp till 60 artiklar)
+    # 4. Bygg käll-lista (max 25 relevanta artiklar)
     sources = []
-    for art in articles[:60]:
+    for art in articles[:25]:
         sources.append({
             "id": art.id,
             "title": art.title or "Utan rubrik",
@@ -1214,39 +1326,40 @@ def prepare_chat_context(
 
     # 5. Bygg kontext för modellen
     context_lines = []
-    if total_period_count > 0:
-        context_lines.append(
-            f"[Systemstatistik: Det finns totalt {total_period_count} händelser i databasen för det valda tidsintervallet. "
-            f"Nedan listas de {len(sources)} mest relevanta händelserna för användarens fråga sorterade efter semantisk relevans.]\n"
-        )
+    if articles:
+        if total_period_count > 0 and broad_query:
+            context_lines.append(
+                f"[Systemstatistik: Det finns totalt {total_period_count} sparade händelser i databasen för det valda tidsintervallet. "
+                f"Nedan listas de {len(sources)} mest relevanta händelserna.]\n"
+            )
 
-    for i, art in enumerate(articles[:60], 1):
-        source_title = art.feed.title if art.feed else "RSS"
-        pub_date = art.published or "Okänt datum"
-        cat = art.category or "Övrigt"
-        summary_text = (art.ai_summary or art.summary or "").strip()
-        context_lines.append(
-            f"[Artikel {i}] (ID: {art.id})\n"
-            f"Källa: {source_title} | Datum: {pub_date} | Kategori: {cat}\n"
-            f"Rubrik: {art.title}\n"
-            f"Sammanfattning: {summary_text[:280]}\n"
-        )
-
-    context_str = "\n".join(context_lines) if context_lines else "Inga sparade artiklar matchade det angivna tidsintervallet."
+        for i, art in enumerate(articles[:25], 1):
+            source_title = art.feed.title if art.feed else "RSS"
+            pub_date = art.published or "Okänt datum"
+            cat = art.category or "Övrigt"
+            summary_text = (art.ai_summary or art.summary or "").strip()
+            context_lines.append(
+                f"[Artikel {i}] (ID: {art.id})\n"
+                f"Källa: {source_title} | Datum: {pub_date} | Kategori: {cat}\n"
+                f"Rubrik: {art.title}\n"
+                f"Sammanfattning: {summary_text[:280]}\n"
+            )
+        context_str = "\n".join(context_lines)
+    else:
+        context_str = f"Inga sparade artiklar matchade sökningen '{clean_msg}' under det valda tidsintervallet."
 
     system_prompt = (
         "Du är en skarp, saklig och hjälpsam svenskspråkig nyhetsassistent för RSS-Bevakaren.\n"
-        "Din uppgift är att svara på användarens frågor uteslutande baserat på artiklarna och systemstatistiken i kontexten.\n\n"
+        "Din uppgift är att svara på användarens frågor baserat på artiklarna och systemstatistiken i kontexten.\n\n"
         "Riktlinjer:\n"
         "1. Svara ALLTID på god, tydlig och naturlig svenska.\n"
         "2. Det är STRIKT FÖRBJUDET att använda emojis i svaret.\n"
-        "3. Basera dina påståenden och siffror på de bifogade artiklarna. Hitta inte på information som saknas.\n"
-        f"4. Om användaren frågar om totalt antal händelser för tidsperioden (t.ex. 'vad har hänt idag', 'hur många olyckor', 'alla händelser'), "
-        f"ange alltid den exakta totalsiffran från systemstatistiken ({total_period_count} st sparade händelser i flödena för tidsintervallet) "
-        "och sammanfatta sedan de mest relevanta händelserna med ort/plats och källa.\n"
-        "5. Om artiklarna inte innehåller svar på frågan, förklara sakligt och artigt att informationen inte finns bland de sparade artiklarna.\n"
+        "3. Basera dina påståenden och fakta på de bifogade artiklarna. Hitta inte på information som saknas.\n"
+        "4. Om användaren frågar om totalt antal händelser eller en övergripande rapport, ange den exakta siffran om sådan finns i statistiken "
+        "och sammanfatta de viktigaste händelserna med ort/plats och källa.\n"
+        "5. Om inga relevanta artiklar finns i kontexten för det sökta ämnet, förklara sakligt och artigt att informationen inte finns bland de sparade artiklarna.\n"
         "6. Använd god styckeindelning och punktlistor vid behov för maximal läsbarhet.\n"
-        "7. OBLIGATORISKT - 4 FÖLJDKÖ: Avsluta ALLTID ditt svar med exakt 4 skarpa, naturliga och relevanta följdfrågor baserade på de specifika händelser och detaljer du just redovisat, så att användaren enkelt kan fördjupa sig.\n"
+        "7. OBLIGATORISKT - 4 FÖLJDKÖ: Avsluta ALLTID ditt svar med exakt 4 skarpa, naturliga och relevanta följdfrågor baserade på de specifika händelser och detaljer du redovisat (eller förslag på sökningar om inga träffar fanns).\n"
         "Formatera dessa 4 frågor allra sist i svaret inneslutna i taggarna <foljdfragor> på följande format:\n"
         "<foljdfragor>\n"
         "- [Konkret följdfråga 1]\n"
@@ -1261,7 +1374,6 @@ def prepare_chat_context(
         f"Användarens fråga: {clean_msg}"
     )
 
-    # 6. Sätt ihop meddelandehistorik
     messages = [{"role": "system", "content": system_prompt}]
     for h in history[-6:]:
         r = h.get("role", "")
@@ -1277,7 +1389,8 @@ def prepare_chat_context(
         "user_query_content": user_query_content,
         "messages": messages,
         "clean_msg": clean_msg,
-        "context_str": context_str
+        "context_str": context_str,
+        "is_conversational": False
     }
 
 def clean_ai_response_and_extract_followups(raw_reply: str, sources: List[Dict[str, Any]], model: str) -> Dict[str, Any]:
@@ -1301,13 +1414,27 @@ def clean_ai_response_and_extract_followups(raw_reply: str, sources: List[Dict[s
 
     follow_ups = follow_ups[:4]
 
-    if len(follow_ups) < 2 and sources:
+    # Om följdfrågor saknas eller är färre än 4, fyll på med artikelbaserade eller allmänna frågor
+    if len(follow_ups) < 4 and sources:
         for s in sources[:4]:
             t = s.get("title", "")
             if t and len(t) > 5:
                 q_cand = f"Vad mer rapporteras om {t.lower()}?"
                 if q_cand not in follow_ups:
                     follow_ups.append(q_cand)
+            if len(follow_ups) >= 4:
+                break
+
+    if len(follow_ups) < 4:
+        default_followups = [
+            "Vad är de viktigaste nyheterna i Sverige och världen idag?",
+            "Finns det några akuta blåljushändelser eller olyckor rapporterade?",
+            "Sammanfatta de senaste ekonominyheterna och börsläget.",
+            "Vilka är de mest omtalade teknik- och vetenskapsnyheterna just nu?"
+        ]
+        for df in default_followups:
+            if df not in follow_ups:
+                follow_ups.append(df)
             if len(follow_ups) >= 4:
                 break
 
@@ -1332,8 +1459,12 @@ def chat_with_news(
     ctx = prepare_chat_context(user_id=user_id, message=message, history=history, db=db)
     sources = ctx["sources"]
     messages = ctx["messages"]
+    clean_msg = ctx["clean_msg"]
 
-    model = model_override or LM_STUDIO_MODEL or ""
+    model = model_override or AI_MODEL or ""
+    q_type = "Hälsning/Konversation" if ctx.get("is_conversational") else f"Nyhetssökning ({len(sources)} källor)"
+    print(f"[AI Chat] Mottog chattfråga: '{clean_msg[:45]}...' ({q_type}) till modell '{model}' på {AI_URL}...", flush=True)
+
     payload = {
         "model": model,
         "temperature": 0.3,
@@ -1343,12 +1474,12 @@ def chat_with_news(
 
     t0 = time.time()
     try:
-        response = requests.post(LM_STUDIO_URL, json=payload, headers={"Content-Type": "application/json"}, timeout=LM_STUDIO_TIMEOUT)
+        response = requests.post(AI_URL, json=payload, headers={"Content-Type": "application/json"}, timeout=AI_TIMEOUT)
         dur = round(time.time() - t0, 2)
         if response.status_code != 200:
-            print(f"[AI Chat] LM Studio HTTP {response.status_code} efter {dur}s: {response.text[:200]}", flush=True)
+            print(f"[AI Chat Fel] AI-servern på {AI_URL} svarade med HTTP {response.status_code} efter {dur}s för modell '{model}': {response.text[:300]}", flush=True)
             return {
-                "reply": "Kunde inte generera ett svar från den lokala AI-modellen (LM Studio svarade med felkod). Kontrollera att LM Studio är igång.",
+                "reply": f"Kunde inte generera ett svar från AI-servern (svarade med HTTP {response.status_code}). Kontrollera att servern och modellen '{model}' är aktiva.",
                 "sources": sources,
                 "model": model or "Okänd",
                 "follow_ups": []
@@ -1418,11 +1549,15 @@ def stream_chat_with_news(
     messages = ctx["messages"]
     clean_msg = ctx["clean_msg"]
     context_str = ctx["context_str"]
+    is_conv = ctx.get("is_conversational", False)
 
     # 1. Skicka direkt källorna och totalantalet händelser till frontend
     yield f"data: {json.dumps({'type': 'sources', 'sources': sources, 'total_count': total_period_count})}\n\n"
 
-    model = model_override or LM_STUDIO_MODEL or ""
+    model = model_override or AI_MODEL or ""
+    q_type = "Hälsning/Konversation" if is_conv else f"Nyhetssökning ({len(sources)} källor)"
+    print(f"[AI Chat] Strömmande chattfråga: '{clean_msg[:45]}...' ({q_type}) till modell '{model}' på {AI_URL}...", flush=True)
+
     native_url = get_native_chat_endpoint()
 
     # Formatera input för LM Studios nativa /api/v1/chat endpoint
@@ -1435,7 +1570,8 @@ def stream_chat_with_news(
             if r and c:
                 input_parts.append(f"- {r}: {c[:250]}")
         input_parts.append("")
-    input_parts.append(f"Artiklar från användarens flöden:\n{context_str}")
+    if not is_conv and context_str:
+        input_parts.append(f"Artiklar från användarens flöden:\n{context_str}")
     input_parts.append(f"Användarens fråga: {clean_msg}")
     full_input = "\n\n".join(input_parts)
 
@@ -1452,7 +1588,7 @@ def stream_chat_with_news(
     stream_successful = False
 
     try:
-        resp = requests.post(native_url, json=native_payload, stream=True, timeout=LM_STUDIO_TIMEOUT)
+        resp = requests.post(native_url, json=native_payload, stream=True, timeout=AI_TIMEOUT)
         if resp.status_code == 200:
             current_event = None
             for line in resp.iter_lines():
@@ -1486,10 +1622,11 @@ def stream_chat_with_news(
                         pass
             if accumulated:
                 stream_successful = True
-    except Exception as e:
-        print(f"[AI Chat Stream] Nativa /api/v1/chat gav fel ({e}), testar standard OpenAI /v1/chat/completions fallback...", flush=True)
+    except Exception:
+        # Vid Ollama stöds inte LM Studios nativa endpoint; faller vidare till standard OpenAI nedan
+        pass
 
-    # Fallback: Om inte nativ endpoint fungerade, använd OpenAI-kompatibla LM_STUDIO_URL
+    # Fallback: Om inte nativ endpoint fungerade, använd OpenAI-kompatibla AI_URL
     if not stream_successful or not accumulated:
         try:
             openai_payload = {
@@ -1501,7 +1638,7 @@ def stream_chat_with_news(
             }
             yield f"data: {json.dumps({'type': 'progress', 'percent': 100, 'stage': 'prompt'})}\n\n"
 
-            fb_resp = requests.post(LM_STUDIO_URL, json=openai_payload, stream=True, timeout=LM_STUDIO_TIMEOUT)
+            fb_resp = requests.post(AI_URL, json=openai_payload, stream=True, timeout=AI_TIMEOUT)
             if fb_resp.status_code == 200:
                 for line in fb_resp.iter_lines():
                     if not line:
@@ -1524,14 +1661,18 @@ def stream_chat_with_news(
                                     yield f"data: {json.dumps({'type': 'token', 'content': content})}\n\n"
                         except Exception:
                             pass
+            else:
+                print(f"[AI Chat Fel] AI-servern på {AI_URL} svarade med HTTP {fb_resp.status_code} för modell '{model}': {fb_resp.text[:300]}", flush=True)
+                yield f"data: {json.dumps({'type': 'error', 'message': f'AI-servern svarade med HTTP {fb_resp.status_code}. Kontrollera att modellen är aktiv.'})}\n\n"
+                return
         except requests.exceptions.ConnectTimeout:
             yield f"data: {json.dumps({'type': 'error', 'message': f'Kunde inte ansluta till AI-servern på {AI_URL}. Kontrollera att servern är igång.'})}\n\n"
             return
         except requests.exceptions.ReadTimeout:
-            yield f"data: {json.dumps({'type': 'error', 'message': f'AI-servern svarade inte inom tidsgränsen ({AI_TIMEOUT}s).'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': f'AI-servern svarade inte inom tidsgränsen ({AI_TIMEOUT}s). Modellen kan hålla på att läsas in i minnet.'})}\n\n"
             return
         except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'message': f'Ett fel uppstod: {e}'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Ett fel uppstod vid kommunikation med AI-servern: {e}'})}\n\n"
             return
 
     raw_reply = "".join(accumulated)

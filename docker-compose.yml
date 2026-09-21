@@ -19,7 +19,7 @@ services:
       # Lokal AI via Ollama, LM Studio eller valfri OpenAI-kompatibel motor
       # För Ollama: http://<IP>:11434/v1/chat/completions  |  För LM Studio: http://<IP>:1234/v1/chat/completions
       - AI_URL=http://192.168.1.50:11434/v1/chat/completions
-      - AI_MODEL=gemma2:9b # Krävs för Ollama (t.ex. gemma2:9b, llama3.2), valfritt för LM Studio (lämna tomt för aktiv modell)
+      - AI_MODEL=google/gemma-4-12b-qat # Rekommenderad modell för både Ollama och LM Studio (eller lämna tomt för aktiv modell i LM Studio)
       - AI_TIMEOUT=120 # Timeout i sekunder (rekommenderat 120s för lokala modeller)
       - AI_MAX_ARTICLE_AGE_HOURS=24 # Bearbeta endast artiklar från de senaste 24 timmarna (hoppar över gammal historik)
       # MQTT-stöd (valfritt, avaktiverat som standard)

@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.21.01-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.21.03-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -96,8 +96,8 @@ Ollama har inbyggt stöd för OpenAIs API på port `11434`.
 
 1. **Hämta modeller i Ollama:**
    ```bash
-   # Rekommenderad modell för svensk nyhetsanalys och sammanfattning
-   ollama pull gemma2:9b
+   # Rekommenderad modell för svensk nyhetsanalys och sammanfattning (oavsett Ollama eller LM Studio)
+   ollama pull google/gemma-4-12b-qat
    
    # Valfritt: för vektor-embeddings och artikelklustring
    ollama pull nomic-embed-text
@@ -111,9 +111,17 @@ Ollama har inbyggt stöd för OpenAIs API på port `11434`.
 3. **Konfigurera i `docker-compose.yml`:**
    ```yaml
    - AI_URL=http://192.168.1.50:11434/v1/chat/completions
-   - AI_MODEL=gemma2:9b  # Ange namnet på din pullade modell
+   - AI_MODEL=google/gemma-4-12b-qat  # Rekommenderad modell för både Ollama och LM Studio
+   - AI_EMBEDDING_MODEL=nomic-embed-text  # Valfritt: för vektorinbäddningar
    - AI_TIMEOUT=120
    ```
+
+4. **Samtidig körning av textmodell och embedding-modell:**
+   Ollama har inbyggt stöd för att ladda och köra flera modeller parallellt i grafikminnet (VRAM).
+   - **Hur det fungerar i RSS-Bevakaren:** Artikelsammanfattning och ClickBait-analys anropar automatiskt modellen som anges i `AI_MODEL` (`google/gemma-4-12b-qat`), medan vektorinbäddningar för sökning anropar modellen som anges i `AI_EMBEDDING_MODEL` (`nomic-embed-text`). Ollama läser av modellnamnet i varje enskild HTTP-förfrågan och dirigerar trafiken internt utan att du behöver byta port eller starta flera instanser.
+   - **Minnesåtgång:** En embedding-modell är mycket kompakt (ca 250–600 MB VRAM) och ryms därför utan problem parallellt med `google/gemma-4-12b-qat` (ca 7–8 GB VRAM) på grafikkort med minst 8–12 GB VRAM.
+   - **Vid begränsat VRAM:** Om grafikminnet inte räcker för båda modellerna hanterar Ollama detta automatiskt genom snabb minnesväxling (LRU) eller genom att fördela lager till systemets arbetsminne (RAM).
+   - **Tips för servern:** Ollama tillåter som standard upp till 3 aktiva modeller i minnet samtidigt (`OLLAMA_MAX_LOADED_MODELS=3`). Om du vill kan du säkerställa detta genom att sätta miljövariabeln `OLLAMA_MAX_LOADED_MODELS=2` eller högre på värddatorn där Ollama körs.
 
 ### Alternativ 2: LM Studio
 
@@ -121,13 +129,13 @@ LM Studio kör sin lokala inferensserver på standardporten `1234`.
 
 1. **Starta servern i LM Studio:**
    - Öppna fliken **Local Server** (dubbelpilen).
-   - Välj önskad modell (t.ex. `gemma-2-9b-it` eller `google/gemma-4-12b-qat`).
+   - Välj önskad modell (rekommenderad modell: `google/gemma-4-12b-qat`).
    - Klicka på **Start Server**. Säkerställ att CORS och nätverksåtkomst är aktiverat om servern anropas från en annan maskin.
 
 2. **Konfigurera i `docker-compose.yml`:**
    ```yaml
    - AI_URL=http://192.168.1.50:1234/v1/chat/completions
-   - AI_MODEL=  # Lämna tomt för att automatiskt använda aktiv modell i LM Studio
+   - AI_MODEL=google/gemma-4-12b-qat  # Rekommenderad modell (eller lämna tomt för aktiv modell i LM Studio)
    - AI_TIMEOUT=120
    ```
 
@@ -272,8 +280,8 @@ Varje artikel bedöms utifrån tre grundfaktorer:
 - **ClickBait-avdrag:** Sensationella rubriker får ett automatiskt avdrag på 25 poäng.
 
 ### Rekommenderade modeller
-- **LLM:** `google/gemma-4-12b-qat` (snabb inferens och stark svensk språkförståelse).
-- **Embeddings:** `text-embedding-nomic-embed-text-v1.5` (768 dimensioner för hybrid-RAG).
+- **LLM:** `google/gemma-4-12b-qat` (rekommenderas oavsett om du kör Ollama eller LM Studio för överlägsen svensk språkförståelse och snabb inferens).
+- **Embeddings:** `nomic-embed-text` eller `text-embedding-nomic-embed-text-v1.5` (768 dimensioner för hybrid-RAG).
 </details>
 
 <details>

@@ -1667,20 +1667,29 @@ ai_lm_offline_notified: bool = False
 
 async def ai_processing_loop():
     global ai_lm_offline_since, ai_lm_offline_notified
-    print("Background AI enrichment loop started", flush=True)
-    # Vänta lite i början så appen och LM Studio hinner initialiseras
-    await asyncio.sleep(5)
+    print("[AI Startup] Bakgrundstråd för AI-berikning startad.", flush=True)
+    print(f"[AI Startup] Konfigurerad AI-anslutning: URL={ai_service.AI_URL}, Modell='{ai_service.AI_MODEL or '(automatisk)'}', Embeddings='{ai_service.AI_EMBEDDING_MODEL}'", flush=True)
+    # Vänta lite i början så appen och AI-servern (Ollama / LM Studio) hinner initialiseras
+    await asyncio.sleep(4)
+    try:
+        startup_models = await asyncio.to_thread(ai_service.get_available_models, True)
+        if startup_models:
+            print(f"[AI Startup] AI-servern är online! Tillgängliga modeller ({len(startup_models)} st): {startup_models}", flush=True)
+        else:
+            print(f"[AI Startup] Varning: Inga modeller returnerades från AI-servern. Kontrollera att din modell är hämtad (t.ex. 'ollama pull google/gemma-4-12b-qat').", flush=True)
+    except Exception as ex_init:
+        print(f"[AI Startup] Fel vid kontakt med AI-servern vid start: {ex_init}", flush=True)
     
     while True:
         try:
-            # Kontrollera om LM Studio är nåbart innan vi hämtar artiklar (TTL-cachad, snabb)
+            # Kontrollera om AI-servern är nåbar innan vi hämtar artiklar (TTL-cachad, snabb)
             is_healthy = await asyncio.to_thread(ai_service.check_lm_studio_health)
             if not is_healthy:
                 now = time.time()
                 if ai_lm_offline_since is None:
                     ai_lm_offline_since = now
 
-                # Om LM Studio har varit onåbart i minst 45 sekunder och vi inte redan larmat:
+                # Om AI-servern har varit onåbar i minst 45 sekunder och vi inte redan larmat:
                 if (now - ai_lm_offline_since >= 45) and not ai_lm_offline_notified:
                     db_alert = database.SessionLocal()
                     try:
@@ -1689,12 +1698,12 @@ async def ai_processing_loop():
                             admin_ai = db_alert.query(models.UserAISettings).filter(models.UserAISettings.user_id == admin_user.id).first()
                             wants_alert = bool(admin_ai.notify_ai_offline if admin_ai and admin_ai.notify_ai_offline is not None else 1)
                             if wants_alert:
-                                print(f"[AI Driftlarm] LM Studio har varit onåbart i 45 sekunder. Skickar driftnotis till admin '{admin_user.username}'.", flush=True)
+                                print(f"[AI Driftlarm] AI-servern har varit onåbar i 45 sekunder. Skickar driftnotis till admin '{admin_user.username}'.", flush=True)
                                 send_push_notification_to_user(
                                     db=db_alert,
                                     user_id=admin_user.id,
                                     title="AI-motorn är offline",
-                                    body="LM Studio svarar inte. Kontrollera att servern och modellen är igång.",
+                                    body="AI-servern (Ollama / LM Studio) svarar inte. Kontrollera att servern och modellen är igång.",
                                     url="/settings?tab=ai",
                                     context="AI Offline Alert"
                                 )
@@ -1705,11 +1714,11 @@ async def ai_processing_loop():
                     finally:
                         db_alert.close()
 
-                # Sov 15 sekunder om LM Studio är offline för att inte spamma loggar
+                # Sov 15 sekunder om AI-servern är offline för att inte spamma loggar
                 await asyncio.sleep(15)
                 continue
             else:
-                # LM Studio är online! Om vi tidigare larmat om offline skickas en återställningsnotis
+                # AI-servern är online! Om vi tidigare larmat om offline skickas en återställningsnotis
                 if ai_lm_offline_notified:
                     db_alert = database.SessionLocal()
                     try:
@@ -1718,12 +1727,12 @@ async def ai_processing_loop():
                             admin_ai = db_alert.query(models.UserAISettings).filter(models.UserAISettings.user_id == admin_user.id).first()
                             wants_alert = bool(admin_ai.notify_ai_offline if admin_ai and admin_ai.notify_ai_offline is not None else 1)
                             if wants_alert:
-                                print(f"[AI Driftlarm] LM Studio är online igen! Skickar återställningsnotis till admin '{admin_user.username}'.", flush=True)
+                                print(f"[AI Driftlarm] AI-servern är online igen! Skickar återställningsnotis till admin '{admin_user.username}'.", flush=True)
                                 send_push_notification_to_user(
                                     db=db_alert,
                                     user_id=admin_user.id,
                                     title="AI-motorn är online igen",
-                                    body="Anslutningen till LM Studio är återställd. Analys av köade artiklar återupptas.",
+                                    body="Anslutningen till AI-servern är återställd. Analys av köade artiklar återupptas.",
                                     url="/settings?tab=ai",
                                     context="AI Online Alert"
                                 )
