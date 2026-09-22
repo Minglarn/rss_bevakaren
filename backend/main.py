@@ -1780,7 +1780,25 @@ async def ai_processing_loop():
             print(f"[AI Startup] Varning: Inga modeller returnerades från AI-servern. Kontrollera att din modell är hämtad (t.ex. 'ollama pull google/gemma-4-12b-qat').", flush=True)
     except Exception as ex_init:
         print(f"[AI Startup] Fel vid kontakt med AI-servern vid start: {ex_init}", flush=True)
-    
+
+    # --- Embedding-hälsokontroll ---
+    try:
+        import time as _time
+        emb_endpoint = ai_service.get_embeddings_endpoint()
+        emb_model    = ai_service.AI_EMBEDDING_MODEL
+        print(f"[AI Embeddings] Testar embedding-endpoint: {emb_endpoint} (modell: '{emb_model}') ...", flush=True)
+        _t0   = _time.monotonic()
+        _vecs = await asyncio.to_thread(ai_service.get_text_embeddings, ["test: RSS Bevakaren embedding-kontroll"], False, emb_model)
+        _ms   = int((_time.monotonic() - _t0) * 1000)
+        if _vecs and len(_vecs) > 0 and len(_vecs[0]) > 0:
+            _dim = len(_vecs[0])
+            print(f"[AI Embeddings] OK - Vektordimensioner: {_dim}  |  Svarstid: {_ms} ms  |  Modell: '{emb_model}'", flush=True)
+        else:
+            print(f"[AI Embeddings] Varning: Endpointen svarade men returnerade inga vektorer. Kontrollera att embedding-modellen '{emb_model}' är laddad i Ollama/LM Studio.", flush=True)
+    except Exception as _emb_ex:
+        print(f"[AI Embeddings] Fel vid embedding-test vid uppstart: {_emb_ex}", flush=True)
+    # --- Slut embedding-hälsokontroll ---
+
     while True:
         try:
             # Kontrollera om AI-servern är nåbar innan vi hämtar artiklar (TTL-cachad, snabb)
