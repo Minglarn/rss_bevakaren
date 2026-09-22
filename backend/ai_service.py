@@ -1279,7 +1279,9 @@ def prepare_chat_context(
                         if missing:
                             batch_embed_articles(missing, db)
 
-                        scored_articles = []
+                        # Samla alla sim_scores for att berakna adaptiv troskel
+                        all_sim_scores = []
+                        raw_candidates = []
                         for art in candidates:
                             sim_score = 0.0
                             if art.embedding and art.embedding.vector:
@@ -1300,15 +1302,31 @@ def prepare_chat_context(
 
                             prio_bonus = 0.03 if (art.priority == "high" or (art.prio_score or 0) >= 75) else 0.0
                             total_score = sim_score + kw_bonus + prio_bonus
+                            all_sim_scores.append(sim_score)
+                            raw_candidates.append((total_score, sim_score, kw_bonus, art))
 
-                            # Kvalitetsspärr: Endast artiklar med faktisk relevans (eller direkt sökordsmatch)
-                            if total_score >= 0.50 or kw_bonus > 0:
-                                scored_articles.append((total_score, art))
+                        # Adaptiv troskel: mean + 0.5 * std – kalibreras automatiskt per embedding-modell
+                        scored_articles = []
+                        if all_sim_scores:
+                            _mean = float(np.mean(all_sim_scores))
+                            _std  = float(np.std(all_sim_scores))
+                            adaptive_threshold = _mean + 0.5 * _std
+                            print(f"[AI Chat] Adaptiv troskel: mean={_mean:.3f} std={_std:.3f} troskel={adaptive_threshold:.3f} | modell='{model_name}'", flush=True)
+
+                            for total_score, sim_score, kw_bonus, art in raw_candidates:
+                                # En artikel passerar om: semantisk score over adaptiv troskel
+                                # ELLER semantisk score inom 80% av tröskeln OCH direkt nyckelordstreff
+                                passes = (sim_score >= adaptive_threshold) or \
+                                         (sim_score >= adaptive_threshold * 0.80 and kw_bonus > 0)
+                                if passes:
+                                    scored_articles.append((total_score, art))
 
                         if scored_articles:
                             scored_articles.sort(key=lambda x: x[0], reverse=True)
                             articles = [item[1] for item in scored_articles[:25]]
                             semantic_success = True
+                            top_score = scored_articles[0][0] if scored_articles else 0
+                            print(f"[AI Chat] Semantisk sokning: {len(scored_articles)} artiklar passerade tröskeln | topp-score={top_score:.3f} | returnerar {len(articles)} st", flush=True)
                 except Exception as e:
                     print(f"[AI Chat] Fel vid semantisk ranking: {e}", flush=True)
 

@@ -1,9 +1,32 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.22.07',
+    date: '2026-09-22',
+    title: 'Adaptiv källfiltrering i AI-Chatten',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Irrelevanta artiklar visas inte langre som kallor',
+        description: 'AI-Chatten visade tidigare upp till 25 artiklar som "Källor" aven om de flesta var orelaterade till fragan. Kallistan innehaller nu enbart artiklar med genuin semantisk likhet till fragan.'
+      },
+      {
+        type: 'feature',
+        title: 'Adaptiv troskel – fungerar med alla embedding-modeller',
+        description: 'Relevanströskeln beraknas nu dynamiskt per anrop som medelvarde + 0,5 × standardavvikelse av alla sim_scores i kandidatpoolen. Det innebar att tröskeln automatiskt anpassar sig oavsett vilken embedding-modell som anvands (t.ex. bge-m3, nomic-embed eller framtida modeller) och logglas tydligt i Docker-loggen for sparbarhet.'
+      },
+      {
+        type: 'improvement',
+        title: 'Semantisk precision kvar vid nyckelordstraffar',
+        description: 'Artiklar med direkt nyckelordsmatch tillats passera om sim_score ar minst 80% av tröskeln – sa att relevanta artiklar inte missas nar fragordet forekommer ordagrant i rubrik eller sammanfattning.'
+      }
+    ]
+  },
+  {
+
     version: '2026.09.22.06',
     date: '2026-09-22',
     title: 'Embedding-halsokontroll synlig i Docker-loggen',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',
