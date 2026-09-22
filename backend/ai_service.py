@@ -1311,7 +1311,7 @@ def prepare_chat_context(
                             _mean = float(np.mean(all_sim_scores))
                             _std  = float(np.std(all_sim_scores))
                             adaptive_threshold = _mean + 0.5 * _std
-                            print(f"[AI Chat] Adaptiv troskel: mean={_mean:.3f} std={_std:.3f} troskel={adaptive_threshold:.3f} | modell='{model_name}'", flush=True)
+                            print(f"[AI Chat] Adaptiv troskel: mean={_mean:.3f} std={_std:.3f} troskel={adaptive_threshold:.3f} | modell='{LM_STUDIO_EMBEDDING_MODEL}'", flush=True)
 
                             for total_score, sim_score, kw_bonus, art in raw_candidates:
                                 # En artikel passerar om: semantisk score over adaptiv troskel

@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.22.09',
+    date: '2026-09-22',
+    title: 'Fix för semantisk rankinglogg i AI-Chatten',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Fixat variabelreferens vid adaptiv tröskelberäkning',
+        description: 'Åtgärdat ett undantag i loggutskriften för den adaptiva tröskeln som tidigare orsakade fallback till standardfiltrering. Den adaptiva tröskeln fungerar nu som avsett vid alla AI-chattförfrågningar.'
+      }
+    ]
+  },
+  {
     version: '2026.09.22.08',
     date: '2026-09-22',
     title: 'Synkronisering av versionsspårbarhet och adaptiv källfiltrering',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
