@@ -1687,7 +1687,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     swipeEnabled={swipeEnabled}
                     onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
                     onMarkAsUnread={() => markAsUnread(item.id, item.cluster_id, item.similar_articles)}
-                    onExpand={() => handleExpand(index, item.link, item.id)}
+                    onExpand={() => {
+                      const itemKey = item.id !== undefined ? item.id : index;
+                      setExpandedItems(prev => ({ ...prev, [itemKey]: !prev[itemKey] }));
+                    }}
                     className={`feed-card feed-card-ultracompact ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                   >
                     <div style={{ width: '100%', boxSizing: 'border-box' }}>
@@ -1731,7 +1734,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           </div>
                         </div>
 
-                        {showImages && item.image_url && (
+                        {showImages && item.image_url && !isItemExpanded && (
                           <div className="feed-card-ultracompact-thumb">
                             <img 
                               src={item.image_url} 
@@ -1742,33 +1745,32 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         )}
                       </div>
 
-                      {/* Expanderad vy vid klick på kortet */}
+                      {/* Expanderad vy vid klick på kortet: fördjupad sammanfattning och bild i full bredd */}
                       {isItemExpanded && (
                         <div className="feed-card-ultracompact-expanded" onClick={(e) => e.stopPropagation()}>
-                          {item.ai_summary && item.ai_summary !== shortSummary && (
-                            <div className="ai-summary-well" style={{ marginBottom: '0.85rem', padding: '0.75rem 0.9rem', fontSize: '0.9rem' }}>
-                              <div style={{ fontWeight: 600, fontSize: '0.78rem', color: '#f97316', marginBottom: '0.35rem' }}>
-                                Fördjupad sammanfattning
-                              </div>
-                              <div style={{ lineHeight: '1.55' }}>{item.ai_summary}</div>
+                          {/* Bild expanderad till full artikelbredd */}
+                          {showImages && item.image_url && (
+                            <div className="feed-card-ultracompact-expanded-image">
+                              <img 
+                                src={item.image_url} 
+                                alt="" 
+                                onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
+                              />
                             </div>
                           )}
 
-                          {scrapingUrls[item.link] ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.85rem' }}>
-                              <Loader2 className="spin" size={15} /> Hämtar hela artikeln...
+                          {/* Fördjupad sammanfattning */}
+                          {(item.ai_summary || item.summary) && (
+                            <div className="ai-summary-well" style={{ marginBottom: '0.85rem', padding: '0.85rem 1rem', fontSize: '0.92rem', borderRadius: '8px' }}>
+                              <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#f97316', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                <Sparkles size={14} />
+                                <span>Fördjupad sammanfattning</span>
+                              </div>
+                              <div style={{ lineHeight: '1.6', color: 'var(--text-main)', whiteSpace: 'pre-line' }}>
+                                {item.ai_summary || item.summary}
+                              </div>
                             </div>
-                          ) : scrapedContents[item.link] ? (
-                            <div style={{ marginBottom: '0.85rem', fontSize: '0.92rem', color: 'var(--text-main)', lineHeight: '1.65', whiteSpace: 'pre-line' }}>
-                              {scrapedContents[item.link]
-                                .split(/\n\s*\n/)
-                                .map((para, pIdx) => (
-                                  <p key={pIdx} style={{ margin: '0 0 0.85rem 0' }}>
-                                    {para.trim()}
-                                  </p>
-                                ))}
-                            </div>
-                          ) : null}
+                          )}
 
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -1856,8 +1858,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                                   textDecoration: 'none'
                                 }}
                               >
+                                <span>Läs original</span>
                                 <ExternalLink size={13} />
-                                <span>Läs på {decodeHtmlEntities(item.source_title || 'källan')}</span>
                               </a>
                             </div>
                           </div>

@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.22.04',
+    date: '2026-09-22',
+    title: 'Vit bakgrundspanel och fullbreddsbild i ultrakompakt läge',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Vit bakgrundspanel på mobil skärm',
+        description: 'Det ultrakompakta flödet på mobil har nu samma eleganta vita bakgrundspanel som på datorn. Detta ger distinkta avgränsningar och eliminerar den blåvita bakgrundstonen.'
+      },
+      {
+        type: 'feature',
+        title: 'Bild expanderas till full artikelbredd',
+        description: 'När ett ultrakompakt artikelkort fälls ut döljs den lilla thumbnailen och bilden expanderas i full bredd högst upp i den utfällda vyn.'
+      },
+      {
+        type: 'improvement',
+        title: 'Fokuserad fördjupad sammanfattning vid expansion',
+        description: 'Vid expansion av ett ultrakompakt kort visas nu direkt den fördjupade AI-sammanfattningen tillsammans med den expanderade bilden och åtgärdsknappar, utan tung och onödig laddning av hela artikeltexten.'
+      }
+    ]
+  },
+  {
     version: '2026.09.22.03',
     date: '2026-09-22',
     title: 'Stöd för vattenfalls-layout i skrivbordsläge för ultrakompakt flöde',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

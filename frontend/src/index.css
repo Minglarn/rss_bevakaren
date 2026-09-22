@@ -2368,20 +2368,26 @@ select:focus, input:focus {
   pointer-events: none;
 }
 
-/* Ultrakompakt läge (Mobil och lista) */
+/* Ultrakompakt läge (Mobil och enskild kolumn) */
 .events-list.layout-ultracompact {
   display: flex !important;
   flex-direction: column !important;
   gap: 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;
+  background-color: #ffffff !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--border-color) !important;
+  padding: 0 0.85rem !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  overflow: hidden !important;
 }
 
 .events-list.layout-ultracompact .feed-card-swipe-container {
   width: 100% !important;
   box-sizing: border-box !important;
   border-radius: 0 !important;
-  background-color: transparent !important;
+  background-color: #ffffff !important;
   border-bottom: 2px solid var(--border-color) !important;
 }
 
@@ -2398,24 +2404,40 @@ select:focus, input:focus {
 
 .events-masonry-container.layout-ultracompact-masonry .events-masonry-column {
   gap: 0 !important;
-  background-color: var(--bg-card);
+  background-color: #ffffff !important;
   border-radius: 12px;
   border: 1px solid var(--border-color);
   padding: 0 0.85rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .events-masonry-container.layout-ultracompact-masonry .feed-card-swipe-container {
   width: 100% !important;
   box-sizing: border-box !important;
   border-radius: 0 !important;
-  background-color: transparent !important;
+  background-color: #ffffff !important;
   border-bottom: 2px solid var(--border-color) !important;
 }
 
 .events-masonry-container.layout-ultracompact-masonry .feed-card-swipe-container:last-child {
   border-bottom: none !important;
+}
+
+/* Temastöd för mörkt läge och emboss */
+.theme-dark .events-list.layout-ultracompact,
+.theme-dark .events-list.layout-ultracompact .feed-card-swipe-container,
+.theme-dark .events-masonry-container.layout-ultracompact-masonry .events-masonry-column,
+.theme-dark .events-masonry-container.layout-ultracompact-masonry .feed-card-swipe-container {
+  background-color: var(--bg-card) !important;
+}
+
+.theme-emboss .events-list.layout-ultracompact,
+.theme-emboss .events-list.layout-ultracompact .feed-card-swipe-container,
+.theme-emboss .events-masonry-container.layout-ultracompact-masonry .events-masonry-column,
+.theme-emboss .events-masonry-container.layout-ultracompact-masonry .feed-card-swipe-container {
+  background-color: var(--bg-card) !important;
 }
 
 .feed-card-ultracompact {
@@ -2512,6 +2534,24 @@ select:focus, input:focus {
   border-top: 2px solid var(--border-color);
   width: 100% !important;
   box-sizing: border-box !important;
+}
+
+.feed-card-ultracompact-expanded-image {
+  width: 100% !important;
+  max-height: 380px !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  margin-bottom: 0.85rem !important;
+  background-color: rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.feed-card-ultracompact-expanded-image img {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 380px !important;
+  object-fit: cover !important;
+  display: block !important;
 }
 
 
