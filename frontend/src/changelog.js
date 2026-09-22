@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.22.06',
+    date: '2026-09-22',
+    title: 'Embedding-halsokontroll synlig i Docker-loggen',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Embedding-kontroll loggas vid uppstart',
+        description: 'Backend loggar nu automatiskt vid uppstart om embedding-modellen svarar korrekt. I Docker-loggen syns endpoint-URL, modellnamn, vektordimensioner och svarstid i ms direkt under [AI Embeddings]-taggen.'
+      },
+      {
+        type: 'improvement',
+        title: 'Per-artikel embedding-logg',
+        description: 'Varje gang en artikel vektoriseras syns nu en loggad i realtid: artikel-ID, vektordimensioner och rubrik. Detta gor det enkelt att foljda att embedding-floden fungerar korrekt.'
+      },
+      {
+        type: 'improvement',
+        title: 'Batch-vektorisering loggas',
+        description: 'Nar gamla artiklar utan embedding behandlas i batch loggas nu antal artiklar, vektordimensioner och totalt antal sparade vektorer per omgang.'
+      }
+    ]
+  },
+  {
     version: '2026.09.22.05',
     date: '2026-09-22',
     title: 'Driftsäker paginering och fix för infinite scroll i mobil PWA',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
