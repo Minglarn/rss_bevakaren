@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.22.05',
+    date: '2026-09-22',
+    title: 'Driftsäker paginering och fix för infinite scroll i mobil PWA',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Åtgärdat fastnande vid scroll i mobil PWA',
+        description: 'Ersatt den tidigare instabila scroll-observern med en dubblerad mekanism bestående av en stabil sentinel-observer och scroll-fallback. Alla olästa artiklar laddas nu in omedelbart utan att stanna på en snurrande cirkel.'
+      },
+      {
+        type: 'improvement',
+        title: 'Ökad initial visningsmängd',
+        description: 'Ökat antalet initialt visade artiklar från 30 till 60 så att normalstora flöden är fullt tillgängliga direkt vid sidladdning utan fördröjning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.22.04',
     date: '2026-09-22',
     title: 'Vit bakgrundspanel och fullbreddsbild i ultrakompakt läge',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

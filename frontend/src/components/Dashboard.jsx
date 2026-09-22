@@ -323,8 +323,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [displayedFeeds, setDisplayedFeeds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const itemsPerPage = 30;
-  const observer = useRef();
+  const itemsPerPage = 60;
+  const allFeedsRef = useRef(allFeeds);
+  allFeedsRef.current = allFeeds;
+  const sentinelRef = useRef(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const feedId = searchParams.get('feedId');
   const articleId = searchParams.get('articleId');
@@ -980,26 +982,47 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     }
   };
 
-  // Infinite Scroll logic
-  const lastElementRef = useCallback(node => {
-    if (loading) return;
-    if (observer.current) observer.current.disconnect();
-    
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        setPage(prevPage => {
-          const nextPage = prevPage + 1;
-          setDisplayedFeeds(prevFeeds => {
-            if (prevFeeds.length >= allFeeds.length) return prevFeeds;
-            return allFeeds.slice(0, nextPage * itemsPerPage);
-          });
-          return nextPage;
-        });
+  // Säker och robust infinite scroll: hämtar nästa sida från lokalt cacheade allFeeds
+  const loadMoreFeeds = useCallback(() => {
+    setDisplayedFeeds(prevFeeds => {
+      const currentAll = allFeedsRef.current;
+      if (prevFeeds.length >= currentAll.length) return prevFeeds;
+      const nextCount = prevFeeds.length + itemsPerPage;
+      return currentAll.slice(0, nextCount);
+    });
+    setPage(p => p + 1);
+  }, [itemsPerPage]);
+
+  // IntersectionObserver på botten-sentinel
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0] && entries[0].isIntersecting) {
+        loadMoreFeeds();
       }
-    }, { rootMargin: '400px' });
-    
-    if (node) observer.current.observe(node);
-  }, [loading, allFeeds]);
+    }, { rootMargin: '600px' });
+
+    obs.observe(sentinel);
+    return () => obs.disconnect();
+  }, [loadMoreFeeds, displayedFeeds.length, allFeeds.length]);
+
+  // Scroll-lyssnare som fallback i mobila webbläsare och PWA standalone-läge
+  useEffect(() => {
+    if (displayedFeeds.length >= allFeeds.length) return;
+
+    const handleScroll = () => {
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const threshold = document.documentElement.scrollHeight - 700;
+      if (scrollPosition >= threshold) {
+        loadMoreFeeds();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [loadMoreFeeds, displayedFeeds.length, allFeeds.length]);
 
   const markAsRead = async (id, clusterId = null, similarArticles = []) => {
     try {
@@ -2993,8 +3016,27 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           })()}
 
           {displayedFeeds.length < allFeeds.length && (
-            <div ref={lastElementRef} style={{ display: 'flex', justifyContent: 'center', padding: '2rem', color: 'var(--text-muted)', width: '100%' }}>
+            <div 
+              ref={sentinelRef} 
+              onClick={loadMoreFeeds}
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                padding: '2rem 1rem', 
+                color: 'var(--text-muted)', 
+                width: '100%',
+                cursor: 'pointer',
+                gap: '0.45rem',
+                userSelect: 'none'
+              }}
+              title="Klicka för att ladda fler artiklar"
+            >
               <Loader2 className="spin" size={24} />
+              <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>
+                Visar {displayedFeeds.length} av {allFeeds.length} artiklar (klicka för att visa fler)
+              </span>
             </div>
           )}
         </div>
