@@ -101,7 +101,13 @@ const Settings = ({ onLogout, currentUser }) => {
   const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
   const [theme, setTheme] = useState(() => localStorage.getItem('rss_theme') || 'system');
   const [cardStyle, setCardStyle] = useState(() => localStorage.getItem('rss_card_style') || 'modern');
-  const [flowLayoutDesktop, setFlowLayoutDesktop] = useState(() => localStorage.getItem('rss_flow_layout_desktop') || localStorage.getItem('rss_flow_layout') || 'compact');
+  const [flowLayoutDesktop, setFlowLayoutDesktop] = useState(() => {
+    const stored = localStorage.getItem('rss_flow_layout_desktop');
+    if (stored) return stored;
+    const legacy = localStorage.getItem('rss_flow_layout');
+    if (legacy && legacy !== 'ultracompact') return legacy;
+    return 'compact';
+  });
   const [flowLayoutMobile, setFlowLayoutMobile] = useState(() => localStorage.getItem('rss_flow_layout_mobile') || 'ultracompact');
   const [feedMode, setFeedMode] = useState(() => localStorage.getItem('rss_feed_mode') || 'ai');
   const [clusterMode, setClusterMode] = useState(() => localStorage.getItem('rss_cluster_mode') !== 'false');
@@ -262,7 +268,7 @@ const Settings = ({ onLogout, currentUser }) => {
           setCardStyle(uip.card_style);
           window.dispatchEvent(new Event('cardStyleChanged'));
         }
-        if (uip.flow_layout_desktop || uip.flow_layout) {
+        if (uip.flow_layout_desktop || (uip.flow_layout && uip.flow_layout !== 'ultracompact')) {
           const dVal = uip.flow_layout_desktop || uip.flow_layout;
           localStorage.setItem('rss_flow_layout_desktop', dVal);
           localStorage.setItem('rss_flow_layout', dVal);

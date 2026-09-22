@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.22.03',
+    date: '2026-09-22',
+    title: 'Stöd för vattenfalls-layout i skrivbordsläge för ultrakompakt flöde',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Korrekt layoutprioritet för datorflödet',
+        description: 'Datorläget prioriterar nu alltid kompakt vattenfall som standard och överskuggas inte längre av eventuella sparade mobilpreferenser.'
+      },
+      {
+        type: 'feature',
+        title: 'Fullt vattenfall- och kolumnstöd för ultrakompakt flöde på desktop',
+        description: 'När ultrakompakt flöde används på dator med 2, 3 eller 4 kolumner fördelas artiklarna nu i eleganta vattenfalls-kolumner som fyller hela skärmbredden istället för en smal spalt.'
+      }
+    ]
+  },
+  {
     version: '2026.09.22.02',
     date: '2026-09-22',
     title: 'Förbättringar i ultrakompakt läge: styckeindelning och skärpa',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

@@ -2389,6 +2389,35 @@ select:focus, input:focus {
   border-bottom: none !important;
 }
 
+/* Ultrakompakt läge i vattenfall (Masonry för dator och flera kolumner) */
+.events-masonry-container.layout-ultracompact-masonry {
+  gap: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.events-masonry-container.layout-ultracompact-masonry .events-masonry-column {
+  gap: 0 !important;
+  background-color: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  padding: 0 0.85rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+}
+
+.events-masonry-container.layout-ultracompact-masonry .feed-card-swipe-container {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  border-bottom: 2px solid var(--border-color) !important;
+}
+
+.events-masonry-container.layout-ultracompact-masonry .feed-card-swipe-container:last-child {
+  border-bottom: none !important;
+}
+
 .feed-card-ultracompact {
   display: flex !important;
   align-items: flex-start !important;

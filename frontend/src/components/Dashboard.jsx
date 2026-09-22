@@ -503,17 +503,25 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   }, []);
 
   // Flödeslayout för desktop respektive mobil
-  const [flowLayoutDesktop, setFlowLayoutDesktop] = useState(() => {
-    return localStorage.getItem('rss_flow_layout_desktop') || localStorage.getItem('rss_flow_layout') || 'compact';
-  });
-  const [flowLayoutMobile, setFlowLayoutMobile] = useState(() => {
+  const getStoredDesktopLayout = () => {
+    const stored = localStorage.getItem('rss_flow_layout_desktop');
+    if (stored) return stored;
+    const legacy = localStorage.getItem('rss_flow_layout');
+    if (legacy && legacy !== 'ultracompact') return legacy;
+    return 'compact';
+  };
+
+  const getStoredMobileLayout = () => {
     return localStorage.getItem('rss_flow_layout_mobile') || 'ultracompact';
-  });
+  };
+
+  const [flowLayoutDesktop, setFlowLayoutDesktop] = useState(getStoredDesktopLayout);
+  const [flowLayoutMobile, setFlowLayoutMobile] = useState(getStoredMobileLayout);
 
   useEffect(() => {
     const handleFlowLayoutChange = () => {
-      setFlowLayoutDesktop(localStorage.getItem('rss_flow_layout_desktop') || localStorage.getItem('rss_flow_layout') || 'compact');
-      setFlowLayoutMobile(localStorage.getItem('rss_flow_layout_mobile') || 'ultracompact');
+      setFlowLayoutDesktop(getStoredDesktopLayout());
+      setFlowLayoutMobile(getStoredMobileLayout());
     };
     window.addEventListener('flowLayoutChanged', handleFlowLayoutChange);
     return () => window.removeEventListener('flowLayoutChanged', handleFlowLayoutChange);
@@ -2925,7 +2933,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
             return dayGroups.map((group, groupIndex) => {
               const effectiveCols = isDesktop ? desktopColumns : 1;
-              const useMasonry = activeFlowLayout === 'compact' && effectiveCols > 1;
+              const useMasonry = (activeFlowLayout === 'compact' || activeFlowLayout === 'ultracompact') && effectiveCols > 1;
 
               return (
                 <div key={group.dayKey || groupIndex} className="day-group-section" style={{ marginBottom: '1.75rem' }}>
@@ -2959,18 +2967,18 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     </div>
                   )}
 
-                  {/* Ultrakompakt lista, Masonry-kolumner (Kompakt) eller Klassiskt rutnät (Sträckt) */}
-                  {activeFlowLayout === 'ultracompact' ? (
-                    <div className="events-list layout-ultracompact">
-                      {group.items.map(({ item, index }) => renderArticleCard(item, index))}
-                    </div>
-                  ) : useMasonry ? (
-                    <div className={`events-masonry-container cols-${effectiveCols}`}>
+                  {/* Vattenfall (Masonry) för både kompakt och ultrakompakt när fler än 1 kolumn används */}
+                  {useMasonry ? (
+                    <div className={`events-masonry-container cols-${effectiveCols} ${activeFlowLayout === 'ultracompact' ? 'layout-ultracompact-masonry' : ''}`}>
                       {partitionIntoColumns(group.items, effectiveCols).map((colEntries, colIdx) => (
                         <div key={colIdx} className="events-masonry-column">
                           {colEntries.map(({ item, index }) => renderArticleCard(item, index))}
                         </div>
                       ))}
+                    </div>
+                  ) : activeFlowLayout === 'ultracompact' ? (
+                    <div className="events-list layout-ultracompact">
+                      {group.items.map(({ item, index }) => renderArticleCard(item, index))}
                     </div>
                   ) : (
                     <div className={`events-list cols-${effectiveCols} ${activeFlowLayout === 'stretch' ? 'layout-stretch' : 'layout-compact'}`} style={{ gap: '1rem' }}>
