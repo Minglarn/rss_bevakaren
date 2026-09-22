@@ -101,7 +101,8 @@ const Settings = ({ onLogout, currentUser }) => {
   const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
   const [theme, setTheme] = useState(() => localStorage.getItem('rss_theme') || 'system');
   const [cardStyle, setCardStyle] = useState(() => localStorage.getItem('rss_card_style') || 'modern');
-  const [flowLayout, setFlowLayout] = useState(() => localStorage.getItem('rss_flow_layout') || 'compact');
+  const [flowLayoutDesktop, setFlowLayoutDesktop] = useState(() => localStorage.getItem('rss_flow_layout_desktop') || localStorage.getItem('rss_flow_layout') || 'compact');
+  const [flowLayoutMobile, setFlowLayoutMobile] = useState(() => localStorage.getItem('rss_flow_layout_mobile') || 'ultracompact');
   const [feedMode, setFeedMode] = useState(() => localStorage.getItem('rss_feed_mode') || 'ai');
   const [clusterMode, setClusterMode] = useState(() => localStorage.getItem('rss_cluster_mode') !== 'false');
   const [purgeDays, setPurgeDays] = useState(30);
@@ -194,7 +195,9 @@ const Settings = ({ onLogout, currentUser }) => {
       const uiPreferences = {
         theme: localStorage.getItem('rss_theme') || 'system',
         card_style: localStorage.getItem('rss_card_style') || 'modern',
-        flow_layout: localStorage.getItem('rss_flow_layout') || 'compact',
+        flow_layout: localStorage.getItem('rss_flow_layout_desktop') || localStorage.getItem('rss_flow_layout') || 'compact',
+        flow_layout_desktop: localStorage.getItem('rss_flow_layout_desktop') || localStorage.getItem('rss_flow_layout') || 'compact',
+        flow_layout_mobile: localStorage.getItem('rss_flow_layout_mobile') || 'ultracompact',
         desktop_columns: localStorage.getItem('rss_desktop_columns') || 'auto',
         feed_mode: localStorage.getItem('rss_feed_mode') || 'ai',
         cluster_mode: localStorage.getItem('rss_cluster_mode') !== 'false',
@@ -259,11 +262,17 @@ const Settings = ({ onLogout, currentUser }) => {
           setCardStyle(uip.card_style);
           window.dispatchEvent(new Event('cardStyleChanged'));
         }
-        if (uip.flow_layout) {
-          localStorage.setItem('rss_flow_layout', uip.flow_layout);
-          setFlowLayout(uip.flow_layout);
-          window.dispatchEvent(new Event('flowLayoutChanged'));
+        if (uip.flow_layout_desktop || uip.flow_layout) {
+          const dVal = uip.flow_layout_desktop || uip.flow_layout;
+          localStorage.setItem('rss_flow_layout_desktop', dVal);
+          localStorage.setItem('rss_flow_layout', dVal);
+          setFlowLayoutDesktop(dVal);
         }
+        if (uip.flow_layout_mobile) {
+          localStorage.setItem('rss_flow_layout_mobile', uip.flow_layout_mobile);
+          setFlowLayoutMobile(uip.flow_layout_mobile);
+        }
+        window.dispatchEvent(new Event('flowLayoutChanged'));
         if (uip.desktop_columns) {
           localStorage.setItem('rss_desktop_columns', uip.desktop_columns);
         }
@@ -332,11 +341,31 @@ const Settings = ({ onLogout, currentUser }) => {
     toast.success(val === 'modern' ? 'Kortstil: Modernt vald.' : 'Kortstil: Klassisk vald.');
   };
 
-  const handleFlowLayoutChange = (val) => {
-    setFlowLayout(val);
+  const handleFlowLayoutDesktopChange = (val) => {
+    setFlowLayoutDesktop(val);
+    localStorage.setItem('rss_flow_layout_desktop', val);
     localStorage.setItem('rss_flow_layout', val);
     window.dispatchEvent(new Event('flowLayoutChanged'));
-    toast.success(val === 'compact' ? 'Flödeslayout: Kompakt vattenfall vald (inga tomma hål).' : 'Flödeslayout: Klassiskt rutnät vald.');
+    toast.success(
+      val === 'compact'
+        ? 'Datorlayout: Kompakt vattenfall vald (inga tomma hål).'
+        : val === 'stretch'
+        ? 'Datorlayout: Klassiskt rutnät vald.'
+        : 'Datorlayout: Ultrakompakt lista vald.'
+    );
+  };
+
+  const handleFlowLayoutMobileChange = (val) => {
+    setFlowLayoutMobile(val);
+    localStorage.setItem('rss_flow_layout_mobile', val);
+    window.dispatchEvent(new Event('flowLayoutChanged'));
+    toast.success(
+      val === 'ultracompact'
+        ? 'Mobillayout: Ultrakompakt vald (rekommenderat för mobil).'
+        : val === 'compact'
+        ? 'Mobillayout: Kompakt kort vald.'
+        : 'Mobillayout: Klassisk vald.'
+    );
   };
 
   const handleFeedModeChange = (val) => {
@@ -1750,7 +1779,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   display: 'none',
                   '@media (min-width: 640px)': { display: 'inline-block' }
                 }}>
-                  {cardStyle === 'modern' ? 'Modernt' : 'Klassiskt'} · {flowLayout === 'compact' ? 'Vattenfall' : 'Rutnät'}
+                  {cardStyle === 'modern' ? 'Modernt' : 'Klassiskt'} · Mobil: {flowLayoutMobile === 'ultracompact' ? 'Ultrakompakt' : flowLayoutMobile === 'compact' ? 'Kompakt' : 'Klassisk'} · Dator: {flowLayoutDesktop === 'compact' ? 'Vattenfall' : flowLayoutDesktop === 'stretch' ? 'Rutnät' : 'Ultrakompakt'}
                 </span>
                 <motion.div
                   animate={{ rotate: expandedUiSections.themeAndLayout ? 180 : 0 }}
@@ -1837,29 +1866,97 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   </div>
                 </div>
 
-                {/* Flödeslayout i desktop */}
+                {/* Flödeslayout på mobil */}
                 <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                   <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
-                    <Laptop size={17} style={{ color: 'var(--primary)' }} /> Flödeslayout i desktop
+                    <Smartphone size={17} style={{ color: 'var(--primary)' }} /> Flödeslayout på mobil
                   </h4>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, minWidth: '220px' }}>
-                      <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.88rem' }}>Korthöjd och packning i rutnät</div>
+                      <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.88rem' }}>Mobilanpassat flöde</div>
                       <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                        Välj mellan kompakt vattenfall (korten anpassas naturligt till sitt innehåll i oberoende kolumner utan tomma hålrum) eller klassiskt rutnät (korten på samma rad tvingas till samma höjd).
+                        Ultrakompakt ger en extremt ren radlayout med fet rubrik, kort notissammanfattning och thumbnail till höger.
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <button
                         type="button"
-                        onClick={() => handleFlowLayoutChange('compact')}
+                        onClick={() => handleFlowLayoutMobileChange('ultracompact')}
                         style={{
-                          padding: '0.45rem 0.95rem',
+                          padding: '0.45rem 0.85rem',
                           borderRadius: '6px',
-                          border: flowLayout === 'compact' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                          backgroundColor: flowLayout === 'compact' ? 'var(--primary)' : 'var(--bg-card)',
-                          color: flowLayout === 'compact' ? '#ffffff' : 'var(--text-main)',
-                          fontWeight: flowLayout === 'compact' ? 600 : 400,
+                          border: flowLayoutMobile === 'ultracompact' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                          backgroundColor: flowLayoutMobile === 'ultracompact' ? 'var(--primary)' : 'var(--bg-card)',
+                          color: flowLayoutMobile === 'ultracompact' ? '#ffffff' : 'var(--text-main)',
+                          fontWeight: flowLayoutMobile === 'ultracompact' ? 600 : 400,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        Ultrakompakt
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFlowLayoutMobileChange('compact')}
+                        style={{
+                          padding: '0.45rem 0.85rem',
+                          borderRadius: '6px',
+                          border: flowLayoutMobile === 'compact' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                          backgroundColor: flowLayoutMobile === 'compact' ? 'var(--primary)' : 'var(--bg-card)',
+                          color: flowLayoutMobile === 'compact' ? '#ffffff' : 'var(--text-main)',
+                          fontWeight: flowLayoutMobile === 'compact' ? 600 : 400,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        Kompakt
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFlowLayoutMobileChange('stretch')}
+                        style={{
+                          padding: '0.45rem 0.85rem',
+                          borderRadius: '6px',
+                          border: flowLayoutMobile === 'stretch' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                          backgroundColor: flowLayoutMobile === 'stretch' ? 'var(--primary)' : 'var(--bg-card)',
+                          color: flowLayoutMobile === 'stretch' ? '#ffffff' : 'var(--text-main)',
+                          fontWeight: flowLayoutMobile === 'stretch' ? 600 : 400,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        Klassisk
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Flödeslayout på dator */}
+                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+                    <Laptop size={17} style={{ color: 'var(--primary)' }} /> Flödeslayout på dator
+                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '220px' }}>
+                      <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.88rem' }}>Korthöjd och packning i skrivbordsläge</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                        Välj mellan kompakt vattenfall (korten anpassas naturligt till sitt innehåll i oberoende kolumner utan hålrum), klassiskt rutnät eller ultrakompakt lista.
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleFlowLayoutDesktopChange('compact')}
+                        style={{
+                          padding: '0.45rem 0.85rem',
+                          borderRadius: '6px',
+                          border: flowLayoutDesktop === 'compact' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                          backgroundColor: flowLayoutDesktop === 'compact' ? 'var(--primary)' : 'var(--bg-card)',
+                          color: flowLayoutDesktop === 'compact' ? '#ffffff' : 'var(--text-main)',
+                          fontWeight: flowLayoutDesktop === 'compact' ? 600 : 400,
                           fontSize: '0.85rem',
                           cursor: 'pointer',
                           transition: 'all 0.15s'
@@ -1869,20 +1966,37 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleFlowLayoutChange('stretch')}
+                        onClick={() => handleFlowLayoutDesktopChange('stretch')}
                         style={{
-                          padding: '0.45rem 0.95rem',
+                          padding: '0.45rem 0.85rem',
                           borderRadius: '6px',
-                          border: flowLayout === 'stretch' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                          backgroundColor: flowLayout === 'stretch' ? 'var(--primary)' : 'var(--bg-card)',
-                          color: flowLayout === 'stretch' ? '#ffffff' : 'var(--text-main)',
-                          fontWeight: flowLayout === 'stretch' ? 600 : 400,
+                          border: flowLayoutDesktop === 'stretch' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                          backgroundColor: flowLayoutDesktop === 'stretch' ? 'var(--primary)' : 'var(--bg-card)',
+                          color: flowLayoutDesktop === 'stretch' ? '#ffffff' : 'var(--text-main)',
+                          fontWeight: flowLayoutDesktop === 'stretch' ? 600 : 400,
                           fontSize: '0.85rem',
                           cursor: 'pointer',
                           transition: 'all 0.15s'
                         }}
                       >
                         Klassiskt Rutnät
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFlowLayoutDesktopChange('ultracompact')}
+                        style={{
+                          padding: '0.45rem 0.85rem',
+                          borderRadius: '6px',
+                          border: flowLayoutDesktop === 'ultracompact' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                          backgroundColor: flowLayoutDesktop === 'ultracompact' ? 'var(--primary)' : 'var(--bg-card)',
+                          color: flowLayoutDesktop === 'ultracompact' ? '#ffffff' : 'var(--text-main)',
+                          fontWeight: flowLayoutDesktop === 'ultracompact' ? 600 : 400,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        Ultrakompakt
                       </button>
                     </div>
                   </div>

@@ -251,6 +251,33 @@ const formatFullDateTime = (dateString) => {
   return d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 };
 
+const formatRelativeTimeSwedish = (dateInput) => {
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  
+  const now = new Date();
+  const timeStr = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }).replace(':', '.');
+  
+  const isToday = d.getDate() === now.getDate() &&
+                  d.getMonth() === now.getMonth() &&
+                  d.getFullYear() === now.getFullYear();
+  if (isToday) {
+    return `I dag ${timeStr}`;
+  }
+  
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = d.getDate() === yesterday.getDate() &&
+                      d.getMonth() === yesterday.getMonth() &&
+                      d.getFullYear() === yesterday.getFullYear();
+  if (isYesterday) {
+    return `I går ${timeStr}`;
+  }
+  
+  const months = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${timeStr}`;
+};
+
 const getArticlePublishedDate = (item) => {
   let dateObj = null;
   if (item.published_ts && item.published_ts > 0) {
@@ -471,29 +498,38 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     return () => window.removeEventListener('swipeGesturesChanged', handleSwipeChange);
   }, []);
 
-  // Flödeslayout i desktop (Kompakt vs Sträckt/Original)
-  const [flowLayout, setFlowLayout] = useState(() => {
-    return localStorage.getItem('rss_flow_layout') || 'compact';
+  // Flödeslayout för desktop respektive mobil
+  const [flowLayoutDesktop, setFlowLayoutDesktop] = useState(() => {
+    return localStorage.getItem('rss_flow_layout_desktop') || localStorage.getItem('rss_flow_layout') || 'compact';
+  });
+  const [flowLayoutMobile, setFlowLayoutMobile] = useState(() => {
+    return localStorage.getItem('rss_flow_layout_mobile') || 'ultracompact';
   });
 
   useEffect(() => {
     const handleFlowLayoutChange = () => {
-      setFlowLayout(localStorage.getItem('rss_flow_layout') || 'compact');
+      setFlowLayoutDesktop(localStorage.getItem('rss_flow_layout_desktop') || localStorage.getItem('rss_flow_layout') || 'compact');
+      setFlowLayoutMobile(localStorage.getItem('rss_flow_layout_mobile') || 'ultracompact');
     };
     window.addEventListener('flowLayoutChanged', handleFlowLayoutChange);
     return () => window.removeEventListener('flowLayoutChanged', handleFlowLayoutChange);
   }, []);
 
-  // Responsiv desktop-detektering för kolumnhantering
+  // Responsiv desktop/mobil-detektering för kolumner och enhetslayout
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
+  const [isMobileScreen, setIsMobileScreen] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   useEffect(() => {
     const handleResize = () => {
       setIsDesktop(window.innerWidth >= 1024);
+      setIsMobileScreen(window.innerWidth < 768);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Aktiv layout beroende på om vi visar på mobil eller större skärm
+  const activeFlowLayout = isMobileScreen ? flowLayoutMobile : flowLayoutDesktop;
 
   // Nollställ artiklar omedelbart vid byte av aktivt flöde så att föregående flödes artiklar inte ligger kvar
   useEffect(() => {
@@ -1626,6 +1662,190 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               const isReadNow = Boolean(isArticleRead(item.id, item.is_read));
               const currentVote = getArticleVote(item.id, item.user_vote);
 
+              // Ultrakompakt läge: extremt ren rad med rubrik, kort notissammanfattning och thumbnail
+              if (activeFlowLayout === 'ultracompact') {
+                const shortSummary = item.ai_short_summary || item.ai_summary || item.summary || '';
+                const relTime = formatRelativeTimeSwedish(pubDate);
+
+                return (
+                  <SwipeableArticleCard
+                    key={item.id}
+                    itemId={item.id}
+                    isRead={isReadNow}
+                    swipeEnabled={swipeEnabled}
+                    onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
+                    onMarkAsUnread={() => markAsUnread(item.id, item.cluster_id, item.similar_articles)}
+                    onExpand={() => handleExpand(index, item.link, item.id)}
+                    className={`feed-card feed-card-ultracompact ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
+                  >
+                    <div style={{ width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.85rem' }}>
+                        <div className="feed-card-ultracompact-content">
+                          <h3 className="feed-card-ultracompact-title">
+                            {decodeHtmlEntities(item.title)}
+                          </h3>
+
+                          {shortSummary && (
+                            <div className="feed-card-ultracompact-desc">
+                              {shortSummary}
+                            </div>
+                          )}
+
+                          <div className="feed-card-ultracompact-meta">
+                            {item.source_title && (
+                              <span style={{ fontWeight: 600, color: 'var(--text-main)', opacity: 0.85 }}>
+                                {decodeHtmlEntities(item.source_title)}
+                              </span>
+                            )}
+                            {item.source_title && relTime && <span>·</span>}
+                            {relTime && <span>{relTime}</span>}
+
+                            {isClickbait && (
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                backgroundColor: '#ef4444',
+                                color: '#ffffff',
+                                padding: '0.1rem 0.4rem',
+                                borderRadius: '4px',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                marginLeft: '0.25rem'
+                              }}>
+                                <AlertTriangle size={11} /> ClickBait
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {showImages && item.image_url && (
+                          <div className="feed-card-ultracompact-thumb">
+                            <img 
+                              src={item.image_url} 
+                              alt="" 
+                              onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Expanderad vy vid klick på kortet */}
+                      {isItemExpanded && (
+                        <div className="feed-card-ultracompact-expanded" onClick={(e) => e.stopPropagation()}>
+                          {item.ai_summary && item.ai_summary !== shortSummary && (
+                            <div className="ai-summary-well" style={{ marginBottom: '0.75rem', padding: '0.75rem', fontSize: '0.9rem' }}>
+                              <div style={{ fontWeight: 600, fontSize: '0.78rem', color: '#f97316', marginBottom: '0.35rem' }}>
+                                Fördjupad sammanfattning
+                              </div>
+                              <div>{item.ai_summary}</div>
+                            </div>
+                          )}
+
+                          {scrapedContents[item.link] && (
+                            <div style={{ marginBottom: '0.85rem', fontSize: '0.88rem', color: 'var(--text-main)', lineHeight: 1.55 }}>
+                              {scrapedContents[item.link]}
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleVote(item.id, currentVote, 1); }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  padding: '0.3rem 0.55rem',
+                                  borderRadius: '6px',
+                                  border: '1px solid var(--border-color)',
+                                  backgroundColor: currentVote === 1 ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-app)',
+                                  color: currentVote === 1 ? '#10b981' : 'var(--text-muted)',
+                                  fontSize: '0.78rem',
+                                  cursor: 'pointer'
+                                }}
+                                title="Gilla artikel"
+                              >
+                                <ThumbsUp size={14} />
+                                <span>Gilla</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleVote(item.id, currentVote, -1); }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  padding: '0.3rem 0.55rem',
+                                  borderRadius: '6px',
+                                  border: '1px solid var(--border-color)',
+                                  backgroundColor: currentVote === -1 ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-app)',
+                                  color: currentVote === -1 ? '#ef4444' : 'var(--text-muted)',
+                                  fontSize: '0.78rem',
+                                  cursor: 'pointer'
+                                }}
+                                title="Ogilla artikel"
+                              >
+                                <ThumbsDown size={14} />
+                                <span>Ogilla</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setShareItem(item); }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  padding: '0.3rem 0.55rem',
+                                  borderRadius: '6px',
+                                  border: '1px solid var(--border-color)',
+                                  backgroundColor: 'var(--bg-app)',
+                                  color: 'var(--text-muted)',
+                                  fontSize: '0.78rem',
+                                  cursor: 'pointer'
+                                }}
+                                title="Dela händelse"
+                              >
+                                <Share2 size={14} />
+                                <span>Dela</span>
+                              </button>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <a
+                                href={item.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markAsRead(item.id, item.cluster_id, item.similar_articles);
+                                }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  padding: '0.35rem 0.65rem',
+                                  borderRadius: '6px',
+                                  backgroundColor: 'var(--primary)',
+                                  color: '#ffffff',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 600,
+                                  textDecoration: 'none'
+                                }}
+                              >
+                                <ExternalLink size={13} />
+                                <span>Läs på {decodeHtmlEntities(item.source_title || 'källan')}</span>
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </SwipeableArticleCard>
+                );
+              }
+
               return (
                 <SwipeableArticleCard
                   key={item.id}
@@ -1976,7 +2196,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   {/* Main content padding wrapper */}
                   <div className="feed-card-content">
                   {/* Title / Content + Thumbnail i kompakt läge (Väg 2) */}
-                  {flowLayout === 'compact' && !isItemExpanded ? (
+                  {activeFlowLayout === 'compact' && !isItemExpanded ? (
                     <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start', marginBottom: '0.65rem' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h3 className="feed-card-title" style={{ margin: '0 0 0.35rem 0' }}>
@@ -2031,7 +2251,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       
                       {showImages && item.image_url && (
                         <motion.div 
-                          initial={flowLayout === 'compact' ? { opacity: 0 } : false}
+                          initial={activeFlowLayout === 'compact' ? { opacity: 0 } : false}
                           animate={{ opacity: 1 }}
                           transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
                           style={{ 
@@ -2691,7 +2911,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
             return dayGroups.map((group, groupIndex) => {
               const effectiveCols = isDesktop ? desktopColumns : 1;
-              const useMasonry = flowLayout === 'compact' && effectiveCols > 1;
+              const useMasonry = activeFlowLayout === 'compact' && effectiveCols > 1;
 
               return (
                 <div key={group.dayKey || groupIndex} className="day-group-section" style={{ marginBottom: '1.75rem' }}>
@@ -2725,8 +2945,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     </div>
                   )}
 
-                  {/* Kort i Masonry-kolumner (Kompakt) eller Klassiskt rutnät (Sträckt) */}
-                  {useMasonry ? (
+                  {/* Ultrakompakt lista, Masonry-kolumner (Kompakt) eller Klassiskt rutnät (Sträckt) */}
+                  {activeFlowLayout === 'ultracompact' ? (
+                    <div className="events-list layout-ultracompact">
+                      {group.items.map(({ item, index }) => renderArticleCard(item, index))}
+                    </div>
+                  ) : useMasonry ? (
                     <div className={`events-masonry-container cols-${effectiveCols}`}>
                       {partitionIntoColumns(group.items, effectiveCols).map((colEntries, colIdx) => (
                         <div key={colIdx} className="events-masonry-column">
@@ -2735,7 +2959,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       ))}
                     </div>
                   ) : (
-                    <div className={`events-list cols-${effectiveCols} ${flowLayout === 'stretch' ? 'layout-stretch' : 'layout-compact'}`} style={{ gap: '1rem' }}>
+                    <div className={`events-list cols-${effectiveCols} ${activeFlowLayout === 'stretch' ? 'layout-stretch' : 'layout-compact'}`} style={{ gap: '1rem' }}>
                       {group.items.map(({ item, index }) => renderArticleCard(item, index))}
                     </div>
                   )}

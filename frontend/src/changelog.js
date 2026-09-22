@@ -1,9 +1,38 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.22.01',
+    date: '2026-09-22',
+    title: 'Ultrakompakt artikelkort och enhetsseparerad flödeslayout',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Nytt ultrakompakt artikelkort för mobilen',
+        description: 'Ett stilrent och ultrakompakt kortformat med fet rubrik, kort notissammanfattning (ai_short_summary), relativ publiceringstid och kvadratisk bild-thumbnail till höger i ren radlayout.'
+      },
+      {
+        type: 'feature',
+        title: 'Oberoende layoutval för mobil och dator',
+        description: 'Möjlighet att välja olika flödeslayouter för mobil och dator på samma användarkonto. Mobilskärmar kan nu exempelvis använda ultrakompakt läge medan datorn visar kompakt vattenfall.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.21.11',
+    date: '2026-09-21',
+    title: 'Förenklad loggning för MQTT Auto-Discovery',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Kompakt och ren loggning vid Home Assistant Auto-Discovery',
+        description: 'Tog bort enskilda loggrader för varje publicerat RSS-flöde och prio-sensor vid MQTT-anslutning. Loggningen sammanfattas nu med en ren bekräftelserad att Auto-Discovery är OK.'
+      }
+    ]
+  },
+  {
     version: '2026.09.21.10',
     date: '2026-09-21',
     title: 'Admin-hantering av flöden och steglöst reglage för ordgräns i sammanfattningar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

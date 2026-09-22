@@ -118,7 +118,6 @@ def publish_ha_discovery_prio(username: Optional[str] = None, user_id: Optional[
 
     try:
         _client.publish(discovery_topic, json.dumps(config_payload, ensure_ascii=False), qos=1, retain=True)
-        print(f"[MQTT: {user_slug}] Publicerade HA Auto-Discovery för prio -> '{discovery_topic}'", flush=True)
     except Exception as e:
         print(f"[MQTT: {user_slug}] Fel vid HA Discovery för prio: {e}", flush=True)
 
@@ -169,7 +168,6 @@ def publish_ha_discovery_for_feed(
 
     try:
         _client.publish(discovery_topic, json.dumps(config_payload, ensure_ascii=False), qos=1, retain=True)
-        print(f"[MQTT: {user_slug}] Publicerade HA Auto-Discovery för '{feed_title}' -> '{discovery_topic}'", flush=True)
     except Exception as e:
         print(f"[MQTT: {user_slug}] Fel vid HA Discovery för '{feed_title}': {e}", flush=True)
 
@@ -227,7 +225,7 @@ def sync_all_ha_discoveries(db_session=None):
             total_feeds += len(user_feeds)
             for f in user_feeds:
                 publish_ha_discovery_for_feed(feed=f, username=u_name, user_id=u.id)
-        print(f"[MQTT] HA Auto-Discovery synkroniserad för {len(users)} användare ({total_feeds} flöden).", flush=True)
+        print("[MQTT] Auto-Discovery är OK.", flush=True)
     except Exception as e:
         print(f"[MQTT] Fel vid synkronisering av HA Auto-Discovery: {e}", flush=True)
     finally:
