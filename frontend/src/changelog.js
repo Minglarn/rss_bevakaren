@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.22.02',
+    date: '2026-09-22',
+    title: 'Förbättringar i ultrakompakt läge: styckeindelning och skärpa',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Bevarad styckeindelning och radbrytningar vid expansion',
+        description: 'Artiklar som fälls ut i det ultrakompakta läget bevarar nu originalets alla styckeavstånd och radbrytningar (pre-line) istället för att flyta ihop till en massiv textklump.'
+      },
+      {
+        type: 'improvement',
+        title: 'Kraftigare och tydligare avdelare',
+        description: 'Skiljelinjen mellan artiklarna i det ultrakompakta läget har gjorts distinktare och kraftigare för ett renare tidningsliknande flöde.'
+      },
+      {
+        type: 'improvement',
+        title: 'Optimal kontrast och skärpa för lästa artiklar',
+        description: 'Justerat opaciteten för lästa artiklar från 55% till 85% samt dämpat rubrikfärgen så att texten förblir skarp och behaglig att läsa utan att bli transparent.'
+      }
+    ]
+  },
+  {
     version: '2026.09.22.01',
     date: '2026-09-22',
     title: 'Ultrakompakt artikelkort och enhetsseparerad flödeslayout',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

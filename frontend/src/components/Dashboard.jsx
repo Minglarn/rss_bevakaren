@@ -142,7 +142,9 @@ const SwipeableArticleCard = ({
       style={{
         position: 'relative',
         overflow: 'hidden',
-        borderRadius: '12px'
+        borderRadius: '12px',
+        width: '100%',
+        boxSizing: 'border-box'
       }}
       animate={isDismissing ? { opacity: 0, scale: 0.96 } : { opacity: 1, scale: 1 }}
       transition={{
@@ -204,6 +206,8 @@ const SwipeableArticleCard = ({
       {/* Själva kortet som dras */}
       <motion.div
         style={{
+          width: '100%',
+          boxSizing: 'border-box',
           ...style,
           x,
           position: 'relative',
@@ -1678,9 +1682,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     onExpand={() => handleExpand(index, item.link, item.id)}
                     className={`feed-card feed-card-ultracompact ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                   >
-                    <div style={{ width: '100%' }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.85rem' }}>
-                        <div className="feed-card-ultracompact-content">
+                    <div style={{ width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', width: '100%' }}>
+                        <div className="feed-card-ultracompact-content" style={{ flex: '1 1 auto', minWidth: 0 }}>
                           <h3 className="feed-card-ultracompact-title">
                             {decodeHtmlEntities(item.title)}
                           </h3>
@@ -1734,19 +1738,29 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       {isItemExpanded && (
                         <div className="feed-card-ultracompact-expanded" onClick={(e) => e.stopPropagation()}>
                           {item.ai_summary && item.ai_summary !== shortSummary && (
-                            <div className="ai-summary-well" style={{ marginBottom: '0.75rem', padding: '0.75rem', fontSize: '0.9rem' }}>
+                            <div className="ai-summary-well" style={{ marginBottom: '0.85rem', padding: '0.75rem 0.9rem', fontSize: '0.9rem' }}>
                               <div style={{ fontWeight: 600, fontSize: '0.78rem', color: '#f97316', marginBottom: '0.35rem' }}>
                                 Fördjupad sammanfattning
                               </div>
-                              <div>{item.ai_summary}</div>
+                              <div style={{ lineHeight: '1.55' }}>{item.ai_summary}</div>
                             </div>
                           )}
 
-                          {scrapedContents[item.link] && (
-                            <div style={{ marginBottom: '0.85rem', fontSize: '0.88rem', color: 'var(--text-main)', lineHeight: 1.55 }}>
-                              {scrapedContents[item.link]}
+                          {scrapingUrls[item.link] ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.85rem' }}>
+                              <Loader2 className="spin" size={15} /> Hämtar hela artikeln...
                             </div>
-                          )}
+                          ) : scrapedContents[item.link] ? (
+                            <div style={{ marginBottom: '0.85rem', fontSize: '0.92rem', color: 'var(--text-main)', lineHeight: '1.65', whiteSpace: 'pre-line' }}>
+                              {scrapedContents[item.link]
+                                .split(/\n\s*\n/)
+                                .map((para, pIdx) => (
+                                  <p key={pIdx} style={{ margin: '0 0 0.85rem 0' }}>
+                                    {para.trim()}
+                                  </p>
+                                ))}
+                            </div>
+                          ) : null}
 
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>

@@ -2373,32 +2373,35 @@ select:focus, input:focus {
   display: flex !important;
   flex-direction: column !important;
   gap: 0 !important;
-  width: 100%;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .events-list.layout-ultracompact .feed-card-swipe-container {
-  border-radius: 0;
-  background-color: transparent;
-  border-bottom: 1px solid var(--border-color);
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  border-bottom: 2px solid var(--border-color) !important;
 }
 
 .events-list.layout-ultracompact .feed-card-swipe-container:last-child {
-  border-bottom: none;
+  border-bottom: none !important;
 }
 
 .feed-card-ultracompact {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.85rem;
-  padding: 0.85rem 0.35rem;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+  padding: 0.95rem 0.25rem !important;
   background: transparent !important;
   box-shadow: none !important;
   border: none !important;
   border-radius: 0 !important;
   cursor: pointer;
-  width: 100%;
-  box-sizing: border-box;
+  width: 100% !important;
+  box-sizing: border-box !important;
   transition: background-color 0.15s ease;
 }
 
@@ -2407,14 +2410,19 @@ select:focus, input:focus {
 }
 
 .feed-card-ultracompact.read {
-  opacity: 0.55;
+  opacity: 0.88;
+}
+
+.feed-card-ultracompact.read .feed-card-ultracompact-title {
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 .feed-card-ultracompact-content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .feed-card-ultracompact-title {
@@ -2452,11 +2460,12 @@ select:focus, input:focus {
 }
 
 .feed-card-ultracompact-thumb {
-  width: 84px;
-  height: 84px;
-  border-radius: 8px;
-  overflow: hidden;
-  flex-shrink: 0;
+  width: 84px !important;
+  height: 84px !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  flex: 0 0 84px !important;
+  margin-left: auto !important;
   background-color: rgba(0, 0, 0, 0.04);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
@@ -2471,8 +2480,9 @@ select:focus, input:focus {
 .feed-card-ultracompact-expanded {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px dashed var(--border-color);
-  width: 100%;
+  border-top: 2px solid var(--border-color);
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 
