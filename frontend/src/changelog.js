@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.22.08',
+    date: '2026-09-22',
+    title: 'Synkronisering av versionsspårbarhet och adaptiv källfiltrering',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Versionsspårbarhet i Docker och gränssnitt',
+        description: 'Uppdaterat versionsnummer i package.json och backend så att rätt CalVer visas i Docker-uppstartsloggen, systeminställningarna och uppdateringsmodalen.'
+      },
+      {
+        type: 'feature',
+        title: 'Adaptiv semantisk tröskel i AI-Chatten',
+        description: 'Relevanströskeln beräknas nu dynamiskt per anrop (medelvärde + 0,5 × standardavvikelse). Det eliminerar irrelevanta artiklar i källistan och fungerar oavsett embedding-modell.'
+      }
+    ]
+  },
+  {
     version: '2026.09.22.07',
     date: '2026-09-22',
     title: 'Adaptiv källfiltrering i AI-Chatten',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
