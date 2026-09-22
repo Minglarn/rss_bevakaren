@@ -271,6 +271,9 @@ def save_article_embedding(article_id: int, title: str, text: str, db: Any, mode
             )
             db.execute(stmt)
             db.commit()
+            _dim = len(embs[0])
+            _short_title = (title or "")[:60]
+            print(f"[AI Embeddings] Sparad #{article_id} | dim={_dim} | '{_short_title}'", flush=True)
             return True
     except Exception as e:
         print(f"[AI Embeddings] Kunde inte spara embedding för artikel {article_id}: {e}", flush=True)
@@ -323,6 +326,8 @@ def batch_embed_articles(articles: List[Any], db: Any, model: Optional[str] = No
                     db.execute(stmt)
                 db.commit()
                 saved_count += len(chunk)
+                _dim = len(embs[0]) if embs else 0
+                print(f"[AI Embeddings] Batch sparad: {len(chunk)} artiklar | dim={_dim} | totalt: {saved_count}", flush=True)
             except Exception as e:
                 print(f"[AI Embeddings] Databasfel vid batch-sparning: {e}", flush=True)
                 try:
