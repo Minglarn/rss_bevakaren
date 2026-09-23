@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.07',
+    date: '2026-09-23',
+    title: 'Korrigerad initieringsordning i flödesvyn',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Korrigerad hook-initiering för Seen on scroll',
+        description: 'Åtgärdat ett initieringsfel (ReferenceError TDZ) i Dashboard där effekten för IntersectionObserver refererade till artikellistan innan dess useMemo-block hade utvärderats.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.06',
     date: '2026-09-23',
     title: 'Kollapsade sektioner i Allmänt samt Seen-on-scroll avräkning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

@@ -471,56 +471,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     };
   }, []);
 
-  // Seen on scroll (Alternativ 1): Spåra artiklar som visas/scrollas förbi under sessionen
-  useEffect(() => {
-    if (appMode !== 'omni' || !sessionRefTime) return;
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        // Om sessionsavdelaren ("Tidigare artiklar") blir synlig har alla nya artiklar passerats
-        if (entry.target.getAttribute('data-session-divider') === 'true') {
-          if (entry.isIntersecting) {
-            resetSessionRef();
-          }
-          return;
-        }
-
-        if (entry.isIntersecting) {
-          const artIdStr = entry.target.getAttribute('data-article-id');
-          const feedIdStr = entry.target.getAttribute('data-feed-id');
-          const artId = artIdStr ? parseInt(artIdStr, 10) : null;
-          const feedId = feedIdStr ? parseInt(feedIdStr, 10) : null;
-
-          if (artId && !seenRef.current.has(artId)) {
-            seenRef.current.add(artId);
-            setSeenArticleIds(new Set(seenRef.current));
-
-            window.dispatchEvent(new CustomEvent('articleSeenInSession', {
-              detail: { articleId: artId, feedId: feedId }
-            }));
-
-            observer.unobserve(entry.target);
-          }
-        }
-      });
-    }, {
-      root: null,
-      rootMargin: '0px 0px -10% 0px',
-      threshold: 0.25
-    });
-
-    const targets = document.querySelectorAll('[data-new-article="true"]');
-    targets.forEach(el => observer.observe(el));
-
-    const dividerEl = document.querySelector('[data-session-divider="true"]');
-    if (dividerEl) {
-      observer.observe(dividerEl);
-    }
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [visibleFeeds, sessionRefTime, appMode, seenArticleIds]);
 
   const [showRead, setShowRead] = useState(() => {
     return localStorage.getItem('rss_show_read') === 'true';
@@ -668,6 +619,57 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       return (b.id || 0) - (a.id || 0);
     });
   }, [displayedFeeds, feedId, appMode, showRead, showLikedOnly, showLockedOnly, showDislikedOnly, isArticleRead]);
+
+  // Seen on scroll (Alternativ 1): Spåra artiklar som visas/scrollas förbi under sessionen
+  useEffect(() => {
+    if (appMode !== 'omni' || !sessionRefTime) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        // Om sessionsavdelaren ("Tidigare artiklar") blir synlig har alla nya artiklar passerats
+        if (entry.target.getAttribute('data-session-divider') === 'true') {
+          if (entry.isIntersecting) {
+            resetSessionRef();
+          }
+          return;
+        }
+
+        if (entry.isIntersecting) {
+          const artIdStr = entry.target.getAttribute('data-article-id');
+          const feedIdStr = entry.target.getAttribute('data-feed-id');
+          const artId = artIdStr ? parseInt(artIdStr, 10) : null;
+          const feedId = feedIdStr ? parseInt(feedIdStr, 10) : null;
+
+          if (artId && !seenRef.current.has(artId)) {
+            seenRef.current.add(artId);
+            setSeenArticleIds(new Set(seenRef.current));
+
+            window.dispatchEvent(new CustomEvent('articleSeenInSession', {
+              detail: { articleId: artId, feedId: feedId }
+            }));
+
+            observer.unobserve(entry.target);
+          }
+        }
+      });
+    }, {
+      root: null,
+      rootMargin: '0px 0px -10% 0px',
+      threshold: 0.25
+    });
+
+    const targets = document.querySelectorAll('[data-new-article="true"]');
+    targets.forEach(el => observer.observe(el));
+
+    const dividerEl = document.querySelector('[data-session-divider="true"]');
+    if (dividerEl) {
+      observer.observe(dividerEl);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [visibleFeeds, sessionRefTime, appMode, seenArticleIds]);
 
   // Gruppera artiklar per dag med strikt datumdeduplicering och kronologisk sortering
   const dayGroups = useMemo(() => {
