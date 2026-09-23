@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.11',
+    date: '2026-09-23',
+    title: 'Stilrena indikatorprickar och fullständig avveckling av scroll-spårning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Diskret indikatorprick istället för sifferpanik',
+        description: 'I Omni-läget ersätts sifferbrickorna med rena, diskreta accentfärgade indikatorprickar på RSS- och PRIO-ikonerna. Pricken tänds när nya artiklar anlänt sedan förra besöket och släcks automatiskt när du scrollar förbi tidsavdelaren.'
+      },
+      {
+        type: 'improvement',
+        title: 'Avvecklade NY-piller för 100 % jank-fritt flöde',
+        description: 'Tidsavdelaren Tidigare artiklar markerar gränsen mellan nya och äldre artiklar. Genom att ta bort individuella NY-piller och all per-kort-spårning renderas flödet helt statiskt under scrollning, vilket ger perfekt 60-120 FPS utan mikrostammande.'
+      },
+      {
+        type: 'fix',
+        title: 'Eliminerade kapplöpningar och spökbrickor',
+        description: 'All komplex hantering av individuella artikel-ID:n i minnet och sessionslagringen har ersatts med ren referenstidslogik mot tidsavdelaren. Skärmuppdateringar och bakgrunds-WebSockets orsakar inte längre att tidigare sedda nyheter felaktigt markeras som nya.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.10',
     date: '2026-09-23',
     title: 'Silkeslen scrollning och bibehållen sessionsstatus vid skärmuppdatering',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

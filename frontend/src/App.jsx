@@ -14,7 +14,7 @@ import WhatsNewModal from './components/WhatsNewModal';
 import api, { isTokenExpired, shouldRefreshToken } from './api';
 import { autoSyncPushSubscription } from './utils/notifications';
 import { resolveFeedIcon } from './utils/textUtils';
-import { getAppMode, getSessionRefTime, initSessionTracker, touchSession, getSeenArticleIds } from './utils/sessionTracker';
+import { getAppMode, getSessionRefTime, initSessionTracker, touchSession } from './utils/sessionTracker';
 import packageJson from '../package.json';
 import './App.css';
 import './index.css';
@@ -36,9 +36,8 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
   const myFeedsRef = useRef([]);
   const [prioUnreadCount, setPrioUnreadCount] = useState(0);
   const [prioNewCount, setPrioNewCount] = useState(0);
-  const [dashboardNewCount, setDashboardNewCount] = useState(null);
-  const seenArticlesByFeedRef = useRef(new Map());
-  const seenPrioArticlesRef = useRef(new Set());
+  const [dashboardHasNew, setDashboardHasNew] = useState(false);
+  const [prioHasNew, setPrioHasNew] = useState(false);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   const [pollingFeeds, setPollingFeeds] = useState(new Set());
   const [appMode, setAppMode] = useState(() => getAppMode());
@@ -54,58 +53,25 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Lyssna på faktiskt antal artiklar med "NY"-piller från Dashboard för 100% sifferbrickeprecision
+  // Lyssna på om det finns nya artiklar sedan senaste besöket från Dashboard
   useEffect(() => {
-    const handleDashboardCount = (e) => {
-      const { count, feedId, isPrio } = e.detail || {};
+    const handleHasNew = (e) => {
+      const { hasNew, feedId, isPrio } = e.detail || {};
       if (!feedId && !isPrio) {
-        setDashboardNewCount(count);
+        setDashboardHasNew(Boolean(hasNew));
       } else if (isPrio) {
-        setPrioNewCount(count);
+        setPrioHasNew(Boolean(hasNew));
       }
     };
-    window.addEventListener('dashboardNewCountUpdated', handleDashboardCount);
-    return () => window.removeEventListener('dashboardNewCountUpdated', handleDashboardCount);
+    window.addEventListener('dashboardHasNewChanged', handleHasNew);
+    return () => window.removeEventListener('dashboardHasNewChanged', handleHasNew);
   }, []);
 
-  // Realtidssynk för Seen on scroll:
-  // När en artikel visas/scrollas förbi i sessionen minskas dess källas nya-räknare
-  // samt prioNewCount om artikeln var prio.
+  // Vid sessionsnollställning (när användaren läst ikapp) släcks indikatorprickarna omedelbart
   useEffect(() => {
-    const handleArticleSeen = (e) => {
-      const { articleId, feedId, isPrio } = e.detail || {};
-      if (articleId && feedId) {
-        if (!seenArticlesByFeedRef.current.has(feedId)) {
-          seenArticlesByFeedRef.current.set(feedId, new Set());
-        }
-        seenArticlesByFeedRef.current.get(feedId).add(articleId);
-      }
-      if (articleId && isPrio) {
-        seenPrioArticlesRef.current.add(articleId);
-        setPrioNewCount(prev => Math.max(0, prev - 1));
-      }
-
-      setMyFeeds(prevFeeds => {
-        let changed = false;
-        const updated = prevFeeds.map(feed => {
-          if ((feed.id === feedId || !feedId) && (feed.new_count || 0) > 0 && !changed) {
-            changed = true;
-            return { ...feed, new_count: Math.max(0, feed.new_count - 1) };
-          }
-          return feed;
-        });
-        if (changed) {
-          myFeedsRef.current = updated;
-          return updated;
-        }
-        return prevFeeds;
-      });
-    };
-
     const handleSessionRefChanged = () => {
-      seenArticlesByFeedRef.current.clear();
-      seenPrioArticlesRef.current.clear();
-      setDashboardNewCount(0);
+      setDashboardHasNew(false);
+      setPrioHasNew(false);
       setPrioNewCount(0);
       setMyFeeds(prevFeeds => {
         const updated = prevFeeds.map(feed => ({ ...feed, new_count: 0 }));
@@ -113,14 +79,8 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
         return updated;
       });
     };
-
-    window.addEventListener('articleSeenInSession', handleArticleSeen);
     window.addEventListener('sessionRefChanged', handleSessionRefChanged);
-
-    return () => {
-      window.removeEventListener('articleSeenInSession', handleArticleSeen);
-      window.removeEventListener('sessionRefChanged', handleSessionRefChanged);
-    };
+    return () => window.removeEventListener('sessionRefChanged', handleSessionRefChanged);
   }, []);
 
   // Lyssna på ändringar i applikationsläge (Omni vs Klassisk)
@@ -140,19 +100,8 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       const url = (mode === 'omni' && refTime > 0) ? `/feeds?since=${refTime}` : '/feeds';
       const res = await api.get(url);
       const sortedFeeds = res.data.sort((a, b) => a.title.localeCompare(b.title, 'sv'));
-      const adjustedFeeds = sortedFeeds.map(feed => {
-        if (mode === 'omni' && feed.new_count) {
-          const seenSet = seenArticlesByFeedRef.current.get(feed.id);
-          const seenCount = seenSet ? seenSet.size : 0;
-          return {
-            ...feed,
-            new_count: Math.max(0, (feed.new_count || 0) - seenCount)
-          };
-        }
-        return feed;
-      });
-      setMyFeeds(adjustedFeeds);
-      myFeedsRef.current = adjustedFeeds;
+      setMyFeeds(sortedFeeds);
+      myFeedsRef.current = sortedFeeds;
     } catch (err) {
       console.error("Could not fetch feeds for the sidebar", err);
     }
@@ -171,9 +120,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
         : '/prio/unread-count';
       const res = await api.get(url);
       setPrioUnreadCount(res.data.unread_count || 0);
-      const rawNew = res.data.new_count || 0;
-      const seenPrioCount = seenPrioArticlesRef.current.size;
-      setPrioNewCount(Math.max(0, rawNew - seenPrioCount));
+      setPrioNewCount(res.data.new_count || 0);
     } catch (err) {
       console.error("Could not fetch prio unread count", err);
     }
@@ -415,9 +362,8 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
     };
   }, []);
 
-  const omniFeedNewCount = (location.pathname === '/' && !location.search.includes('feedId') && dashboardNewCount !== null)
-    ? dashboardNewCount
-    : Math.max(0, myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0) - getSeenArticleIds().size);
+  const showFeedDot = appMode === 'omni' && (dashboardHasNew || myFeeds.some(f => (f.new_count || 0) > 0));
+  const showPrioDot = appMode === 'omni' && (prioHasNew || prioNewCount > 0);
 
   return (
     <FeedsContext.Provider value={{ myFeeds, prioUnreadCount, refreshFeeds: fetchMyFeeds }}>
@@ -516,18 +462,18 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             <Rss size={17} /> {!isCollapsed && "Nyhetsflöde"}
             {!isCollapsed && (
               appMode === 'omni' ? (
-                omniFeedNewCount > 0 && (
-                  <span style={{ 
-                    marginLeft: 'auto', 
-                    backgroundColor: 'var(--primary)', 
-                    color: 'white', 
-                    fontSize: '0.65rem', 
-                    padding: '0.06rem 0.38rem', 
-                    borderRadius: '10px', 
-                    fontWeight: 'bold' 
-                  }}>
-                    +{omniFeedNewCount}
-                  </span>
+                showFeedDot && (
+                  <span 
+                    style={{ 
+                      marginLeft: 'auto', 
+                      width: '8px', 
+                      height: '8px', 
+                      borderRadius: '50%', 
+                      backgroundColor: 'var(--primary)',
+                      boxShadow: '0 0 6px var(--primary)'
+                    }} 
+                    title="Nya artiklar sedan ditt senaste besök"
+                  />
                 )
               ) : (
                 myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
@@ -562,18 +508,18 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               <Flame size={17} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio-flöde"}
               {!isCollapsed && (
                 appMode === 'omni' ? (
-                  prioNewCount > 0 && (
-                    <span style={{ 
-                      marginLeft: 'auto', 
-                      backgroundColor: '#f97316', 
-                      color: 'white', 
-                      fontSize: '0.65rem', 
-                      padding: '0.06rem 0.38rem', 
-                      borderRadius: '10px', 
-                      fontWeight: 'bold' 
-                    }}>
-                      +{prioNewCount}
-                    </span>
+                  showPrioDot && (
+                    <span 
+                      style={{ 
+                        marginLeft: 'auto', 
+                        width: '8px', 
+                        height: '8px', 
+                        borderRadius: '50%', 
+                        backgroundColor: '#f97316',
+                        boxShadow: '0 0 6px #f97316'
+                      }} 
+                      title="Nya prioriterade artiklar sedan ditt senaste besök"
+                    />
                   )
                 ) : (
                   prioUnreadCount > 0 && (
@@ -750,13 +696,23 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
         }}>
-          <div className="icon-wrapper">
+          <div className="icon-wrapper" style={{ position: 'relative' }}>
             <Rss size={22} />
             {appMode === 'omni' ? (
-              omniFeedNewCount > 0 && (
-                <span className="bottom-bar-badge" style={{ backgroundColor: 'var(--primary)' }}>
-                  +{omniFeedNewCount}
-                </span>
+              showFeedDot && (
+                <span 
+                  style={{ 
+                    position: 'absolute', 
+                    top: '-2px', 
+                    right: '-3px', 
+                    width: '8px', 
+                    height: '8px', 
+                    borderRadius: '50%', 
+                    backgroundColor: 'var(--primary)',
+                    boxShadow: '0 0 6px var(--primary)'
+                  }} 
+                  title="Nya artiklar sedan ditt senaste besök"
+                />
               )
             ) : (
               myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
@@ -774,11 +730,23 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
         }}>
-          <div className="icon-wrapper">
+          <div className="icon-wrapper" style={{ position: 'relative' }}>
             <Flame size={22} style={{ color: location.pathname === '/prio' ? '#f97316' : 'inherit' }} />
             {appMode === 'omni' ? (
-              prioNewCount > 0 && (
-                <span className="bottom-bar-badge" style={{ backgroundColor: '#f97316' }}>+{prioNewCount}</span>
+              showPrioDot && (
+                <span 
+                  style={{ 
+                    position: 'absolute', 
+                    top: '-2px', 
+                    right: '-3px', 
+                    width: '8px', 
+                    height: '8px', 
+                    borderRadius: '50%', 
+                    backgroundColor: '#f97316',
+                    boxShadow: '0 0 6px #f97316'
+                  }} 
+                  title="Nya prioriterade artiklar sedan ditt senaste besök"
+                />
               )
             ) : (
               prioUnreadCount > 0 && (
@@ -843,6 +811,19 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             }}
           >
             <Rss size={20} /> Alla flöden
+            {appMode === 'omni' && showFeedDot && (
+              <span 
+                style={{ 
+                  marginLeft: 'auto', 
+                  width: '8px', 
+                  height: '8px', 
+                  borderRadius: '50%', 
+                  backgroundColor: 'var(--primary)',
+                  boxShadow: '0 0 6px var(--primary)'
+                }} 
+                title="Nya artiklar sedan ditt senaste besök"
+              />
+            )}
           </Link>
           {prioEnabled && (
             <Link 
@@ -862,10 +843,18 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             >
               <Flame size={20} style={{ color: '#f97316' }} /> Prio-flöde
               {appMode === 'omni' ? (
-                prioNewCount > 0 && (
-                  <span style={{ backgroundColor: '#f97316', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold', marginLeft: 'auto' }}>
-                    +{prioNewCount}
-                  </span>
+                showPrioDot && (
+                  <span 
+                    style={{ 
+                      marginLeft: 'auto', 
+                      width: '8px', 
+                      height: '8px', 
+                      borderRadius: '50%', 
+                      backgroundColor: '#f97316',
+                      boxShadow: '0 0 6px #f97316'
+                    }} 
+                    title="Nya prioriterade artiklar sedan ditt senaste besök"
+                  />
                 )
               ) : (
                 prioUnreadCount > 0 && (

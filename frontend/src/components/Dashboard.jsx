@@ -9,7 +9,7 @@ import OnboardingWizard from './OnboardingWizard';
 import AIReasoningModal from './AIReasoningModal';
 import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
 import { useFeeds } from '../App';
-import { getAppMode, getSessionRefTime, getSeenArticleIds, addSeenArticleId, resetSessionRef } from '../utils/sessionTracker';
+import { getAppMode, getSessionRefTime, resetSessionRef } from '../utils/sessionTracker';
 
 const DEFAULT_CATEGORIES = ['All', 'Technology', 'Politics', 'Emergency', 'Local', 'Economy', 'Entertainment', 'Other'];
 
@@ -450,24 +450,15 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
   const [appMode, setAppMode] = useState(() => getAppMode());
   const [sessionRefTime, setSessionRefTime] = useState(() => getSessionRefTime());
-  const [seenArticleIds, setSeenArticleIds] = useState(() => getSeenArticleIds());
-  const seenRef = useRef(new Set(getSeenArticleIds()));
-  seenRef.current = seenArticleIds;
 
   useEffect(() => {
     const handleAppMode = (e) => {
       const newMode = e.detail?.mode || getAppMode();
       setAppMode(newMode);
       setSessionRefTime(getSessionRefTime());
-      const currentSeen = getSeenArticleIds();
-      seenRef.current = currentSeen;
-      setSeenArticleIds(new Set(currentSeen));
     };
     const handleSessionRef = (e) => {
       setSessionRefTime(e.detail?.refTime || getSessionRefTime());
-      const currentSeen = getSeenArticleIds();
-      seenRef.current = currentSeen;
-      setSeenArticleIds(new Set(currentSeen));
     };
     window.addEventListener('appModeChanged', handleAppMode);
     window.addEventListener('sessionRefChanged', handleSessionRef);
@@ -628,86 +619,45 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     });
   }, [displayedFeeds, feedId, appMode, showRead, showLikedOnly, showLockedOnly, showDislikedOnly, isArticleRead]);
 
-  // Seen on scroll: Spåra artiklar som scrollats förbi under sessionen
+  // Kontrollera om det finns nya artiklar sedan senaste besöket (för indikatorprick)
+  const hasNewArticles = useMemo(() => {
+    if (appMode !== 'omni' || !sessionRefTime) return false;
+    return visibleFeeds.some(it => {
+      const pubDate = getArticlePublishedDate(it);
+      const itemEffectiveTs = (it.received_ts || it.published_ts || (pubDate && !isNaN(pubDate.getTime()) ? Math.floor(pubDate.getTime() / 1000) : 0));
+      return itemEffectiveTs >= (sessionRefTime - 60);
+    });
+  }, [visibleFeeds, sessionRefTime, appMode]);
+
   useEffect(() => {
-    if (appMode !== 'omni' || !sessionRefTime) return;
+    window.dispatchEvent(new CustomEvent('dashboardHasNewChanged', {
+      detail: { hasNew: hasNewArticles, feedId: feedId, isPrio: isPrioMode }
+    }));
+  }, [hasNewArticles, feedId, isPrioMode]);
 
-    let batchTimer = null;
+  // När användaren scrollar förbi sessionsavdelaren uppåt markeras sessionen som ikapp och pricken släcks
+  useEffect(() => {
+    if (appMode !== 'omni' || !sessionRefTime || !hasNewArticles) return;
+
+    const dividerEl = document.querySelector('[data-session-divider="true"]');
+    if (!dividerEl) return;
+
     const observer = new IntersectionObserver((entries) => {
-      let newlySeen = false;
       entries.forEach(entry => {
-        // En artikel/avdelare anses passerad/sedd först när användaren har scrollat förbi den uppåt
         const isPassedAbove = !entry.isIntersecting && entry.boundingClientRect.bottom < 120;
-
-        // Om användaren passerar sessionsavdelaren ("Tidigare nyheter / Du är ikapp") uppåt, är man ikapp!
-        if (entry.target.getAttribute('data-session-divider') === 'true') {
-          if (isPassedAbove) {
-            observer.unobserve(entry.target);
-            resetSessionRef();
-          }
-          return;
-        }
-
         if (isPassedAbove) {
-          const artIdStr = entry.target.getAttribute('data-article-id');
-          const feedIdStr = entry.target.getAttribute('data-feed-id');
-          const isPrioStr = entry.target.getAttribute('data-is-prio');
-          const artId = artIdStr ? parseInt(artIdStr, 10) : null;
-          const feedId = feedIdStr ? parseInt(feedIdStr, 10) : null;
-          const isPrio = isPrioStr === 'true';
-
-          if (artId && !seenRef.current.has(artId)) {
-            addSeenArticleId(artId);
-            seenRef.current.add(artId);
-            newlySeen = true;
-
-            window.dispatchEvent(new CustomEvent('articleSeenInSession', {
-              detail: { articleId: artId, feedId: feedId, isPrio: isPrio }
-            }));
-
-            observer.unobserve(entry.target);
-          }
+          observer.unobserve(entry.target);
+          resetSessionRef();
         }
       });
-
-      if (newlySeen) {
-        if (batchTimer) clearTimeout(batchTimer);
-        batchTimer = setTimeout(() => {
-          setSeenArticleIds(new Set(seenRef.current));
-        }, 120);
-      }
     }, {
       root: null,
       threshold: [0, 0.1]
     });
 
-    const targets = document.querySelectorAll('[data-new-article="true"]');
-    targets.forEach(el => observer.observe(el));
-
-    const dividerEl = document.querySelector('[data-session-divider="true"]');
-    if (dividerEl) {
-      observer.observe(dividerEl);
-    }
-
-    return () => {
-      if (batchTimer) clearTimeout(batchTimer);
-      observer.disconnect();
-    };
-  }, [visibleFeeds, sessionRefTime, appMode]);
-
-  // Synka det faktiska antalet nya artiklar med "NY"-piller direkt med App.jsx för 100% sifferbrickeprecision
-  useEffect(() => {
-    if (appMode !== 'omni' || !sessionRefTime) return;
-    const actualNewCount = visibleFeeds.filter(it => {
-      const pubDate = getArticlePublishedDate(it);
-      const itemEffectiveTs = (it.received_ts || it.published_ts || (pubDate && !isNaN(pubDate.getTime()) ? Math.floor(pubDate.getTime() / 1000) : 0));
-      return itemEffectiveTs >= (sessionRefTime - 60) && !seenArticleIds.has(it.id);
-    }).length;
-
-    window.dispatchEvent(new CustomEvent('dashboardNewCountUpdated', {
-      detail: { count: actualNewCount, feedId: feedId, isPrio: isPrioMode }
-    }));
-  }, [visibleFeeds, sessionRefTime, appMode, seenArticleIds, feedId, isPrioMode]);
+    observer.observe(dividerEl);
+    return () => observer.disconnect();
+  }, [visibleFeeds, sessionRefTime, appMode, hasNewArticles]);
 
   // Gruppera artiklar per dag med strikt datumdeduplicering och kronologisk sortering
   const dayGroups = useMemo(() => {
@@ -1973,8 +1923,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               const isNewSinceLastVisit = Boolean(
                 appMode === 'omni' && 
                 sessionRefTime > 0 && 
-                itemEffectiveTs >= (sessionRefTime - 60) && 
-                !seenArticleIds.has(item.id)
+                itemEffectiveTs >= (sessionRefTime - 60)
               );
               const isPrioItem = Boolean(item.priority === 'high' || (item.prio_score || 0) >= 75);
               const showTimelineDivider = Boolean(firstOlderIndex !== -1 && index === firstOlderIndex);
@@ -2020,7 +1969,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       data-article-id={item.id}
                       data-feed-id={item.feed_id}
                       data-is-prio={isPrioItem ? "true" : undefined}
-                      data-new-article={isNewSinceLastVisit ? "true" : undefined}
                       isRead={isReadNow}
                       swipeEnabled={effectiveSwipeEnabled}
                       onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
@@ -2028,14 +1976,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       onExpand={() => {
                         const itemKey = item.id !== undefined ? item.id : index;
                         setExpandedItems(prev => ({ ...prev, [itemKey]: !prev[itemKey] }));
-                        if (isNewSinceLastVisit && !seenRef.current.has(item.id)) {
-                          addSeenArticleId(item.id);
-                          seenRef.current.add(item.id);
-                          setSeenArticleIds(new Set(seenRef.current));
-                          window.dispatchEvent(new CustomEvent('articleSeenInSession', {
-                            detail: { articleId: item.id, feedId: item.feed_id, isPrio: isPrioItem }
-                          }));
-                        }
                       }}
                       className={`feed-card feed-card-ultracompact ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                     >
@@ -2060,21 +2000,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                               )}
                               {item.source_title && relTime && <span>·</span>}
                               {relTime && <span>{relTime}</span>}
-
-                              {isNewSinceLastVisit && (
-                                <span style={{
-                                  backgroundColor: 'var(--primary)',
-                                  color: '#ffffff',
-                                  padding: '0.1rem 0.4rem',
-                                  borderRadius: '4px',
-                                  fontSize: '0.68rem',
-                                  fontWeight: 700,
-                                  letterSpacing: '0.5px',
-                                  marginLeft: '0.35rem'
-                                }}>
-                                  NY
-                                </span>
-                              )}
 
                             {isClickbait && (
                               <span style={{
@@ -2315,21 +2240,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     data-article-id={item.id}
                     data-feed-id={item.feed_id}
                     data-is-prio={isPrioItem ? "true" : undefined}
-                    data-new-article={isNewSinceLastVisit ? "true" : undefined}
                     isRead={isReadNow}
                     swipeEnabled={effectiveSwipeEnabled}
                     onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
                   onMarkAsUnread={() => markAsUnread(item.id, item.cluster_id, item.similar_articles)}
                   onExpand={() => {
                     handleExpand(index, item.link, item.id);
-                    if (isNewSinceLastVisit && !seenRef.current.has(item.id)) {
-                      addSeenArticleId(item.id);
-                      seenRef.current.add(item.id);
-                      setSeenArticleIds(new Set(seenRef.current));
-                      window.dispatchEvent(new CustomEvent('articleSeenInSession', {
-                        detail: { articleId: item.id, feedId: item.feed_id, isPrio: isPrioItem }
-                      }));
-                    }
                   }}
                   className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                   style={{ 
@@ -2497,22 +2413,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           </span>
                         </div>
 
-                        {isNewSinceLastVisit && (
-                          <span 
-                            style={{
-                              backgroundColor: 'rgba(37, 99, 235, 0.95)',
-                              color: '#ffffff',
-                              padding: '0.12rem 0.45rem',
-                              borderRadius: '4px',
-                              fontSize: '0.7rem',
-                              fontWeight: 700,
-                              letterSpacing: '0.5px'
-                            }} 
-                            title="Ny artikel sedan ditt senaste besök"
-                          >
-                            NY
-                          </span>
-                        )}
 
                         {/* ClickBait-varning */}
                         {shouldShowAi && Boolean(item.is_clickbait) && (
