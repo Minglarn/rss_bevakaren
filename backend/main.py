@@ -3231,6 +3231,8 @@ def get_dashboard_feeds(
     locked_only: Optional[bool] = False,
     liked_only: Optional[bool] = False,
     disliked_only: Optional[bool] = False,
+    limit: Optional[int] = 80,
+    offset: Optional[int] = 0,
     db: Session = Depends(database.get_db), 
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -3289,7 +3291,12 @@ def get_dashboard_feeds(
         effective_ts = func.coalesce(func.nullif(models.Article.received_ts, 0), models.Article.published_ts)
     else:
         effective_ts = func.coalesce(func.nullif(models.Article.published_ts, 0), models.Article.received_ts)
-    articles = query.order_by(effective_ts.desc(), models.Article.id.desc()).limit(150).all()
+    query = query.order_by(effective_ts.desc(), models.Article.id.desc())
+    if offset and offset > 0:
+        query = query.offset(offset)
+    if limit and limit > 0:
+        query = query.limit(limit)
+    articles = query.all()
     
     # Bygg respons-artiklar
     response_items = []

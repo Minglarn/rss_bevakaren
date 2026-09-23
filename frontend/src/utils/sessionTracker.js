@@ -33,18 +33,14 @@ export const setAppMode = (mode) => {
   return validMode;
 };
 
-const SEEN_ARTICLES_KEY = 'rss_session_seen_articles';
+// Lokalt minne för sedda artiklar under pågående flik/session
+const activeSessionSeenSet = new Set();
 
 /**
- * Hämtar mängden av artikel-ID:n som setts under innevarande session.
+ * Hämtar mängden av artikel-ID:n som setts under innevarande fliksession.
  */
 export const getSeenArticleIds = () => {
-  try {
-    const raw = sessionStorage.getItem(SEEN_ARTICLES_KEY);
-    return raw ? new Set(JSON.parse(raw)) : new Set();
-  } catch (e) {
-    return new Set();
-  }
+  return new Set(activeSessionSeenSet);
 };
 
 /**
@@ -52,19 +48,16 @@ export const getSeenArticleIds = () => {
  */
 export const addSeenArticleId = (id) => {
   if (!id) return;
-  try {
-    const set = getSeenArticleIds();
-    set.add(id);
-    sessionStorage.setItem(SEEN_ARTICLES_KEY, JSON.stringify([...set]));
-  } catch (e) {}
+  activeSessionSeenSet.add(id);
 };
 
 /**
  * Rensar listan över sedda artiklar för sessionen.
  */
 export const clearSeenArticleIds = () => {
+  activeSessionSeenSet.clear();
   try {
-    sessionStorage.removeItem(SEEN_ARTICLES_KEY);
+    sessionStorage.removeItem('rss_session_seen_articles');
   } catch (e) {}
 };
 
@@ -96,7 +89,8 @@ export const initSessionTracker = () => {
   if (!refTime || (lastActive > 0 && (now - lastActive) > SESSION_TIMEOUT_SECONDS)) {
     clearSeenArticleIds();
     if (lastActive > 0) {
-      refTime = lastActive;
+      // Begränsa 'sedan sist' till max 4 timmar bakåt så vi inte samlar flera dygns historik som "nya"
+      refTime = Math.max(lastActive, now - 14400);
     } else {
       // Första besöket: starta med nuvarande tid så vi inte samlar på oss ett helt dygns historik
       refTime = now;

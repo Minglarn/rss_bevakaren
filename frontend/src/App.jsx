@@ -36,6 +36,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
   const myFeedsRef = useRef([]);
   const [prioUnreadCount, setPrioUnreadCount] = useState(0);
   const [prioNewCount, setPrioNewCount] = useState(0);
+  const [dashboardNewCount, setDashboardNewCount] = useState(null);
   const seenArticlesByFeedRef = useRef(new Map());
   const seenPrioArticlesRef = useRef(new Set());
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
@@ -51,6 +52,20 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       }
     }, 60000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Lyssna på faktiskt antal artiklar med "NY"-piller från Dashboard för 100% sifferbrickeprecision
+  useEffect(() => {
+    const handleDashboardCount = (e) => {
+      const { count, feedId, isPrio } = e.detail || {};
+      if (!feedId && !isPrio) {
+        setDashboardNewCount(count);
+      } else if (isPrio) {
+        setPrioNewCount(count);
+      }
+    };
+    window.addEventListener('dashboardNewCountUpdated', handleDashboardCount);
+    return () => window.removeEventListener('dashboardNewCountUpdated', handleDashboardCount);
   }, []);
 
   // Realtidssynk för Seen on scroll:
@@ -90,6 +105,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
     const handleSessionRefChanged = () => {
       seenArticlesByFeedRef.current.clear();
       seenPrioArticlesRef.current.clear();
+      setDashboardNewCount(0);
       setPrioNewCount(0);
       setMyFeeds(prevFeeds => {
         const updated = prevFeeds.map(feed => ({ ...feed, new_count: 0 }));
@@ -399,6 +415,10 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
     };
   }, []);
 
+  const omniFeedNewCount = (location.pathname === '/' && !location.search.includes('feedId') && dashboardNewCount !== null)
+    ? dashboardNewCount
+    : myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0);
+
   return (
     <FeedsContext.Provider value={{ myFeeds, prioUnreadCount, refreshFeeds: fetchMyFeeds }}>
       <div className="app-container" style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-app)', transition: 'all 0.3s' }}>
@@ -496,7 +516,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             <Rss size={17} /> {!isCollapsed && "Nyhetsflöde"}
             {!isCollapsed && (
               appMode === 'omni' ? (
-                myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0) > 0 && (
+                omniFeedNewCount > 0 && (
                   <span style={{ 
                     marginLeft: 'auto', 
                     backgroundColor: 'var(--primary)', 
@@ -506,7 +526,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
                     borderRadius: '10px', 
                     fontWeight: 'bold' 
                   }}>
-                    +{myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0)}
+                    +{omniFeedNewCount}
                   </span>
                 )
               ) : (
@@ -733,9 +753,9 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           <div className="icon-wrapper">
             <Rss size={22} />
             {appMode === 'omni' ? (
-              myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0) > 0 && (
+              omniFeedNewCount > 0 && (
                 <span className="bottom-bar-badge" style={{ backgroundColor: 'var(--primary)' }}>
-                  +{myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0)}
+                  +{omniFeedNewCount}
                 </span>
               )
             ) : (

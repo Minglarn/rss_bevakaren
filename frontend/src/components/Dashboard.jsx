@@ -9,7 +9,7 @@ import OnboardingWizard from './OnboardingWizard';
 import AIReasoningModal from './AIReasoningModal';
 import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
 import { useFeeds } from '../App';
-import { getAppMode, getSessionRefTime, getSeenArticleIds, addSeenArticleId } from '../utils/sessionTracker';
+import { getAppMode, getSessionRefTime, getSeenArticleIds, addSeenArticleId, resetSessionRef } from '../utils/sessionTracker';
 
 const DEFAULT_CATEGORIES = ['All', 'Technology', 'Politics', 'Emergency', 'Local', 'Economy', 'Entertainment', 'Other'];
 
@@ -444,9 +444,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
   const longPressTimers = useRef({});
   const isDraggingCard = useRef(false);
+  const [hasMoreFromServer, setHasMoreFromServer] = useState(true);
+  const [loadingMoreServer, setLoadingMoreServer] = useState(false);
+  const rawOffsetRef = useRef(0);
+
   const [appMode, setAppMode] = useState(() => getAppMode());
   const [sessionRefTime, setSessionRefTime] = useState(() => getSessionRefTime());
-  const [seenArticleIds, setSeenArticleIds] = useState(() => getSeenArticleIds());
+  const [seenArticleIds, setSeenArticleIds] = useState(() => new Set());
   const seenRef = useRef(seenArticleIds);
   seenRef.current = seenArticleIds;
 
@@ -455,15 +459,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       const newMode = e.detail?.mode || getAppMode();
       setAppMode(newMode);
       setSessionRefTime(getSessionRefTime());
-      const freshSeen = getSeenArticleIds();
-      seenRef.current = freshSeen;
-      setSeenArticleIds(freshSeen);
+      seenRef.current.clear();
+      setSeenArticleIds(new Set());
     };
     const handleSessionRef = (e) => {
       setSessionRefTime(e.detail?.refTime || getSessionRefTime());
-      const freshSeen = getSeenArticleIds();
-      seenRef.current = freshSeen;
-      setSeenArticleIds(freshSeen);
+      seenRef.current.clear();
+      setSeenArticleIds(new Set());
     };
     window.addEventListener('appModeChanged', handleAppMode);
     window.addEventListener('sessionRefChanged', handleSessionRef);
@@ -595,6 +597,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   useEffect(() => {
     setDisplayedFeeds([]);
     setAllFeeds([]);
+    rawOffsetRef.current = 0;
+    setHasMoreFromServer(true);
     setPage(1);
     setLoading(true);
   }, [feedId, isPrioMode]);
@@ -622,15 +626,22 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     });
   }, [displayedFeeds, feedId, appMode, showRead, showLikedOnly, showLockedOnly, showDislikedOnly, isArticleRead]);
 
-  // Seen on scroll (Alternativ 1): Spåra artiklar som scrollats förbi under sessionen
+  // Seen on scroll: Spåra artiklar som scrollats förbi under sessionen
   useEffect(() => {
     if (appMode !== 'omni' || !sessionRefTime) return;
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        // En artikel anses passerad/sedd först när användaren har scrollat förbi den uppåt
-        // (den är inte längre i viewporten och dess botten har passerat förbi toppen av skärmen)
+        // En artikel/avdelare anses passerad/sedd först när användaren har scrollat förbi den uppåt
         const isPassedAbove = !entry.isIntersecting && entry.boundingClientRect.bottom < 120;
+
+        // Om användaren passerar sessionsavdelaren ("Tidigare nyheter / Du är ikapp") uppåt, är man ikapp!
+        if (entry.target.getAttribute('data-session-divider') === 'true') {
+          if (isPassedAbove) {
+            resetSessionRef();
+          }
+          return;
+        }
 
         if (isPassedAbove) {
           const artIdStr = entry.target.getAttribute('data-article-id');
@@ -661,10 +672,29 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     const targets = document.querySelectorAll('[data-new-article="true"]');
     targets.forEach(el => observer.observe(el));
 
+    const dividerEl = document.querySelector('[data-session-divider="true"]');
+    if (dividerEl) {
+      observer.observe(dividerEl);
+    }
+
     return () => {
       observer.disconnect();
     };
   }, [visibleFeeds, sessionRefTime, appMode, seenArticleIds]);
+
+  // Synka det faktiska antalet nya artiklar med "NY"-piller direkt med App.jsx för 100% sifferbrickeprecision
+  useEffect(() => {
+    if (appMode !== 'omni' || !sessionRefTime) return;
+    const actualNewCount = visibleFeeds.filter(it => {
+      const pubDate = getArticlePublishedDate(it);
+      const itemEffectiveTs = (it.received_ts || it.published_ts || (pubDate && !isNaN(pubDate.getTime()) ? Math.floor(pubDate.getTime() / 1000) : 0));
+      return itemEffectiveTs >= (sessionRefTime - 60) && !seenArticleIds.has(it.id);
+    }).length;
+
+    window.dispatchEvent(new CustomEvent('dashboardNewCountUpdated', {
+      detail: { count: actualNewCount, feedId: feedId, isPrio: isPrioMode }
+    }));
+  }, [visibleFeeds, sessionRefTime, appMode, seenArticleIds, feedId, isPrioMode]);
 
   // Gruppera artiklar per dag med strikt datumdeduplicering och kronologisk sortering
   const dayGroups = useMemo(() => {
@@ -817,6 +847,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     if (!isBackground) {
       setLoading(true);
       setPage(1);
+      rawOffsetRef.current = 0;
+      setHasMoreFromServer(true);
     }
     try {
       const queryParts = [];
@@ -841,6 +873,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       if (sCat && sCat !== 'All') queryParts.push(`category=${encodeURIComponent(sCat)}`);
       if (sTag && sTag.trim()) queryParts.push(`tag=${encodeURIComponent(sTag.trim())}`);
       if (cMode !== undefined) queryParts.push(`cluster_mode=${cMode ? 'true' : 'false'}`);
+      queryParts.push('limit=80');
+      queryParts.push('offset=0');
 
       const url = '/dashboard-feeds' + (queryParts.length > 0 ? '?' + queryParts.join('&') : '');
       const res = await api.get(url);
@@ -852,6 +886,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       const cleanData = fId ? res.data.filter(item => String(item.feed_id) === String(fId)) : res.data;
 
       setAllFeeds(cleanData);
+      rawOffsetRef.current = res.data.length;
+      setHasMoreFromServer(res.data.length >= 30);
+
       if (!isBackground) {
         setDisplayedFeeds(cleanData.slice(0, itemsPerPage));
         if (aId && cleanData.length > 0) {
@@ -1081,16 +1118,93 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     }
   };
 
-  // Säker och robust infinite scroll: hämtar nästa sida från lokalt cacheade allFeeds
-  const loadMoreFeeds = useCallback(() => {
-    setDisplayedFeeds(prevFeeds => {
-      const currentAll = allFeedsRef.current;
-      if (prevFeeds.length >= currentAll.length) return prevFeeds;
-      const nextCount = prevFeeds.length + itemsPerPage;
-      return currentAll.slice(0, nextCount);
-    });
-    setPage(p => p + 1);
-  }, [itemsPerPage]);
+  // Säker och robust infinite scroll: visar lokala artiklar och hämtar äldre artiklar från servern
+  const loadMoreFeeds = useCallback(async () => {
+    if (loadingMoreServer) return;
+
+    const currentAll = allFeedsRef.current;
+    if (displayedFeeds.length < currentAll.length) {
+      const nextCount = displayedFeeds.length + itemsPerPage;
+      setDisplayedFeeds(currentAll.slice(0, nextCount));
+      setPage(p => p + 1);
+      return;
+    }
+
+    if (!hasMoreFromServer) return;
+
+    setLoadingMoreServer(true);
+    try {
+      const {
+        isPrioMode: pMode,
+        feedMode: fMode,
+        feedId: fId,
+        articleId: aId,
+        showRead: sRead,
+        showLockedOnly: sLocked,
+        showLikedOnly: sLiked,
+        showDislikedOnly: sDisliked,
+        debouncedSearch: dSearch,
+        selectedCategory: sCat,
+        selectedTag: sTag,
+        clusterMode: cMode,
+        appMode: aMode
+      } = paramsRef.current;
+
+      const queryParts = [];
+      if (fId) queryParts.push(`feed_id=${encodeURIComponent(fId)}`);
+      if (aId) queryParts.push(`article_id=${encodeURIComponent(aId)}`);
+      if (aMode) queryParts.push(`app_mode=${encodeURIComponent(aMode)}`);
+      if (sLocked) {
+        queryParts.push('locked_only=true');
+      } else if (sLiked) {
+        queryParts.push('liked_only=true');
+      } else if (sDisliked) {
+        queryParts.push('disliked_only=true');
+      } else if (aMode === 'omni' || sRead) {
+        queryParts.push('show_read=true');
+      }
+      if (dSearch) queryParts.push(`search=${encodeURIComponent(dSearch)}`);
+      if (pMode) {
+        queryParts.push('prio_only=true');
+      } else if (fMode === 'ai') {
+        queryParts.push('ai_mode=true');
+      }
+      if (sCat && sCat !== 'All') queryParts.push(`category=${encodeURIComponent(sCat)}`);
+      if (sTag && sTag.trim()) queryParts.push(`tag=${encodeURIComponent(sTag.trim())}`);
+      if (cMode !== undefined) queryParts.push(`cluster_mode=${cMode ? 'true' : 'false'}`);
+      queryParts.push('limit=80');
+      queryParts.push(`offset=${rawOffsetRef.current}`);
+
+      const url = '/dashboard-feeds?' + queryParts.join('&');
+      const res = await api.get(url);
+      const incoming = fId ? res.data.filter(item => String(item.feed_id) === String(fId)) : res.data;
+
+      if (!incoming || incoming.length === 0) {
+        setHasMoreFromServer(false);
+      } else {
+        rawOffsetRef.current += res.data.length;
+        setAllFeeds(prevAll => {
+          const existingIds = new Set(prevAll.map(it => it.id));
+          const newUnique = incoming.filter(it => !existingIds.has(it.id));
+          if (newUnique.length === 0) {
+            setHasMoreFromServer(false);
+            return prevAll;
+          }
+          const combined = [...prevAll, ...newUnique];
+          setDisplayedFeeds(combined);
+          return combined;
+        });
+        if (incoming.length < 30) {
+          setHasMoreFromServer(false);
+        }
+      }
+    } catch (err) {
+      console.error("Fel vid hämtning av äldre nyheter:", err);
+      setHasMoreFromServer(false);
+    } finally {
+      setLoadingMoreServer(false);
+    }
+  }, [displayedFeeds.length, itemsPerPage, hasMoreFromServer, loadingMoreServer]);
 
   // IntersectionObserver på botten-sentinel
   useEffect(() => {
@@ -1105,11 +1219,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
     obs.observe(sentinel);
     return () => obs.disconnect();
-  }, [loadMoreFeeds, displayedFeeds.length, allFeeds.length]);
+  }, [loadMoreFeeds, displayedFeeds.length, allFeeds.length, hasMoreFromServer]);
 
   // Scroll-lyssnare som fallback i mobila webbläsare och PWA standalone-läge
   useEffect(() => {
-    if (displayedFeeds.length >= allFeeds.length) return;
+    if (!hasMoreFromServer && displayedFeeds.length >= allFeeds.length) return;
 
     const handleScroll = () => {
       const scrollPosition = window.innerHeight + window.scrollY;
@@ -1121,7 +1235,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [loadMoreFeeds, displayedFeeds.length, allFeeds.length]);
+  }, [loadMoreFeeds, displayedFeeds.length, allFeeds.length, hasMoreFromServer]);
 
   const markAsRead = async (id, clusterId = null, similarArticles = []) => {
     try {
@@ -3339,7 +3453,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             });
           })()}
 
-          {displayedFeeds.length < allFeeds.length && (
+          {(displayedFeeds.length < allFeeds.length || hasMoreFromServer) && (
             <div 
               ref={sentinelRef} 
               onClick={loadMoreFeeds}
@@ -3359,8 +3473,19 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             >
               <Loader2 className="spin" size={24} />
               <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>
-                Visar {displayedFeeds.length} av {allFeeds.length} artiklar (klicka för att visa fler)
+                {loadingMoreServer ? "Hämtar äldre nyheter från arkivet..." : `Visar ${displayedFeeds.length} artiklar (scrolla för att ladda fler)`}
               </span>
+            </div>
+          )}
+          {!hasMoreFromServer && displayedFeeds.length >= 30 && (
+            <div style={{
+              textAlign: 'center',
+              padding: '2rem 1rem',
+              color: 'var(--text-muted)',
+              fontSize: '0.82rem',
+              opacity: 0.75
+            }}>
+              Du har nått slutet på nyhetsflödet
             </div>
           )}
         </div>

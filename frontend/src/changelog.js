@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.09',
+    date: '2026-09-23',
+    title: 'Oändlig scroll för historik och synkroniserad sifferbricka',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Oändlig scrollning bakåt i tiden',
+        description: 'Implementerat äkta server-paginering i flödet. Du kan nu scrolla oändligt bakåt i tiden och läsa gårdagens, förrgårdagens och veckans artiklar utan att det tar stopp efter de första artiklarna.'
+      },
+      {
+        type: 'fix',
+        title: 'Synkroniserad sifferbricka och NY-märkning',
+        description: 'Sifferbrickan (+X) i bottenbaren och sidomenyn är nu direkt kopplad till det faktiska antalet artiklar med NY-märkning på skärmen. Nollställning sker automatiskt när du passerar avdelaren och är ikapp med flödet.'
+      },
+      {
+        type: 'improvement',
+        title: 'Begränsning av historiska nya nyheter',
+        description: 'Vid längre frånvaro begränsas referenstiden för nya artiklar till max 4 timmar så att inte flera dygns gamla artiklar ackumuleras som nya i sifferbrickan.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.08',
     date: '2026-09-23',
     title: 'Korrigerad nedräkning för NYA artiklar och synkat PRIO-flöde',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
