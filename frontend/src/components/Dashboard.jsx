@@ -3386,9 +3386,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               const useMasonry = (activeFlowLayout === 'compact' || activeFlowLayout === 'ultracompact') && effectiveCols > 1;
 
               return (
-                <div key={group.dayKey || groupIndex} className="day-group-section" style={{ marginBottom: '1.75rem' }}>
-                  {/* Datumavgränsare */}
-                  {group.dateLabel && (
+                <div key={group.dayKey || groupIndex} className="day-group-section" style={{ marginBottom: activeFlowLayout === 'ultracompact' ? '0' : '1.75rem' }}>
+                  {/* Datumavgränsare: visas endast när ultrakompakt inte används, eftersom ultrakompakt har datumet direkt i avdelaren */}
+                  {group.dateLabel && activeFlowLayout !== 'ultracompact' && (
                     <div className={`divider-header ${groupIndex === 0 ? 'first-divider' : ''}`} style={{ 
                       display: 'flex', 
                       alignItems: 'center', 

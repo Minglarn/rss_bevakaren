@@ -1,9 +1,33 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.23',
+    date: '2026-09-23',
+    title: 'Dold redundant datumavgränsare i ultrakompakt flöde',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Borttagen överflödig datumbanner i ultrakompakt läge',
+        description: 'Dold datumavgränsaren i toppen av flödesgrupperna när ultrakompakt layout används, eftersom varje artikelkort redan har fullständig och integrerad tidsinformation i sin egen avdelare.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.23.22',
+    date: '2026-09-23',
+    title: 'Åtgärdad dubbelram runt notiser och förenklad rendering',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Eliminerat dubbla ramar runt notiser',
+        description: 'Tog bort överflödig wrapper-div och rensade CSS-selektorer kring Toaster så att notisen visas som en enda ren och snygg ruta med direkt klickstängning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.21',
     date: '2026-09-23',
     title: 'Toaster flyttad till toppen, dämpat pollingbrus och lyft bottenmeny',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash, Filter, Home, Menu, RefreshCw, Flame, Sparkles, MessageSquare, FileText } from 'lucide-react';
-import { Toaster, toast, ToastBar } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 import Login from './Login';
 import Dashboard from './components/Dashboard';
 import RssManager from './components/RssManager';
@@ -314,6 +314,18 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [prioEnabled]);
+
+  // Snabbavfärda notiser omedelbart vid klick
+  useEffect(() => {
+    const handleToastClick = (e) => {
+      const toastEl = e.target.closest('.my-toast-container [role="status"], .my-toast-container [role="alert"]');
+      if (toastEl) {
+        toast.dismiss();
+      }
+    };
+    document.addEventListener('click', handleToastClick, true);
+    return () => document.removeEventListener('click', handleToastClick, true);
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -1171,17 +1183,7 @@ const App = () => {
             }
           }
         }}
-      >
-        {(t) => (
-          <div 
-            onClick={() => toast.dismiss(t.id)} 
-            style={{ cursor: 'pointer', pointerEvents: 'auto' }}
-            title="Klicka för att stänga notis"
-          >
-            <ToastBar toast={t} />
-          </div>
-        )}
-      </Toaster>
+      />
     </>
   );
 };

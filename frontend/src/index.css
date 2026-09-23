@@ -2106,28 +2106,20 @@ select:focus, input:focus {
 /* Endast 1 slimmad ruta per toast */
 .my-toast-container [role="status"],
 .my-toast-container [role="alert"] {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.my-toast-container > div > div {
-  border-radius: 8px !important;
+  border-radius: 10px !important;
   background: #18181b !important;
   color: #f4f4f5 !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45) !important;
   font-size: 0.86rem !important;
   line-height: 1.35 !important;
   max-width: min(92vw, 380px) !important;
   padding: 8px 14px !important;
+  cursor: pointer !important;
 }
 
 .my-toast-container [role="status"] > div:last-child,
-.my-toast-container [role="alert"] > div:last-child,
-.my-toast-container > div > div > div:last-child {
+.my-toast-container [role="alert"] > div:last-child {
   display: -webkit-box !important;
   -webkit-line-clamp: 2 !important;
   -webkit-box-orient: vertical !important;
