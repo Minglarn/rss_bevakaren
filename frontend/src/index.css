@@ -1098,16 +1098,15 @@ select:focus, input:focus {
   .desktop-sidebar {
     display: none !important;
   }
-  
-  .app-main-content {
-    padding: 0.5rem 0.15rem 70px 0.15rem; /* Minimerad sido-padding för att maximera mobilens bredd */
+    .app-main-content {
+    padding: 0.5rem 0.15rem calc(84px + env(safe-area-inset-bottom, 0px)) 0.15rem; /* Minimerad sido-padding för att maximera mobilens bredd, och säker marginal mot bottenmeny */
     overflow-x: clip;
     max-width: 100%;
     box-sizing: border-box;
   }
 
   .app-main-content.chat-view {
-    padding: 0.25rem 0.15rem 68px 0.15rem;
+    padding: 0.25rem 0.15rem calc(82px + env(safe-area-inset-bottom, 0px)) 0.15rem;
   }
   
   .toppbar {
@@ -1123,7 +1122,7 @@ select:focus, input:focus {
   }
   
   .scroll-to-top {
-    bottom: 5.5rem; /* Above bottom bar */
+    bottom: calc(6.2rem + env(safe-area-inset-bottom, 0px)); /* Sitter tryggt ovanför den upphöjda bottenmenyn */
     right: 1rem;
   }
   
@@ -1133,7 +1132,7 @@ select:focus, input:focus {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 65px;
+    height: calc(75px + env(safe-area-inset-bottom, 0px));
     background-color: #ffffff !important;
     background: #ffffff !important;
     opacity: 1 !important;
@@ -1142,9 +1141,10 @@ select:focus, input:focus {
     border-top: 1px solid var(--border-color);
     z-index: 9000;
     justify-content: space-around;
-    align-items: center;
-    padding: 0 0.5rem;
+    align-items: flex-start;
+    padding: 6px 0.5rem calc(10px + env(safe-area-inset-bottom, 0px)) 0.5rem !important;
     box-shadow: 0 -4px 15px rgba(0,0,0,0.06);
+    box-sizing: border-box !important;
   }
 
   .theme-dark .mobile-bottom-bar {
@@ -1160,16 +1160,16 @@ select:focus, input:focus {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.25rem;
+    gap: 0.2rem;
     color: var(--text-muted);
     text-decoration: none;
     font-size: 0.7rem;
     font-weight: 500;
-    padding: 0.4rem 0.2rem;
+    padding: 0.2rem 0.2rem;
     border-radius: 10px;
     flex: 1;
     position: relative;
-    height: 52px;
+    height: 48px;
     margin: 0 2px;
     background: transparent !important;
     background-color: transparent !important;
@@ -2076,29 +2076,30 @@ select:focus, input:focus {
   .desktop-only { display: flex !important; }
 }
 
-/* Toast-placering i botten (strax ovanfor mobilens bottombar), mork bakgrund, max 2 rader */
+/* Toast-placering i toppen (strax under statusrad / sökfält), mörk bakgrund, max 2 rader */
 .my-toast-container {
-  bottom: 24px !important;
-  top: auto !important;
+  top: 16px !important;
+  bottom: auto !important;
   z-index: 9999 !important;
   pointer-events: none !important;
 }
 
 .my-toast-container > div {
-  bottom: 0 !important;
-  top: auto !important;
+  top: 0 !important;
+  bottom: auto !important;
   justify-content: center !important;
   pointer-events: auto !important;
+  cursor: pointer !important;
 }
 
 @media (max-width: 1024px) {
   .my-toast-container {
-    bottom: calc(65px + 8px + env(safe-area-inset-bottom, 0px)) !important;
-    top: auto !important;
+    top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+    bottom: auto !important;
   }
   .my-toast-container > div {
-    bottom: 0 !important;
-    top: auto !important;
+    top: 0 !important;
+    bottom: auto !important;
   }
 }
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { Rss, List, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, Hash, Filter, Home, Menu, RefreshCw, Flame, Sparkles, MessageSquare, FileText } from 'lucide-react';
-import { Toaster, toast } from 'react-hot-toast';
+import { Toaster, toast, ToastBar } from 'react-hot-toast';
 import Login from './Login';
 import Dashboard from './components/Dashboard';
 import RssManager from './components/RssManager';
@@ -285,12 +285,6 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
         return newSet;
       });
       
-      const feed = myFeedsRef.current.find(f => f.id === feedId);
-      const title = feed ? feed.title : `flöde ${feedId}`;
-      toast(`Söker: ${title}`, {
-        id: `poll-${feedId}`,
-        duration: 2500
-      });
     };
     const handleEnd = (e) => {
       const feedId = e.detail;
@@ -299,7 +293,6 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
         newSet.delete(feedId);
         return newSet;
       });
-      toast.dismiss(`poll-${feedId}`);
     };
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
@@ -1148,21 +1141,22 @@ const App = () => {
         </AiChatProvider>
       </Router>
       <Toaster 
-        position="bottom-center" 
+        position="top-center" 
         containerClassName="my-toast-container" 
         toastOptions={{
-          duration: 3000,
+          duration: 3500,
           style: {
-            borderRadius: '8px',
+            borderRadius: '10px',
             background: '#18181b',
             color: '#f4f4f5',
             border: '1px solid rgba(255, 255, 255, 0.16)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.45)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
             fontSize: '0.86rem',
             fontWeight: 500,
             padding: '8px 14px',
             maxWidth: 'min(92vw, 380px)',
-            lineHeight: '1.35'
+            lineHeight: '1.35',
+            cursor: 'pointer'
           },
           success: {
             iconTheme: {
@@ -1177,7 +1171,17 @@ const App = () => {
             }
           }
         }}
-      />
+      >
+        {(t) => (
+          <div 
+            onClick={() => toast.dismiss(t.id)} 
+            style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+            title="Klicka för att stänga notis"
+          >
+            <ToastBar toast={t} />
+          </div>
+        )}
+      </Toaster>
     </>
   );
 };

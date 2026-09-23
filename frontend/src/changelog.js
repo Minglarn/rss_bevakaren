@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.21',
+    date: '2026-09-23',
+    title: 'Toaster flyttad till toppen, dämpat pollingbrus och lyft bottenmeny',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Notiser flyttade till toppen med direkt klick-avfärdning',
+        description: 'Flyttade alla toasts till skärmens överkant (top-center) så att artiklar och klickzoner i flödet aldrig blockeras. Notiser kan nu även avfärdas direkt vid klick.'
+      },
+      {
+        type: 'improvement',
+        title: 'Tyst bakgrundssynk utan popup-brus',
+        description: 'Dämpade de frekventa "Söker: [flöde]"-notiserna vid automatisk bakgrundspolling. Status visas diskret via puls-indikatorn och notiser visas endast när faktiska nya artiklar anländer.'
+      },
+      {
+        type: 'improvement',
+        title: 'Upplyft bottenmeny och utökat säkerhetsavstånd mot skärmkant',
+        description: 'Ökade höjden på mobilens bottenmeny och flyttade upp navigeringsikonerna ca 10–12 px med säkerhetsmarginal mot mobilens hem-gest-fält för att förhindra oavsiktlig app-stängning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.20',
     date: '2026-09-23',
     title: 'Modern och animerad laddningsupplevelse för nyhetsflödet',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
