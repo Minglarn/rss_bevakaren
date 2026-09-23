@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.15',
+    date: '2026-09-23',
+    title: 'Enhetlig och strukturerad sektionsdesign i samtliga inställningsflikar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Konsekvent dragspelsstruktur i inställningarna',
+        description: 'Övriga inställningsflikar (Gränssnitt, Databas & Underhåll, Notiser, AI & Analys samt Administratörspanelen) har nu strukturerats om enligt samma eleganta modell som fliken Allmänt. Varje sektion har en enhetlig header, statusbricka, ikon och snabbkontroll för att expandera eller kollapsa alla sektioner.'
+      },
+      {
+        type: 'improvement',
+        title: 'Överskådligare och snabbare navigering',
+        description: 'Minskat vertikalt rullande och tydligare gruppering av inställningar, funktioner och verktyg.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.14',
     date: '2026-09-23',
     title: 'Google News-modell för klustrade artiklar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

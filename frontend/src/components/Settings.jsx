@@ -83,6 +83,51 @@ const Settings = ({ onLogout, currentUser }) => {
     }));
   };
 
+  // Kollapsade sektioner under fliken Databas & Underhåll
+  const [openDatabaseSections, setOpenDatabaseSections] = useState({
+    overview: true,
+    autoPurge: false,
+    backupRestore: false
+  });
+
+  const toggleDatabaseSection = (key) => {
+    setOpenDatabaseSections(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  // Kollapsade sektioner under fliken AI & Analys
+  const [openAiSections, setOpenAiSections] = useState({
+    prioFlow: true,
+    engineStatus: false,
+    keywords: false,
+    interestProfile: false,
+    categoryWeights: false,
+    systemPrompt: false
+  });
+
+  const toggleAiSection = (key) => {
+    setOpenAiSections(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  // Kollapsade sektioner under fliken Administratör
+  const [openAdminSections, setOpenAdminSections] = useState({
+    users: true,
+    dangerZone: false,
+    systemConfig: false
+  });
+
+  const toggleAdminSection = (key) => {
+    setOpenAdminSections(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   // Administratörspanel State
   const [adminUsers, setAdminUsers] = useState([]);
   const [isLoadingAdminUsers, setIsLoadingAdminUsers] = useState(false);
@@ -1976,52 +2021,31 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       )}
 
       {activeTab === 'ui' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           
-          {/* Huvudkort för Utseende med snabbknappar */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem' }}>
-              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.15rem' }}>
-                <Palette size={20} style={{ color: 'var(--primary)' }} /> Utseende och visning
-              </h3>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setAllUiSections(true)}
-                  style={{
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-app)',
-                    color: 'var(--text-main)',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    fontWeight: 500
-                  }}
-                >
-                  Fäll ut alla
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAllUiSections(false)}
-                  style={{
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-app)',
-                    color: 'var(--text-main)',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    fontWeight: 500
-                  }}
-                >
-                  Fäll ihop alla
-                </button>
-              </div>
-            </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.45 }}>
-              Anpassa hur applikationen ser ut, hur nyhetsflödet disponeras och hur djupt innehållet analyseras. Klicka på sektionerna nedan för att öppna eller stänga inställningarna.
-            </p>
+          {/* Snabbkontroll för att expandera/kollapsa alla */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 0.25rem', marginBottom: '0.25rem' }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              Klicka på en sektion för att fälla ut dess inställningar.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const anyOpen = Object.values(expandedUiSections).some(Boolean);
+                setAllUiSections(!anyOpen);
+              }}
+              style={{
+                fontSize: '0.78rem',
+                color: 'var(--primary)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.2rem 0.5rem',
+                fontWeight: 600
+              }}
+            >
+              {Object.values(expandedUiSections).some(Boolean) ? 'Kollapsa alla' : 'Expandera alla'}
+            </button>
           </div>
 
           {/* Sektion 1: Tema och flödeslayout */}
@@ -3316,430 +3340,526 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       )}
 
       {activeTab === 'database' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           
-          {/* Databasöversikt & Hälsa */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.75rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem', paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Database size={20} style={{ color: 'var(--primary)' }} />
-                <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem' }}>
-                  Databasöversikt och hälsa
-                </h3>
+          {/* Snabbkontroll för att expandera/kollapsa alla */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 0.25rem', marginBottom: '0.25rem' }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              Klicka på en sektion för att fälla ut dess inställningar.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const anyOpen = Object.values(openDatabaseSections).some(Boolean);
+                setOpenDatabaseSections({
+                  overview: !anyOpen,
+                  autoPurge: !anyOpen,
+                  backupRestore: !anyOpen
+                });
+              }}
+              style={{
+                fontSize: '0.78rem',
+                color: 'var(--primary)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.2rem 0.5rem',
+                fontWeight: 600
+              }}
+            >
+              {Object.values(openDatabaseSections).some(Boolean) ? 'Kollapsa alla' : 'Expandera alla'}
+            </button>
+          </div>
+
+          {/* Sektion 1: Databasöversikt och hälsa */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleDatabaseSection('overview')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openDatabaseSections.overview ? 'rgba(37, 99, 235, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.1)', flexShrink: 0 }}>
+                  <Database size={18} style={{ color: 'var(--primary)' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Databasöversikt och hälsa
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Realtidsstatistik, artiklarnas livscykel och databasens lagringshälsa
+                  </div>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => fetchDbStats(true)}
-                disabled={isLoadingDbStats}
-                style={{
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--primary)', fontWeight: 600 }}>
+                  {dbStats ? (dbStats.database_size_bytes / 1024 / 1024).toFixed(1) + ' MB' : 'Statistik'}
+                </span>
+                {openDatabaseSections.overview ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
+            </div>
+
+            {openDatabaseSections.overview && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => fetchDbStats(true)}
+                    disabled={isLoadingDbStats}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.4rem 0.8rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.82rem',
+                      fontWeight: 500,
+                      cursor: isLoadingDbStats ? 'not-allowed' : 'pointer',
+                      opacity: isLoadingDbStats ? 0.7 : 1
+                    }}
+                  >
+                    <RefreshCw size={14} className={isLoadingDbStats ? 'spin' : ''} />
+                    {isLoadingDbStats ? 'Uppdaterar...' : 'Uppdatera statistik'}
+                  </button>
+                </div>
+
+                {/* KPI-kort */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '0.85rem',
+                  marginBottom: '1.25rem'
+                }}>
+                  {/* Kort 1: Totalt antal artiklar */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-app)',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <span>Totalt antal artiklar</span>
+                      <Layers size={16} style={{ color: 'var(--primary)' }} />
+                    </div>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                      {dbStats ? dbStats.total_articles.toLocaleString('sv-SE') : (sysInfo?.total_articles?.toLocaleString('sv-SE') || '0')}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      {dbStats ? `${dbStats.unread_articles.toLocaleString('sv-SE')} olästa · ${dbStats.read_articles.toLocaleString('sv-SE')} lästa` : 'Artiklar indexerade i databasen'}
+                    </div>
+                  </div>
+
+                  {/* Kort 2: Databasstorlek */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-app)',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <span>Databasstorlek</span>
+                      <HardDrive size={16} style={{ color: '#8b5cf6' }} />
+                    </div>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#8b5cf6' }}>
+                      {dbStats ? (dbStats.database_size_bytes / 1024 / 1024).toFixed(2) + ' MB' : (sysInfo ? (sysInfo.database_size_bytes / 1024 / 1024).toFixed(2) + ' MB' : '0.00 MB')}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Beständig disklagring (SQLite)
+                    </div>
+                  </div>
+
+                  {/* Kort 3: Äldsta artikel */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-app)',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <span>Äldsta artikel</span>
+                      <Calendar size={16} style={{ color: '#f59e0b' }} />
+                    </div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.15rem' }}>
+                      {formatEuropeanDateTime(dbStats?.oldest_article?.received_ts)}
+                    </div>
+                    <div 
+                      title={dbStats?.oldest_article?.title || ''}
+                      style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      {dbStats?.oldest_article?.title ? `"${dbStats.oldest_article.title}"` : 'Inga artiklar sparade ännu'}
+                    </div>
+                  </div>
+
+                  {/* Kort 4: Senaste artikel */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-app)',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <span>Senaste artikel</span>
+                      <Clock size={16} style={{ color: '#10b981' }} />
+                    </div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.15rem' }}>
+                      {formatEuropeanDateTime(dbStats?.newest_article?.received_ts)}
+                    </div>
+                    <div 
+                      title={dbStats?.newest_article?.title || ''}
+                      style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      {dbStats?.newest_article?.title ? `"${dbStats.newest_article.title}"` : 'Väntar på inkommande RSS-flöden'}
+                    </div>
+                  </div>
+
+                  {/* Kort 5: Låsta och bilder */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-app)',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <span>Låsta & Bilder</span>
+                      <Lock size={16} style={{ color: '#ec4899' }} />
+                    </div>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                      {dbStats ? dbStats.locked_articles.toLocaleString('sv-SE') : '0'} låsta
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Skyddade mot rensning · {dbStats ? dbStats.articles_with_image.toLocaleString('sv-SE') : '0'} med bilder
+                    </div>
+                  </div>
+
+                  {/* Kort 6: AI-analyserade */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-app)',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <span>AI-insikter</span>
+                      <Sparkles size={16} style={{ color: '#f97316' }} />
+                    </div>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#f97316' }}>
+                      {dbStats ? dbStats.ai_processed_articles.toLocaleString('sv-SE') : '0'} analyserade
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      {dbStats ? `${dbStats.clickbait_articles.toLocaleString('sv-SE')} ClickBait-flaggade` : 'ClickBait- och PRIO-bedömning aktiv'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Största kategorierna i databasen */}
+                {dbStats && dbStats.top_categories && dbStats.top_categories.length > 0 && (
+                  <div style={{
+                    backgroundColor: 'var(--bg-app)',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                    border: '1px solid var(--border-color)',
+                    marginBottom: '1rem'
+                  }}>
+                    <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', fontSize: '0.95rem', fontWeight: 600 }}>
+                      Största kategorierna i databasen
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      {dbStats.top_categories.map((cat, idx) => {
+                        const pct = dbStats.total_articles > 0 
+                          ? Math.round((cat.count / dbStats.total_articles) * 100) 
+                          : 0;
+                        return (
+                          <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                              <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{cat.name}</span>
+                              <span style={{ color: 'var(--text-muted)' }}>{cat.count.toLocaleString('sv-SE')} artiklar ({pct}%)</span>
+                            </div>
+                            <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-card)', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ width: `${Math.max(2, pct)}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '3px' }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Flödessammanfattning */}
+                <div style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '0.4rem 0.8rem',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-color)',
+                  gap: '1rem',
+                  flexWrap: 'wrap',
+                  padding: '0.75rem 1rem',
                   backgroundColor: 'var(--bg-app)',
-                  color: 'var(--text-main)',
-                  fontSize: '0.82rem',
-                  fontWeight: 500,
-                  cursor: isLoadingDbStats ? 'not-allowed' : 'pointer',
-                  opacity: isLoadingDbStats ? 0.7 : 1
-                }}
-              >
-                <RefreshCw size={14} className={isLoadingDbStats ? 'spin' : ''} />
-                {isLoadingDbStats ? 'Uppdaterar...' : 'Uppdatera statistik'}
-              </button>
-            </div>
-            
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.25rem', paddingLeft: '0.25rem', lineHeight: 1.45 }}>
-              Realtidsstatistik, artiklarnas livscykel och databasens lagringshälsa.
-            </p>
-
-            {/* KPI-kort */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '0.85rem',
-              marginBottom: '1.5rem'
-            }}>
-              {/* Kort 1: Totalt antal artiklar */}
-              <div style={{
-                backgroundColor: 'var(--bg-app)',
-                borderRadius: '10px',
-                padding: '1rem',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.35rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <span>Totalt antal artiklar</span>
-                  <Layers size={16} style={{ color: 'var(--primary)' }} />
-                </div>
-                <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  {dbStats ? dbStats.total_articles.toLocaleString('sv-SE') : (sysInfo?.total_articles?.toLocaleString('sv-SE') || '0')}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  {dbStats ? `${dbStats.unread_articles.toLocaleString('sv-SE')} olästa · ${dbStats.read_articles.toLocaleString('sv-SE')} lästa` : 'Artiklar indexerade i databasen'}
-                </div>
-              </div>
-
-              {/* Kort 2: Databasstorlek */}
-              <div style={{
-                backgroundColor: 'var(--bg-app)',
-                borderRadius: '10px',
-                padding: '1rem',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.35rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <span>Databasstorlek</span>
-                  <HardDrive size={16} style={{ color: '#8b5cf6' }} />
-                </div>
-                <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#8b5cf6' }}>
-                  {dbStats ? (dbStats.database_size_bytes / 1024 / 1024).toFixed(2) + ' MB' : (sysInfo ? (sysInfo.database_size_bytes / 1024 / 1024).toFixed(2) + ' MB' : '0.00 MB')}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Beständig disklagring (SQLite)
-                </div>
-              </div>
-
-              {/* Kort 3: Äldsta artikel */}
-              <div style={{
-                backgroundColor: 'var(--bg-app)',
-                borderRadius: '10px',
-                padding: '1rem',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.35rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <span>Äldsta artikel</span>
-                  <Calendar size={16} style={{ color: '#f59e0b' }} />
-                </div>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.15rem' }}>
-                  {formatEuropeanDateTime(dbStats?.oldest_article?.received_ts)}
-                </div>
-                <div 
-                  title={dbStats?.oldest_article?.title || ''}
-                  style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                >
-                  {dbStats?.oldest_article?.title ? `"${dbStats.oldest_article.title}"` : 'Inga artiklar sparade ännu'}
-                </div>
-              </div>
-
-              {/* Kort 4: Senaste artikel */}
-              <div style={{
-                backgroundColor: 'var(--bg-app)',
-                borderRadius: '10px',
-                padding: '1rem',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.35rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <span>Senaste artikel</span>
-                  <Clock size={16} style={{ color: '#10b981' }} />
-                </div>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.15rem' }}>
-                  {formatEuropeanDateTime(dbStats?.newest_article?.received_ts)}
-                </div>
-                <div 
-                  title={dbStats?.newest_article?.title || ''}
-                  style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                >
-                  {dbStats?.newest_article?.title ? `"${dbStats.newest_article.title}"` : 'Väntar på inkommande RSS-flöden'}
-                </div>
-              </div>
-
-              {/* Kort 5: Låsta och bilder */}
-              <div style={{
-                backgroundColor: 'var(--bg-app)',
-                borderRadius: '10px',
-                padding: '1rem',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.35rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <span>Låsta & Bilder</span>
-                  <Lock size={16} style={{ color: '#ec4899' }} />
-                </div>
-                <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  {dbStats ? dbStats.locked_articles.toLocaleString('sv-SE') : '0'} låsta
-                </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Skyddade mot rensning · {dbStats ? dbStats.articles_with_image.toLocaleString('sv-SE') : '0'} med bilder
-                </div>
-              </div>
-
-              {/* Kort 6: AI-analyserade */}
-              <div style={{
-                backgroundColor: 'var(--bg-app)',
-                borderRadius: '10px',
-                padding: '1rem',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.35rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <span>AI-insikter</span>
-                  <Sparkles size={16} style={{ color: '#f97316' }} />
-                </div>
-                <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#f97316' }}>
-                  {dbStats ? dbStats.ai_processed_articles.toLocaleString('sv-SE') : '0'} analyserade
-                </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  {dbStats ? `${dbStats.clickbait_articles.toLocaleString('sv-SE')} ClickBait-flaggade` : 'ClickBait- och PRIO-bedömning aktiv'}
-                </div>
-              </div>
-            </div>
-
-            {/* Största kategorierna i databasen */}
-            {dbStats && dbStats.top_categories && dbStats.top_categories.length > 0 && (
-              <div style={{
-                backgroundColor: 'var(--bg-app)',
-                borderRadius: '10px',
-                padding: '1rem',
-                border: '1px solid var(--border-color)',
-                marginBottom: '1rem'
-              }}>
-                <h4 style={{ margin: '0 0 0.85rem 0', color: 'var(--text-main)', fontSize: '0.95rem', fontWeight: 600 }}>
-                  Största kategorierna i databasen
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                  {dbStats.top_categories.map((cat, idx) => {
-                    const pct = dbStats.total_articles > 0 
-                      ? Math.round((cat.count / dbStats.total_articles) * 100) 
-                      : 0;
-                    return (
-                      <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-                          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{cat.name}</span>
-                          <span style={{ color: 'var(--text-muted)' }}>{cat.count.toLocaleString('sv-SE')} artiklar ({pct}%)</span>
-                        </div>
-                        <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-card)', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${Math.max(2, pct)}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '3px' }} />
-                        </div>
-                      </div>
-                    );
-                  })}
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '0.85rem',
+                  color: 'var(--text-muted)'
+                }}>
+                  <div>
+                    <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.total_feeds : feeds.length}</strong> flöden totalt
+                  </div>
+                  <span style={{ color: 'var(--border-color)' }}>•</span>
+                  <div>
+                    <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.active_feeds : feeds.filter(f => f.include_in_dashboard).length}</strong> aktiva i översikten
+                  </div>
+                  <span style={{ color: 'var(--border-color)' }}>•</span>
+                  <div>
+                    <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.notify_feeds : feeds.filter(f => f.notify_enabled).length}</strong> med notiser aktiverade
+                  </div>
                 </div>
               </div>
             )}
-
-            {/* Flödessammanfattning */}
-            <div style={{
-              display: 'flex',
-              gap: '1rem',
-              flexWrap: 'wrap',
-              padding: '0.75rem 1rem',
-              backgroundColor: 'var(--bg-app)',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color)',
-              fontSize: '0.85rem',
-              color: 'var(--text-muted)'
-            }}>
-              <div>
-                <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.total_feeds : feeds.length}</strong> flöden totalt
-              </div>
-              <span style={{ color: 'var(--border-color)' }}>•</span>
-              <div>
-                <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.active_feeds : feeds.filter(f => f.include_in_dashboard).length}</strong> aktiva i översikten
-              </div>
-              <span style={{ color: 'var(--border-color)' }}>•</span>
-              <div>
-                <strong style={{ color: 'var(--text-main)' }}>{dbStats ? dbStats.notify_feeds : feeds.filter(f => f.notify_enabled).length}</strong> med notiser aktiverade
-              </div>
-            </div>
           </div>
 
-          {/* Automatisk nattlig rensning */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.75rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem', paddingLeft: '0.25rem' }}>
-              <h4 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem' }}>
-                <Clock size={18} style={{ color: 'var(--primary)' }} /> Automatisk nattlig rensning
-              </h4>
-              <span style={{ 
-                fontSize: '0.75rem', 
-                padding: '0.2rem 0.6rem', 
-                borderRadius: '12px', 
-                backgroundColor: aiConfig.auto_purge_enabled !== false ? 'rgba(34, 197, 94, 0.15)' : 'rgba(100, 116, 139, 0.15)',
-                color: aiConfig.auto_purge_enabled !== false ? '#22c55e' : 'var(--text-muted)',
-                fontWeight: 600,
-                letterSpacing: '0.04em'
-              }}>
-                {aiConfig.auto_purge_enabled !== false ? 'AKTIV (03:00)' : 'INAKTIV'}
-              </span>
-            </div>
-            
-            <p style={{ margin: '0 0 1.25rem 0', paddingLeft: '0.25rem', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
-              Rensar automatiskt gamla olåsta artiklar varje natt kl 03:00. Håller databasen snabb och förhindrar att lagringsutrymmet växer i det oändliga.
-            </p>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', paddingLeft: '0.25rem', paddingTop: '0.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={aiConfig.auto_purge_enabled !== false}
-                    onChange={handleToggleAutoPurge}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-                <span style={{ color: 'var(--text-main)', fontSize: '0.9rem', fontWeight: 500 }}>
-                  {aiConfig.auto_purge_enabled !== false ? 'Nattlig rensning aktiverad' : 'Nattlig rensning inaktiverad'}
-                </span>
-              </div>
-
-              {aiConfig.auto_purge_enabled !== false && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Ta bort olåsta artiklar äldre än</span>
-                  <input 
-                    type="number" 
-                    value={purgeDays} 
-                    onChange={e => handleUpdateAutoPurgeDays(e.target.value)} 
-                    style={{ width: '65px', padding: '0.45rem 0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', textAlign: 'center', fontSize: '0.9rem' }}
-                    min="1"
-                    max="365"
-                  />
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>dagar</span>
+          {/* Sektion 2: Automatisk nattlig rensning */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleDatabaseSection('autoPurge')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openDatabaseSections.autoPurge ? 'rgba(245, 158, 11, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(245, 158, 11, 0.1)', flexShrink: 0 }}>
+                  <Clock size={18} style={{ color: '#f59e0b' }} />
                 </div>
-              )}
-            </div>
-          </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Automatisk nattlig rensning
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Rensar gamla olåsta artiklar varje natt kl 03:00 för att spara utrymme
+                  </div>
+                </div>
+              </div>
 
-          {/* Säkerhetskopiering & Återställning av alla inställningar */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem', paddingLeft: '0.25rem', paddingRight: '0.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <HardDrive size={20} style={{ color: 'var(--primary)' }} />
-                <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem' }}>
-                  Säkerhetskopiering och återställning av alla inställningar
-                </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ 
+                  fontSize: '0.72rem', 
+                  padding: '0.15rem 0.55rem', 
+                  borderRadius: '10px', 
+                  backgroundColor: aiConfig.auto_purge_enabled !== false ? 'rgba(34, 197, 94, 0.15)' : 'rgba(100, 116, 139, 0.15)',
+                  color: aiConfig.auto_purge_enabled !== false ? '#22c55e' : 'var(--text-muted)',
+                  fontWeight: 600 
+                }}>
+                  {aiConfig.auto_purge_enabled !== false ? `${purgeDays} dagar` : 'Avstängd'}
+                </span>
+                {openDatabaseSections.autoPurge ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
               </div>
             </div>
 
-            <p style={{ margin: '0 0 1.25rem 0', paddingLeft: '0.25rem', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
-              Säkerhetskopiera eller återställ samtliga dina anpassade inställningar i en och samma JSON-fil. Inkluderar fullständiga notisinställningar (PRIO-filtrering, sammanfattningsformat, notisinnehåll och flödesnotiser), AI-systemprompter, prioriterings- och exkluderingsregler, kategorivikter, intresseprofilens taggjusteringar, bevakade nyckelord samt alla prenumererade RSS-flöden.
-            </p>
+            {openDatabaseSections.autoPurge && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)' }}>
+                <p style={{ margin: '0 0 1.25rem 0', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+                  Rensar automatiskt gamla olåsta artiklar varje natt kl 03:00. Håller databasen snabb och förhindrar att lagringsutrymmet växer i det oändliga.
+                </p>
 
-            {/* Dold filväljare */}
-            <input 
-              type="file"
-              ref={backupFileInputRef}
-              accept=".json"
-              onChange={handleImportFullBackup}
-              style={{ display: 'none' }}
-            />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={aiConfig.auto_purge_enabled !== false}
+                        onChange={handleToggleAutoPurge}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                    <span style={{ color: 'var(--text-main)', fontSize: '0.9rem', fontWeight: 500 }}>
+                      {aiConfig.auto_purge_enabled !== false ? 'Nattlig rensning aktiverad' : 'Nattlig rensning inaktiverad'}
+                    </span>
+                  </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', paddingLeft: '0.25rem' }}>
-              <button
-                type="button"
-                onClick={handleExportFullBackup}
-                disabled={isExportingBackup}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.6rem 1.2rem',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-app)',
-                  color: 'var(--text-main)',
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  cursor: isExportingBackup ? 'wait' : 'pointer',
-                  opacity: isExportingBackup ? 0.7 : 1,
-                  transition: 'all 0.2s'
-                }}
-              >
-                <Download size={16} style={{ color: 'var(--primary)' }} />
-                {isExportingBackup ? 'Exporterar säkerhetskopia...' : 'Exportera alla inställningar (JSON)'}
-              </button>
+                  {aiConfig.auto_purge_enabled !== false && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Ta bort olåsta artiklar äldre än</span>
+                      <input 
+                        type="number" 
+                        value={purgeDays} 
+                        onChange={e => handleUpdateAutoPurgeDays(e.target.value)} 
+                        style={{ width: '65px', padding: '0.45rem 0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', textAlign: 'center', fontSize: '0.9rem' }}
+                        min="1"
+                        max="365"
+                      />
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>dagar</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
-              <button
-                type="button"
-                onClick={() => backupFileInputRef.current?.click()}
-                disabled={isImportingBackup}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.6rem 1.2rem',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-app)',
-                  color: 'var(--text-main)',
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  cursor: isImportingBackup ? 'wait' : 'pointer',
-                  opacity: isImportingBackup ? 0.7 : 1,
-                  transition: 'all 0.2s'
-                }}
-              >
-                <Upload size={16} style={{ color: '#10b981' }} />
-                {isImportingBackup ? 'Återställer inställningar...' : 'Återställ från säkerhetskopia'}
-              </button>
+          {/* Sektion 3: Säkerhetskopiering & Återställning av alla inställningar */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleDatabaseSection('backupRestore')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openDatabaseSections.backupRestore ? 'rgba(139, 92, 246, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(139, 92, 246, 0.1)', flexShrink: 0 }}>
+                  <HardDrive size={18} style={{ color: '#8b5cf6' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Säkerhetskopiering och återställning
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Exportera eller importera alla inställningar i JSON-format
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(139, 92, 246, 0.08)', color: '#8b5cf6', fontWeight: 600 }}>
+                  JSON
+                </span>
+                {openDatabaseSections.backupRestore ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
             </div>
+
+            {openDatabaseSections.backupRestore && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)' }}>
+                <p style={{ margin: '0 0 1.25rem 0', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+                  Säkerhetskopiera eller återställ samtliga dina anpassade inställningar i en och samma JSON-fil. Inkluderar fullständiga notisinställningar (PRIO-filtrering, sammanfattningsformat, notisinnehåll och flödesnotiser), AI-systemprompter, prioriterings- och exkluderingsregler, kategorivikter, intresseprofilens taggjusteringar, bevakade nyckelord samt alla prenumererade RSS-flöden.
+                </p>
+
+                {/* Dold filväljare */}
+                <input 
+                  type="file"
+                  ref={backupFileInputRef}
+                  accept=".json"
+                  onChange={handleImportFullBackup}
+                  style={{ display: 'none' }}
+                />
+
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <button
+                    type="button"
+                    onClick={handleExportFullBackup}
+                    disabled={isExportingBackup}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.6rem 1.2rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                      cursor: isExportingBackup ? 'wait' : 'pointer',
+                      opacity: isExportingBackup ? 0.7 : 1,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <Download size={16} style={{ color: 'var(--primary)' }} />
+                    {isExportingBackup ? 'Exporterar säkerhetskopia...' : 'Exportera alla inställningar (JSON)'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => backupFileInputRef.current?.click()}
+                    disabled={isImportingBackup}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.6rem 1.2rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                      cursor: isImportingBackup ? 'wait' : 'pointer',
+                      opacity: isImportingBackup ? 0.7 : 1,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <Upload size={16} style={{ color: '#10b981' }} />
+                    {isImportingBackup ? 'Återställer inställningar...' : 'Återställ från säkerhetskopia'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
       )}
 
       {/* Notisinställningar Tab */}
       {activeTab === 'notifications' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           
-          {/* Huvudkort för Notiser med expandera/kollapsa-knappar */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.5rem' }}>
-              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.15rem' }}>
-                <Bell size={20} style={{ color: 'var(--primary)' }} /> Notisinställningar
-              </h3>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setAllNotificationSections(true)}
-                  style={{
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-app)',
-                    color: 'var(--text-main)',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    fontWeight: 500
-                  }}
-                >
-                  Fäll ut alla
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAllNotificationSections(false)}
-                  style={{
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-app)',
-                    color: 'var(--text-main)',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    fontWeight: 500
-                  }}
-                >
-                  Fäll ihop alla
-                </button>
-              </div>
-            </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.45 }}>
-              Hantera webbläsarnotiser (PWA), anslutna enheter, anpassning av notisinnehåll, nyckelordsbevakning och individuella flöden. Klicka på sektionerna nedan för att fälla ut eller ihop inställningarna.
-            </p>
+          {/* Snabbkontroll för att expandera/kollapsa alla */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 0.25rem', marginBottom: '0.25rem' }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              Klicka på en sektion för att fälla ut dess inställningar.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const anyOpen = Object.values(expandedNotificationSections).some(Boolean);
+                setAllNotificationSections(!anyOpen);
+              }}
+              style={{
+                fontSize: '0.78rem',
+                color: 'var(--primary)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.2rem 0.5rem',
+                fontWeight: 600
+              }}
+            >
+              {Object.values(expandedNotificationSections).some(Boolean) ? 'Kollapsa alla' : 'Expandera alla'}
+            </button>
           </div>
 
           {/* Sektion 1: Pushnotiser i webbläsare (PWA) */}
@@ -4866,599 +4986,738 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 
       {/* AI Analys & Prompt Tab */}
       {activeTab === 'ai' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           
-          {/* Huvudbrytare: Aktivera / Skapa personligt PRIO-flöde */}
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            padding: '1.25rem 0.6rem',
-            borderRadius: '12px',
-            border: aiConfig.prio_enabled ? '1px solid rgba(249, 115, 22, 0.4)' : '1px solid var(--border-color)',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '240px' }}>
-                <div style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '10px',
-                  backgroundColor: aiConfig.prio_enabled ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-app)',
-                  color: aiConfig.prio_enabled ? '#f97316' : 'var(--text-muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <Flame size={24} />
+          {/* Snabbkontroll för att expandera/kollapsa alla */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 0.25rem', marginBottom: '0.25rem' }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              Klicka på en sektion för att fälla ut dess inställningar.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const anyOpen = Object.values(openAiSections).some(Boolean);
+                setOpenAiSections({
+                  prioFlow: !anyOpen,
+                  engineStatus: !anyOpen,
+                  keywords: !anyOpen,
+                  interestProfile: !anyOpen,
+                  categoryWeights: !anyOpen,
+                  systemPrompt: !anyOpen
+                });
+              }}
+              style={{
+                fontSize: '0.78rem',
+                color: 'var(--primary)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.2rem 0.5rem',
+                fontWeight: 600
+              }}
+            >
+              {Object.values(openAiSections).some(Boolean) ? 'Kollapsa alla' : 'Expandera alla'}
+            </button>
+          </div>
+
+          {/* Sektion 1: Personligt PRIO-flöde */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleAiSection('prioFlow')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openAiSections.prioFlow ? 'rgba(249, 115, 22, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(249, 115, 22, 0.1)', flexShrink: 0 }}>
+                  <Flame size={18} style={{ color: '#f97316' }} />
                 </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem', fontWeight: 700 }}>
-                      Personligt PRIO-flöde
-                    </h3>
-                    <span style={{
-                      fontSize: '0.72rem',
-                      padding: '0.15rem 0.5rem',
-                      borderRadius: '12px',
-                      fontWeight: 700,
-                      backgroundColor: aiConfig.prio_enabled ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-app)',
-                      color: aiConfig.prio_enabled ? '#f97316' : 'var(--text-muted)',
-                      border: aiConfig.prio_enabled ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid var(--border-color)'
-                    }}>
-                      {aiConfig.prio_enabled ? 'AKTIVERAT' : 'INAKTIVERAT'}
-                    </span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Personligt PRIO-flöde
                   </div>
-                  <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.4 }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {aiConfig.prio_enabled ? 'Aktivt: inkommande nyheter poängsätts och filtreras' : 'Inaktiverat: appen körs i ren klassisk RSS-drift'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ 
+                  fontSize: '0.72rem', 
+                  padding: '0.15rem 0.55rem', 
+                  borderRadius: '10px', 
+                  backgroundColor: aiConfig.prio_enabled ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-app)', 
+                  color: aiConfig.prio_enabled ? '#f97316' : 'var(--text-muted)', 
+                  fontWeight: 600,
+                  border: aiConfig.prio_enabled ? '1px solid rgba(249, 115, 22, 0.3)' : '1px solid var(--border-color)'
+                }}>
+                  {aiConfig.prio_enabled ? 'AKTIVT' : 'INAKTIVT'}
+                </span>
+                {openAiSections.prioFlow ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
+            </div>
+
+            {openAiSections.prioFlow && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45, flex: 1, minWidth: '240px' }}>
                     {aiConfig.prio_enabled 
                       ? 'Ditt personliga PRIO-flöde är aktivt. Inkommande artiklar poängsätts och filtreras mot dina regler.'
                       : 'När det är inaktiverat fungerar appen som en ren, klassisk RSS-läsare utan AI-analyser och förbrukar inga bakgrundsresurser.'}
                   </p>
+                  <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={!!aiConfig.prio_enabled}
+                      onChange={handleTogglePrioEnabled}
+                      disabled={isSavingAi}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
                 </div>
-              </div>
 
-              <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
-                <input
-                  type="checkbox"
-                  checked={!!aiConfig.prio_enabled}
-                  onChange={handleTogglePrioEnabled}
-                  disabled={isSavingAi}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-
-            {aiConfig.prio_enabled && (
-              <div style={{
-                marginTop: '0.25rem',
-                paddingTop: '0.75rem',
-                borderTop: '1px solid var(--border-color)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.75rem'
-              }}>
-                <div style={{ flex: 1, minWidth: '220px' }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Bell size={15} style={{ color: '#f97316' }} /> Begränsa push-notiser till endast PRIO
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                    Stoppar vanliga notiser och skickar endast när en artikel blir PRIO eller matchar bevakningsord.
-                  </div>
-                </div>
-                <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={!!aiConfig.prio_notify_only}
-                    onChange={handleTogglePrioNotifyOnly}
-                    disabled={isSavingAi}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-            )}
-
-            {!aiConfig.prio_enabled && (
-              <div style={{
-                padding: '1rem',
-                backgroundColor: 'var(--bg-app)',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.75rem'
-              }}>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Vill du börja prioritera och skräddarsy ditt nyhetsflöde med AI?
-                </div>
-                <button
-                  type="button"
-                  onClick={handleTogglePrioEnabled}
-                  disabled={isSavingAi}
-                  style={{
-                    display: 'inline-flex',
+                {aiConfig.prio_enabled && (
+                  <div style={{
+                    paddingTop: '0.85rem',
+                    borderTop: '1px solid var(--border-color)',
+                    display: 'flex',
                     alignItems: 'center',
-                    gap: '0.4rem',
-                    backgroundColor: '#f97316',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '6px',
-                    fontWeight: 600,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Flame size={16} /> Aktivera och skapa flöde
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Statuskort */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)', opacity: aiConfig.prio_enabled ? 1 : 0.7 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sparkles size={20} style={{ color: '#f97316' }} /> {aiConfig.server_type || 'AI-motor'}-status
-              </h3>
-              <button 
-                onClick={handleCheckConnection}
-                disabled={isLoadingAi}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem',
-                  backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)',
-                  borderRadius: '6px', cursor: 'pointer', color: 'var(--text-main)', fontSize: '0.8rem'
-                }}
-              >
-                <RefreshCw size={14} className={isLoadingAi ? 'spin' : ''} /> {isLoadingAi ? 'Kontrollerar...' : 'Kontrollera anslutning'}
-              </button>
-            </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Anslutningsstatus</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: aiConfig.is_healthy ? '#16a34a' : '#ef4444' }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: aiConfig.is_healthy ? '#16a34a' : '#ef4444', display: 'inline-block' }}></span>
-                  {aiConfig.is_healthy ? `Ansluten till ${aiConfig.server_type || 'AI-servern'}` : 'Offline / Ingen anslutning'}
-                </div>
-              </div>
-
-              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                  AI-modell
-                </div>
-                {aiConfig.available_models && aiConfig.available_models.length > 0 ? (
-                  <select
-                    value={aiConfig.lm_studio_model || ''}
-                    onChange={(e) => handleUpdateModel(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.4rem 0.5rem',
-                      borderRadius: '6px',
-                      backgroundColor: 'var(--bg-card)',
-                      color: 'var(--text-main)',
-                      border: '1px solid var(--border-color)',
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="">Standard (Automatiskt)</option>
-                    {aiConfig.available_models.map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <div style={{ fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {aiConfig.ai_model || aiConfig.lm_studio_model || 'Standardmodell'}
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '0.75rem'
+                  }}>
+                    <div style={{ flex: 1, minWidth: '220px' }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Bell size={15} style={{ color: '#f97316' }} /> Begränsa push-notiser till endast PRIO
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                        Stoppar vanliga notiser och skickar endast när en artikel blir PRIO eller matchar bevakningsord.
+                      </div>
+                    </div>
+                    <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={!!aiConfig.prio_notify_only}
+                        onChange={handleTogglePrioNotifyOnly}
+                        disabled={isSavingAi}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
                   </div>
                 )}
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                  {aiConfig.available_models?.length 
-                    ? `${aiConfig.available_models.length} modeller tillgängliga på AI-servern` 
-                    : 'Inga modeller hittades'}
-                </div>
               </div>
-
-              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Skyddsgräns (artikelålder)</div>
-                <select
-                  value={aiConfig.max_article_age_hours || 24}
-                  onChange={(e) => handleUpdateMaxArticleAgeHours(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.4rem 0.5rem',
-                    borderRadius: '6px',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                    border: '1px solid var(--border-color)',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value={6}>6 timmar</option>
-                  <option value={12}>12 timmar</option>
-                  <option value={24}>24 timmar (1 dygn)</option>
-                  <option value={48}>48 timmar (2 dygn)</option>
-                  <option value={72}>72 timmar (3 dygn)</option>
-                  <option value={168}>7 dagar (1 vecka)</option>
-                </select>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                  Äldre artiklar hoppas över vid AI-analys
-                </div>
-              </div>
-            </div>
-
-            {/* Driftnotiser för AI (Endast Administratör) */}
-            <div style={{
-              marginTop: '1rem',
-              paddingTop: '0.9rem',
-              borderTop: '1px solid var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '0.75rem'
-            }}>
-              <div style={{ flex: 1, minWidth: '220px' }}>
-                <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Bell size={15} style={{ color: '#f97316' }} /> Driftnotiser vid AI-avbrott (Endast administratör)
-                </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
-                  Skickar en pushnotis till administratören om AI-servern är onåbar i mer än 45 sekunder, samt när anslutningen återställts.
-                </div>
-              </div>
-              <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
-                <input
-                  type="checkbox"
-                  checked={aiConfig.notify_ai_offline !== false}
-                  onChange={() => handleTogglePushSetting('notify_ai_offline', 'Driftnotiser vid AI-avbrott')}
-                  disabled={isSavingAi}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
+            )}
           </div>
 
-          {/* Prioriterade sökord & orter (Garanterad 100% PRIO) */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-            <h3 style={{ marginTop: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Hash size={20} style={{ color: '#f97316' }} /> Prioriterade nyckelord & ämnen (Alltid 100% PRIO)
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-              Alla artiklar som innehåller något av dina bevakade ord (t.ex. din hemort som <strong>Trosa</strong> eller favoritintressen som <strong>Tesla</strong>) får omedelbart <strong>100 poäng</strong> och visas alltid i PRIO-flödet oavsett kategori.
-            </p>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '1.25rem' }}>
-              {keywords.length > 0 ? (
-                keywords.map((kw) => (
-                  <div 
-                    key={kw.id}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      backgroundColor: 'rgba(249, 115, 22, 0.12)',
-                      border: '1px solid rgba(249, 115, 22, 0.3)',
-                      color: 'var(--text-main)',
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '20px',
-                      fontSize: '0.84rem',
-                      fontWeight: 600
-                    }}
-                  >
-                    <span>{kw.keyword}</span>
-                    <button 
-                      type="button"
-                      onClick={() => handleDeleteKeyword(kw.id)}
-                      style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
-                      title={`Ta bort ${kw.keyword}`}
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                  Inga prioriterade nyckelord har lagts till ännu. Lägg till sökord nedan för garanterad 100% PRIO.
-                </div>
-              )}
-            </div>
-
-            <form onSubmit={handleAddKeyword} style={{ display: 'flex', gap: '0.5rem', maxWidth: '440px' }}>
-              <input 
-                type="text" 
-                placeholder="Lägg till prioriterat nyckelord (t.ex. Tesla, AI)..." 
-                value={newKeyword} 
-                onChange={(e) => setNewKeyword(e.target.value)}
-                style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.85rem' }}
-              />
-              <button 
-                type="submit"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 1rem', backgroundColor: '#f97316', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
-              >
-                <Plus size={15} /> Lägg till
-              </button>
-            </form>
-          </div>
-
-          {/* Adaptiv Intresseprofil Banner */}
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            padding: '1.25rem 1.5rem',
-            borderRadius: '12px',
-            border: '1px solid rgba(22, 163, 74, 0.3)',
-            boxShadow: '0 4px 12px rgba(22, 163, 74, 0.05)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '240px' }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                backgroundColor: 'rgba(22, 163, 74, 0.15)',
-                color: '#16a34a',
+          {/* Sektion 2: AI-motor och status */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleAiSection('engineStatus')}
+              style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <ThumbsUp size={20} />
-              </div>
-              <div>
-                <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 700 }}>
-                  Adaptiv Intresseprofil (Gilla & Ogilla)
-                </h4>
-                <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.84rem', lineHeight: 1.45 }}>
-                  Artiklar du gillar skapar automatiskt en personlig intressebonus (+10p till +20p), medan ogillade ämnen dämpas (-15p).
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => handleTabChange('interests')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                padding: '0.55rem 1rem',
-                backgroundColor: 'rgba(22, 163, 74, 0.15)',
-                color: '#16a34a',
-                border: '1px solid rgba(22, 163, 74, 0.35)',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                cursor: 'pointer'
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openAiSections.engineStatus ? 'rgba(139, 92, 246, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
               }}
             >
-              <span>Se din Intresseprofil</span>
-              <ArrowUpRight size={15} />
-            </button>
-          </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(139, 92, 246, 0.1)', flexShrink: 0 }}>
+                  <Sparkles size={18} style={{ color: '#8b5cf6' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    AI-motor och modellstatus
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {aiConfig.server_type || 'AI-server'} · {aiConfig.ai_model || aiConfig.lm_studio_model || 'Modell'}
+                  </div>
+                </div>
+              </div>
 
-          {/* Kategori-viktning (0–10) */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sliders size={20} style={{ color: '#f97316' }} /> Kategoriviktning och prioritet (0–10)
-              </h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('openOnboarding'));
-                    toast.success('Öppnar installationsguiden...');
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.35rem 0.85rem',
-                    backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                    color: '#3b82f6',
-                    border: '1px solid rgba(59, 130, 246, 0.35)',
-                    borderRadius: '6px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                  title="Kör installationsguiden med frågor för att ställa in vikterna automatiskt"
-                >
-                  <Compass size={14} /> Kör guide
-                </button>
-                <button
-                  type="button"
-                  onClick={() => saveCategoryWeights()}
-                  disabled={isSavingAi}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.35rem 0.85rem',
-                    backgroundColor: 'rgba(249, 115, 22, 0.12)',
-                    color: '#f97316',
-                    border: '1px solid rgba(249, 115, 22, 0.35)',
-                    borderRadius: '6px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: isSavingAi ? 'not-allowed' : 'pointer'
-                  }}
-                  title="Spara aktuella kategoriviktningar direkt"
-                >
-                  <Check size={14} /> {isSavingAi ? 'Sparar...' : 'Spara viktningar'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetAiCategories}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem',
-                    textDecoration: 'underline'
-                  }}
-                >
-                  Återställ standardvikter
-                </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ 
+                  fontSize: '0.72rem', 
+                  padding: '0.15rem 0.55rem', 
+                  borderRadius: '10px', 
+                  backgroundColor: aiConfig.is_healthy ? 'rgba(22, 163, 74, 0.12)' : 'rgba(239, 68, 68, 0.12)', 
+                  color: aiConfig.is_healthy ? '#16a34a' : '#ef4444', 
+                  fontWeight: 600 
+                }}>
+                  {aiConfig.is_healthy ? 'ONLINE' : 'OFFLINE'}
+                </span>
+                {openAiSections.engineStatus ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
               </div>
             </div>
-            
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.5 }}>
-              AI klassificerar varje artikel till en kategori. Kategorins viktning bidrar med upp till 30 % av artikelns totalpoäng (0–100p), och vägs samman med händelsens akuthet (40 %) och faktasubstans (30 %):
-            </p>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: '0.5rem',
-              backgroundColor: 'var(--bg-app)',
-              padding: '0.75rem',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color)',
-              marginBottom: '1.25rem',
-              fontSize: '0.78rem'
-            }}>
-              <div><strong style={{ color: '#16a34a' }}>8–10:</strong> Högt intresse (24–30p)</div>
-              <div><strong style={{ color: '#0284c7' }}>5–7:</strong> Normalt intresse (15–21p)</div>
-              <div><strong style={{ color: 'var(--text-muted)' }}>1–4:</strong> Lågt intresse (3–12p)</div>
-              <div><strong style={{ color: '#ef4444' }}>0:</strong> Ignoreras (0p - Aldrig PRIO)</div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.25rem' }}>
-              {(aiConfig.categories || []).map((catItem, idx) => {
-                const name = typeof catItem === 'object' ? catItem.name : catItem;
-                const weight = typeof catItem === 'object' && typeof catItem.weight === 'number' ? catItem.weight : 5;
-                const badge = getWeightBadge(weight);
-                return (
-                  <div 
-                    key={idx}
+            {openAiSections.engineStatus && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                  <button 
+                    onClick={handleCheckConnection}
+                    disabled={isLoadingAi}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '0.75rem',
-                      padding: '0.65rem 0.9rem',
-                      backgroundColor: 'var(--bg-app)',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color)',
-                      flexWrap: 'wrap'
+                      display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem',
+                      backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)',
+                      borderRadius: '6px', cursor: 'pointer', color: 'var(--text-main)', fontSize: '0.82rem'
                     }}
                   >
-                    <div style={{ minWidth: '140px', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                      <Tag size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-                      <span style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-main)' }}>{name}</span>
-                    </div>
+                    <RefreshCw size={14} className={isLoadingAi ? 'spin' : ''} /> {isLoadingAi ? 'Kontrollerar...' : 'Kontrollera anslutning'}
+                  </button>
+                </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '200px' }}>
-                      <input
-                        type="range"
-                        min="0"
-                        max="10"
-                        step="1"
-                        value={weight}
-                        onChange={(e) => handleCategoryWeightChange(name, parseInt(e.target.value))}
-                        onPointerUp={() => saveCategoryWeights()}
-                        onTouchEnd={() => saveCategoryWeights()}
-                        onKeyUp={() => saveCategoryWeights()}
-                        style={{
-                          flex: 1,
-                          cursor: 'pointer',
-                          accentColor: weight >= 8 ? '#16a34a' : weight >= 5 ? '#0284c7' : weight >= 1 ? '#64748b' : '#ef4444'
-                        }}
-                      />
-                      <span style={{
-                        fontSize: '0.85rem',
-                        fontWeight: 700,
-                        color: 'var(--text-main)',
-                        minWidth: '38px',
-                        textAlign: 'right',
-                        fontFamily: 'monospace'
-                      }}>
-                        {weight}/10
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <span style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 600,
-                        padding: '0.2rem 0.55rem',
-                        borderRadius: '12px',
-                        backgroundColor: badge.bg,
-                        color: badge.color,
-                        border: badge.border,
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {badge.label}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveAiCategory(name)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'var(--text-muted)',
-                          cursor: 'pointer',
-                          padding: '0.2rem',
-                          borderRadius: '4px',
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}
-                        title={`Ta bort ${name}`}
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem', marginBottom: '1rem' }}>
+                  <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Anslutningsstatus</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: aiConfig.is_healthy ? '#16a34a' : '#ef4444' }}>
+                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: aiConfig.is_healthy ? '#16a34a' : '#ef4444', display: 'inline-block' }}></span>
+                      {aiConfig.is_healthy ? `Ansluten till ${aiConfig.server_type || 'AI-servern'}` : 'Offline / Ingen anslutning'}
                     </div>
                   </div>
-                );
-              })}
-            </div>
 
-            <form onSubmit={handleAddAiCategory} style={{ display: 'flex', gap: '0.5rem', maxWidth: '400px' }}>
-              <input 
-                type="text" 
-                placeholder="Ny kategori (t.ex. Försvar, Forskning)..." 
-                value={newAiCategory} 
-                onChange={(e) => setNewAiCategory(e.target.value)}
-                style={{ flex: 1, padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.85rem' }}
-              />
-              <button 
-                type="submit"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.9rem', backgroundColor: 'var(--primary)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
-              >
-                <Plus size={15} /> Lägg till kategori
-              </button>
-            </form>
+                  <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                      AI-modell
+                    </div>
+                    {aiConfig.available_models && aiConfig.available_models.length > 0 ? (
+                      <select
+                        value={aiConfig.lm_studio_model || ''}
+                        onChange={(e) => handleUpdateModel(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.4rem 0.5rem',
+                          borderRadius: '6px',
+                          backgroundColor: 'var(--bg-card)',
+                          color: 'var(--text-main)',
+                          border: '1px solid var(--border-color)',
+                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="">Standard (Automatiskt)</option>
+                        {aiConfig.available_models.map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div style={{ fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {aiConfig.ai_model || aiConfig.lm_studio_model || 'Standardmodell'}
+                      </div>
+                    )}
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                      {aiConfig.available_models?.length 
+                        ? `${aiConfig.available_models.length} modeller tillgängliga på AI-servern` 
+                        : 'Inga modeller hittades'}
+                    </div>
+                  </div>
+
+                  <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>Skyddsgräns (artikelålder)</div>
+                    <select
+                      value={aiConfig.max_article_age_hours || 24}
+                      onChange={(e) => handleUpdateMaxArticleAgeHours(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.4rem 0.5rem',
+                        borderRadius: '6px',
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-main)',
+                        border: '1px solid var(--border-color)',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value={6}>6 timmar</option>
+                      <option value={12}>12 timmar</option>
+                      <option value={24}>24 timmar (1 dygn)</option>
+                      <option value={48}>48 timmar (2 dygn)</option>
+                      <option value={72}>72 timmar (3 dygn)</option>
+                      <option value={168}>7 dagar (1 vecka)</option>
+                    </select>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                      Äldre artiklar hoppas över vid AI-analys
+                    </div>
+                  </div>
+                </div>
+
+                {/* Driftnotiser för AI (Endast Administratör) */}
+                <div style={{
+                  paddingTop: '0.85rem',
+                  borderTop: '1px solid var(--border-color)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem'
+                }}>
+                  <div style={{ flex: 1, minWidth: '220px' }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Bell size={15} style={{ color: '#f97316' }} /> Driftnotiser vid AI-avbrott (Endast administratör)
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.4 }}>
+                      Skickar en pushnotis till administratören om AI-servern är onåbar i mer än 45 sekunder, samt när anslutningen återställts.
+                    </div>
+                  </div>
+                  <label className="toggle-switch" style={{ margin: 0, flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={aiConfig.notify_ai_offline !== false}
+                      onChange={() => handleTogglePushSetting('notify_ai_offline', 'Driftnotiser vid AI-avbrott')}
+                      disabled={isSavingAi}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Avancerat: Rå Systemprompt (Utfällbar) */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}>
-            <div 
-              onClick={() => setShowAdvancedPrompt(!showAdvancedPrompt)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
+          {/* Sektion 3: Prioriterade sökord & orter */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleAiSection('keywords')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openAiSections.keywords ? 'rgba(245, 158, 11, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
             >
-              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
-                <FileText size={18} style={{ color: '#f97316' }} /> Avancerat: Fullständig AI-systemprompt
-              </h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                <span>{showAdvancedPrompt ? 'Dölj' : 'Visa och redigera'}</span>
-                {showAdvancedPrompt ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(245, 158, 11, 0.1)', flexShrink: 0 }}>
+                  <Hash size={18} style={{ color: '#f59e0b' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Prioriterade nyckelord & ämnen
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Alla matchade artiklar får direkt 100 poäng och visas alltid i PRIO-flödet
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#d97706', fontWeight: 600 }}>
+                  {keywords.length} sökord
+                </span>
+                {openAiSections.keywords ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
               </div>
             </div>
 
-            {showAdvancedPrompt && (
-              <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+            {openAiSections.keywords && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0 0 1rem 0', lineHeight: 1.5 }}>
+                  Alla artiklar som innehåller något av dina bevakade ord (t.ex. din hemort som <strong>Trosa</strong> eller favoritintressen som <strong>Tesla</strong>) får omedelbart <strong>100 poäng</strong> och visas alltid i PRIO-flödet oavsett kategori.
+                </p>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '1.25rem' }}>
+                  {keywords.length > 0 ? (
+                    keywords.map((kw) => (
+                      <div 
+                        key={kw.id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          backgroundColor: 'rgba(249, 115, 22, 0.12)',
+                          border: '1px solid rgba(249, 115, 22, 0.3)',
+                          color: 'var(--text-main)',
+                          padding: '0.35rem 0.75rem',
+                          borderRadius: '20px',
+                          fontSize: '0.84rem',
+                          fontWeight: 600
+                        }}
+                      >
+                        <span>{kw.keyword}</span>
+                        <button 
+                          type="button"
+                          onClick={() => handleDeleteKeyword(kw.id)}
+                          style={{ background: 'none', border: 'none', color: '#f97316', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
+                          title={`Ta bort ${kw.keyword}`}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                      Inga prioriterade nyckelord har lagts till ännu. Lägg till sökord nedan för garanterad 100% PRIO.
+                    </div>
+                  )}
+                </div>
+
+                <form onSubmit={handleAddKeyword} style={{ display: 'flex', gap: '0.5rem', maxWidth: '440px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Lägg till prioriterat nyckelord (t.ex. Tesla, AI)..." 
+                    value={newKeyword} 
+                    onChange={(e) => setNewKeyword(e.target.value)}
+                    style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                  />
+                  <button 
+                    type="submit"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 1rem', backgroundColor: '#f97316', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                  >
+                    <Plus size={15} /> Lägg till
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+
+          {/* Sektion 4: Adaptiv Intresseprofil */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleAiSection('interestProfile')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openAiSections.interestProfile ? 'rgba(22, 163, 74, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(22, 163, 74, 0.1)', flexShrink: 0 }}>
+                  <ThumbsUp size={18} style={{ color: '#16a34a' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Adaptiv Intresseprofil (Gilla & Ogilla)
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Dynamisk intressebonus (+10p till +20p) eller dämpning (-15p) utifrån din läsning
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(22, 163, 74, 0.1)', color: '#16a34a', fontWeight: 600 }}>
+                  Aktiv
+                </span>
+                {openAiSections.interestProfile ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
+            </div>
+
+            {openAiSections.interestProfile && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)' }}>
+                <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+                  Artiklar du gillar skapar automatiskt en personlig intressebonus (+10p till +20p), medan ogillade ämnen dämpas (-15p). Du kan finjustera dina taggar och intressen när som helst.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('interests')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    padding: '0.55rem 1rem',
+                    backgroundColor: 'rgba(22, 163, 74, 0.15)',
+                    color: '#16a34a',
+                    border: '1px solid rgba(22, 163, 74, 0.35)',
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span>Öppna din Intresseprofil</span>
+                  <ArrowUpRight size={15} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Sektion 5: Kategori-viktning */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleAiSection('categoryWeights')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openAiSections.categoryWeights ? 'rgba(37, 99, 235, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.1)', flexShrink: 0 }}>
+                  <Sliders size={18} style={{ color: 'var(--primary)' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Kategoriviktning och prioritet (0–10)
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Styr hur starkt olika nyhetskategorier väger i totalpoängen
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--primary)', fontWeight: 600 }}>
+                  {(aiConfig.categories || []).length} kategorier
+                </span>
+                {openAiSections.categoryWeights ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
+            </div>
+
+            {openAiSections.categoryWeights && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.5, flex: 1, minWidth: '240px' }}>
+                    AI klassificerar varje artikel till en kategori. Kategorins viktning bidrar med upp till 30 % av artikelns totalpoäng (0–100p).
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('openOnboarding'));
+                        toast.success('Öppnar installationsguiden...');
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        padding: '0.35rem 0.75rem',
+                        backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                        color: '#3b82f6',
+                        border: '1px solid rgba(59, 130, 246, 0.35)',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Compass size={14} /> Kör guide
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => saveCategoryWeights()}
+                      disabled={isSavingAi}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        padding: '0.35rem 0.75rem',
+                        backgroundColor: 'rgba(249, 115, 22, 0.12)',
+                        color: '#f97316',
+                        border: '1px solid rgba(249, 115, 22, 0.35)',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        cursor: isSavingAi ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      <Check size={14} /> {isSavingAi ? 'Sparar...' : 'Spara'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetAiCategories}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      Återställ
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '0.5rem',
+                  backgroundColor: 'var(--bg-app)',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  marginBottom: '1.25rem',
+                  fontSize: '0.78rem'
+                }}>
+                  <div><strong style={{ color: '#16a34a' }}>8–10:</strong> Högt intresse (24–30p)</div>
+                  <div><strong style={{ color: '#0284c7' }}>5–7:</strong> Normalt intresse (15–21p)</div>
+                  <div><strong style={{ color: 'var(--text-muted)' }}>1–4:</strong> Lågt intresse (3–12p)</div>
+                  <div><strong style={{ color: '#ef4444' }}>0:</strong> Ignoreras (0p - Aldrig PRIO)</div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.25rem' }}>
+                  {(aiConfig.categories || []).map((catItem, idx) => {
+                    const name = typeof catItem === 'object' ? catItem.name : catItem;
+                    const weight = typeof catItem === 'object' && typeof catItem.weight === 'number' ? catItem.weight : 5;
+                    const badge = getWeightBadge(weight);
+                    return (
+                      <div 
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.75rem',
+                          padding: '0.65rem 0.9rem',
+                          backgroundColor: 'var(--bg-app)',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          flexWrap: 'wrap'
+                        }}
+                      >
+                        <div style={{ minWidth: '140px', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <Tag size={15} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                          <span style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-main)' }}>{name}</span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '200px' }}>
+                          <input
+                            type="range"
+                            min="0"
+                            max="10"
+                            step="1"
+                            value={weight}
+                            onChange={(e) => handleCategoryWeightChange(name, parseInt(e.target.value))}
+                            onPointerUp={() => saveCategoryWeights()}
+                            onTouchEnd={() => saveCategoryWeights()}
+                            onKeyUp={() => saveCategoryWeights()}
+                            style={{
+                              flex: 1,
+                              cursor: 'pointer',
+                              accentColor: weight >= 8 ? '#16a34a' : weight >= 5 ? '#0284c7' : weight >= 1 ? '#64748b' : '#ef4444'
+                            }}
+                          />
+                          <span style={{
+                            fontSize: '0.85rem',
+                            fontWeight: 700,
+                            color: 'var(--text-main)',
+                            minWidth: '38px',
+                            textAlign: 'right',
+                            fontFamily: 'monospace'
+                          }}>
+                            {weight}/10
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            padding: '0.2rem 0.55rem',
+                            borderRadius: '12px',
+                            backgroundColor: badge.bg,
+                            color: badge.color,
+                            border: badge.border,
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {badge.label}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAiCategory(name)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--text-muted)',
+                              cursor: 'pointer',
+                              padding: '0.2rem',
+                              borderRadius: '4px',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                            title={`Ta bort ${name}`}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <form onSubmit={handleAddAiCategory} style={{ display: 'flex', gap: '0.5rem', maxWidth: '400px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Ny kategori (t.ex. Försvar, Forskning)..." 
+                    value={newAiCategory} 
+                    onChange={(e) => setNewAiCategory(e.target.value)}
+                    style={{ flex: 1, padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                  />
+                  <button 
+                    type="submit"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.9rem', backgroundColor: 'var(--primary)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                  >
+                    <Plus size={15} /> Lägg till kategori
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+
+          {/* Sektion 6: Avancerat Systemprompt */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleAiSection('systemPrompt')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openAiSections.systemPrompt ? 'rgba(100, 116, 139, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(100, 116, 139, 0.1)', flexShrink: 0 }}>
+                  <FileText size={18} style={{ color: 'var(--text-main)' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Avancerat: Fullständig AI-systemprompt
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Visa, anpassa eller återskapa rå systeminstruktion för AI-analysen
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(100, 116, 139, 0.1)', color: 'var(--text-muted)', fontWeight: 600 }}>
+                  Expert
+                </span>
+                {openAiSections.systemPrompt ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
+            </div>
+
+            {openAiSections.systemPrompt && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
                     Här ser du den råa systemprompten som skickas till AI-motorn vid analys.
@@ -5507,7 +5766,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
           </div>
 
           {/* Spara-knapp */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
             <button 
               type="button"
               onClick={handleSaveAiConfig}
@@ -5535,7 +5794,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
 
       {/* ADMINISTRATÖRSPANEL */}
       {activeTab === 'admin' && isAdmin && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           
           {/* Admin Header Banner */}
           <div style={{
@@ -5543,7 +5802,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             padding: '1.25rem 1rem',
             borderRadius: '12px',
             border: '1px solid rgba(239, 68, 68, 0.3)',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -5594,815 +5853,920 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             </div>
           </div>
 
-          {/* Sektion 1: Användaradministration */}
+          {/* Snabbkontroll för sektioner */}
           <div style={{
-            backgroundColor: 'var(--bg-card)',
-            padding: '1.5rem',
-            borderRadius: '12px',
-            border: '1px solid var(--border-color)',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
             display: 'flex',
-            flexDirection: 'column',
-            gap: '1.25rem'
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.5rem 0.25rem',
+            color: 'var(--text-muted)',
+            fontSize: '0.85rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Users size={20} style={{ color: 'var(--primary)' }} />
-                <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem' }}>
-                  Användarkonton och behörigheter
-                </h3>
+            <span>Klicka på en sektion för att fälla ut dess inställningar.</span>
+            <button
+              type="button"
+              onClick={() => {
+                const allOpen = Object.values(openAdminSections).every(Boolean);
+                const nextState = !allOpen;
+                setOpenAdminSections({
+                  users: nextState,
+                  dangerZone: nextState,
+                  systemConfig: nextState
+                });
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--primary)',
+                cursor: 'pointer',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                padding: '0.2rem 0.5rem',
+                borderRadius: '4px'
+              }}
+            >
+              {Object.values(openAdminSections).every(Boolean) ? 'Kollapsa alla' : 'Expandera alla'}
+            </button>
+          </div>
+
+          {/* Sektion 1: Användaradministration */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleAdminSection('users')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openAdminSections.users ? 'rgba(37, 99, 235, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.1)', flexShrink: 0 }}>
+                  <Users size={18} style={{ color: 'var(--primary)' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Användarkonton och behörigheter
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {adminUsers.length} registrerade användare · Kontohantering, roller och användarflöden
+                  </div>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={fetchAdminUsers}
-                disabled={isLoadingAdminUsers}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '0.4rem 0.8rem',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-app)',
-                  color: 'var(--text-main)',
-                  fontSize: '0.82rem',
-                  fontWeight: 500,
-                  cursor: isLoadingAdminUsers ? 'not-allowed' : 'pointer'
-                }}
-              >
-                <RefreshCw size={14} className={isLoadingAdminUsers ? 'spin' : ''} />
-                {isLoadingAdminUsers ? 'Laddar...' : 'Uppdatera lista'}
-              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.1)', color: 'var(--primary)', fontWeight: 600 }}>
+                  {adminUsers.length} konton
+                </span>
+                {openAdminSections.users ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
             </div>
 
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
-              Administrera vilka som har åtkomst till installationen, tilldela administratörsrättigheter och nollställ lösenord.
-            </p>
-
-            {/* Befintliga användare */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {isLoadingAdminUsers && adminUsers.length === 0 ? (
-                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                  Hämtar användare...
-                </div>
-              ) : adminUsers.map((u) => {
-                const isSelf = u.id === localUser?.id;
-                const isChangingPwd = passwordChangeUserId === u.id;
-
-                return (
-                  <div 
-                    key={u.id}
+            {openAdminSections.users && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+                    Administrera vilka som har åtkomst till installationen, tilldela administratörsrättigheter och nollställ lösenord.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={fetchAdminUsers}
+                    disabled={isLoadingAdminUsers}
                     style={{
-                      padding: '1rem',
-                      borderRadius: '8px',
-                      backgroundColor: 'var(--bg-app)',
-                      border: '1px solid var(--border-color)',
                       display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.75rem'
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.4rem 0.8rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.82rem',
+                      fontWeight: 500,
+                      cursor: isLoadingAdminUsers ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          backgroundColor: u.is_admin ? 'rgba(239, 68, 68, 0.15)' : 'rgba(37, 99, 235, 0.15)',
-                          color: u.is_admin ? '#ef4444' : 'var(--primary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: '0.9rem'
-                        }}>
-                          {u.username.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <strong style={{ color: 'var(--text-main)', fontSize: '0.95rem' }}>{u.username}</strong>
-                            {isSelf && (
-                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                                (du)
-                              </span>
-                            )}
-                            <span style={{
-                              fontSize: '0.7rem',
-                              padding: '0.1rem 0.45rem',
-                              borderRadius: '4px',
-                              fontWeight: 600,
-                              backgroundColor: u.is_admin ? 'rgba(239, 68, 68, 0.15)' : 'rgba(100, 116, 139, 0.15)',
-                              color: u.is_admin ? '#ef4444' : 'var(--text-muted)'
-                            }}>
-                              {u.is_admin ? 'Administratör' : 'Användare'}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                            {u.feed_count} aktiva prenumerationer
-                          </div>
-                        </div>
-                      </div>
+                    <RefreshCw size={14} className={isLoadingAdminUsers ? 'spin' : ''} />
+                    {isLoadingAdminUsers ? 'Laddar...' : 'Uppdatera lista'}
+                  </button>
+                </div>
 
-                      {/* Åtgärder per användare */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleUserFeeds(u.id)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            padding: '0.35rem 0.65rem',
-                            borderRadius: '6px',
-                            border: expandedUserFeeds[u.id] ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                            backgroundColor: expandedUserFeeds[u.id] ? 'rgba(37, 99, 235, 0.1)' : 'var(--bg-card)',
-                            color: expandedUserFeeds[u.id] ? 'var(--primary)' : 'var(--text-main)',
-                            fontSize: '0.8rem',
-                            fontWeight: 500,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <Rss size={13} />
-                          <span>Flöden ({u.feed_count})</span>
-                          {expandedUserFeeds[u.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isChangingPwd) {
-                              setPasswordChangeUserId(null);
-                              setNewPasswordForUser('');
-                            } else {
-                              setPasswordChangeUserId(u.id);
-                              setNewPasswordForUser('');
-                            }
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            padding: '0.35rem 0.65rem',
-                            borderRadius: '6px',
-                            border: '1px solid var(--border-color)',
-                            backgroundColor: 'var(--bg-card)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem',
-                            fontWeight: 500,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <Key size={13} />
-                          {isChangingPwd ? 'Avbryt lösenord' : 'Byt lösenord'}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleToggleAdminStatus(u)}
-                          disabled={isSelf && u.is_admin}
-                          title={isSelf && u.is_admin ? 'Du kan inte ta bort din egen administratörsstatus.' : ''}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            padding: '0.35rem 0.65rem',
-                            borderRadius: '6px',
-                            border: '1px solid var(--border-color)',
-                            backgroundColor: 'var(--bg-card)',
-                            color: u.is_admin ? '#ef4444' : 'var(--primary)',
-                            fontSize: '0.8rem',
-                            fontWeight: 500,
-                            cursor: isSelf && u.is_admin ? 'not-allowed' : 'pointer',
-                            opacity: isSelf && u.is_admin ? 0.6 : 1
-                          }}
-                        >
-                          <ShieldCheck size={13} />
-                          {u.is_admin ? 'Ta bort admin' : 'Gör till admin'}
-                        </button>
-
-                        {!isSelf && (
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteUser(u)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              padding: '0.35rem 0.65rem',
-                              borderRadius: '6px',
-                              border: '1px solid rgba(239, 68, 68, 0.4)',
-                              backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                              color: '#ef4444',
-                              fontSize: '0.8rem',
-                              fontWeight: 500,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <Trash2 size={13} />
-                            Ta bort
-                          </button>
-                        )}
-                      </div>
+                {/* Befintliga användare */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {isLoadingAdminUsers && adminUsers.length === 0 ? (
+                    <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                      Hämtar användare...
                     </div>
+                  ) : adminUsers.map((u) => {
+                    const isSelf = u.id === localUser?.id;
+                    const isChangingPwd = passwordChangeUserId === u.id;
 
-                    {/* Inline lösenordsbyte */}
-                    {isChangingPwd && (
-                      <div style={{
-                        marginTop: '0.5rem',
-                        padding: '0.75rem',
-                        backgroundColor: 'var(--bg-card)',
-                        borderRadius: '6px',
-                        border: '1px dashed var(--border-color)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        flexWrap: 'wrap'
-                      }}>
-                        <input
-                          type="password"
-                          placeholder="Nytt lösenord (minst 4 tecken)"
-                          value={newPasswordForUser}
-                          onChange={(e) => setNewPasswordForUser(e.target.value)}
-                          style={{
-                            flex: 1,
-                            minWidth: '200px',
-                            padding: '0.45rem 0.75rem',
-                            borderRadius: '6px',
-                            border: '1px solid var(--border-color)',
-                            backgroundColor: 'var(--bg-app)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.85rem'
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleChangePassword(u.id)}
-                          disabled={isChangingPassword || !newPasswordForUser.trim()}
-                          style={{
-                            padding: '0.45rem 0.85rem',
-                            borderRadius: '6px',
-                            border: 'none',
-                            backgroundColor: 'var(--primary)',
-                            color: 'white',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {isChangingPassword ? 'Sparar...' : 'Spara nytt lösenord'}
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Expanderbar sektion: Användarens RSS-flöden */}
-                    {expandedUserFeeds[u.id] && (
-                      <div style={{
-                        marginTop: '0.5rem',
-                        padding: '1rem',
-                        backgroundColor: 'var(--bg-card)',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-color)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.85rem'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-main)' }}>
-                            <Rss size={15} style={{ color: 'var(--primary)' }} />
-                            <span>Flöden för {u.username}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => fetchAdminUserFeeds(u.id)}
-                            disabled={loadingUserFeeds[u.id]}
-                            style={{
+                    return (
+                      <div 
+                        key={u.id}
+                        style={{
+                          padding: '1rem',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--bg-app)',
+                          border: '1px solid var(--border-color)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.75rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '50%',
+                              backgroundColor: u.is_admin ? 'rgba(239, 68, 68, 0.15)' : 'rgba(37, 99, 235, 0.15)',
+                              color: u.is_admin ? '#ef4444' : 'var(--primary)',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.3rem',
-                              padding: '0.25rem 0.55rem',
-                              borderRadius: '4px',
-                              border: '1px solid var(--border-color)',
-                              backgroundColor: 'var(--bg-app)',
-                              color: 'var(--text-muted)',
-                              fontSize: '0.75rem',
-                              cursor: loadingUserFeeds[u.id] ? 'not-allowed' : 'pointer'
-                            }}
-                          >
-                            <RefreshCw size={12} className={loadingUserFeeds[u.id] ? 'spin' : ''} />
-                            {loadingUserFeeds[u.id] ? 'Hämtar...' : 'Uppdatera'}
-                          </button>
-                        </div>
-
-                        {/* Lägg till flöde för denna användare */}
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          <input
-                            type="url"
-                            placeholder="https://exempel.se/rss.xml"
-                            value={newFeedUrlPerUser[u.id] || ''}
-                            onChange={(e) => setNewFeedUrlPerUser(prev => ({ ...prev, [u.id]: e.target.value }))}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleAdminAddFeed(u.id);
-                              }
-                            }}
-                            style={{
-                              flex: 1,
-                              minWidth: '220px',
-                              padding: '0.45rem 0.75rem',
-                              borderRadius: '6px',
-                              border: '1px solid var(--border-color)',
-                              backgroundColor: 'var(--bg-app)',
-                              color: 'var(--text-main)',
-                              fontSize: '0.82rem'
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleAdminAddFeed(u.id)}
-                            disabled={isAddingFeedForUser[u.id] || !(newFeedUrlPerUser[u.id]?.trim())}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              padding: '0.45rem 0.85rem',
-                              borderRadius: '6px',
-                              border: 'none',
-                              backgroundColor: 'var(--primary)',
-                              color: 'white',
-                              fontSize: '0.82rem',
-                              fontWeight: 600,
-                              cursor: isAddingFeedForUser[u.id] || !(newFeedUrlPerUser[u.id]?.trim()) ? 'not-allowed' : 'pointer',
-                              opacity: isAddingFeedForUser[u.id] || !(newFeedUrlPerUser[u.id]?.trim()) ? 0.6 : 1
-                            }}
-                          >
-                            <Plus size={14} />
-                            {isAddingFeedForUser[u.id] ? 'Lägger till...' : 'Lägg till flöde'}
-                          </button>
-                        </div>
-
-                        {/* Lista över sparade flöden */}
-                        {loadingUserFeeds[u.id] && !adminUserFeeds[u.id] ? (
-                          <div style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-                            Hämtar flöden...
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '0.9rem'
+                            }}>
+                              {u.username.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <strong style={{ color: 'var(--text-main)', fontSize: '0.95rem' }}>{u.username}</strong>
+                                {isSelf && (
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                    (du)
+                                  </span>
+                                )}
+                                <span style={{
+                                  fontSize: '0.7rem',
+                                  padding: '0.1rem 0.45rem',
+                                  borderRadius: '4px',
+                                  fontWeight: 600,
+                                  backgroundColor: u.is_admin ? 'rgba(239, 68, 68, 0.15)' : 'rgba(100, 116, 139, 0.15)',
+                                  color: u.is_admin ? '#ef4444' : 'var(--text-muted)'
+                                }}>
+                                  {u.is_admin ? 'Administratör' : 'Användare'}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                                {u.feed_count} aktiva prenumerationer
+                              </div>
+                            </div>
                           </div>
-                        ) : (adminUserFeeds[u.id] || []).length === 0 ? (
-                          <div style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic' }}>
-                            Användaren har inga sparade flöden ännu.
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', maxHeight: '320px', overflowY: 'auto' }}>
-                            {(adminUserFeeds[u.id] || []).map((feed) => (
-                              <div
-                                key={feed.id}
+
+                          {/* Åtgärder per användare */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleUserFeeds(u.id)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                padding: '0.35rem 0.65rem',
+                                borderRadius: '6px',
+                                border: expandedUserFeeds[u.id] ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                                backgroundColor: expandedUserFeeds[u.id] ? 'rgba(37, 99, 235, 0.1)' : 'var(--bg-card)',
+                                color: expandedUserFeeds[u.id] ? 'var(--primary)' : 'var(--text-main)',
+                                fontSize: '0.8rem',
+                                fontWeight: 500,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Rss size={13} />
+                              <span>Flöden ({u.feed_count})</span>
+                              {expandedUserFeeds[u.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isChangingPwd) {
+                                  setPasswordChangeUserId(null);
+                                  setNewPasswordForUser('');
+                                } else {
+                                  setPasswordChangeUserId(u.id);
+                                  setNewPasswordForUser('');
+                                }
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                padding: '0.35rem 0.65rem',
+                                borderRadius: '6px',
+                                border: '1px solid var(--border-color)',
+                                backgroundColor: 'var(--bg-card)',
+                                color: 'var(--text-main)',
+                                fontSize: '0.8rem',
+                                fontWeight: 500,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Key size={13} />
+                              {isChangingPwd ? 'Avbryt lösenord' : 'Byt lösenord'}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleToggleAdminStatus(u)}
+                              disabled={isSelf && u.is_admin}
+                              title={isSelf && u.is_admin ? 'Du kan inte ta bort din egen administratörsstatus.' : ''}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                padding: '0.35rem 0.65rem',
+                                borderRadius: '6px',
+                                border: '1px solid var(--border-color)',
+                                backgroundColor: 'var(--bg-card)',
+                                color: u.is_admin ? '#ef4444' : 'var(--primary)',
+                                fontSize: '0.8rem',
+                                fontWeight: 500,
+                                cursor: isSelf && u.is_admin ? 'not-allowed' : 'pointer',
+                                opacity: isSelf && u.is_admin ? 0.6 : 1
+                              }}
+                            >
+                              <ShieldCheck size={13} />
+                              {u.is_admin ? 'Ta bort admin' : 'Gör till admin'}
+                            </button>
+
+                            {!isSelf && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteUser(u)}
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  gap: '0.75rem',
-                                  padding: '0.5rem 0.75rem',
+                                  gap: '0.35rem',
+                                  padding: '0.35rem 0.65rem',
                                   borderRadius: '6px',
-                                  backgroundColor: 'var(--bg-app)',
-                                  border: '1px solid var(--border-color)'
+                                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                                  color: '#ef4444',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 500,
+                                  cursor: 'pointer'
                                 }}
                               >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
-                                  {feed.icon_url ? (
-                                    <img
-                                      src={resolveFeedIcon(feed.icon_url)}
-                                      alt=""
-                                      style={{ width: '18px', height: '18px', borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }}
-                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                    />
-                                  ) : (
-                                    <Rss size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                                  )}
-                                  <div style={{ minWidth: 0, flex: 1 }}>
-                                    <div style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                      {feed.title || 'Namnlöst flöde'}
-                                    </div>
-                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                      {feed.url}
-                                    </div>
-                                  </div>
-                                  {feed.unread_count > 0 && (
-                                    <span style={{
-                                      fontSize: '0.68rem',
-                                      padding: '0.1rem 0.4rem',
-                                      borderRadius: '10px',
-                                      backgroundColor: 'rgba(37, 99, 235, 0.12)',
-                                      color: 'var(--primary)',
-                                      fontWeight: 600,
-                                      flexShrink: 0
-                                    }}>
-                                      {feed.unread_count} olästa
-                                    </span>
-                                  )}
-                                </div>
+                                <Trash2 size={13} />
+                                Ta bort
+                              </button>
+                            )}
+                          </div>
+                        </div>
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleAdminDeleteFeed(u.id, feed)}
-                                  disabled={isDeletingFeedForUser[feed.id]}
-                                  title="Ta bort flöde från användare"
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                    padding: '0.3rem 0.55rem',
-                                    borderRadius: '5px',
-                                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                                    color: '#ef4444',
-                                    fontSize: '0.75rem',
-                                    cursor: isDeletingFeedForUser[feed.id] ? 'not-allowed' : 'pointer',
-                                    flexShrink: 0
-                                  }}
-                                >
-                                  <Trash2 size={12} />
-                                  <span>{isDeletingFeedForUser[feed.id] ? 'Tar bort...' : 'Ta bort'}</span>
-                                </button>
+                        {/* Inline lösenordsbyte */}
+                        {isChangingPwd && (
+                          <div style={{
+                            marginTop: '0.5rem',
+                            padding: '0.75rem',
+                            backgroundColor: 'var(--bg-card)',
+                            borderRadius: '6px',
+                            border: '1px dashed var(--border-color)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            flexWrap: 'wrap'
+                          }}>
+                            <input
+                              type="password"
+                              placeholder="Nytt lösenord (minst 4 tecken)"
+                              value={newPasswordForUser}
+                              onChange={(e) => setNewPasswordForUser(e.target.value)}
+                              style={{
+                                flex: 1,
+                                minWidth: '200px',
+                                padding: '0.45rem 0.75rem',
+                                borderRadius: '6px',
+                                border: '1px solid var(--border-color)',
+                                backgroundColor: 'var(--bg-app)',
+                                color: 'var(--text-main)',
+                                fontSize: '0.85rem'
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleChangePassword(u.id)}
+                              disabled={isChangingPassword || !newPasswordForUser.trim()}
+                              style={{
+                                padding: '0.45rem 0.85rem',
+                                borderRadius: '6px',
+                                border: 'none',
+                                backgroundColor: 'var(--primary)',
+                                color: 'white',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {isChangingPassword ? 'Sparar...' : 'Spara nytt lösenord'}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Expanderbar sektion: Användarens RSS-flöden */}
+                        {expandedUserFeeds[u.id] && (
+                          <div style={{
+                            marginTop: '0.5rem',
+                            padding: '1rem',
+                            backgroundColor: 'var(--bg-card)',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.85rem'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-main)' }}>
+                                <Rss size={15} style={{ color: 'var(--primary)' }} />
+                                <span>Flöden för {u.username}</span>
                               </div>
-                            ))}
+                              <button
+                                type="button"
+                                onClick={() => fetchAdminUserFeeds(u.id)}
+                                disabled={loadingUserFeeds[u.id]}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  padding: '0.25rem 0.55rem',
+                                  borderRadius: '4px',
+                                  border: '1px solid var(--border-color)',
+                                  backgroundColor: 'var(--bg-app)',
+                                  color: 'var(--text-muted)',
+                                  fontSize: '0.75rem',
+                                  cursor: loadingUserFeeds[u.id] ? 'not-allowed' : 'pointer'
+                                }}
+                              >
+                                <RefreshCw size={12} className={loadingUserFeeds[u.id] ? 'spin' : ''} />
+                                {loadingUserFeeds[u.id] ? 'Hämtar...' : 'Uppdatera'}
+                              </button>
+                            </div>
+
+                            {/* Lägg till flöde för denna användare */}
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <input
+                                type="url"
+                                placeholder="https://exempel.se/rss.xml"
+                                value={newFeedUrlPerUser[u.id] || ''}
+                                onChange={(e) => setNewFeedUrlPerUser(prev => ({ ...prev, [u.id]: e.target.value }))}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAdminAddFeed(u.id);
+                                  }
+                                }}
+                                style={{
+                                  flex: 1,
+                                  minWidth: '220px',
+                                  padding: '0.45rem 0.75rem',
+                                  borderRadius: '6px',
+                                  border: '1px solid var(--border-color)',
+                                  backgroundColor: 'var(--bg-app)',
+                                  color: 'var(--text-main)',
+                                  fontSize: '0.82rem'
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleAdminAddFeed(u.id)}
+                                disabled={isAddingFeedForUser[u.id] || !(newFeedUrlPerUser[u.id]?.trim())}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                  padding: '0.45rem 0.85rem',
+                                  borderRadius: '6px',
+                                  border: 'none',
+                                  backgroundColor: 'var(--primary)',
+                                  color: 'white',
+                                  fontSize: '0.82rem',
+                                  fontWeight: 600,
+                                  cursor: isAddingFeedForUser[u.id] || !(newFeedUrlPerUser[u.id]?.trim()) ? 'not-allowed' : 'pointer',
+                                  opacity: isAddingFeedForUser[u.id] || !(newFeedUrlPerUser[u.id]?.trim()) ? 0.6 : 1
+                                }}
+                              >
+                                <Plus size={14} />
+                                {isAddingFeedForUser[u.id] ? 'Lägger till...' : 'Lägg till flöde'}
+                              </button>
+                            </div>
+
+                            {/* Lista över sparade flöden */}
+                            {loadingUserFeeds[u.id] && !adminUserFeeds[u.id] ? (
+                              <div style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                                Hämtar flöden...
+                              </div>
+                            ) : (adminUserFeeds[u.id] || []).length === 0 ? (
+                              <div style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic' }}>
+                                Användaren har inga sparade flöden ännu.
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', maxHeight: '320px', overflowY: 'auto' }}>
+                                {(adminUserFeeds[u.id] || []).map((feed) => (
+                                  <div
+                                    key={feed.id}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      gap: '0.75rem',
+                                      padding: '0.5rem 0.75rem',
+                                      borderRadius: '6px',
+                                      backgroundColor: 'var(--bg-app)',
+                                      border: '1px solid var(--border-color)'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
+                                      {feed.icon_url ? (
+                                        <img
+                                          src={resolveFeedIcon(feed.icon_url)}
+                                          alt=""
+                                          style={{ width: '18px', height: '18px', borderRadius: '4px', objectFit: 'contain', flexShrink: 0 }}
+                                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        />
+                                      ) : (
+                                        <Rss size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                      )}
+                                      <div style={{ minWidth: 0, flex: 1 }}>
+                                        <div style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {feed.title || 'Namnlöst flöde'}
+                                        </div>
+                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {feed.url}
+                                        </div>
+                                      </div>
+                                      {feed.unread_count > 0 && (
+                                        <span style={{
+                                          fontSize: '0.68rem',
+                                          padding: '0.1rem 0.4rem',
+                                          borderRadius: '10px',
+                                          backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                                          color: 'var(--primary)',
+                                          fontWeight: 600,
+                                          flexShrink: 0
+                                        }}>
+                                          {feed.unread_count} olästa
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAdminDeleteFeed(u.id, feed)}
+                                      disabled={isDeletingFeedForUser[feed.id]}
+                                      title="Ta bort flöde från användare"
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.25rem',
+                                        padding: '0.3rem 0.55rem',
+                                        borderRadius: '5px',
+                                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                                        backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                                        color: '#ef4444',
+                                        fontSize: '0.75rem',
+                                        cursor: isDeletingFeedForUser[feed.id] ? 'not-allowed' : 'pointer',
+                                        flexShrink: 0
+                                      }}
+                                    >
+                                      <Trash2 size={12} />
+                                      <span>{isDeletingFeedForUser[feed.id] ? 'Tar bort...' : 'Ta bort'}</span>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
+                    );
+                  })}
+                </div>
+
+                {/* Skapa ny användare formulär */}
+                <div style={{
+                  marginTop: '0.5rem',
+                  padding: '1rem',
+                  backgroundColor: 'var(--bg-app)',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)'
+                }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <UserPlus size={16} style={{ color: 'var(--primary)' }} /> Skapa nytt användarkonto
                   </div>
-                );
-              })}
-            </div>
 
-            {/* Skapa ny användare formulär */}
-            <div style={{
-              marginTop: '0.5rem',
-              padding: '1rem',
-              backgroundColor: 'var(--bg-app)',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color)'
-            }}>
-              <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <UserPlus size={16} style={{ color: 'var(--primary)' }} /> Skapa nytt användarkonto
+                  <form onSubmit={handleCreateUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      placeholder="Användarnamn"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-main)',
+                        fontSize: '0.88rem'
+                      }}
+                      required
+                    />
+
+                    <input
+                      type="password"
+                      placeholder="Lösenord"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-main)',
+                        fontSize: '0.88rem'
+                      }}
+                      required
+                    />
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.88rem', color: 'var(--text-main)' }}>
+                      <input
+                        type="checkbox"
+                        checked={newIsAdmin}
+                        onChange={(e) => setNewIsAdmin(e.target.checked)}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                      <span>Administratörsrättigheter</span>
+                    </label>
+
+                    <button
+                      type="submit"
+                      disabled={isCreatingUser || !newUsername.trim() || !newPassword.trim()}
+                      style={{
+                        padding: '0.55rem 1rem',
+                        borderRadius: '6px',
+                        border: 'none',
+                        backgroundColor: 'var(--primary)',
+                        color: 'white',
+                        fontSize: '0.88rem',
+                        fontWeight: 600,
+                        cursor: isCreatingUser ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {isCreatingUser ? 'Skapar konto...' : 'Skapa användare'}
+                    </button>
+                  </form>
+                </div>
               </div>
-
-              <form onSubmit={handleCreateUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  placeholder="Användarnamn"
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  style={{
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                    fontSize: '0.88rem'
-                  }}
-                  required
-                />
-
-                <input
-                  type="password"
-                  placeholder="Lösenord"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  style={{
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                    fontSize: '0.88rem'
-                  }}
-                  required
-                />
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.88rem', color: 'var(--text-main)' }}>
-                  <input
-                    type="checkbox"
-                    checked={newIsAdmin}
-                    onChange={(e) => setNewIsAdmin(e.target.checked)}
-                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                  />
-                  <span>Administratörsrättigheter</span>
-                </label>
-
-                <button
-                  type="submit"
-                  disabled={isCreatingUser || !newUsername.trim() || !newPassword.trim()}
-                  style={{
-                    padding: '0.55rem 1rem',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: 'var(--primary)',
-                    color: 'white',
-                    fontSize: '0.88rem',
-                    fontWeight: 600,
-                    cursor: isCreatingUser ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {isCreatingUser ? 'Skapar konto...' : 'Skapa användare'}
-                </button>
-              </form>
-            </div>
+            )}
           </div>
 
           {/* Sektion 2: Kritiska Databasåtgärder */}
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            padding: '1.5rem',
-            borderRadius: '12px',
-            border: '1px solid rgba(239, 68, 68, 0.25)',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.25rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Database size={20} style={{ color: '#ef4444' }} />
-              <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem' }}>
-                Kritiska databasåtgärder och tömning
-              </h3>
-            </div>
-
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
-              Dessa operationer påverkar systemets databas direkt. Tömning och manuell rensning frigör lagringsutrymme men raderar artiklar permanent.
-            </p>
-
-            {/* KPI-kort */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
-              <div style={{ padding: '0.85rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Totalt antal artiklar</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.2rem' }}>
-                  {dbStats ? dbStats.total_articles.toLocaleString('sv-SE') : '0'}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.25)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleAdminSection('dangerZone')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openAdminSections.dangerZone ? 'rgba(239, 68, 68, 0.04)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', flexShrink: 0 }}>
+                  <Database size={18} style={{ color: '#ef4444' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Kritiska databasåtgärder och tömning
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Töm artiklar, manuell åldersrensning och optimering (VACUUM)
+                  </div>
                 </div>
               </div>
 
-              <div style={{ padding: '0.85rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Databasfilens storlek</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#8b5cf6', marginTop: '0.2rem' }}>
-                  {dbStats ? (dbStats.database_size_bytes / 1024 / 1024).toFixed(2) + ' MB' : '0.00 MB'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontWeight: 600 }}>
+                  Kritisk zon
+                </span>
+                {openAdminSections.dangerZone ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
+            </div>
+
+            {openAdminSections.dangerZone && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+                  Dessa operationer påverkar systemets databas direkt. Tömning och manuell rensning frigör lagringsutrymme men raderar artiklar permanent.
+                </p>
+
+                {/* KPI-kort */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                  <div style={{ padding: '0.85rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Totalt antal artiklar</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.2rem' }}>
+                      {dbStats ? dbStats.total_articles.toLocaleString('sv-SE') : '0'}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '0.85rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Databasfilens storlek</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#8b5cf6', marginTop: '0.2rem' }}>
+                      {dbStats ? (dbStats.database_size_bytes / 1024 / 1024).toFixed(2) + ' MB' : '0.00 MB'}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Åtgärd 1: Tömma databasen */}
-            <div style={{
-              padding: '1.1rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.05)',
-              borderRadius: '8px',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem'
-            }}>
-              <div>
-                <strong style={{ color: '#ef4444', fontSize: '0.95rem' }}>Töm artiklar från databasen</strong>
-                <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.82rem', lineHeight: 1.4 }}>
-                  Radera artiklar från databasen. Du kan välja att enbart rensa olåsta artiklar (bokmärkta/låsta artiklar sparas) eller köra en fullständig nollställning av samtliga artiklar.
-                </p>
-              </div>
+                {/* Åtgärd 1: Tömma databasen */}
+                <div style={{
+                  padding: '1.1rem',
+                  backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem'
+                }}>
+                  <div>
+                    <strong style={{ color: '#ef4444', fontSize: '0.95rem' }}>Töm artiklar från databasen</strong>
+                    <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.82rem', lineHeight: 1.4 }}>
+                      Radera artiklar från databasen. Du kan välja att enbart rensa olåsta artiklar (bokmärkta/låsta artiklar sparas) eller köra en fullständig nollställning av samtliga artiklar.
+                    </p>
+                  </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setClearMode('unlocked');
-                    setShowClearModal(true);
-                  }}
-                  style={{
-                    padding: '0.55rem 1rem',
-                    borderRadius: '6px',
-                    border: '1px solid rgba(239, 68, 68, 0.4)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: '#ef4444',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Töm olåsta artiklar
-                </button>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setClearMode('unlocked');
+                        setShowClearModal(true);
+                      }}
+                      style={{
+                        padding: '0.55rem 1rem',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        backgroundColor: 'var(--bg-card)',
+                        color: '#ef4444',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Töm olåsta artiklar
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setClearMode('all');
-                    setShowClearModal(true);
-                  }}
-                  style={{
-                    padding: '0.55rem 1rem',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Töm ALLA artiklar i databasen
-                </button>
-              </div>
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setClearMode('all');
+                        setShowClearModal(true);
+                      }}
+                      style={{
+                        padding: '0.55rem 1rem',
+                        borderRadius: '6px',
+                        border: 'none',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Töm ALLA artiklar i databasen
+                    </button>
+                  </div>
+                </div>
 
-            {/* Åtgärd 2: Manuell Purge (Rensa artiklar äldre än X dagar) */}
-            <div style={{
-              padding: '1.1rem',
-              backgroundColor: 'var(--bg-app)',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '1rem'
-            }}>
-              <div>
-                <strong style={{ color: 'var(--text-main)', fontSize: '0.95rem' }}>Manuell artikelrensning</strong>
-                <p style={{ margin: '0.2rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-                  Tar bort gamla olåsta artiklar som överskrider angivet antal dagar.
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Äldre än</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="365"
-                  value={adminPurgeDays}
-                  onChange={(e) => setAdminPurgeDays(Math.max(1, parseInt(e.target.value) || 1))}
-                  style={{
-                    width: '60px',
-                    padding: '0.4rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                    textAlign: 'center',
-                    fontSize: '0.85rem'
-                  }}
-                />
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>dagar</span>
-
-                <button
-                  type="button"
-                  onClick={() => handleManualPurge(adminPurgeDays)}
-                  disabled={isPurgingDb}
-                  style={{
-                    padding: '0.45rem 0.9rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: isPurgingDb ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {isPurgingDb ? 'Rensar...' : 'Kör rensning'}
-                </button>
-              </div>
-            </div>
-
-            {/* Åtgärd 3: Optimera databasfilen (VACUUM) */}
-            <div style={{
-              padding: '1.1rem',
-              backgroundColor: 'var(--bg-app)',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '1rem'
-            }}>
-              <div>
-                <strong style={{ color: 'var(--text-main)', fontSize: '0.95rem' }}>Optimera databas (VACUUM)</strong>
-                <p style={{ margin: '0.2rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-                  Defragmenterar och krymper SQLite-databasfilen på hårddisken efter att artiklar har raderats.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleVacuumDatabase}
-                disabled={isVacuuming}
-                style={{
-                  padding: '0.45rem 0.9rem',
-                  borderRadius: '6px',
+                {/* Åtgärd 2: Manuell Purge (Rensa artiklar äldre än X dagar) */}
+                <div style={{
+                  padding: '1.1rem',
+                  backgroundColor: 'var(--bg-app)',
+                  borderRadius: '8px',
                   border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  cursor: isVacuuming ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem'
-                }}
-              >
-                <HardDrive size={15} style={{ color: '#8b5cf6' }} />
-                {isVacuuming ? 'Optimerar...' : 'Kör VACUUM'}
-              </button>
-            </div>
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '1rem'
+                }}>
+                  <div>
+                    <strong style={{ color: 'var(--text-main)', fontSize: '0.95rem' }}>Manuell artikelrensning</strong>
+                    <p style={{ margin: '0.2rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                      Tar bort gamla olåsta artiklar som överskrider angivet antal dagar.
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Äldre än</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="365"
+                      value={adminPurgeDays}
+                      onChange={(e) => setAdminPurgeDays(Math.max(1, parseInt(e.target.value) || 1))}
+                      style={{
+                        width: '60px',
+                        padding: '0.4rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-main)',
+                        textAlign: 'center',
+                        fontSize: '0.85rem'
+                      }}
+                    />
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>dagar</span>
+
+                    <button
+                      type="button"
+                      onClick={() => handleManualPurge(adminPurgeDays)}
+                      disabled={isPurgingDb}
+                      style={{
+                        padding: '0.45rem 0.9rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-main)',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: isPurgingDb ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {isPurgingDb ? 'Rensar...' : 'Kör rensning'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Åtgärd 3: Optimera databasfilen (VACUUM) */}
+                <div style={{
+                  padding: '1.1rem',
+                  backgroundColor: 'var(--bg-app)',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '1rem'
+                }}>
+                  <div>
+                    <strong style={{ color: 'var(--text-main)', fontSize: '0.95rem' }}>Optimera databas (VACUUM)</strong>
+                    <p style={{ margin: '0.2rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                      Defragmenterar och krymper SQLite-databasfilen på hårddisken efter att artiklar har raderats.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleVacuumDatabase}
+                    disabled={isVacuuming}
+                    style={{
+                      padding: '0.45rem 0.9rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: isVacuuming ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem'
+                    }}
+                  >
+                    <HardDrive size={15} style={{ color: '#8b5cf6' }} />
+                    {isVacuuming ? 'Optimerar...' : 'Kör VACUUM'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sektion 3: Global AI- och systemkonfiguration */}
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            padding: '1.5rem',
-            borderRadius: '12px',
-            border: '1px solid var(--border-color)',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.25rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Server size={20} style={{ color: 'var(--primary)' }} />
-              <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.15rem' }}>
-                Global AI-modell och inferensserver
-              </h3>
-            </div>
-
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
-              Konfigurera den gemensamma AI-motorn. Ändringar här slår igenom globalt för alla artiklar och sammanfattningar.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-              {/* Global AI-modell */}
-              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                  Aktiv AI-modell (Systemstandard)
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleAdminSection('systemConfig')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openAdminSections.systemConfig ? 'rgba(16, 185, 129, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.1)', flexShrink: 0 }}>
+                  <Server size={18} style={{ color: '#10b981' }} />
                 </div>
-                {aiConfig.available_models && aiConfig.available_models.length > 0 ? (
-                  <select
-                    value={aiConfig.lm_studio_model || ''}
-                    onChange={(e) => handleUpdateSystemModel(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem',
-                      borderRadius: '6px',
-                      backgroundColor: 'var(--bg-card)',
-                      color: 'var(--text-main)',
-                      border: '1px solid var(--border-color)',
-                      fontSize: '0.88rem',
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="">Standard (Automatiskt)</option>
-                    {aiConfig.available_models.map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <div style={{ fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {aiConfig.ai_model || aiConfig.lm_studio_model || 'Standardmodell'}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Global AI-modell och inferensserver
                   </div>
-                )}
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                  {aiConfig.available_models?.length 
-                    ? `${aiConfig.available_models.length} modeller identifierade på inferensservern` 
-                    : 'Inga modeller rapporterade'}
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Gemensam AI-modell och maximal artikelålder för systemet
+                  </div>
                 </div>
               </div>
 
-              {/* Skyddsgräns artikelålder */}
-              <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                  Maximal artikelålder för AI-analys
-                </div>
-                <select
-                  value={aiConfig.max_article_age_hours || 24}
-                  onChange={(e) => handleUpdateMaxArticleAgeHours(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    borderRadius: '6px',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                    border: '1px solid var(--border-color)',
-                    fontSize: '0.88rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value={6}>6 timmar</option>
-                  <option value={12}>12 timmar</option>
-                  <option value={24}>24 timmar (1 dygn)</option>
-                  <option value={48}>48 timmar (2 dygn)</option>
-                  <option value={72}>72 timmar (3 dygn)</option>
-                  <option value={168}>7 dagar (1 vecka)</option>
-                </select>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                  Äldre artiklar markeras utan att belasta AI-servern med analys
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontWeight: 600 }}>
+                  Globalt
+                </span>
+                {openAdminSections.systemConfig ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
               </div>
             </div>
+
+            {openAdminSections.systemConfig && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45 }}>
+                  Konfigurera den gemensamma AI-motorn. Ändringar här slår igenom globalt för alla artiklar och sammanfattningar.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                  {/* Global AI-modell */}
+                  <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                      Aktiv AI-modell (Systemstandard)
+                    </div>
+                    {aiConfig.available_models && aiConfig.available_models.length > 0 ? (
+                      <select
+                        value={aiConfig.lm_studio_model || ''}
+                        onChange={(e) => handleUpdateSystemModel(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          borderRadius: '6px',
+                          backgroundColor: 'var(--bg-card)',
+                          color: 'var(--text-main)',
+                          border: '1px solid var(--border-color)',
+                          fontSize: '0.88rem',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="">Standard (Automatiskt)</option>
+                        {aiConfig.available_models.map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div style={{ fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {aiConfig.ai_model || aiConfig.lm_studio_model || 'Standardmodell'}
+                      </div>
+                    )}
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                      {aiConfig.available_models?.length 
+                        ? `${aiConfig.available_models.length} modeller identifierade på inferensservern` 
+                        : 'Inga modeller rapporterade'}
+                    </div>
+                  </div>
+
+                  {/* Skyddsgräns artikelålder */}
+                  <div style={{ backgroundColor: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                      Maximal artikelålder för AI-analys
+                    </div>
+                    <select
+                      value={aiConfig.max_article_age_hours || 24}
+                      onChange={(e) => handleUpdateMaxArticleAgeHours(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        backgroundColor: 'var(--bg-card)',
+                        color: 'var(--text-main)',
+                        border: '1px solid var(--border-color)',
+                        fontSize: '0.88rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value={6}>6 timmar</option>
+                      <option value={12}>12 timmar</option>
+                      <option value={24}>24 timmar (1 dygn)</option>
+                      <option value={48}>48 timmar (2 dygn)</option>
+                      <option value={72}>72 timmar (3 dygn)</option>
+                      <option value={168}>7 dagar (1 vecka)</option>
+                    </select>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                      Äldre artiklar markeras utan att belasta AI-servern med analys
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Modal för Tömning av databasen */}
