@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.16',
+    date: '2026-09-23',
+    title: 'Standardiserad och kolumnanpassad loggformatering i backend',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Spikrak kolumnlinjering för systemloggar',
+        description: 'Loggprefix och taggar i hakparenteser har standardiserats med fast bredd så att artikel- och systemmeddelanden startar på exakt samma kolumn oavsett användarnamn eller tjänst.'
+      },
+      {
+        type: 'fix',
+        title: 'Kompakt och enhetlig tagghantering',
+        description: 'AI Embeddings har kortats ner till AI Embed och loggtaggarna formateras automatiskt med jämn utfyllnad för användare med olika namnlängder (t.ex. admin och mari).'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.15',
     date: '2026-09-23',
     title: 'Enhetlig och strukturerad sektionsdesign i samtliga inställningsflikar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

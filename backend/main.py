@@ -16,11 +16,44 @@ import models, schemas, database, auth, ai_service, rss_parser, mqtt_service
 from pydantic import BaseModel
 import logging
 import builtins
+import re
 from datetime import datetime
+
+_LOG_TAG_REGEX = re.compile(r"^\[([A-Za-z0-9_ :\-]+)\](?:\s+)?(.*)$", re.DOTALL)
 
 _original_print = builtins.print
 def _timestamped_print(*args, **kwargs):
-    _original_print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]", *args, **kwargs)
+    now_str = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]"
+    if args and isinstance(args[0], str):
+        first_arg = args[0]
+        m = _LOG_TAG_REGEX.match(first_arg)
+        if m:
+            raw_tag = m.group(1).strip()
+            rest = m.group(2)
+            
+            if raw_tag == "AI Embeddings":
+                tag = "AI Embed"
+            elif raw_tag == "AI Embeddings Fel":
+                tag = "AI Embed Err"
+            elif raw_tag == "AI Service Fel":
+                tag = "AI Svc Err"
+            elif ":" in raw_tag:
+                prefix, _, user = raw_tag.partition(":")
+                prefix = prefix.strip()
+                user = user.strip()
+                if prefix == "AI":
+                    prefix = "AI  "
+                tag = f"{prefix}: {user}"
+            else:
+                tag = raw_tag
+            
+            tag_padded = f"{tag:<12}"
+            formatted_first = f"[{tag_padded}] {rest}" if rest else f"[{tag_padded}]"
+            _original_print(now_str, formatted_first, *args[1:], **kwargs)
+            return
+
+    _original_print(now_str, *args, **kwargs)
+
 builtins.print = _timestamped_print
 
 class WsLogFilter(logging.Filter):
@@ -1786,17 +1819,17 @@ async def ai_processing_loop():
         import time as _time
         emb_endpoint = ai_service.get_embeddings_endpoint()
         emb_model    = ai_service.AI_EMBEDDING_MODEL
-        print(f"[AI Embeddings] Testar embedding-endpoint: {emb_endpoint} (modell: '{emb_model}') ...", flush=True)
+        print(f"[AI Embed] Testar embedding-endpoint: {emb_endpoint} (modell: '{emb_model}') ...", flush=True)
         _t0   = _time.monotonic()
         _vecs = await asyncio.to_thread(ai_service.get_text_embeddings, ["test: RSS Bevakaren embedding-kontroll"], False, emb_model)
         _ms   = int((_time.monotonic() - _t0) * 1000)
         if _vecs and len(_vecs) > 0 and len(_vecs[0]) > 0:
             _dim = len(_vecs[0])
-            print(f"[AI Embeddings] OK - Vektordimensioner: {_dim}  |  Svarstid: {_ms} ms  |  Modell: '{emb_model}'", flush=True)
+            print(f"[AI Embed] OK - Vektordimensioner: {_dim}  |  Svarstid: {_ms} ms  |  Modell: '{emb_model}'", flush=True)
         else:
-            print(f"[AI Embeddings] Varning: Endpointen svarade men returnerade inga vektorer. Kontrollera att embedding-modellen '{emb_model}' är laddad i Ollama/LM Studio.", flush=True)
+            print(f"[AI Embed] Varning: Endpointen svarade men returnerade inga vektorer. Kontrollera att embedding-modellen '{emb_model}' är laddad i Ollama/LM Studio.", flush=True)
     except Exception as _emb_ex:
-        print(f"[AI Embeddings] Fel vid embedding-test vid uppstart: {_emb_ex}", flush=True)
+        print(f"[AI Embed] Fel vid embedding-test vid uppstart: {_emb_ex}", flush=True)
     # --- Slut embedding-hälsokontroll ---
 
     while True:
@@ -2329,7 +2362,7 @@ async def ai_processing_loop():
                 finally:
                     db_emb.close()
             except Exception as emb_err:
-                print(f"[AI Embeddings] Fel vid bakgrundsvektorisering: {emb_err}", flush=True)
+                print(f"[AI Embed] Fel vid bakgrundsvektorisering: {emb_err}", flush=True)
 
         except Exception as e:
             print(f"[AI] Fel i ai_processing_loop: {e}", flush=True)

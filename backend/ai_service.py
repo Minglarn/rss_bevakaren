@@ -229,13 +229,13 @@ def get_text_embeddings(texts: List[str], is_query: bool = False, model: Optiona
             items.sort(key=lambda x: x.get("index", 0))
             return [item["embedding"] for item in items if "embedding" in item]
         else:
-            print(f"[AI Embeddings Fel] Servern på {endpoint} svarade med HTTP {res.status_code} för modell '{model_name}': {res.text[:250]}", flush=True)
+            print(f"[AI Embed Err] Servern på {endpoint} svarade med HTTP {res.status_code} för modell '{model_name}': {res.text[:250]}", flush=True)
     except requests.exceptions.ConnectTimeout:
-        print(f"[AI Embeddings Fel] Timeout vid anslutning till {endpoint} för modell '{model_name}'.", flush=True)
+        print(f"[AI Embed Err] Timeout vid anslutning till {endpoint} för modell '{model_name}'.", flush=True)
     except requests.exceptions.ConnectionError:
-        print(f"[AI Embeddings Fel] Kunde inte ansluta till {endpoint} (servern är onåbar).", flush=True)
+        print(f"[AI Embed Err] Kunde inte ansluta till {endpoint} (servern är onåbar).", flush=True)
     except Exception as e:
-        print(f"[AI Embeddings Fel] Fel vid anrop till {endpoint} för modell '{model_name}': {e}", flush=True)
+        print(f"[AI Embed Err] Fel vid anrop till {endpoint} för modell '{model_name}': {e}", flush=True)
     
     return None
 
@@ -273,10 +273,10 @@ def save_article_embedding(article_id: int, title: str, text: str, db: Any, mode
             db.commit()
             _dim = len(embs[0])
             _short_title = (title or "")[:60]
-            print(f"[AI Embeddings] Sparad #{article_id} | dim={_dim} | '{_short_title}'", flush=True)
+            print(f"[AI Embed] Sparad #{article_id} | dim={_dim} | '{_short_title}'", flush=True)
             return True
     except Exception as e:
-        print(f"[AI Embeddings] Kunde inte spara embedding för artikel {article_id}: {e}", flush=True)
+        print(f"[AI Embed] Kunde inte spara embedding för artikel {article_id}: {e}", flush=True)
         try:
             db.rollback()
         except Exception:
@@ -327,9 +327,9 @@ def batch_embed_articles(articles: List[Any], db: Any, model: Optional[str] = No
                 db.commit()
                 saved_count += len(chunk)
                 _dim = len(embs[0]) if embs else 0
-                print(f"[AI Embeddings] Batch sparad: {len(chunk)} artiklar | dim={_dim} | totalt: {saved_count}", flush=True)
+                print(f"[AI Embed] Batch sparad: {len(chunk)} artiklar | dim={_dim} | totalt: {saved_count}", flush=True)
             except Exception as e:
-                print(f"[AI Embeddings] Databasfel vid batch-sparning: {e}", flush=True)
+                print(f"[AI Embed] Databasfel vid batch-sparning: {e}", flush=True)
                 try:
                     db.rollback()
                 except Exception:
