@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.10',
+    date: '2026-09-23',
+    title: 'Silkeslen scrollning och bibehållen sessionsstatus vid skärmuppdatering',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Eliminerat scroll-hack vid nya artiklar',
+        description: 'Optimerat IntersectionObserver och avvecklat onödiga React-omrenderingar under scrollning. Sedda artiklar batchas och observern rivs inte längre ner för varje passerat kort, vilket ger en silkeslen scrollning i full bildfrekvens.'
+      },
+      {
+        type: 'fix',
+        title: 'Bibehållna sedda artiklar vid pull-to-refresh',
+        description: 'Sedda artiklar persisteras nu under pågående session i sessionslagringen knutet till aktuell referenstid. Skärmuppdatering (dra ned och släpp) återställer inte längre NY-pillret eller sifferbrickan för redan genomgångna artiklar.'
+      },
+      {
+        type: 'improvement',
+        title: 'Säker avregistrering av sessionsavdelaren',
+        description: 'Sessionsavdelaren för tidigare artiklar avregistreras omedelbart när den passerats uppåt, vilket förhindrar upprepade sessionsnollställningar vid fram- och tillbakascrollning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.09',
     date: '2026-09-23',
     title: 'Oändlig scroll för historik och synkroniserad sifferbricka',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

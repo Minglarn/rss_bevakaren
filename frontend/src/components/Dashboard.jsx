@@ -450,8 +450,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
   const [appMode, setAppMode] = useState(() => getAppMode());
   const [sessionRefTime, setSessionRefTime] = useState(() => getSessionRefTime());
-  const [seenArticleIds, setSeenArticleIds] = useState(() => new Set());
-  const seenRef = useRef(seenArticleIds);
+  const [seenArticleIds, setSeenArticleIds] = useState(() => getSeenArticleIds());
+  const seenRef = useRef(new Set(getSeenArticleIds()));
   seenRef.current = seenArticleIds;
 
   useEffect(() => {
@@ -459,13 +459,15 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       const newMode = e.detail?.mode || getAppMode();
       setAppMode(newMode);
       setSessionRefTime(getSessionRefTime());
-      seenRef.current.clear();
-      setSeenArticleIds(new Set());
+      const currentSeen = getSeenArticleIds();
+      seenRef.current = currentSeen;
+      setSeenArticleIds(new Set(currentSeen));
     };
     const handleSessionRef = (e) => {
       setSessionRefTime(e.detail?.refTime || getSessionRefTime());
-      seenRef.current.clear();
-      setSeenArticleIds(new Set());
+      const currentSeen = getSeenArticleIds();
+      seenRef.current = currentSeen;
+      setSeenArticleIds(new Set(currentSeen));
     };
     window.addEventListener('appModeChanged', handleAppMode);
     window.addEventListener('sessionRefChanged', handleSessionRef);
@@ -630,7 +632,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   useEffect(() => {
     if (appMode !== 'omni' || !sessionRefTime) return;
 
+    let batchTimer = null;
     const observer = new IntersectionObserver((entries) => {
+      let newlySeen = false;
       entries.forEach(entry => {
         // En artikel/avdelare anses passerad/sedd först när användaren har scrollat förbi den uppåt
         const isPassedAbove = !entry.isIntersecting && entry.boundingClientRect.bottom < 120;
@@ -638,6 +642,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         // Om användaren passerar sessionsavdelaren ("Tidigare nyheter / Du är ikapp") uppåt, är man ikapp!
         if (entry.target.getAttribute('data-session-divider') === 'true') {
           if (isPassedAbove) {
+            observer.unobserve(entry.target);
             resetSessionRef();
           }
           return;
@@ -654,7 +659,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           if (artId && !seenRef.current.has(artId)) {
             addSeenArticleId(artId);
             seenRef.current.add(artId);
-            setSeenArticleIds(new Set(seenRef.current));
+            newlySeen = true;
 
             window.dispatchEvent(new CustomEvent('articleSeenInSession', {
               detail: { articleId: artId, feedId: feedId, isPrio: isPrio }
@@ -664,6 +669,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           }
         }
       });
+
+      if (newlySeen) {
+        if (batchTimer) clearTimeout(batchTimer);
+        batchTimer = setTimeout(() => {
+          setSeenArticleIds(new Set(seenRef.current));
+        }, 120);
+      }
     }, {
       root: null,
       threshold: [0, 0.1]
@@ -678,9 +690,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     }
 
     return () => {
+      if (batchTimer) clearTimeout(batchTimer);
       observer.disconnect();
     };
-  }, [visibleFeeds, sessionRefTime, appMode, seenArticleIds]);
+  }, [visibleFeeds, sessionRefTime, appMode]);
 
   // Synka det faktiska antalet nya artiklar med "NY"-piller direkt med App.jsx för 100% sifferbrickeprecision
   useEffect(() => {

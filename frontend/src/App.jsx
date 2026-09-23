@@ -417,7 +417,7 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
 
   const omniFeedNewCount = (location.pathname === '/' && !location.search.includes('feedId') && dashboardNewCount !== null)
     ? dashboardNewCount
-    : myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0);
+    : Math.max(0, myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0) - getSeenArticleIds().size);
 
   return (
     <FeedsContext.Provider value={{ myFeeds, prioUnreadCount, refreshFeeds: fetchMyFeeds }}>

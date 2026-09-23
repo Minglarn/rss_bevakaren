@@ -4,11 +4,13 @@
  * Hanterar:
  * 1. Applikationsläge: 'omni' (standard, Nyhetsbevakare) vs 'classic' (Klassisk RSS-läsare).
  * 2. Automatisk sessionsspårning för 'Nya sedan sist' med 30 minuters inaktivitetströskel.
+ * 3. Persistering av sedda artiklar under pågående session över skärmuppdatering (pull-to-refresh).
  */
 
 const APP_MODE_KEY = 'rss_app_mode';
 const SESSION_REF_TIME_KEY = 'rss_session_ref_time';
 const SESSION_LAST_ACTIVE_KEY = 'rss_session_last_active';
+const SESSION_SEEN_KEY = 'rss_session_seen_articles';
 const SESSION_TIMEOUT_SECONDS = 1800; // 30 minuter
 
 /**
@@ -37,9 +39,49 @@ export const setAppMode = (mode) => {
 const activeSessionSeenSet = new Set();
 
 /**
- * Hämtar mängden av artikel-ID:n som setts under innevarande fliksession.
+ * Hjälpfunktion för att hämta persisterat tillstånd från sessionStorage.
+ */
+const getStoredSeenState = () => {
+  try {
+    const raw = sessionStorage.getItem(SESSION_SEEN_KEY);
+    if (!raw) return { refTime: 0, ids: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      refTime: Number(parsed.refTime) || 0,
+      ids: Array.isArray(parsed.ids) ? parsed.ids : []
+    };
+  } catch (e) {
+    return { refTime: 0, ids: [] };
+  }
+};
+
+/**
+ * Hjälpfunktion för att spara sedda artiklar till sessionStorage knutet till aktuell referenstid.
+ */
+const saveSeenStateToStorage = () => {
+  try {
+    const refTime = parseInt(localStorage.getItem(SESSION_REF_TIME_KEY) || '0', 10);
+    if (refTime > 0) {
+      sessionStorage.setItem(SESSION_SEEN_KEY, JSON.stringify({
+        refTime,
+        ids: Array.from(activeSessionSeenSet)
+      }));
+    }
+  } catch (e) {}
+};
+
+/**
+ * Hämtar mängden av artikel-ID:n som setts under innevarande session.
+ * Synkar automatiskt med sessionStorage om minnet är tomt men samma session pågår (t.ex. efter pull-to-refresh).
  */
 export const getSeenArticleIds = () => {
+  const refTime = parseInt(localStorage.getItem(SESSION_REF_TIME_KEY) || '0', 10);
+  if (activeSessionSeenSet.size === 0 && refTime > 0) {
+    const stored = getStoredSeenState();
+    if (stored.refTime === refTime && stored.ids.length > 0) {
+      stored.ids.forEach(id => activeSessionSeenSet.add(id));
+    }
+  }
   return new Set(activeSessionSeenSet);
 };
 
@@ -49,6 +91,7 @@ export const getSeenArticleIds = () => {
 export const addSeenArticleId = (id) => {
   if (!id) return;
   activeSessionSeenSet.add(id);
+  saveSeenStateToStorage();
 };
 
 /**
@@ -57,7 +100,7 @@ export const addSeenArticleId = (id) => {
 export const clearSeenArticleIds = () => {
   activeSessionSeenSet.clear();
   try {
-    sessionStorage.removeItem('rss_session_seen_articles');
+    sessionStorage.removeItem(SESSION_SEEN_KEY);
   } catch (e) {}
 };
 
@@ -79,6 +122,7 @@ export const resetSessionRef = (customTime = null) => {
  * Initierar sessionsspårning vid start av applikationen.
  * Om mer än 30 minuter förflutit sedan förra aktiviteten betraktas detta som ett nytt besök,
  * varvid föregående aktivitetstid sätts som referenstid ('sedan sist').
+ * Vid aktiv session bibehålls sedda artiklar från sessionStorage.
  */
 export const initSessionTracker = () => {
   const now = Math.floor(Date.now() / 1000);
@@ -97,6 +141,14 @@ export const initSessionTracker = () => {
     }
     localStorage.setItem(SESSION_REF_TIME_KEY, String(refTime));
     window.dispatchEvent(new CustomEvent('sessionRefChanged', { detail: { refTime } }));
+  } else {
+    // Samma aktiva session (t.ex. vid skärmuppdatering / pull-to-refresh):
+    // Återställ sedda artiklar från sessionStorage så att de inte återuppstår som "NY"
+    const stored = getStoredSeenState();
+    if (stored.refTime === refTime && stored.ids.length > 0) {
+      activeSessionSeenSet.clear();
+      stored.ids.forEach(id => activeSessionSeenSet.add(id));
+    }
   }
 
   // Uppdatera senaste aktivitet till nu
