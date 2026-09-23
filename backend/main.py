@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Request, Response, UploadFile, File
 from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import time
 from fastapi.security import OAuth2PasswordRequestForm
@@ -506,6 +507,15 @@ def ensure_db_migrations():
 ensure_db_migrations()
 
 app = FastAPI(title="RSS Bevakaren API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Has-More", "X-Raw-Count"]
+)
 
 BANNER = """
 ██████  ███████ ███████                                                    
@@ -3280,6 +3290,7 @@ def preview_feed(url: str, current_user: models.User = Depends(auth.get_current_
 
 @app.get("/dashboard-feeds", response_model=List[schemas.ArticleResponse])
 def get_dashboard_feeds(
+    response: Response,
     feed_id: Optional[int] = None, 
     show_read: Optional[bool] = False, 
     app_mode: Optional[str] = None,
@@ -3491,6 +3502,8 @@ def get_dashboard_feeds(
         final_items.sort(key=lambda x: (x.get("received_ts") or x.get("published_ts") or 0, x.get("id", 0)), reverse=True)
     else:
         final_items.sort(key=lambda x: (x.get("published_ts") or x.get("received_ts") or 0, x.get("id", 0)), reverse=True)
+    response.headers["X-Has-More"] = "true" if len(articles) == limit else "false"
+    response.headers["X-Raw-Count"] = str(len(articles))
     return final_items
 
 @app.post("/articles/cluster/{cluster_id}/read")

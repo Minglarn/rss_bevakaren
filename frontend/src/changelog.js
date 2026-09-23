@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.19',
+    date: '2026-09-23',
+    title: 'Justering av ultrakompakta avstånd och robust paginering',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Minskat och balanserat mellanrum i ultrakompakt vy',
+        description: 'Justerade padding och marginaler kring den inbäddade avdelaren i det ultrakompakta läget så att onödigt tomrum under linjen elimineras och ger ett jämnt, harmoniskt avstånd mellan artiklarna.'
+      },
+      {
+        type: 'fix',
+        title: 'Robust paginering och obegränsad scroll bakåt i tiden',
+        description: 'Åtgärdade beräkningen av databas-offset vid klustrade nyheter samt tog bort för tidig avslutning av flödet, vilket gör att äldre artiklar nu kan laddas in oavbrutet utan att flödet stannar mitt på dagen.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.18',
     date: '2026-09-23',
     title: 'Strukturerad Intresseprofil, inbäddat datum i avdelare och buggfix',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

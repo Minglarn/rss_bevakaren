@@ -991,9 +991,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       // Strikt källisolering: Om fId är satt får endast artiklar från det flödet sparas i state
       const cleanData = fId ? res.data.filter(item => String(item.feed_id) === String(fId)) : res.data;
 
+      const rawCount = Number(res.headers?.['x-raw-count'] ?? (res.data?.length > 0 ? 80 : 0));
+      const hasMoreHeader = res.headers?.['x-has-more'];
+      const hasMore = hasMoreHeader !== undefined ? hasMoreHeader === 'true' : (res.data?.length > 0);
+
       setAllFeeds(cleanData);
-      rawOffsetRef.current = res.data.length;
-      setHasMoreFromServer(res.data.length >= 30);
+      rawOffsetRef.current = rawCount;
+      setHasMoreFromServer(hasMore);
 
       if (!isBackground) {
         setDisplayedFeeds(cleanData.slice(0, itemsPerPage));
@@ -1284,25 +1288,32 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       const url = '/dashboard-feeds?' + queryParts.join('&');
       const res = await api.get(url);
       const incoming = fId ? res.data.filter(item => String(item.feed_id) === String(fId)) : res.data;
+      const rawCount = Number(res.headers?.['x-raw-count'] ?? 80);
+      const hasMoreHeader = res.headers?.['x-has-more'];
+      const serverHasMore = hasMoreHeader !== undefined ? hasMoreHeader === 'true' : (rawCount >= 80);
 
       if (!incoming || incoming.length === 0) {
-        setHasMoreFromServer(false);
+        if (!serverHasMore) {
+          setHasMoreFromServer(false);
+        } else {
+          rawOffsetRef.current += rawCount;
+        }
       } else {
-        rawOffsetRef.current += res.data.length;
+        rawOffsetRef.current += rawCount;
         setAllFeeds(prevAll => {
           const existingIds = new Set(prevAll.map(it => it.id));
           const newUnique = incoming.filter(it => !existingIds.has(it.id));
           if (newUnique.length === 0) {
-            setHasMoreFromServer(false);
+            if (!serverHasMore) {
+              setHasMoreFromServer(false);
+            }
             return prevAll;
           }
           const combined = [...prevAll, ...newUnique];
           setDisplayedFeeds(combined);
           return combined;
         });
-        if (incoming.length < 30) {
-          setHasMoreFromServer(false);
-        }
+        setHasMoreFromServer(serverHasMore);
       }
     } catch (err) {
       console.error("Fel vid hämtning av äldre nyheter:", err);
