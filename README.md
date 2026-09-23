@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.23.23-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.23.24-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -22,19 +22,25 @@ services:
     ports:
       - "8094:8000"
     volumes:
+      # Lagra databasen och nycklar persistent på hosten
       - ./data:/data
     environment:
       - TZ=Europe/Stockholm
       - DATABASE_URL=sqlite:////data/rss.db
-      # Fleranvändarstöd: Separera användarnamn och lösenord med kommatecken för flera konton
+      
+      # Fleranvändarstöd och administratör
       - APP_USERNAME=admin,anvandare2
       - APP_PASSWORD=ditt_sakna_losenord,andra_losenordet
+      - APP_ADMIN_USER=admin # Anger vilket konto ovan som får admin-rättigheter (standard: admin)
+      # - SECRET_KEY=byt_till_en_hemlig_slumpmassig_strang # Valfri persistent JWT-nyckel
       
       # Lokal AI via Ollama, LM Studio eller valfri OpenAI-kompatibel motor
       - AI_URL=http://192.168.1.50:11434/v1/chat/completions # :11434 för Ollama, :1234 för LM Studio
       - AI_MODEL=google/gemma-4-12b-qat # Rekommenderad modell för både Ollama och LM Studio
-      - AI_TIMEOUT=120
-      - AI_MAX_ARTICLE_AGE_HOURS=24
+      - AI_EMBEDDING_MODEL=text-embedding-baai-bge-m3-568m # Rekommenderad embedding-modell (alternativ: nomic-embed-text)
+      - AI_TIMEOUT=120 # Timeout i sekunder för AI-anrop
+      - AI_MAX_TOKENS=8192 # Max tokens för AI-generering
+      - AI_MAX_ARTICLE_AGE_HOURS=24 # Max ålder på artiklar som ska AI-bearbetas
       
       # Home Assistant & MQTT (valfritt, avstängt som standard)
       - MQTT_ENABLED=false
@@ -44,6 +50,9 @@ services:
       - MQTT_PASSWORD=                # Lämna tomt om brokern tillåter anonym anslutning
       - MQTT_TOPIC_PREFIX=rss_bevakaren
       - MQTT_DISCOVERY_ENABLED=true   # Aktiverar Home Assistant MQTT Auto-Discovery
+      - MQTT_DISCOVERY_PREFIX=homeassistant # Auto-Discovery prefix för Home Assistant
+      - MQTT_RETAIN=true              # Behåll senaste sensorvärde i brokern
+      - MQTT_QOS=1                    # MQTT QoS-nivå (0, 1 eller 2)
     restart: unless-stopped
 
   frontend:
@@ -101,8 +110,10 @@ Ollama har inbyggt stöd för OpenAIs API på port `11434`.
    # Rekommenderad modell för svensk nyhetsanalys och sammanfattning (oavsett Ollama eller LM Studio)
    ollama pull google/gemma-4-12b-qat
    
-   # Valfritt: för vektor-embeddings och artikelklustring
-   ollama pull nomic-embed-text
+   # Rekommenderad embedding-modell för semantisk klustring och intresseprofil
+   ollama pull bge-m3
+   # Alternativ embedding-modell (mindre resurskrävande):
+   # ollama pull nomic-embed-text
    ```
 
 2. **Viktigt: Miljövariabler för Ollama-servern:**
@@ -133,13 +144,13 @@ Ollama har inbyggt stöd för OpenAIs API på port `11434`.
    ```yaml
    - AI_URL=http://192.168.1.50:11434/v1/chat/completions
    - AI_MODEL=google/gemma-4-12b-qat  # Rekommenderad modell för både Ollama och LM Studio
-   - AI_EMBEDDING_MODEL=nomic-embed-text  # Valfritt: för vektorinbäddningar
+   - AI_EMBEDDING_MODEL=text-embedding-baai-bge-m3-568m  # Rekommenderad (eller bge-m3 i Ollama, alternativ: nomic-embed-text)
    - AI_TIMEOUT=120
    ```
 
 4. **Samtidig körning av textmodell och embedding-modell:**
    Ollama har inbyggt stöd för att ladda och köra flera modeller parallellt i grafikminnet (VRAM).
-   - **Hur det fungerar i RSS-Bevakaren:** Artikelsammanfattning och ClickBait-analys anropar automatiskt modellen som anges i `AI_MODEL` (`google/gemma-4-12b-qat`), medan vektorinbäddningar för sökning anropar modellen som anges i `AI_EMBEDDING_MODEL` (`nomic-embed-text`). Ollama läser av modellnamnet i varje enskild HTTP-förfrågan och dirigerar trafiken internt utan att du behöver byta port eller starta flera instanser.
+   - **Hur det fungerar i RSS-Bevakaren:** Artikelsammanfattning och ClickBait-analys anropar automatiskt modellen som anges i `AI_MODEL` (`google/gemma-4-12b-qat`), medan vektorinbäddningar för sökning anropar modellen som anges i `AI_EMBEDDING_MODEL` (`text-embedding-baai-bge-m3-568m` eller `bge-m3`). Ollama läser av modellnamnet i varje enskild HTTP-förfrågan och dirigerar trafiken internt utan att du behöver byta port eller starta flera instanser.
    - **Minnesåtgång:** En embedding-modell är mycket kompakt (ca 250–600 MB VRAM) och ryms därför utan problem parallellt med `google/gemma-4-12b-qat` (ca 7–8 GB VRAM) på grafikkort med minst 8–12 GB VRAM.
    - **Vid begränsat VRAM:** Om grafikminnet inte räcker för båda modellerna hanterar Ollama detta automatiskt genom snabb minnesväxling (LRU) eller genom att fördela lager till systemets arbetsminne (RAM).
    - **Tips för servern:** Ollama tillåter som standard upp till 3 aktiva modeller i minnet samtidigt (`OLLAMA_MAX_LOADED_MODELS=3`). Om du vill kan du säkerställa detta genom att sätta miljövariabeln `OLLAMA_MAX_LOADED_MODELS=2` eller högre på värddatorn där Ollama körs.
@@ -302,7 +313,7 @@ Varje artikel bedöms utifrån tre grundfaktorer:
 
 ### Rekommenderade modeller
 - **LLM:** `google/gemma-4-12b-qat` (rekommenderas oavsett om du kör Ollama eller LM Studio för överlägsen svensk språkförståelse och snabb inferens).
-- **Embeddings:** `nomic-embed-text` eller `text-embedding-nomic-embed-text-v1.5` (768 dimensioner för hybrid-RAG).
+- **Embeddings:** `text-embedding-baai-bge-m3-568m` (eller `bge-m3` i Ollama) för överlägsen flerspråkig och svensk semantisk klustring och intresseprofil. Alternativ: `nomic-embed-text` / `text-embedding-nomic-embed-text-v1.5`.
 </details>
 
 <details>

@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.24',
+    date: '2026-09-23',
+    title: 'Dokumentation av samtliga miljövariabler och uppdaterad embedding-modell',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Uppdaterad rekommenderad embedding-modell',
+        description: 'Rekommenderad modell för vektor-embeddings och semantisk klustring har uppdaterats till text-embedding-baai-bge-m3-568m för överlägsen svensk språkförståelse, med nomic-embed-text kvar som resurssnålt alternativ.'
+      },
+      {
+        type: 'improvement',
+        title: 'Komplett specifikation av miljövariabler i docker-compose och dokumentation',
+        description: 'Samtliga miljövariabler har dokumenterats i docker-compose.yml och README.md, inklusive APP_ADMIN_USER, AI_EMBEDDING_MODEL, AI_MAX_TOKENS samt MQTT Auto-Discovery-inställningar.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.23',
     date: '2026-09-23',
     title: 'Dold redundant datumavgränsare i ultrakompakt flöde',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

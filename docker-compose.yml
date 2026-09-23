@@ -1,35 +1,42 @@
-# version: '3.8'
-
 services:
   backend:
     image: ghcr.io/minglarn/rss_bevakaren_backend:main
     ports:
       - "8094:8000"
     volumes:
-      # Lagra databasen i en dedikerad data-mapp på hosten så den överlever omstarter
+      # Lagra databasen och nycklar i en dedikerad data-mapp på hosten så den överlever omstarter
       - ./data:/data
     environment:
       - TZ=Europe/Stockholm
       - DATABASE_URL=sqlite:////data/rss.db
-      # Fleranvändarstöd: Separera användarnamn och lösenord med kommatecken för flera konton
+      
+      # Fleranvändarstöd och administratör
       - APP_USERNAME=admin,anvandare2
       - APP_PASSWORD=ditt_sakna_losenord,andra_losenordet
-      # Valfri JWT-hemlighet (om den utelämnas genereras en slumpmässig nyckel automatiskt i /data)
-      # - SECRET_KEY=byt_till_en_hemlig_slumpmassig_strang
+      - APP_ADMIN_USER=admin # Anger vilket konto ovan som får admin-rättigheter (standard: admin)
+      # - SECRET_KEY=byt_till_en_hemlig_slumpmassig_strang # Valfri persistent JWT-nyckel
+
       # Lokal AI via Ollama, LM Studio eller valfri OpenAI-kompatibel motor
       # För Ollama: http://<IP>:11434/v1/chat/completions  |  För LM Studio: http://<IP>:1234/v1/chat/completions
       - AI_URL=http://192.168.1.50:11434/v1/chat/completions
-      - AI_MODEL=google/gemma-4-12b-qat # Rekommenderad modell för både Ollama och LM Studio (eller lämna tomt för aktiv modell i LM Studio)
+      - AI_MODEL=google/gemma-4-12b-qat # Rekommenderad LLM för sammanfattningar och prioritering
+      - AI_EMBEDDING_MODEL=text-embedding-baai-bge-m3-568m # Rekommenderad embedding-modell (alternativ: nomic-embed-text)
       - AI_TIMEOUT=120 # Timeout i sekunder (rekommenderat 120s för lokala modeller)
+      - AI_MAX_TOKENS=8192 # Max tokens för AI-generering
       - AI_MAX_ARTICLE_AGE_HOURS=24 # Bearbeta endast artiklar från de senaste 24 timmarna (hoppar över gammal historik)
-      # MQTT-stöd (valfritt, avaktiverat som standard)
+      
+      # MQTT-stöd och Home Assistant Auto-Discovery (valfritt, avaktiverat som standard)
       - MQTT_ENABLED=false
       - MQTT_BROKER=192.168.1.50
       - MQTT_PORT=1883
       - MQTT_USERNAME=
       - MQTT_PASSWORD=
       - MQTT_TOPIC_PREFIX=rss_bevakaren
+      - MQTT_DISCOVERY_ENABLED=true # Aktiverar Home Assistant MQTT Auto-Discovery
+      - MQTT_DISCOVERY_PREFIX=homeassistant # Auto-Discovery prefix för Home Assistant
       - MQTT_RETAIN=true # Behåll senaste meddelandet i brokern (persistent över omstarter)
+      - MQTT_QOS=1 # MQTT QoS-nivå (0, 1 eller 2)
+      # - MQTT_CLIENT_ID=rss_bevakaren # Valfritt fast MQTT-klient-ID
     restart: unless-stopped
 
   frontend:
