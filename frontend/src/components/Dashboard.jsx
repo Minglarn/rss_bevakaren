@@ -2141,12 +2141,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                                   {decodeHtmlEntities(item.source_title)}
                                 </span>
                               )}
-                              {relTime && (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                  {item.source_title && <span style={{ opacity: 0.6 }}>·</span>}
-                                  <span>{relTime}</span>
-                                </span>
-                              )}
 
                             {isClickbait && (
                               <span style={{
@@ -2375,6 +2369,16 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           </div>
                         </div>
                       )}
+
+                      {/* Horisontell avdelare med inbäddat datum till höger */}
+                      <div className="feed-card-ultracompact-divider">
+                        <div className="feed-card-ultracompact-divider-line" />
+                        {relTime && (
+                          <span className="feed-card-ultracompact-divider-date">
+                            {relTime}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </SwipeableArticleCard>
                 </React.Fragment>

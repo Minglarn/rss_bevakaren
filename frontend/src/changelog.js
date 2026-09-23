@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.18',
+    date: '2026-09-23',
+    title: 'Strukturerad Intresseprofil, inbäddat datum i avdelare och buggfix',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Strukturerad Intresseprofil med dragspelssektioner',
+        description: 'Intresseprofilen i inställningarna har byggts om till samma enhetliga layout som övriga flikar med sektioner för översikt & nyckeltal, aktiva intresseämnen, dämpade ämnen, kategoribalans och röstningshistorik.'
+      },
+      {
+        type: 'feature',
+        title: 'Inbäddat datum direkt i den horisontella avdelaren',
+        description: 'I det ultrakompakta flödesläget har publiceringsdatumet flyttats ner och integrerats direkt i den horisontella avdelaren mellan artiklarna, vilket frigör raden för källnamnet.'
+      },
+      {
+        type: 'fix',
+        title: 'Åtgärdad referens i statistikpanelen',
+        description: 'Löste ett ReferenceError för maxSourceCount som orsakade krasch vid visning av källvolymer i Statistikfliken.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.17',
     date: '2026-09-23',
     title: 'Statistikpanel i inställningar, nattlig purge-notis och tidslinjering',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

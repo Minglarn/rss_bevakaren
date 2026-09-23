@@ -2377,7 +2377,7 @@ select:focus, input:focus {
   box-sizing: border-box !important;
   border-radius: 0 !important;
   background-color: #ffffff !important;
-  border-bottom: 2px solid #94a3b8 !important;
+  border-bottom: none !important;
 }
 
 .events-list.layout-ultracompact .feed-card-swipe-container:last-child,
@@ -2409,7 +2409,7 @@ select:focus, input:focus {
   box-sizing: border-box !important;
   border-radius: 0 !important;
   background-color: #ffffff !important;
-  border-bottom: 2px solid #94a3b8 !important;
+  border-bottom: none !important;
 }
 
 .events-masonry-container.layout-ultracompact-masonry .feed-card-swipe-container:last-child,
@@ -2431,7 +2431,7 @@ select:focus, input:focus {
 .theme-dark .events-list.layout-ultracompact .feed-card-ultracompact,
 .theme-dark .events-masonry-container.layout-ultracompact-masonry .feed-card-swipe-container,
 .theme-dark .events-masonry-container.layout-ultracompact-masonry .feed-card-ultracompact {
-  border-bottom-color: rgba(255, 255, 255, 0.25) !important;
+  border-bottom: none !important;
 }
 
 .theme-emboss .events-list.layout-ultracompact,
@@ -2441,6 +2441,42 @@ select:focus, input:focus {
 .theme-emboss .events-masonry-container.layout-ultracompact-masonry .feed-card-swipe-container,
 .theme-emboss .events-masonry-container.layout-ultracompact-masonry .feed-card-ultracompact {
   background-color: var(--bg-card) !important;
+}
+
+/* Avdelare med inbäddat datum i botten av ultrakompakt kort */
+.feed-card-ultracompact-divider {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.65rem !important;
+  width: 100% !important;
+  margin-top: 0.65rem !important;
+  box-sizing: border-box !important;
+}
+
+.feed-card-ultracompact-divider-line {
+  flex: 1 1 auto !important;
+  height: 1px !important;
+  background-color: #94a3b8 !important;
+  opacity: 0.6 !important;
+}
+
+.theme-dark .feed-card-ultracompact-divider-line {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  opacity: 1 !important;
+}
+
+.theme-emboss .feed-card-ultracompact-divider-line {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  opacity: 1 !important;
+}
+
+.feed-card-ultracompact-divider-date {
+  font-size: 0.75rem !important;
+  color: var(--text-muted) !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  letter-spacing: -0.01em !important;
 }
 
 .feed-card-ultracompact {

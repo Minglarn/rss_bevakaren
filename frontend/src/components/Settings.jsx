@@ -710,6 +710,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
     if (!sourceStats || !sourceStats.sources || sourceStats.sources.length === 0) return 1;
     return Math.max(...sourceStats.sources.map(s => s.total_articles), 1);
   }, [sourceStats]);
+  const maxSourceCount = maxArticleCount;
 
   const sortedCategories = React.useMemo(() => {
     if (!sourceStats || !sourceStats.categories) return [];
