@@ -34,6 +34,19 @@ export const setAppMode = (mode) => {
 };
 
 /**
+ * Nollställer eller flyttar fram sessionsreferensen till nuvarande tidpunkt (eller angiven timestamp).
+ * Skickar eventet 'sessionRefChanged' för omedelbar realtidssynk i hela gränssnittet.
+ */
+export const resetSessionRef = (customTime = null) => {
+  const now = Math.floor(Date.now() / 1000);
+  const newRefTime = customTime || now;
+  localStorage.setItem(SESSION_REF_TIME_KEY, String(newRefTime));
+  localStorage.setItem(SESSION_LAST_ACTIVE_KEY, String(now));
+  window.dispatchEvent(new CustomEvent('sessionRefChanged', { detail: { refTime: newRefTime } }));
+  return newRefTime;
+};
+
+/**
  * Initierar sessionsspårning vid start av applikationen.
  * Om mer än 30 minuter förflutit sedan förra aktiviteten betraktas detta som ett nytt besök,
  * varvid föregående aktivitetstid sätts som referenstid ('sedan sist').
@@ -48,10 +61,11 @@ export const initSessionTracker = () => {
     if (lastActive > 0) {
       refTime = lastActive;
     } else {
-      // Första besöket: sätt referenstid till 12 timmar bakåt
-      refTime = Math.max(0, now - (12 * 3600));
+      // Första besöket: starta med nuvarande tid så vi inte samlar på oss ett helt dygns historik
+      refTime = now;
     }
     localStorage.setItem(SESSION_REF_TIME_KEY, String(refTime));
+    window.dispatchEvent(new CustomEvent('sessionRefChanged', { detail: { refTime } }));
   }
 
   // Uppdatera senaste aktivitet till nu

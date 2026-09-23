@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.06',
+    date: '2026-09-23',
+    title: 'Kollapsade sektioner i Allmänt samt Seen-on-scroll avräkning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Kollapsade sektioner i Inställningar -> Allmänt',
+        description: 'Samtliga sektioner under fliken Allmänt (Applikationsläge, Systeminformation & Felsökning, Ändringslogg, Installationsguide samt Konto & Utloggning) presenteras nu som eleganta kollapsbara kort. Detta eliminerar onödig vertikal scrollning och ger en ren, samlad överblick.'
+      },
+      {
+        type: 'feature',
+        title: 'Seen on scroll - dynamisk avräkning vid läsning',
+        description: 'När artiklar med NY-märkning passeras under scrollning kvitteras de direkt som sedda. Deras NY-märkning tonas bort och sifferindikatorn på RSS-ikonen och i sidomenyn räknas automatiskt ner i realtid.'
+      },
+      {
+        type: 'improvement',
+        title: 'RSS-ikon i mobilens bottenmeny och mjuk återställning',
+        description: 'Den tidigare hus-ikonen i bottenmenyn har ersatts av vår RSS-ikon. Ett klick på ikonen när användaren redan befinner sig i flödet scrollar mjukt till toppen och nollställer sessionens referenstid.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.05',
     date: '2026-09-23',
     title: 'Sortering efter hämtningstidpunkt i Omni-läget',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

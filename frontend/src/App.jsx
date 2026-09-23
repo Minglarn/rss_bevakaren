@@ -14,7 +14,7 @@ import WhatsNewModal from './components/WhatsNewModal';
 import api, { isTokenExpired, shouldRefreshToken } from './api';
 import { autoSyncPushSubscription } from './utils/notifications';
 import { resolveFeedIcon } from './utils/textUtils';
-import { getAppMode, getSessionRefTime, initSessionTracker, touchSession } from './utils/sessionTracker';
+import { getAppMode, getSessionRefTime, initSessionTracker, touchSession, resetSessionRef } from './utils/sessionTracker';
 import packageJson from '../package.json';
 import './App.css';
 import './index.css';
@@ -39,13 +39,56 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
   const [pollingFeeds, setPollingFeeds] = useState(new Set());
   const [appMode, setAppMode] = useState(() => getAppMode());
 
-  // Initiera sessionsspårning och löpande aktivitetshjärtslag
+  // Initiera sessionsspårning och löpande aktivitetshjärtslag när fliken är aktiv
   useEffect(() => {
     initSessionTracker();
     const interval = setInterval(() => {
-      touchSession();
+      if (document.visibilityState === 'visible') {
+        touchSession();
+      }
     }, 60000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Realtidssynk för Seen on scroll (Alternativ 1):
+  // När en artikel visas/scrollas förbi i sessionen minskas dess källas nya-räknare,
+  // och när sessionen nollställs (klick på RSS-ikonen eller vid sessionsavdelaren)
+  // nollställs alla källors nya-räknare omedelbart.
+  useEffect(() => {
+    const handleArticleSeen = (e) => {
+      const { feedId } = e.detail || {};
+      setMyFeeds(prevFeeds => {
+        let changed = false;
+        const updated = prevFeeds.map(feed => {
+          if ((feed.id === feedId || !feedId) && (feed.new_count || 0) > 0 && !changed) {
+            changed = true;
+            return { ...feed, new_count: Math.max(0, feed.new_count - 1) };
+          }
+          return feed;
+        });
+        if (changed) {
+          myFeedsRef.current = updated;
+          return updated;
+        }
+        return prevFeeds;
+      });
+    };
+
+    const handleSessionRefChanged = () => {
+      setMyFeeds(prevFeeds => {
+        const updated = prevFeeds.map(feed => ({ ...feed, new_count: 0 }));
+        myFeedsRef.current = updated;
+        return updated;
+      });
+    };
+
+    window.addEventListener('articleSeenInSession', handleArticleSeen);
+    window.addEventListener('sessionRefChanged', handleSessionRefChanged);
+
+    return () => {
+      window.removeEventListener('articleSeenInSession', handleArticleSeen);
+      window.removeEventListener('sessionRefChanged', handleSessionRefChanged);
+    };
   }, []);
 
   // Lyssna på ändringar i applikationsläge (Omni vs Klassisk)
@@ -403,7 +446,12 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
         </div>
 
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.18rem', padding: '0 0.55rem', overflowY: 'auto', overflowX: 'hidden' }}>
-          <Link to="/" style={{
+          <Link to="/" onClick={() => {
+            if (location.pathname === '/' && !location.search) {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              resetSessionRef();
+            }
+          }} style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.6rem', padding: '0.32rem 0.65rem',
             borderRadius: '6px', textDecoration: 'none',
             color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-muted)',
@@ -620,9 +668,15 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
 
       {/* Mobile Bottom Bar: HEM, PRIO, CHATT, FLÖDEN, INSTÄLLNINGAR */}
       <div className="mobile-bottom-bar">
-        <Link to="/" className={`bottom-bar-item ${location.pathname === '/' && !location.search.includes('feedId') ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+        <Link to="/" className={`bottom-bar-item ${location.pathname === '/' && !location.search.includes('feedId') ? 'active' : ''}`} onClick={() => {
+          setIsMobileSheetOpen(false);
+          if (location.pathname === '/' && !location.search) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            resetSessionRef();
+          }
+        }}>
           <div className="icon-wrapper">
-            <Home size={22} />
+            <Rss size={22} />
             {appMode === 'omni' ? (
               myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0) > 0 && (
                 <span className="bottom-bar-badge" style={{ backgroundColor: 'var(--primary)' }}>
@@ -695,9 +749,15 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               backgroundColor: location.pathname === '/' && !location.search.includes('feedId') ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
               borderRadius: '12px', textDecoration: 'none', fontWeight: 600
             }}
-            onClick={() => setIsMobileSheetOpen(false)}
+            onClick={() => {
+              setIsMobileSheetOpen(false);
+              if (location.pathname === '/' && !location.search) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                resetSessionRef();
+              }
+            }}
           >
-            <Home size={20} /> Alla flöden
+            <Rss size={20} /> Alla flöden
           </Link>
           {prioEnabled && (
             <Link 

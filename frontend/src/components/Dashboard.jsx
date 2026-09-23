@@ -9,7 +9,7 @@ import OnboardingWizard from './OnboardingWizard';
 import AIReasoningModal from './AIReasoningModal';
 import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
 import { useFeeds } from '../App';
-import { getAppMode, getSessionRefTime } from '../utils/sessionTracker';
+import { getAppMode, getSessionRefTime, resetSessionRef } from '../utils/sessionTracker';
 
 const DEFAULT_CATEGORIES = ['All', 'Technology', 'Politics', 'Emergency', 'Local', 'Economy', 'Entertainment', 'Other'];
 
@@ -34,7 +34,8 @@ const SwipeableArticleCard = ({
   onMarkAsUnread,
   onExpand,
   className,
-  style
+  style,
+  ...rest
 }) => {
   const x = useMotionValue(0);
   const [isPassed, setIsPassed] = useState(false);
@@ -134,6 +135,7 @@ const SwipeableArticleCard = ({
           width: '100%',
           boxSizing: 'border-box'
         }}
+        {...rest}
       >
         <div 
           className={className}
@@ -161,6 +163,7 @@ const SwipeableArticleCard = ({
         opacity: { duration: 0.22, ease: "easeOut" },
         scale: { duration: 0.22, ease: "easeOut" }
       }}
+      {...rest}
     >
       {/* Dynamisk bakgrundsindikator med realtidsrespons */}
       <motion.div
@@ -443,16 +446,81 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const isDraggingCard = useRef(false);
   const [appMode, setAppMode] = useState(() => getAppMode());
   const [sessionRefTime, setSessionRefTime] = useState(() => getSessionRefTime());
+  const [seenArticleIds, setSeenArticleIds] = useState(() => new Set());
+  const seenRef = useRef(seenArticleIds);
+  seenRef.current = seenArticleIds;
 
   useEffect(() => {
     const handleAppMode = (e) => {
       const newMode = e.detail?.mode || getAppMode();
       setAppMode(newMode);
       setSessionRefTime(getSessionRefTime());
+      seenRef.current.clear();
+      setSeenArticleIds(new Set());
+    };
+    const handleSessionRef = (e) => {
+      setSessionRefTime(e.detail?.refTime || getSessionRefTime());
+      seenRef.current.clear();
+      setSeenArticleIds(new Set());
     };
     window.addEventListener('appModeChanged', handleAppMode);
-    return () => window.removeEventListener('appModeChanged', handleAppMode);
+    window.addEventListener('sessionRefChanged', handleSessionRef);
+    return () => {
+      window.removeEventListener('appModeChanged', handleAppMode);
+      window.removeEventListener('sessionRefChanged', handleSessionRef);
+    };
   }, []);
+
+  // Seen on scroll (Alternativ 1): Spåra artiklar som visas/scrollas förbi under sessionen
+  useEffect(() => {
+    if (appMode !== 'omni' || !sessionRefTime) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        // Om sessionsavdelaren ("Tidigare artiklar") blir synlig har alla nya artiklar passerats
+        if (entry.target.getAttribute('data-session-divider') === 'true') {
+          if (entry.isIntersecting) {
+            resetSessionRef();
+          }
+          return;
+        }
+
+        if (entry.isIntersecting) {
+          const artIdStr = entry.target.getAttribute('data-article-id');
+          const feedIdStr = entry.target.getAttribute('data-feed-id');
+          const artId = artIdStr ? parseInt(artIdStr, 10) : null;
+          const feedId = feedIdStr ? parseInt(feedIdStr, 10) : null;
+
+          if (artId && !seenRef.current.has(artId)) {
+            seenRef.current.add(artId);
+            setSeenArticleIds(new Set(seenRef.current));
+
+            window.dispatchEvent(new CustomEvent('articleSeenInSession', {
+              detail: { articleId: artId, feedId: feedId }
+            }));
+
+            observer.unobserve(entry.target);
+          }
+        }
+      });
+    }, {
+      root: null,
+      rootMargin: '0px 0px -10% 0px',
+      threshold: 0.25
+    });
+
+    const targets = document.querySelectorAll('[data-new-article="true"]');
+    targets.forEach(el => observer.observe(el));
+
+    const dividerEl = document.querySelector('[data-session-divider="true"]');
+    if (dividerEl) {
+      observer.observe(dividerEl);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [visibleFeeds, sessionRefTime, appMode, seenArticleIds]);
 
   const [showRead, setShowRead] = useState(() => {
     return localStorage.getItem('rss_show_read') === 'true';
@@ -1778,12 +1846,18 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               const itemEffectiveTs = appMode === 'omni'
                 ? (item.received_ts || item.published_ts || 0)
                 : (item.published_ts || (pubDate && !isNaN(pubDate.getTime()) ? Math.floor(pubDate.getTime() / 1000) : (item.received_ts || 0)));
-              const isNewSinceLastVisit = Boolean(appMode === 'omni' && sessionRefTime > 0 && itemEffectiveTs >= sessionRefTime);
+              const isNewSinceLastVisit = Boolean(
+                appMode === 'omni' && 
+                sessionRefTime > 0 && 
+                itemEffectiveTs >= sessionRefTime && 
+                !seenArticleIds.has(item.id)
+              );
               const showTimelineDivider = Boolean(firstOlderIndex !== -1 && index === firstOlderIndex);
 
               const sessionDivider = showTimelineDivider ? (
                 <div
                   key={`session-divider-${item.id}`}
+                  data-session-divider="true"
                   style={{
                     gridColumn: '1 / -1',
                     width: '100%',
@@ -1818,6 +1892,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     <SwipeableArticleCard
                       key={item.id}
                       itemId={item.id}
+                      data-article-id={item.id}
+                      data-feed-id={item.feed_id}
+                      data-new-article={isNewSinceLastVisit ? "true" : undefined}
                       isRead={isReadNow}
                       swipeEnabled={effectiveSwipeEnabled}
                       onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
@@ -2101,6 +2178,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   <SwipeableArticleCard
                     key={item.id}
                     itemId={item.id}
+                    data-article-id={item.id}
+                    data-feed-id={item.feed_id}
+                    data-new-article={isNewSinceLastVisit ? "true" : undefined}
                     isRead={isReadNow}
                     swipeEnabled={effectiveSwipeEnabled}
                     onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}

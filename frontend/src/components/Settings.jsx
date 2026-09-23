@@ -67,6 +67,22 @@ const Settings = ({ onLogout, currentUser }) => {
     setSearchParams({ tab });
   };
 
+  // Kollapsade sektioner under fliken Allmänt
+  const [openGeneralSections, setOpenGeneralSections] = useState({
+    appMode: false,
+    systemInfo: false,
+    changelog: false,
+    onboarding: false,
+    account: false
+  });
+
+  const toggleGeneralSection = (key) => {
+    setOpenGeneralSections(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   // Administratörspanel State
   const [adminUsers, setAdminUsers] = useState([]);
   const [isLoadingAdminUsers, setIsLoadingAdminUsers] = useState(false);
@@ -1471,298 +1487,485 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       </div>
 
       {activeTab === 'general' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           
-          {/* Val av applikationsläge: Omni (Nyhetsbevakare) vs Klassisk RSS */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.85rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
-            <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Sliders size={20} style={{ color: 'var(--primary)' }} /> Applikationsläge
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem' }}>
-              Välj hur RSS-Bevakaren ska fungera för dig. Du kan växla när som helst utan att data eller inställningar går förlorade.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-              {/* Omni-läge */}
-              <div
-                onClick={() => {
-                  setAppMode('omni');
-                  setAppModeState('omni');
-                  toast.success('Nyhetsbevakare (Omni-läge) aktiverat.');
-                }}
-                style={{
-                  padding: '1.15rem',
-                  borderRadius: '10px',
-                  border: appMode === 'omni' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                  backgroundColor: appMode === 'omni' ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-main)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.6rem'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: appMode === 'omni' ? 'var(--primary)' : 'var(--text-main)', fontSize: '1rem' }}>
-                    <Rss size={18} /> Nyhetsbevakare (Omni-läge)
-                  </div>
-                  <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '12px', backgroundColor: 'var(--primary)', color: 'white', fontWeight: 600 }}>Standard</span>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                  Ett modernt och levande nyhetsflöde där artiklar inte behöver markeras som lästa. Appen håller automatiskt reda på nya artiklar sedan ditt senaste besök.
-                </p>
-                <div style={{ marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  <div>· Ingen inkorgsstress – inga artiklar behöver bockas av</div>
-                  <div>· Sidomenyn visar antalet nya artiklar sedan ditt förra besök (+X nya)</div>
-                  <div>· Spara och bokmärk viktiga nyheter för att läsa senare</div>
-                </div>
-              </div>
-
-              {/* Klassiskt RSS-läge */}
-              <div
-                onClick={() => {
-                  setAppMode('classic');
-                  setAppModeState('classic');
-                  toast.success('Klassisk RSS-läsare aktiverad.');
-                }}
-                style={{
-                  padding: '1.15rem',
-                  borderRadius: '10px',
-                  border: appMode === 'classic' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                  backgroundColor: appMode === 'classic' ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-main)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.6rem'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: appMode === 'classic' ? 'var(--primary)' : 'var(--text-main)', fontSize: '1rem' }}>
-                    <List size={18} /> Klassisk RSS-läsare
-                  </div>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                  Traditionell RSS-hantering med manuell läst/oläst-status på varje enskild artikel och inkorgsräknare.
-                </p>
-                <div style={{ marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  <div>· Manuell avprickning av lästa artiklar</div>
-                  <div>· Sifferbrickor visar totalt olästa artiklar i databasen</div>
-                  <div>· Möjlighet att dölja redan lästa artiklar från flödet</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
-            <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Info size={20} /> Systeminformation
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem' }}>
-              Teknisk information om din installation av RSS-bevakaren.
-            </p>
-            
-            {sysInfo ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
-                <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Server size={14} /> Serverversion</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--primary)' }}>{sysInfo.version}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Uppdaterad: {sysInfo.last_update}</div>
-                </div>
-                
-                <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Database size={14} /> Databas</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{(sysInfo.database_size_bytes / 1024 / 1024).toFixed(2)} MB</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>SQLite-lagring</div>
-                </div>
-
-                <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><FileText size={14} /> Innehåll</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{sysInfo.total_articles} artiklar</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Från {sysInfo.total_feeds} flöden</div>
-                </div>
-              </div>
-            ) : (
-              <p style={{ color: 'var(--text-muted)', paddingLeft: '0.35rem' }}>Läser in systeminformation...</p>
-            )}
-
-            <div style={{ marginTop: '1.25rem', padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-              <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                Felsökning
-              </h4>
-              <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                Om applikationen upplevs inaktuell eller vid problem med sparad data kan du tvinga en uppdatering. Detta rensar webbläsarens lokala cache och service workers.
-              </p>
-              <button 
-                onClick={async () => {
-                  if ('serviceWorker' in navigator) {
-                    try {
-                      const registrations = await navigator.serviceWorker.getRegistrations();
-                      for (let registration of registrations) {
-                        await registration.unregister();
-                      }
-                      const cacheNames = await caches.keys();
-                      for (const cacheName of cacheNames) {
-                        await caches.delete(cacheName);
-                      }
-                      window.location.reload(true);
-                    } catch (e) {
-                      console.error(e);
-                      window.location.reload(true);
-                    }
-                  } else {
-                    window.location.reload(true);
-                  }
-                }}
-                style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: 'transparent',
-                  color: 'var(--primary)',
-                  border: '1px solid var(--primary)',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: '0.85rem'
-                }}
-              >
-                Tvinga app-uppdatering
-              </button>
-            </div>
-          </div>
-
-          {/* Application Info & Changelog */}
-          <div style={{ 
-            backgroundColor: 'var(--bg-card)', 
-            padding: '1.25rem 1rem', 
-            borderRadius: '12px', 
-            border: '1px solid var(--border-color)', 
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1rem'
-          }}>
-            <div>
-              <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
-                RSS-Bevakaren v{packageJson.version}
-              </div>
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                Se alla nyheter, ändringar och förbättringar i ändringsloggen.
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent('openWhatsNew'))}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.55rem 1.1rem',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                color: '#3b82f6',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '8px',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              <Sparkles size={16} /> Vad är nytt
-            </button>
-          </div>
-
-          {/* Installationsguide */}
-          <div style={{ 
-            backgroundColor: 'var(--bg-card)', 
-            padding: '1.25rem 1rem', 
-            borderRadius: '12px', 
-            border: '1px solid var(--border-color)', 
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1rem'
-          }}>
-            <div>
-              <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Compass size={18} style={{ color: 'var(--primary)' }} /> Installationsguide
-              </div>
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                Starta om guiden för att välja flödespaket, kontrollera lokal AI och kalibrera din personliga intresseprofil.
-              </div>
-            </div>
+          {/* Snabbkontroll för att expandera/kollapsa alla */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 0.25rem', marginBottom: '0.25rem' }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              Klicka på en sektion för att fälla ut dess inställningar.
+            </span>
             <button
               type="button"
               onClick={() => {
-                window.dispatchEvent(new CustomEvent('openOnboarding'));
-                toast.success('Öppnar installationsguiden...');
+                const anyOpen = Object.values(openGeneralSections).some(Boolean);
+                setOpenGeneralSections({
+                  appMode: !anyOpen,
+                  systemInfo: !anyOpen,
+                  changelog: !anyOpen,
+                  onboarding: !anyOpen,
+                  account: !anyOpen
+                });
               }}
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.55rem 1.1rem',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                color: '#3b82f6',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '8px',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                cursor: 'pointer'
+                fontSize: '0.78rem',
+                color: 'var(--primary)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.2rem 0.5rem',
+                fontWeight: 600
               }}
             >
-              <Compass size={16} /> Starta installationsguiden
+              {Object.values(openGeneralSections).some(Boolean) ? 'Kollapsa alla' : 'Expandera alla'}
             </button>
           </div>
 
-          {/* Konto & Utloggning */}
-          <div style={{ 
-            backgroundColor: 'var(--bg-card)', 
-            padding: '1.25rem 1rem', 
-            borderRadius: '12px', 
-            border: '1px solid var(--border-color)', 
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1rem'
-          }}>
-            <div>
-              <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <LogOut size={18} style={{ color: '#ef4444' }} /> Konto & Utloggning
+          {/* Sektion 1: Applikationsläge */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleGeneralSection('appMode')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openGeneralSections.appMode ? 'rgba(37, 99, 235, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.1)', flexShrink: 0 }}>
+                  <Sliders size={18} style={{ color: 'var(--primary)' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Applikationsläge
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {appMode === 'omni' ? 'Nyhetsbevakare (Omni-läge)' : 'Klassisk RSS-läsare'}
+                  </div>
+                </div>
               </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                Inloggad som <strong style={{ color: 'var(--text-main)' }}>{localStorage.getItem('username') || 'Användare'}</strong>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--primary)', fontWeight: 600 }}>
+                  {appMode === 'omni' ? 'Omni' : 'Klassisk'}
+                </span>
+                {openGeneralSections.appMode ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
               </div>
             </div>
-            {onLogout && (
-              <button
-                type="button"
-                onClick={onLogout}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.55rem 1.1rem',
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  color: '#ef4444',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  borderRadius: '8px',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <LogOut size={16} /> Logga ut
-              </button>
+
+            {openGeneralSections.appMode && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0 0 1.25rem 0' }}>
+                  Välj hur RSS-Bevakaren ska fungera för dig. Du kan växla när som helst utan att data eller inställningar går förlorade.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                  {/* Omni-läge */}
+                  <div
+                    onClick={() => {
+                      setAppMode('omni');
+                      setAppModeState('omni');
+                      toast.success('Nyhetsbevakare (Omni-läge) aktiverat.');
+                    }}
+                    style={{
+                      padding: '1.15rem',
+                      borderRadius: '10px',
+                      border: appMode === 'omni' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                      backgroundColor: appMode === 'omni' ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-main)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.6rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: appMode === 'omni' ? 'var(--primary)' : 'var(--text-main)', fontSize: '1rem' }}>
+                        <Rss size={18} /> Nyhetsbevakare (Omni-läge)
+                      </div>
+                      <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '12px', backgroundColor: 'var(--primary)', color: 'white', fontWeight: 600 }}>Standard</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                      Ett modernt och levande nyhetsflöde där artiklar inte behöver markeras som lästa. Appen håller automatiskt reda på nya artiklar sedan ditt senaste besök.
+                    </p>
+                    <div style={{ marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      <div>· Ingen inkorgsstress – inga artiklar behöver bockas av</div>
+                      <div>· Sidomenyn visar antalet nya artiklar sedan ditt förra besök (+X nya)</div>
+                      <div>· Spara och bokmärk viktiga nyheter för att läsa senare</div>
+                    </div>
+                  </div>
+
+                  {/* Klassiskt RSS-läge */}
+                  <div
+                    onClick={() => {
+                      setAppMode('classic');
+                      setAppModeState('classic');
+                      toast.success('Klassisk RSS-läsare aktiverad.');
+                    }}
+                    style={{
+                      padding: '1.15rem',
+                      borderRadius: '10px',
+                      border: appMode === 'classic' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                      backgroundColor: appMode === 'classic' ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-main)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.6rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: appMode === 'classic' ? 'var(--primary)' : 'var(--text-main)', fontSize: '1rem' }}>
+                        <List size={18} /> Klassisk RSS-läsare
+                      </div>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                      Traditionell RSS-hantering med manuell läst/oläst-status på varje enskild artikel och inkorgsräknare.
+                    </p>
+                    <div style={{ marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      <div>· Manuell avprickning av lästa artiklar</div>
+                      <div>· Sifferbrickor visar totalt olästa artiklar i databasen</div>
+                      <div>· Möjlighet att dölja redan lästa artiklar från flödet</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Fler allmänna inställningar kommer i framtida uppdateringar.</p>
+          {/* Sektion 2: Systeminformation & Felsökning */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleGeneralSection('systemInfo')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openGeneralSections.systemInfo ? 'rgba(14, 165, 233, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(14, 165, 233, 0.1)', flexShrink: 0 }}>
+                  <Info size={18} style={{ color: '#0ea5e9' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Systeminformation & Felsökning
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {sysInfo ? `Server ${sysInfo.version} · ${(sysInfo.database_size_bytes / 1024 / 1024).toFixed(1)} MB databas` : 'Serverversion, databas och cache'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(14, 165, 233, 0.08)', color: '#0ea5e9', fontWeight: 600 }}>
+                  {sysInfo ? sysInfo.version : 'System'}
+                </span>
+                {openGeneralSections.systemInfo ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
+            </div>
+
+            {openGeneralSections.systemInfo && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0 0 1.25rem 0' }}>
+                  Teknisk information om din installation av RSS-bevakaren.
+                </p>
+
+                {sysInfo ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                    <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Server size={14} /> Serverversion</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--primary)' }}>{sysInfo.version}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Uppdaterad: {sysInfo.last_update}</div>
+                    </div>
+                    
+                    <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Database size={14} /> Databas</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{(sysInfo.database_size_bytes / 1024 / 1024).toFixed(2)} MB</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>SQLite-lagring</div>
+                    </div>
+
+                    <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><FileText size={14} /> Innehåll</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{sysInfo.total_articles} artiklar</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Från {sysInfo.total_feeds} flöden</div>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ color: 'var(--text-muted)' }}>Läser in systeminformation...</p>
+                )}
+
+                <div style={{ marginTop: '1.25rem', padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    Felsökning
+                  </h4>
+                  <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                    Om applikationen upplevs inaktuell eller vid problem med sparad data kan du tvinga en uppdatering. Detta rensar webbläsarens lokala cache och service workers.
+                  </p>
+                  <button 
+                    onClick={async () => {
+                      if ('serviceWorker' in navigator) {
+                        try {
+                          const registrations = await navigator.serviceWorker.getRegistrations();
+                          for (let registration of registrations) {
+                            await registration.unregister();
+                          }
+                          const cacheNames = await caches.keys();
+                          for (const cacheName of cacheNames) {
+                            await caches.delete(cacheName);
+                          }
+                          window.location.reload(true);
+                        } catch (e) {
+                          console.error(e);
+                          window.location.reload(true);
+                        }
+                      } else {
+                        window.location.reload(true);
+                      }
+                    }}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: 'transparent',
+                      color: 'var(--primary)',
+                      border: '1px solid var(--primary)',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    Tvinga app-uppdatering
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sektion 3: Ändringslogg & Versionshistorik */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleGeneralSection('changelog')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openGeneralSections.changelog ? 'rgba(139, 92, 246, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(139, 92, 246, 0.1)', flexShrink: 0 }}>
+                  <Sparkles size={18} style={{ color: '#8b5cf6' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Ändringslogg & Versionshistorik
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    RSS-Bevakaren v{packageJson.version} · Se vad som är nytt
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(139, 92, 246, 0.08)', color: '#8b5cf6', fontWeight: 600 }}>
+                  v{packageJson.version}
+                </span>
+                {openGeneralSections.changelog ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
+            </div>
+
+            {openGeneralSections.changelog && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    RSS-Bevakaren v{packageJson.version}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                    Se alla nyheter, ändringar och förbättringar i ändringsloggen.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('openWhatsNew'))}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.55rem 1.1rem',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    color: '#3b82f6',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Sparkles size={16} /> Vad är nytt
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Sektion 4: Installationsguide */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleGeneralSection('onboarding')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openGeneralSections.onboarding ? 'rgba(16, 185, 129, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.1)', flexShrink: 0 }}>
+                  <Compass size={18} style={{ color: '#10b981' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Installationsguide
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Flödespaket, AI-anslutning och intresseprofil
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.08)', color: '#10b981', fontWeight: 600 }}>
+                  Guide
+                </span>
+                {openGeneralSections.onboarding ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
+            </div>
+
+            {openGeneralSections.onboarding && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Compass size={18} style={{ color: 'var(--primary)' }} /> Installationsguide
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                    Starta om guiden för att välja flödespaket, kontrollera lokal AI och kalibrera din personliga intresseprofil.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('openOnboarding'));
+                    toast.success('Öppnar installationsguiden...');
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.55rem 1.1rem',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    color: '#3b82f6',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Compass size={16} /> Starta installationsguiden
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Sektion 5: Konto & Utloggning */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleGeneralSection('account')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openGeneralSections.account ? 'rgba(239, 68, 68, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', flexShrink: 0 }}>
+                  <LogOut size={18} style={{ color: '#ef4444' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Konto & Utloggning
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Inloggad som {localStorage.getItem('username') || 'Användare'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: 'rgba(239, 68, 68, 0.08)', color: '#ef4444', fontWeight: 600 }}>
+                  {localStorage.getItem('username') || 'Konto'}
+                </span>
+                {openGeneralSections.account ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
+            </div>
+
+            {openGeneralSections.account && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <LogOut size={18} style={{ color: '#ef4444' }} /> Aktiv inloggningssession
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                    Inloggad som <strong style={{ color: 'var(--text-main)' }}>{localStorage.getItem('username') || 'Användare'}</strong>
+                  </div>
+                </div>
+                {onLogout && (
+                  <button
+                    type="button"
+                    onClick={onLogout}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.55rem 1.1rem',
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      color: '#ef4444',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <LogOut size={16} /> Logga ut
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
         </motion.div>
       )}
 
