@@ -16,7 +16,6 @@ import { autoSyncPushSubscription } from './utils/notifications';
 import { resolveFeedIcon } from './utils/textUtils';
 import { getAppMode, getSessionRefTime, initSessionTracker, touchSession } from './utils/sessionTracker';
 import packageJson from '../package.json';
-import './App.css';
 import './index.css';
 
 // Layout Component with Sidebar

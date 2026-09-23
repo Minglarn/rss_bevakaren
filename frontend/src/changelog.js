@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.25',
+    date: '2026-09-23',
+    title: 'Städning och optimering av projektstruktur',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Borttagning av överflödiga filer och mallar',
+        description: 'Tog bort det föråldrade testskriptet test_sqla.py, oanvänd standardmall för App.css och Vite-ikoner i assets-katalogen, den tomma databasfilen backend/rss_bevakaren.db samt frontend/README.md för ett rent och optimerat repository.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.24',
     date: '2026-09-23',
     title: 'Dokumentation av samtliga miljövariabler och uppdaterad embedding-modell',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
