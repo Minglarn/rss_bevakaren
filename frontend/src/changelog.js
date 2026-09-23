@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.08',
+    date: '2026-09-23',
+    title: 'Korrigerad nedräkning för NYA artiklar och synkat PRIO-flöde',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Korrigerad avräkning för NYA artiklar (+X)',
+        description: 'Åtgärdat fel där antalet nya artiklar raderades vid klick på RSS- eller PRIO-fliken. Sessionens referenstid nollställs nu inte vid vanlig navigering utan artiklarna räknas ner dynamiskt när användaren scrollar förbi dem.'
+      },
+      {
+        type: 'fix',
+        title: 'Bibehållen NY-märkning och klockdrifttolerans',
+        description: 'Nya artiklar behåller nu sitt NY-piller tills de faktiskt scrollas förbi eller expanderas. Tidsjämförelsen har försetts med 60 sekunders buffert mot klockdifferenser mellan server och klient.'
+      },
+      {
+        type: 'feature',
+        title: 'PRIO-flödet anpassat till sessionsreglerna',
+        description: 'PRIO-flödet i Omni-läget visar nu sifferbricka med antalet nya prio-artiklar (+X) och synkar nedräkning och Seen on scroll på samma sätt som nyhetsflödet.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.07',
     date: '2026-09-23',
     title: 'Korrigerad initieringsordning i flödesvyn',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

@@ -14,7 +14,7 @@ import WhatsNewModal from './components/WhatsNewModal';
 import api, { isTokenExpired, shouldRefreshToken } from './api';
 import { autoSyncPushSubscription } from './utils/notifications';
 import { resolveFeedIcon } from './utils/textUtils';
-import { getAppMode, getSessionRefTime, initSessionTracker, touchSession, resetSessionRef } from './utils/sessionTracker';
+import { getAppMode, getSessionRefTime, initSessionTracker, touchSession, getSeenArticleIds } from './utils/sessionTracker';
 import packageJson from '../package.json';
 import './App.css';
 import './index.css';
@@ -35,6 +35,9 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
   const [myFeeds, setMyFeeds] = useState([]);
   const myFeedsRef = useRef([]);
   const [prioUnreadCount, setPrioUnreadCount] = useState(0);
+  const [prioNewCount, setPrioNewCount] = useState(0);
+  const seenArticlesByFeedRef = useRef(new Map());
+  const seenPrioArticlesRef = useRef(new Set());
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   const [pollingFeeds, setPollingFeeds] = useState(new Set());
   const [appMode, setAppMode] = useState(() => getAppMode());
@@ -50,13 +53,23 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Realtidssynk för Seen on scroll (Alternativ 1):
-  // När en artikel visas/scrollas förbi i sessionen minskas dess källas nya-räknare,
-  // och när sessionen nollställs (klick på RSS-ikonen eller vid sessionsavdelaren)
-  // nollställs alla källors nya-räknare omedelbart.
+  // Realtidssynk för Seen on scroll:
+  // När en artikel visas/scrollas förbi i sessionen minskas dess källas nya-räknare
+  // samt prioNewCount om artikeln var prio.
   useEffect(() => {
     const handleArticleSeen = (e) => {
-      const { feedId } = e.detail || {};
+      const { articleId, feedId, isPrio } = e.detail || {};
+      if (articleId && feedId) {
+        if (!seenArticlesByFeedRef.current.has(feedId)) {
+          seenArticlesByFeedRef.current.set(feedId, new Set());
+        }
+        seenArticlesByFeedRef.current.get(feedId).add(articleId);
+      }
+      if (articleId && isPrio) {
+        seenPrioArticlesRef.current.add(articleId);
+        setPrioNewCount(prev => Math.max(0, prev - 1));
+      }
+
       setMyFeeds(prevFeeds => {
         let changed = false;
         const updated = prevFeeds.map(feed => {
@@ -75,6 +88,9 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
     };
 
     const handleSessionRefChanged = () => {
+      seenArticlesByFeedRef.current.clear();
+      seenPrioArticlesRef.current.clear();
+      setPrioNewCount(0);
       setMyFeeds(prevFeeds => {
         const updated = prevFeeds.map(feed => ({ ...feed, new_count: 0 }));
         myFeedsRef.current = updated;
@@ -108,8 +124,19 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       const url = (mode === 'omni' && refTime > 0) ? `/feeds?since=${refTime}` : '/feeds';
       const res = await api.get(url);
       const sortedFeeds = res.data.sort((a, b) => a.title.localeCompare(b.title, 'sv'));
-      setMyFeeds(sortedFeeds);
-      myFeedsRef.current = sortedFeeds;
+      const adjustedFeeds = sortedFeeds.map(feed => {
+        if (mode === 'omni' && feed.new_count) {
+          const seenSet = seenArticlesByFeedRef.current.get(feed.id);
+          const seenCount = seenSet ? seenSet.size : 0;
+          return {
+            ...feed,
+            new_count: Math.max(0, (feed.new_count || 0) - seenCount)
+          };
+        }
+        return feed;
+      });
+      setMyFeeds(adjustedFeeds);
+      myFeedsRef.current = adjustedFeeds;
     } catch (err) {
       console.error("Could not fetch feeds for the sidebar", err);
     }
@@ -121,8 +148,16 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
 
   const fetchPrioUnread = async () => {
     try {
-      const res = await api.get('/prio/unread-count');
+      const mode = getAppMode();
+      const refTime = getSessionRefTime();
+      const url = (mode === 'omni' && refTime > 0)
+        ? `/prio/unread-count?since=${refTime}&app_mode=omni`
+        : '/prio/unread-count';
+      const res = await api.get(url);
       setPrioUnreadCount(res.data.unread_count || 0);
+      const rawNew = res.data.new_count || 0;
+      const seenPrioCount = seenPrioArticlesRef.current.size;
+      setPrioNewCount(Math.max(0, rawNew - seenPrioCount));
     } catch (err) {
       console.error("Could not fetch prio unread count", err);
     }
@@ -449,7 +484,6 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           <Link to="/" onClick={() => {
             if (location.pathname === '/' && !location.search) {
               window.scrollTo({ top: 0, behavior: 'smooth' });
-              resetSessionRef();
             }
           }} style={{
             display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.6rem', padding: '0.32rem 0.65rem',
@@ -493,7 +527,11 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             )}
           </Link>
           {prioEnabled && (
-            <Link to="/prio" style={{
+            <Link to="/prio" onClick={() => {
+              if (location.pathname === '/prio') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }} style={{
               display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'flex-start', gap: '0.6rem', padding: '0.32rem 0.65rem',
               borderRadius: '6px', textDecoration: 'none',
               color: location.pathname === '/prio' ? '#f97316' : 'var(--text-muted)',
@@ -501,19 +539,37 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               fontWeight: location.pathname === '/prio' ? 600 : 400,
               fontSize: '0.86rem'
             }}>
-              <Flame size={17} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio Feed"}
-              {!isCollapsed && prioUnreadCount > 0 && (
-                <span style={{ 
-                  marginLeft: 'auto', 
-                  backgroundColor: '#f97316', 
-                  color: 'white', 
-                  fontSize: '0.65rem', 
-                  padding: '0.06rem 0.38rem', 
-                  borderRadius: '10px', 
-                  fontWeight: 'bold' 
-                }}>
-                  {prioUnreadCount}
-                </span>
+              <Flame size={17} style={{ color: '#f97316' }} /> {!isCollapsed && "Prio-flöde"}
+              {!isCollapsed && (
+                appMode === 'omni' ? (
+                  prioNewCount > 0 && (
+                    <span style={{ 
+                      marginLeft: 'auto', 
+                      backgroundColor: '#f97316', 
+                      color: 'white', 
+                      fontSize: '0.65rem', 
+                      padding: '0.06rem 0.38rem', 
+                      borderRadius: '10px', 
+                      fontWeight: 'bold' 
+                    }}>
+                      +{prioNewCount}
+                    </span>
+                  )
+                ) : (
+                  prioUnreadCount > 0 && (
+                    <span style={{ 
+                      marginLeft: 'auto', 
+                      backgroundColor: '#f97316', 
+                      color: 'white', 
+                      fontSize: '0.65rem', 
+                      padding: '0.06rem 0.38rem', 
+                      borderRadius: '10px', 
+                      fontWeight: 'bold' 
+                    }}>
+                      {prioUnreadCount}
+                    </span>
+                  )
+                )
               )}
             </Link>
           )}
@@ -672,7 +728,6 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           setIsMobileSheetOpen(false);
           if (location.pathname === '/' && !location.search) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
-            resetSessionRef();
           }
         }}>
           <div className="icon-wrapper">
@@ -693,11 +748,22 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
           </div>
           <span>HEM</span>
         </Link>
-        <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active prio-active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
+        <Link to="/prio" className={`bottom-bar-item ${location.pathname === '/prio' ? 'active prio-active' : ''}`} onClick={() => {
+          setIsMobileSheetOpen(false);
+          if (location.pathname === '/prio') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}>
           <div className="icon-wrapper">
             <Flame size={22} style={{ color: location.pathname === '/prio' ? '#f97316' : 'inherit' }} />
-            {prioUnreadCount > 0 && (
-              <span className="bottom-bar-badge" style={{ backgroundColor: '#f97316' }}>{prioUnreadCount}</span>
+            {appMode === 'omni' ? (
+              prioNewCount > 0 && (
+                <span className="bottom-bar-badge" style={{ backgroundColor: '#f97316' }}>+{prioNewCount}</span>
+              )
+            ) : (
+              prioUnreadCount > 0 && (
+                <span className="bottom-bar-badge" style={{ backgroundColor: '#f97316' }}>{prioUnreadCount}</span>
+              )
             )}
           </div>
           <span style={{ color: location.pathname === '/prio' ? '#f97316' : undefined }}>PRIO</span>
@@ -753,7 +819,6 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
               setIsMobileSheetOpen(false);
               if (location.pathname === '/' && !location.search) {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
-                resetSessionRef();
               }
             }}
           >
@@ -768,13 +833,26 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
                 backgroundColor: location.pathname === '/prio' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
                 borderRadius: '12px', textDecoration: 'none', fontWeight: 600
               }}
-              onClick={() => setIsMobileSheetOpen(false)}
+              onClick={() => {
+                setIsMobileSheetOpen(false);
+                if (location.pathname === '/prio') {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
             >
               <Flame size={20} style={{ color: '#f97316' }} /> Prio-flöde
-              {prioUnreadCount > 0 && (
-                <span style={{ backgroundColor: '#f97316', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold', marginLeft: 'auto' }}>
-                  {prioUnreadCount}
-                </span>
+              {appMode === 'omni' ? (
+                prioNewCount > 0 && (
+                  <span style={{ backgroundColor: '#f97316', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold', marginLeft: 'auto' }}>
+                    +{prioNewCount}
+                  </span>
+                )
+              ) : (
+                prioUnreadCount > 0 && (
+                  <span style={{ backgroundColor: '#f97316', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold', marginLeft: 'auto' }}>
+                    {prioUnreadCount}
+                  </span>
+                )
               )}
             </Link>
           )}

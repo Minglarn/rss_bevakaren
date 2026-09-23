@@ -3417,7 +3417,10 @@ def get_dashboard_feeds(
         final_items.append(head)
 
     final_items.extend(unclustered)
-    final_items.sort(key=lambda x: (x.get("published_ts") or x.get("received_ts") or 0, x.get("id", 0)), reverse=True)
+    if app_mode == 'omni':
+        final_items.sort(key=lambda x: (x.get("received_ts") or x.get("published_ts") or 0, x.get("id", 0)), reverse=True)
+    else:
+        final_items.sort(key=lambda x: (x.get("published_ts") or x.get("received_ts") or 0, x.get("id", 0)), reverse=True)
     return final_items
 
 @app.post("/articles/cluster/{cluster_id}/read")
@@ -3740,22 +3743,32 @@ async def prioritize_article(
 
 @app.get("/prio/unread-count")
 def get_prio_unread_count(
+    since: Optional[int] = None,
+    app_mode: Optional[str] = None,
     db: Session = Depends(database.get_db), 
     current_user: models.User = Depends(auth.get_current_user)
 ):
     user_ai = db.query(models.UserAISettings).filter(models.UserAISettings.user_id == current_user.id).first()
     if not user_ai or not user_ai.prio_enabled:
-        return {"unread_count": 0}
+        return {"unread_count": 0, "new_count": 0}
 
     threshold = user_ai.prio_threshold or 75
 
-    count = db.query(models.Article).join(models.Feed).filter(
+    base_query = db.query(models.Article).join(models.Feed).filter(
         models.Feed.user_id == current_user.id,
         models.Article.ai_processed == 1,
-        or_(models.Article.priority == 'high', models.Article.prio_score >= threshold),
-        (models.Article.is_read == 0) | (models.Article.is_read == None)
-    ).count()
-    return {"unread_count": count}
+        or_(models.Article.priority == 'high', models.Article.prio_score >= threshold)
+    )
+
+    unread_count = base_query.filter((models.Article.is_read == 0) | (models.Article.is_read == None)).count()
+
+    new_count = 0
+    if since and since > 0:
+        new_count = base_query.filter(
+            func.coalesce(func.nullif(models.Article.received_ts, 0), models.Article.published_ts) >= since
+        ).count()
+
+    return {"unread_count": unread_count, "new_count": new_count}
 
 @app.get("/ai/config", response_model=schemas.AIConfigResponse)
 def get_ai_config(

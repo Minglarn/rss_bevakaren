@@ -33,6 +33,41 @@ export const setAppMode = (mode) => {
   return validMode;
 };
 
+const SEEN_ARTICLES_KEY = 'rss_session_seen_articles';
+
+/**
+ * Hämtar mängden av artikel-ID:n som setts under innevarande session.
+ */
+export const getSeenArticleIds = () => {
+  try {
+    const raw = sessionStorage.getItem(SEEN_ARTICLES_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch (e) {
+    return new Set();
+  }
+};
+
+/**
+ * Lägger till ett artikel-ID som sett under sessionen.
+ */
+export const addSeenArticleId = (id) => {
+  if (!id) return;
+  try {
+    const set = getSeenArticleIds();
+    set.add(id);
+    sessionStorage.setItem(SEEN_ARTICLES_KEY, JSON.stringify([...set]));
+  } catch (e) {}
+};
+
+/**
+ * Rensar listan över sedda artiklar för sessionen.
+ */
+export const clearSeenArticleIds = () => {
+  try {
+    sessionStorage.removeItem(SEEN_ARTICLES_KEY);
+  } catch (e) {}
+};
+
 /**
  * Nollställer eller flyttar fram sessionsreferensen till nuvarande tidpunkt (eller angiven timestamp).
  * Skickar eventet 'sessionRefChanged' för omedelbar realtidssynk i hela gränssnittet.
@@ -40,6 +75,7 @@ export const setAppMode = (mode) => {
 export const resetSessionRef = (customTime = null) => {
   const now = Math.floor(Date.now() / 1000);
   const newRefTime = customTime || now;
+  clearSeenArticleIds();
   localStorage.setItem(SESSION_REF_TIME_KEY, String(newRefTime));
   localStorage.setItem(SESSION_LAST_ACTIVE_KEY, String(now));
   window.dispatchEvent(new CustomEvent('sessionRefChanged', { detail: { refTime: newRefTime } }));
@@ -58,6 +94,7 @@ export const initSessionTracker = () => {
 
   // Ny session om det är första besöket eller mer än SESSION_TIMEOUT_SECONDS inaktivitet
   if (!refTime || (lastActive > 0 && (now - lastActive) > SESSION_TIMEOUT_SECONDS)) {
+    clearSeenArticleIds();
     if (lastActive > 0) {
       refTime = lastActive;
     } else {

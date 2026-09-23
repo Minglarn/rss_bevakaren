@@ -9,7 +9,7 @@ import OnboardingWizard from './OnboardingWizard';
 import AIReasoningModal from './AIReasoningModal';
 import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
 import { useFeeds } from '../App';
-import { getAppMode, getSessionRefTime, resetSessionRef } from '../utils/sessionTracker';
+import { getAppMode, getSessionRefTime, getSeenArticleIds, addSeenArticleId } from '../utils/sessionTracker';
 
 const DEFAULT_CATEGORIES = ['All', 'Technology', 'Politics', 'Emergency', 'Local', 'Economy', 'Entertainment', 'Other'];
 
@@ -446,7 +446,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const isDraggingCard = useRef(false);
   const [appMode, setAppMode] = useState(() => getAppMode());
   const [sessionRefTime, setSessionRefTime] = useState(() => getSessionRefTime());
-  const [seenArticleIds, setSeenArticleIds] = useState(() => new Set());
+  const [seenArticleIds, setSeenArticleIds] = useState(() => getSeenArticleIds());
   const seenRef = useRef(seenArticleIds);
   seenRef.current = seenArticleIds;
 
@@ -455,13 +455,15 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       const newMode = e.detail?.mode || getAppMode();
       setAppMode(newMode);
       setSessionRefTime(getSessionRefTime());
-      seenRef.current.clear();
-      setSeenArticleIds(new Set());
+      const freshSeen = getSeenArticleIds();
+      seenRef.current = freshSeen;
+      setSeenArticleIds(freshSeen);
     };
     const handleSessionRef = (e) => {
       setSessionRefTime(e.detail?.refTime || getSessionRefTime());
-      seenRef.current.clear();
-      setSeenArticleIds(new Set());
+      const freshSeen = getSeenArticleIds();
+      seenRef.current = freshSeen;
+      setSeenArticleIds(freshSeen);
     };
     window.addEventListener('appModeChanged', handleAppMode);
     window.addEventListener('sessionRefChanged', handleSessionRef);
@@ -589,13 +591,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   // Aktiv layout beroende på om vi visar på mobil eller större skärm
   const activeFlowLayout = isMobileScreen ? flowLayoutMobile : flowLayoutDesktop;
 
-  // Nollställ artiklar omedelbart vid byte av aktivt flöde så att föregående flödes artiklar inte ligger kvar
+  // Nollställ artiklar omedelbart vid byte av aktivt flöde eller prio-läge så att föregående artiklar inte ligger kvar
   useEffect(() => {
     setDisplayedFeeds([]);
     setAllFeeds([]);
     setPage(1);
     setLoading(true);
-  }, [feedId]);
+  }, [feedId, isPrioMode]);
 
   // Filtrera bort lästa artiklar om användaren inte valt att visa lästa (showRead = false)
   // Samt strikt isolering till det aktiva flödet om ett specifikt flöde är valt (feedId)
@@ -620,32 +622,31 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     });
   }, [displayedFeeds, feedId, appMode, showRead, showLikedOnly, showLockedOnly, showDislikedOnly, isArticleRead]);
 
-  // Seen on scroll (Alternativ 1): Spåra artiklar som visas/scrollas förbi under sessionen
+  // Seen on scroll (Alternativ 1): Spåra artiklar som scrollats förbi under sessionen
   useEffect(() => {
     if (appMode !== 'omni' || !sessionRefTime) return;
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        // Om sessionsavdelaren ("Tidigare artiklar") blir synlig har alla nya artiklar passerats
-        if (entry.target.getAttribute('data-session-divider') === 'true') {
-          if (entry.isIntersecting) {
-            resetSessionRef();
-          }
-          return;
-        }
+        // En artikel anses passerad/sedd först när användaren har scrollat förbi den uppåt
+        // (den är inte längre i viewporten och dess botten har passerat förbi toppen av skärmen)
+        const isPassedAbove = !entry.isIntersecting && entry.boundingClientRect.bottom < 120;
 
-        if (entry.isIntersecting) {
+        if (isPassedAbove) {
           const artIdStr = entry.target.getAttribute('data-article-id');
           const feedIdStr = entry.target.getAttribute('data-feed-id');
+          const isPrioStr = entry.target.getAttribute('data-is-prio');
           const artId = artIdStr ? parseInt(artIdStr, 10) : null;
           const feedId = feedIdStr ? parseInt(feedIdStr, 10) : null;
+          const isPrio = isPrioStr === 'true';
 
           if (artId && !seenRef.current.has(artId)) {
+            addSeenArticleId(artId);
             seenRef.current.add(artId);
             setSeenArticleIds(new Set(seenRef.current));
 
             window.dispatchEvent(new CustomEvent('articleSeenInSession', {
-              detail: { articleId: artId, feedId: feedId }
+              detail: { articleId: artId, feedId: feedId, isPrio: isPrio }
             }));
 
             observer.unobserve(entry.target);
@@ -654,17 +655,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       });
     }, {
       root: null,
-      rootMargin: '0px 0px -10% 0px',
-      threshold: 0.25
+      threshold: [0, 0.1]
     });
 
     const targets = document.querySelectorAll('[data-new-article="true"]');
     targets.forEach(el => observer.observe(el));
-
-    const dividerEl = document.querySelector('[data-session-divider="true"]');
-    if (dividerEl) {
-      observer.observe(dividerEl);
-    }
 
     return () => {
       observer.disconnect();
@@ -1826,12 +1821,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           {(() => {
             const hasNewerArticles = visibleFeeds.some(it => {
               const ts = appMode === 'omni' ? (it.received_ts || it.published_ts || 0) : (it.published_ts || it.received_ts || 0);
-              return ts >= sessionRefTime;
+              return ts >= (sessionRefTime - 60);
             });
             const firstOlderIndex = (appMode === 'omni' && sessionRefTime > 0 && hasNewerArticles)
               ? visibleFeeds.findIndex(it => {
                   const ts = appMode === 'omni' ? (it.received_ts || it.published_ts || 0) : (it.published_ts || it.received_ts || 0);
-                  return ts < sessionRefTime;
+                  return ts < (sessionRefTime - 60);
                 })
               : -1;
 
@@ -1851,9 +1846,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               const isNewSinceLastVisit = Boolean(
                 appMode === 'omni' && 
                 sessionRefTime > 0 && 
-                itemEffectiveTs >= sessionRefTime && 
+                itemEffectiveTs >= (sessionRefTime - 60) && 
                 !seenArticleIds.has(item.id)
               );
+              const isPrioItem = Boolean(item.priority === 'high' || (item.prio_score || 0) >= 75);
               const showTimelineDivider = Boolean(firstOlderIndex !== -1 && index === firstOlderIndex);
 
               const sessionDivider = showTimelineDivider ? (
@@ -1896,6 +1892,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       itemId={item.id}
                       data-article-id={item.id}
                       data-feed-id={item.feed_id}
+                      data-is-prio={isPrioItem ? "true" : undefined}
                       data-new-article={isNewSinceLastVisit ? "true" : undefined}
                       isRead={isReadNow}
                       swipeEnabled={effectiveSwipeEnabled}
@@ -1904,6 +1901,14 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       onExpand={() => {
                         const itemKey = item.id !== undefined ? item.id : index;
                         setExpandedItems(prev => ({ ...prev, [itemKey]: !prev[itemKey] }));
+                        if (isNewSinceLastVisit && !seenRef.current.has(item.id)) {
+                          addSeenArticleId(item.id);
+                          seenRef.current.add(item.id);
+                          setSeenArticleIds(new Set(seenRef.current));
+                          window.dispatchEvent(new CustomEvent('articleSeenInSession', {
+                            detail: { articleId: item.id, feedId: item.feed_id, isPrio: isPrioItem }
+                          }));
+                        }
                       }}
                       className={`feed-card feed-card-ultracompact ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                     >
@@ -2182,12 +2187,23 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     itemId={item.id}
                     data-article-id={item.id}
                     data-feed-id={item.feed_id}
+                    data-is-prio={isPrioItem ? "true" : undefined}
                     data-new-article={isNewSinceLastVisit ? "true" : undefined}
                     isRead={isReadNow}
                     swipeEnabled={effectiveSwipeEnabled}
                     onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
                   onMarkAsUnread={() => markAsUnread(item.id, item.cluster_id, item.similar_articles)}
-                  onExpand={() => handleExpand(index, item.link, item.id)}
+                  onExpand={() => {
+                    handleExpand(index, item.link, item.id);
+                    if (isNewSinceLastVisit && !seenRef.current.has(item.id)) {
+                      addSeenArticleId(item.id);
+                      seenRef.current.add(item.id);
+                      setSeenArticleIds(new Set(seenRef.current));
+                      window.dispatchEvent(new CustomEvent('articleSeenInSession', {
+                        detail: { articleId: item.id, feedId: item.feed_id, isPrio: isPrioItem }
+                      }));
+                    }
+                  }}
                   className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                   style={{ 
                     filter: 'none', 
