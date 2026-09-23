@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.17',
+    date: '2026-09-23',
+    title: 'Statistikpanel i inställningar, nattlig purge-notis och tidslinjering',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Ny flik för Statistik & Insikter',
+        description: 'Översikt med KPI-kort, dagligt artikelflöde senaste 14–30 dagarna med prioritetsfärgkodning, dygnsrytm (24h), kategoriandelar och mest aktiva källor.'
+      },
+      {
+        type: 'feature',
+        title: 'Nattlig purge-notis till administratör',
+        description: 'Automatisk web-push-notis till administratören kl. 03:00 som rapporterar resultat från schemalagd rensning, frigjort utrymme och aktuell databasstatus.'
+      },
+      {
+        type: 'fix',
+        title: 'Sammansatt rad för tidsstämpel i ultrakompakt läge',
+        description: 'Källnamnet, avgränsaren och tidsangivelsen hålls nu strikt ihop på samma rad med mjuk trunkering på smala mobilskärmar så att tiden inte knuffas ner.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.16',
     date: '2026-09-23',
     title: 'Standardiserad och kolumnanpassad loggformatering i backend',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

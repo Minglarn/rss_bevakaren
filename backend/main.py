@@ -1415,6 +1415,35 @@ async def scheduled_purge_loop():
                         db.commit()
                         total_deleted += count
                 print(f"[PURGE] Nattlig schemalagd rensning slutförd. Raderade {total_deleted} gamla olåsta artiklar.", flush=True)
+
+                # Skicka nattlig purge-notis till administratörer (Exempel 1)
+                try:
+                    total_preserved = db.query(models.Article).count()
+                    db_size_mb = 0.0
+                    for p in ["/data/rss.db", "backend/rss.db", "rss.db"]:
+                        if os.path.exists(p):
+                            db_size_mb = os.path.getsize(p) / (1024 * 1024)
+                            break
+                    
+                    if total_deleted > 0:
+                        notify_title = "Nattlig databasrensning slutförd"
+                        notify_body = f"{total_deleted} gamla olåsta artiklar raderades. Databas: {db_size_mb:.1f} MB ({total_preserved} artiklar bevarade)."
+                    else:
+                        notify_title = "Nattlig databasrensning slutförd"
+                        notify_body = f"Databasen är ren och uppdaterad. 0 artiklar behövde raderas (totalt {total_preserved} artiklar)."
+                    
+                    admin_users = db.query(models.User).filter(models.User.is_admin == 1).all()
+                    for admin in admin_users:
+                        send_push_notification_to_user(
+                            db=db,
+                            user_id=admin.id,
+                            title=notify_title,
+                            body=notify_body,
+                            url="/settings?tab=database",
+                            context="PURGE"
+                        )
+                except Exception as notify_err:
+                    print(f"[PURGE] Kunde inte skicka administratörsnotis om nattlig rensning: {notify_err}", flush=True)
             finally:
                 db.close()
                 
@@ -2232,8 +2261,8 @@ async def ai_processing_loop():
                                     should_send_push = False
 
                             if should_send_push and user_id:
-                                cb_prefix = "⚠ " if is_clickbait else ""
-                                if cb_prefix and not push_title.startswith("⚠"):
+                                cb_prefix = "[ClickBait] " if is_clickbait else ""
+                                if cb_prefix and not push_title.startswith("[ClickBait]"):
                                     push_title = f"{cb_prefix}{push_title}"
 
                                 chosen_summary = (ai_short_summary if item.get("push_summary_type") == "short" and ai_short_summary else ai_summary) or ai_short_summary
@@ -4646,6 +4675,212 @@ def get_source_analytics(db: Session = Depends(database.get_db), current_user: m
                 "total_unique_tags": 0,
                 "tagged_articles_count": 0
             }
+        }
+
+@app.get("/stats/overview")
+@app.get("/api/stats/overview")
+def get_stats_overview(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """
+    Returnerar aggregerad statistik och analysdata för den dedikerade statistikfliken i inställningar:
+    - Nyckeltal (totalt, idag, denna vecka, denna månad, lästa, sparade, ClickBait)
+    - 14-dagars inflödestrend med prioritetsfördelning
+    - 24-timmars dygnsrytm
+    - AI-ämneskategorier
+    - Toppkällor
+    """
+    try:
+        now = datetime.now()
+        now_ts = int(now.timestamp())
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start_ts = int(today_start.timestamp())
+        week_start_ts = now_ts - (7 * 86400)
+        month_start_ts = now_ts - (30 * 86400)
+
+        user_feeds = db.query(models.Feed).filter(models.Feed.user_id == current_user.id).all()
+        user_feed_ids = [f.id for f in user_feeds]
+
+        if not user_feed_ids and current_user.is_admin:
+            all_feeds = db.query(models.Feed).all()
+            user_feed_ids = [f.id for f in all_feeds]
+
+        if not user_feed_ids:
+            return {
+                "kpi": {
+                    "total_articles": 0,
+                    "articles_today": 0,
+                    "articles_week": 0,
+                    "articles_month": 0,
+                    "prio_count": 0,
+                    "prio_pct": 0.0,
+                    "clickbait_count": 0,
+                    "clickbait_pct": 0.0,
+                    "read_count": 0,
+                    "read_pct": 0.0,
+                    "locked_count": 0,
+                    "avg_ai_duration_s": 0.0
+                },
+                "daily_trend": [],
+                "hourly_distribution": [0] * 24,
+                "priority_distribution": {"high": 0, "medium": 0, "low": 0},
+                "top_categories": [],
+                "top_sources": []
+            }
+
+        base_query = db.query(models.Article).filter(models.Article.feed_id.in_(user_feed_ids))
+        total_articles = base_query.count()
+        articles_today = base_query.filter(models.Article.received_ts >= today_start_ts).count()
+        articles_week = base_query.filter(models.Article.received_ts >= week_start_ts).count()
+        articles_month = base_query.filter(models.Article.received_ts >= month_start_ts).count()
+
+        prio_count = base_query.filter(or_(models.Article.priority == 'high', models.Article.prio_score >= 75)).count()
+        med_count = base_query.filter(and_(
+            models.Article.priority != 'high',
+            or_(models.Article.priority == 'medium', and_(models.Article.prio_score >= 40, models.Article.prio_score < 75))
+        )).count()
+        low_count = max(0, total_articles - prio_count - med_count)
+
+        read_count = base_query.filter(models.Article.is_read == 1).count()
+        locked_count = base_query.filter(models.Article.is_locked == 1).count()
+        clickbait_count = base_query.filter(models.Article.is_clickbait == 1).count()
+
+        avg_ai = db.query(func.avg(models.Article.ai_duration_s)).filter(
+            models.Article.feed_id.in_(user_feed_ids),
+            models.Article.ai_duration_s > 0
+        ).scalar() or 0.0
+
+        # Daglig trend för de senaste 14 dagarna
+        daily_trend = []
+        swedish_months = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
+        for i in range(13, -1, -1):
+            day_date = (now - timedelta(days=i)).date()
+            day_start_ts = int(datetime(day_date.year, day_date.month, day_date.day, 0, 0, 0).timestamp())
+            day_end_ts = day_start_ts + 86400
+
+            day_stats = db.query(
+                func.count(models.Article.id).label("total"),
+                func.sum(case((or_(models.Article.priority == 'high', models.Article.prio_score >= 75), 1), else_=0)).label("high"),
+                func.sum(case((and_(models.Article.priority != 'high', or_(models.Article.priority == 'medium', and_(models.Article.prio_score >= 40, models.Article.prio_score < 75))), 1), else_=0)).label("medium")
+            ).filter(
+                models.Article.feed_id.in_(user_feed_ids),
+                models.Article.received_ts >= day_start_ts,
+                models.Article.received_ts < day_end_ts
+            ).first()
+
+            tot = day_stats.total or 0
+            hi = day_stats.high or 0
+            md = day_stats.medium or 0
+            lo = max(0, tot - hi - md)
+
+            daily_trend.append({
+                "date": day_date.strftime("%Y-%m-%d"),
+                "label": f"{day_date.day} {swedish_months[day_date.month - 1]}",
+                "total": tot,
+                "high": hi,
+                "medium": md,
+                "low": lo
+            })
+
+        # Dygnsrytm (fördelning per timme 00-23 över senaste 7 dagarna)
+        hourly_distribution = [0] * 24
+        recent_ts = db.query(models.Article.received_ts).filter(
+            models.Article.feed_id.in_(user_feed_ids),
+            models.Article.received_ts >= week_start_ts
+        ).all()
+        for (r_ts,) in recent_ts:
+            if r_ts:
+                try:
+                    dt = datetime.fromtimestamp(r_ts)
+                    hourly_distribution[dt.hour] += 1
+                except Exception:
+                    pass
+
+        # Topp AI-kategorier
+        cat_rows = db.query(
+            models.Article.category,
+            func.count(models.Article.id).label("cnt")
+        ).filter(
+            models.Article.feed_id.in_(user_feed_ids),
+            models.Article.category.isnot(None),
+            models.Article.category != ""
+        ).group_by(models.Article.category).order_by(desc("cnt")).limit(6).all()
+
+        top_categories = []
+        for cat_name, cnt in cat_rows:
+            pct = round((cnt / total_articles * 100), 1) if total_articles > 0 else 0.0
+            top_categories.append({
+                "name": cat_name,
+                "count": cnt,
+                "pct": pct
+            })
+
+        # Topp 5 källor
+        source_stats = []
+        for f in user_feeds:
+            f_stat = db.query(
+                func.count(models.Article.id).label("total"),
+                func.sum(case((or_(models.Article.priority == 'high', models.Article.prio_score >= 75), 1), else_=0)).label("high")
+            ).filter(models.Article.feed_id == f.id).first()
+            f_tot = f_stat.total or 0
+            f_hi = f_stat.high or 0
+            if f_tot > 0:
+                source_stats.append({
+                    "feed_id": f.id,
+                    "title": f.title or "Namnlöst flöde",
+                    "icon_url": f.icon_url or "",
+                    "total": f_tot,
+                    "high": f_hi,
+                    "high_pct": round((f_hi / f_tot * 100), 1)
+                })
+        source_stats.sort(key=lambda s: s["total"], reverse=True)
+        top_sources = source_stats[:5]
+
+        return {
+            "kpi": {
+                "total_articles": total_articles,
+                "articles_today": articles_today,
+                "articles_week": articles_week,
+                "articles_month": articles_month,
+                "prio_count": prio_count,
+                "prio_pct": round((prio_count / total_articles * 100), 1) if total_articles > 0 else 0.0,
+                "clickbait_count": clickbait_count,
+                "clickbait_pct": round((clickbait_count / total_articles * 100), 1) if total_articles > 0 else 0.0,
+                "read_count": read_count,
+                "read_pct": round((read_count / total_articles * 100), 1) if total_articles > 0 else 0.0,
+                "locked_count": locked_count,
+                "avg_ai_duration_s": round(float(avg_ai), 2)
+            },
+            "daily_trend": daily_trend,
+            "hourly_distribution": hourly_distribution,
+            "priority_distribution": {
+                "high": prio_count,
+                "medium": med_count,
+                "low": low_count
+            },
+            "top_categories": top_categories,
+            "top_sources": top_sources
+        }
+    except Exception as e:
+        print(f"[STATS] Fel vid hämtning av statistiköversikt: {e}", flush=True)
+        return {
+            "kpi": {
+                "total_articles": 0,
+                "articles_today": 0,
+                "articles_week": 0,
+                "articles_month": 0,
+                "prio_count": 0,
+                "prio_pct": 0.0,
+                "clickbait_count": 0,
+                "clickbait_pct": 0.0,
+                "read_count": 0,
+                "read_pct": 0.0,
+                "locked_count": 0,
+                "avg_ai_duration_s": 0.0
+            },
+            "daily_trend": [],
+            "hourly_distribution": [0] * 24,
+            "priority_distribution": {"high": 0, "medium": 0, "low": 0},
+            "top_categories": [],
+            "top_sources": []
         }
 
 @app.post("/articles/{article_id}/read")

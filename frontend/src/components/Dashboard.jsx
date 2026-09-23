@@ -2137,12 +2137,16 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
                             <div className="feed-card-ultracompact-meta">
                               {item.source_title && (
-                                <span style={{ fontWeight: 600, color: 'var(--text-main)', opacity: 0.85 }}>
+                                <span style={{ fontWeight: 600, color: 'var(--text-main)', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flexShrink: 1 }}>
                                   {decodeHtmlEntities(item.source_title)}
                                 </span>
                               )}
-                              {item.source_title && relTime && <span>·</span>}
-                              {relTime && <span>{relTime}</span>}
+                              {relTime && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  {item.source_title && <span style={{ opacity: 0.6 }}>·</span>}
+                                  <span>{relTime}</span>
+                                </span>
+                              )}
 
                             {isClickbait && (
                               <span style={{
