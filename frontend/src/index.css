@@ -870,7 +870,7 @@ select:focus, input:focus {
   --primary-hover: #60a5fa;
 }
 
-.theme-dark .sidebar, .theme-dark .mobile-top-bar, .theme-dark .mobile-bottom-bar {
+.theme-dark .sidebar, .theme-dark .mobile-top-bar {
   background: rgba(30, 41, 59, 0.85);
 }
 
@@ -1134,15 +1134,25 @@ select:focus, input:focus {
     left: 0;
     right: 0;
     height: 65px;
-    background: var(--bg-card);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     border-top: 1px solid var(--border-color);
     z-index: 9000;
     justify-content: space-around;
     align-items: center;
     padding: 0 0.5rem;
-    box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.06);
+  }
+
+  .theme-dark .mobile-bottom-bar {
+    background-color: #1e293b !important;
+    background: #1e293b !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.3);
   }
   
   .bottom-bar-item {

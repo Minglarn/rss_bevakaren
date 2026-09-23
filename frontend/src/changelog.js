@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.13',
+    date: '2026-09-23',
+    title: 'Solid och ogenomskinlig bakgrund i bottenbaren',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Helt opak och solid bottenbar',
+        description: 'Ersatt halvtransparent bakgrund och suddfilter (blur) med 100 % solid bakgrund i mobilens bottenbar (vitt i ljust läge och skiffergrått i mörkt läge). Text och bilder från bakomliggande artiklar lyser inte längre igenom vid scrollning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.12',
     date: '2026-09-23',
     title: 'Avlägsnad indikatorlinje i bottenbaren',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
