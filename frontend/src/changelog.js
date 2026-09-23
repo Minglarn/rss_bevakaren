@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.04',
+    date: '2026-09-23',
+    title: 'Återställda och mörkare avdelare i artikelflödet',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Återställda avdelare i flödet',
+        description: 'Säkerställt att kortbehållaren alltid bevaras intakt oavsett om svepgester är aktiverade eller inte, så att avgränsningslinjerna mellan artiklar aldrig faller bort.'
+      },
+      {
+        type: 'improvement',
+        title: 'Starkare och mörkare kontrast',
+        description: 'Avdelarna mellan artiklarna i ultrakompakt läge och datumavgränsarna har uppdaterats med en betydligt mörkare och skarpare kontrastfärg för tydlig och ren visuell separation.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.03',
     date: '2026-09-23',
     title: 'Åtgärd för artikelvisning och inaktiverade svepgester i Omni-läge',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

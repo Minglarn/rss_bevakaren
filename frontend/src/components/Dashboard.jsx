@@ -128,11 +128,20 @@ const SwipeableArticleCard = ({
   if (!swipeEnabled) {
     return (
       <div 
-        className={className}
-        style={style}
-        onClick={handleClick}
+        className="feed-card-swipe-container"
+        style={{
+          position: 'relative',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}
       >
-        {children}
+        <div 
+          className={className}
+          style={style}
+          onClick={handleClick}
+        >
+          {children}
+        </div>
       </div>
     );
   }
@@ -3196,7 +3205,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         <Calendar size={13} style={{ color: 'var(--primary)', opacity: 0.9 }} />
                         <span>{group.dateLabel}</span>
                       </div>
-                      <div style={{ flex: 1, height: '1px', background: 'var(--border-color)', opacity: 0.7 }}></div>
+                      <div style={{ flex: 1, height: '2px', background: '#94a3b8', opacity: 0.55 }}></div>
                     </div>
                   )}
 
