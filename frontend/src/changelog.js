@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.20',
+    date: '2026-09-23',
+    title: 'Modern och animerad laddningsupplevelse för nyhetsflödet',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Animerad och elegant laddningsvy',
+        description: 'Ersatte den tidigare enkla texten "Laddar nyheter..." med ett modernt, centrerat laddningskort med pulserande ikon, dynamisk shimmer-progressbar, animerade steg och studsande punkter för "Snart klar...".'
+      },
+      {
+        type: 'feature',
+        title: 'Förhandsvisning med pulserande artikel-skelett',
+        description: 'Lade till eleganta skeleton-kort som pulserar i takt medan nyheter hämtas och analyseras, vilket ger en omedelbar och professionell känsla vid uppstart och byte av vyer.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.19',
     date: '2026-09-23',
     title: 'Justering av ultrakompakta avstånd och robust paginering',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import ShareModal from './ShareModal';
 import OnboardingWizard from './OnboardingWizard';
 import AIReasoningModal from './AIReasoningModal';
+import DashboardLoading from './DashboardLoading';
 import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
 import { useFeeds } from '../App';
 import { getAppMode, getSessionRefTime, resetSessionRef } from '../utils/sessionTracker';
@@ -2032,7 +2033,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
           </Link>
         </div>
       ) : loading && allFeeds.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)' }}>Laddar nyheter...</p>
+        <DashboardLoading activeFlowLayout={activeFlowLayout} />
       ) : visibleFeeds.length === 0 ? (
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', textAlign: 'center' }}>
           <p style={{ color: 'var(--text-muted)' }}>
