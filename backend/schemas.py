@@ -57,6 +57,7 @@ class FeedResponse(FeedBase):
     id: int
     user_id: int
     unread_count: int = 0
+    new_count: int = 0
 
     class Config:
         from_attributes = True

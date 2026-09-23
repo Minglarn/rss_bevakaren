@@ -14,6 +14,7 @@ import WhatsNewModal from './components/WhatsNewModal';
 import api, { isTokenExpired, shouldRefreshToken } from './api';
 import { autoSyncPushSubscription } from './utils/notifications';
 import { resolveFeedIcon } from './utils/textUtils';
+import { getAppMode, getSessionRefTime, initSessionTracker, touchSession } from './utils/sessionTracker';
 import packageJson from '../package.json';
 import './App.css';
 import './index.css';
@@ -36,10 +37,33 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
   const [prioUnreadCount, setPrioUnreadCount] = useState(0);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   const [pollingFeeds, setPollingFeeds] = useState(new Set());
+  const [appMode, setAppMode] = useState(() => getAppMode());
+
+  // Initiera sessionsspårning och löpande aktivitetshjärtslag
+  useEffect(() => {
+    initSessionTracker();
+    const interval = setInterval(() => {
+      touchSession();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Lyssna på ändringar i applikationsläge (Omni vs Klassisk)
+  useEffect(() => {
+    const handleAppMode = (e) => {
+      const newMode = e.detail?.mode || getAppMode();
+      setAppMode(newMode);
+    };
+    window.addEventListener('appModeChanged', handleAppMode);
+    return () => window.removeEventListener('appModeChanged', handleAppMode);
+  }, []);
 
   const fetchMyFeeds = async () => {
     try {
-      const res = await api.get('/feeds');
+      const mode = getAppMode();
+      const refTime = getSessionRefTime();
+      const url = (mode === 'omni' && refTime > 0) ? `/feeds?since=${refTime}` : '/feeds';
+      const res = await api.get(url);
       const sortedFeeds = res.data.sort((a, b) => a.title.localeCompare(b.title, 'sv'));
       setMyFeeds(sortedFeeds);
       myFeedsRef.current = sortedFeeds;
@@ -47,6 +71,10 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
       console.error("Could not fetch feeds for the sidebar", err);
     }
   };
+
+  useEffect(() => {
+    fetchMyFeeds();
+  }, [appMode]);
 
   const fetchPrioUnread = async () => {
     try {
@@ -384,18 +412,36 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
             fontSize: '0.86rem'
           }}>
             <Rss size={17} /> {!isCollapsed && "Nyhetsflöde"}
-            {!isCollapsed && myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
-              <span style={{ 
-                marginLeft: 'auto', 
-                backgroundColor: '#ef4444', 
-                color: 'white', 
-                fontSize: '0.65rem', 
-                padding: '0.06rem 0.38rem', 
-                borderRadius: '10px', 
-                fontWeight: 'bold' 
-              }}>
-                {myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}
-              </span>
+            {!isCollapsed && (
+              appMode === 'omni' ? (
+                myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0) > 0 && (
+                  <span style={{ 
+                    marginLeft: 'auto', 
+                    backgroundColor: 'var(--primary)', 
+                    color: 'white', 
+                    fontSize: '0.65rem', 
+                    padding: '0.06rem 0.38rem', 
+                    borderRadius: '10px', 
+                    fontWeight: 'bold' 
+                  }}>
+                    +{myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0)}
+                  </span>
+                )
+              ) : (
+                myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
+                  <span style={{ 
+                    marginLeft: 'auto', 
+                    backgroundColor: '#ef4444', 
+                    color: 'white', 
+                    fontSize: '0.65rem', 
+                    padding: '0.06rem 0.38rem', 
+                    borderRadius: '10px', 
+                    fontWeight: 'bold' 
+                  }}>
+                    {myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}
+                  </span>
+                )
+              )
             )}
           </Link>
           {prioEnabled && (
@@ -510,18 +556,36 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
                       {feed.title}
                       {pollingFeeds.has(feed.id) && <RefreshCw size={10} className="spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />}
                     </span>
-                    {!isCollapsed && feed.unread_count > 0 && (
-                      <span style={{ 
-                        backgroundColor: '#ef4444', 
-                        color: 'white', 
-                        fontSize: '0.64rem', 
-                        padding: '0.04rem 0.35rem', 
-                        borderRadius: '10px', 
-                        fontWeight: 'bold',
-                        marginLeft: 'auto'
-                      }}>
-                        {feed.unread_count}
-                      </span>
+                    {!isCollapsed && (
+                      appMode === 'omni' ? (
+                        (feed.new_count || 0) > 0 && (
+                          <span style={{ 
+                            backgroundColor: 'var(--primary)', 
+                            color: 'white', 
+                            fontSize: '0.64rem', 
+                            padding: '0.04rem 0.35rem', 
+                            borderRadius: '10px', 
+                            fontWeight: 'bold',
+                            marginLeft: 'auto'
+                          }}>
+                            +{feed.new_count}
+                          </span>
+                        )
+                      ) : (
+                        (feed.unread_count || 0) > 0 && (
+                          <span style={{ 
+                            backgroundColor: '#ef4444', 
+                            color: 'white', 
+                            fontSize: '0.64rem', 
+                            padding: '0.04rem 0.35rem', 
+                            borderRadius: '10px', 
+                            fontWeight: 'bold',
+                            marginLeft: 'auto'
+                          }}>
+                            {feed.unread_count}
+                          </span>
+                        )
+                      )
                     )}
                   </Link>
                   );
@@ -559,8 +623,18 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
         <Link to="/" className={`bottom-bar-item ${location.pathname === '/' && !location.search.includes('feedId') ? 'active' : ''}`} onClick={() => setIsMobileSheetOpen(false)}>
           <div className="icon-wrapper">
             <Home size={22} />
-            {myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
-              <span className="bottom-bar-badge">{myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}</span>
+            {appMode === 'omni' ? (
+              myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0) > 0 && (
+                <span className="bottom-bar-badge" style={{ backgroundColor: 'var(--primary)' }}>
+                  +{myFeeds.reduce((acc, f) => acc + (f.new_count || 0), 0)}
+                </span>
+              )
+            ) : (
+              myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0) > 0 && (
+                <span className="bottom-bar-badge">
+                  {myFeeds.reduce((acc, f) => acc + (f.unread_count || 0), 0)}
+                </span>
+              )
             )}
           </div>
           <span>HEM</span>
@@ -710,10 +784,18 @@ const AppLayout = ({ children, onLogout, prioEnabled }) => {
                 {feed.title}
                 {pollingFeeds.has(feed.id) && <RefreshCw size={14} className="spin" style={{ color: 'var(--accent)', flexShrink: 0 }} />}
               </span>
-              {feed.unread_count > 0 && (
-                <span style={{ backgroundColor: '#ef4444', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold' }}>
-                  {feed.unread_count}
-                </span>
+              {appMode === 'omni' ? (
+                (feed.new_count || 0) > 0 && (
+                  <span style={{ backgroundColor: 'var(--primary)', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold' }}>
+                    +{feed.new_count}
+                  </span>
+                )
+              ) : (
+                (feed.unread_count || 0) > 0 && (
+                  <span style={{ backgroundColor: '#ef4444', color: 'white', fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', fontWeight: 'bold' }}>
+                    {feed.unread_count}
+                  </span>
+                )
               )}
             </Link>
           ))}

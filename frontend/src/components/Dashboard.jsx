@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
-import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText, Smartphone, Calendar, ThumbsUp, ThumbsDown, Info, Clock } from 'lucide-react';
+import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Bookmark, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText, Smartphone, Calendar, ThumbsUp, ThumbsDown, Info, Clock } from 'lucide-react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
@@ -9,6 +9,7 @@ import OnboardingWizard from './OnboardingWizard';
 import AIReasoningModal from './AIReasoningModal';
 import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
 import { useFeeds } from '../App';
+import { getAppMode, getSessionRefTime } from '../utils/sessionTracker';
 
 const DEFAULT_CATEGORIES = ['All', 'Technology', 'Politics', 'Emergency', 'Local', 'Economy', 'Entertainment', 'Other'];
 
@@ -431,6 +432,19 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
   const longPressTimers = useRef({});
   const isDraggingCard = useRef(false);
+  const [appMode, setAppMode] = useState(() => getAppMode());
+  const [sessionRefTime, setSessionRefTime] = useState(() => getSessionRefTime());
+
+  useEffect(() => {
+    const handleAppMode = (e) => {
+      const newMode = e.detail?.mode || getAppMode();
+      setAppMode(newMode);
+      setSessionRefTime(getSessionRefTime());
+    };
+    window.addEventListener('appModeChanged', handleAppMode);
+    return () => window.removeEventListener('appModeChanged', handleAppMode);
+  }, []);
+
   const [showRead, setShowRead] = useState(() => {
     return localStorage.getItem('rss_show_read') === 'true';
   });
@@ -561,7 +575,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     if (feedId) {
       list = list.filter(item => String(item.feed_id) === String(feedId));
     }
-    if (!showRead && !showLikedOnly && !showLockedOnly && !showDislikedOnly) {
+    if (appMode === 'classic' && !showRead && !showLikedOnly && !showLockedOnly && !showDislikedOnly) {
       list = list.filter(item => !isArticleRead(item.id, item.is_read));
     }
     return [...list].sort((a, b) => {
@@ -572,7 +586,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       }
       return (b.id || 0) - (a.id || 0);
     });
-  }, [displayedFeeds, feedId, showRead, showLikedOnly, showLockedOnly, showDislikedOnly, isArticleRead]);
+  }, [displayedFeeds, feedId, appMode, showRead, showLikedOnly, showLockedOnly, showDislikedOnly, isArticleRead]);
 
   // Gruppera artiklar per dag med strikt datumdeduplicering och kronologisk sortering
   const dayGroups = useMemo(() => {
@@ -1283,10 +1297,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               transition: 'all 0.2s',
               height: '36px'
             }}
-            title={showLockedOnly ? "Visa alla artiklar i flödet" : "Visa endast sparade och låsta artiklar"}
+            title={showLockedOnly ? "Visa alla artiklar i flödet" : (appMode === 'omni' ? "Visa endast sparade artiklar" : "Visa endast sparade och låsta artiklar")}
           >
-            <Lock size={16} />
-            <span className="desktop-only">{showLockedOnly ? "Alla artiklar" : "Låsta"}</span>
+            {appMode === 'omni' ? <Bookmark size={16} /> : <Lock size={16} />}
+            <span className="desktop-only">{showLockedOnly ? "Alla artiklar" : (appMode === 'omni' ? "Sparade" : "Låsta")}</span>
           </button>
           <button
             onClick={() => {
@@ -1344,58 +1358,62 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
             <ThumbsDown size={16} />
             <span className="desktop-only">{showDislikedOnly ? "Alla artiklar" : "Ogillade"}</span>
           </button>
-          <button
-            onClick={() => setShowRead(!showRead)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '6px 12px',
-              border: '1px solid var(--border-color)',
-              backgroundColor: showRead ? 'var(--primary)' : 'var(--bg-card)',
-              color: showRead ? 'white' : 'var(--text-muted)',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              transition: 'all 0.2s',
-              height: '36px'
-            }}
-            title={showRead ? "Dölj lästa artiklar" : "Visa lästa artiklar"}
-          >
-            {showRead ? <EyeOff size={16} /> : <Eye size={16} />}
-            <span className="desktop-only">{showRead ? "Dölj lästa" : "Visa lästa"}</span>
-          </button>
-          <button
-            onClick={markAllAsRead}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '6px 12px',
-              border: '1px solid var(--border-color)',
-              backgroundColor: 'var(--bg-card)',
-              color: 'var(--text-muted)',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              transition: 'all 0.2s',
-              height: '36px'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--primary)';
-              e.currentTarget.style.borderColor = 'var(--primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--text-muted)';
-              e.currentTarget.style.borderColor = 'var(--border-color)';
-            }}
-            title="Markera alla aktuella artiklar som lästa"
-          >
-            <CheckCheck size={16} />
-            <span className="desktop-only">Markera alla som lästa</span>
-          </button>
+          {appMode === 'classic' && (
+            <>
+              <button
+                onClick={() => setShowRead(!showRead)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '6px 12px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: showRead ? 'var(--primary)' : 'var(--bg-card)',
+                  color: showRead ? 'white' : 'var(--text-muted)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  transition: 'all 0.2s',
+                  height: '36px'
+                }}
+                title={showRead ? "Dölj lästa artiklar" : "Visa lästa artiklar"}
+              >
+                {showRead ? <EyeOff size={16} /> : <Eye size={16} />}
+                <span className="desktop-only">{showRead ? "Dölj lästa" : "Visa lästa"}</span>
+              </button>
+              <button
+                onClick={markAllAsRead}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '6px 12px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-muted)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  transition: 'all 0.2s',
+                  height: '36px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--primary)';
+                  e.currentTarget.style.borderColor = 'var(--primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.borderColor = 'var(--border-color)';
+                }}
+                title="Markera alla aktuella artiklar som lästa"
+              >
+                <CheckCheck size={16} />
+                <span className="desktop-only">Markera alla som lästa</span>
+              </button>
+            </>
+          )}
           
           {/* Layout controls (desktop only) */}
           <div className="layout-controls desktop-only" style={{ gap: '4px', backgroundColor: 'var(--bg-app)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-color)', marginLeft: 'auto', height: '36px', display: 'flex', alignItems: 'center' }}>
@@ -1686,6 +1704,17 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       ) : (
         <div className="events-flow-wrapper">
           {(() => {
+            const hasNewerArticles = visibleFeeds.some(it => {
+              const ts = it.published_ts || (it.received_ts || 0);
+              return ts >= sessionRefTime;
+            });
+            const firstOlderIndex = (appMode === 'omni' && sessionRefTime > 0 && hasNewerArticles)
+              ? visibleFeeds.findIndex(it => {
+                  const ts = it.published_ts || (it.received_ts || 0);
+                  return ts < sessionRefTime;
+                })
+              : -1;
+
             const renderArticleCard = (item, index) => {
               const isItemExpanded = Boolean(expandedItems[item.id]);
               const isClickbait = Boolean(shouldShowAi && item.is_clickbait);
@@ -1696,6 +1725,34 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               const hasDistinctReceivedTime = recDate && Math.abs(recDate.getTime() - pubDate.getTime()) > 120000;
               const isReadNow = Boolean(isArticleRead(item.id, item.is_read));
               const currentVote = getArticleVote(item.id, item.user_vote);
+              const itemEffectiveTs = item.published_ts || (pubDate && !isNaN(pubDate.getTime()) ? Math.floor(pubDate.getTime() / 1000) : (item.received_ts || 0));
+              const isNewSinceLastVisit = Boolean(appMode === 'omni' && sessionRefTime > 0 && itemEffectiveTs >= sessionRefTime);
+              const showTimelineDivider = Boolean(firstOlderIndex !== -1 && index === firstOlderIndex);
+
+              const sessionDivider = showTimelineDivider ? (
+                <div
+                  key={`session-divider-${item.id}`}
+                  style={{
+                    gridColumn: '1 / -1',
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.65rem',
+                    margin: '1.25rem 0 1rem 0',
+                    padding: '0.6rem 1rem',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                    border: '1px dashed var(--primary)',
+                    color: 'var(--primary)',
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <Clock size={16} />
+                  <span>Tidigare artiklar (före ditt senaste besök)</span>
+                </div>
+              ) : null;
 
               // Ultrakompakt läge: extremt ren rad med rubrik, kort notissammanfattning och thumbnail
               if (activeFlowLayout === 'ultracompact') {
@@ -1703,40 +1760,57 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                 const relTime = formatRelativeTimeSwedish(pubDate);
 
                 return (
-                  <SwipeableArticleCard
-                    key={item.id}
-                    itemId={item.id}
-                    isRead={isReadNow}
-                    swipeEnabled={swipeEnabled}
-                    onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
-                    onMarkAsUnread={() => markAsUnread(item.id, item.cluster_id, item.similar_articles)}
-                    onExpand={() => {
-                      const itemKey = item.id !== undefined ? item.id : index;
-                      setExpandedItems(prev => ({ ...prev, [itemKey]: !prev[itemKey] }));
-                    }}
-                    className={`feed-card feed-card-ultracompact ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
-                  >
-                    <div style={{ width: '100%', boxSizing: 'border-box' }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', width: '100%' }}>
-                        <div className="feed-card-ultracompact-content" style={{ flex: '1 1 auto', minWidth: 0 }}>
-                          <h3 className="feed-card-ultracompact-title">
-                            {decodeHtmlEntities(item.title)}
-                          </h3>
+                  <React.Fragment key={item.id}>
+                    {sessionDivider}
+                    <SwipeableArticleCard
+                      key={item.id}
+                      itemId={item.id}
+                      isRead={isReadNow}
+                      swipeEnabled={swipeEnabled}
+                      onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
+                      onMarkAsUnread={() => markAsUnread(item.id, item.cluster_id, item.similar_articles)}
+                      onExpand={() => {
+                        const itemKey = item.id !== undefined ? item.id : index;
+                        setExpandedItems(prev => ({ ...prev, [itemKey]: !prev[itemKey] }));
+                      }}
+                      className={`feed-card feed-card-ultracompact ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
+                    >
+                      <div style={{ width: '100%', boxSizing: 'border-box' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', width: '100%' }}>
+                          <div className="feed-card-ultracompact-content" style={{ flex: '1 1 auto', minWidth: 0 }}>
+                            <h3 className="feed-card-ultracompact-title">
+                              {decodeHtmlEntities(item.title)}
+                            </h3>
 
-                          {shortSummary && (
-                            <div className="feed-card-ultracompact-desc">
-                              {shortSummary}
-                            </div>
-                          )}
-
-                          <div className="feed-card-ultracompact-meta">
-                            {item.source_title && (
-                              <span style={{ fontWeight: 600, color: 'var(--text-main)', opacity: 0.85 }}>
-                                {decodeHtmlEntities(item.source_title)}
-                              </span>
+                            {shortSummary && (
+                              <div className="feed-card-ultracompact-desc">
+                                {shortSummary}
+                              </div>
                             )}
-                            {item.source_title && relTime && <span>·</span>}
-                            {relTime && <span>{relTime}</span>}
+
+                            <div className="feed-card-ultracompact-meta">
+                              {item.source_title && (
+                                <span style={{ fontWeight: 600, color: 'var(--text-main)', opacity: 0.85 }}>
+                                  {decodeHtmlEntities(item.source_title)}
+                                </span>
+                              )}
+                              {item.source_title && relTime && <span>·</span>}
+                              {relTime && <span>{relTime}</span>}
+
+                              {isNewSinceLastVisit && (
+                                <span style={{
+                                  backgroundColor: 'var(--primary)',
+                                  color: '#ffffff',
+                                  padding: '0.1rem 0.4rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  letterSpacing: '0.5px',
+                                  marginLeft: '0.35rem'
+                                }}>
+                                  NY
+                                </span>
+                              )}
 
                             {isClickbait && (
                               <span style={{
@@ -1890,13 +1964,16 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       )}
                     </div>
                   </SwipeableArticleCard>
+                </React.Fragment>
                 );
               }
 
               return (
-                <SwipeableArticleCard
-                  key={item.id}
-                  itemId={item.id}
+                <React.Fragment key={item.id}>
+                  {sessionDivider}
+                  <SwipeableArticleCard
+                    key={item.id}
+                    itemId={item.id}
                   isRead={isReadNow}
                   swipeEnabled={swipeEnabled}
                   onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
@@ -1979,41 +2056,43 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         <ThumbsDown size={16} />
                       </button>
 
-                      {/* Read button */}
-                      {isArticleRead(item.id, item.is_read) ? (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); markAsUnread(item.id, item.cluster_id, item.similar_articles); }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                          title="Markera som oläst"
-                        >
-                          <EyeOff size={18} />
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); markAsRead(item.id, item.cluster_id, item.similar_articles); }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                          title="Markera som läst"
-                        >
-                          <Eye size={18} />
-                        </button>
+                      {/* Read button (endast i klassiskt läge) */}
+                      {appMode === 'classic' && (
+                        isArticleRead(item.id, item.is_read) ? (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); markAsUnread(item.id, item.cluster_id, item.similar_articles); }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                            title="Markera som oläst"
+                          >
+                            <EyeOff size={18} />
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); markAsRead(item.id, item.cluster_id, item.similar_articles); }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
+                            title="Markera som läst"
+                          >
+                            <Eye size={18} />
+                          </button>
+                        )
                       )}
 
-                      {/* Lock button */}
+                      {/* Lock / Spara button */}
                       {isArticleLocked(item.id, item.is_locked) ? (
                         <button 
                           onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                          title="Lås upp artikel (kan rensas automatiskt)"
+                          title={appMode === 'omni' ? "Ta bort sparad artikel" : "Lås upp artikel (kan rensas automatiskt)"}
                         >
-                          <Lock size={18} />
+                          {appMode === 'omni' ? <Bookmark size={18} /> : <Lock size={18} />}
                         </button>
                       ) : (
                         <button 
                           onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', borderRadius: '4px', transition: 'all 0.2s' }}
-                          title="Lås artikel (skydda från automatisk rensning)"
+                          title={appMode === 'omni' ? "Spara artikel / Bokmärk" : "Lås artikel (skydda från automatisk rensning)"}
                         >
-                          <Unlock size={18} />
+                          {appMode === 'omni' ? <Bookmark size={18} /> : <Unlock size={18} />}
                         </button>
                       )}
                     </div>
@@ -2065,6 +2144,23 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             {decodeHtmlEntities(item.source_title)}
                           </span>
                         </div>
+
+                        {isNewSinceLastVisit && (
+                          <span 
+                            style={{
+                              backgroundColor: 'rgba(37, 99, 235, 0.95)',
+                              color: '#ffffff',
+                              padding: '0.12rem 0.45rem',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              letterSpacing: '0.5px'
+                            }} 
+                            title="Ny artikel sedan ditt senaste besök"
+                          >
+                            NY
+                          </span>
+                        )}
 
                         {/* ClickBait-varning */}
                         {shouldShowAi && Boolean(item.is_clickbait) && (
@@ -2897,25 +2993,27 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         <span>{currentVote === -1 ? 'Ogillad' : 'Ogilla'}</span>
                       </button>
 
-                      {/* Läst / Oläst */}
-                      {isArticleRead(item.id, item.is_read) ? (
-                        <button
-                          className="modern-bottombar-btn active"
-                          onClick={(e) => { e.stopPropagation(); markAsUnread(item.id, item.cluster_id, item.similar_articles); }}
-                          title="Markera som oläst"
-                        >
-                          <EyeOff size={14} />
-                          <span>Oläst</span>
-                        </button>
-                      ) : (
-                        <button
-                          className="modern-bottombar-btn"
-                          onClick={(e) => { e.stopPropagation(); markAsRead(item.id, item.cluster_id, item.similar_articles); }}
-                          title="Markera som läst"
-                        >
-                          <CheckCheck size={14} />
-                          <span>Läst</span>
-                        </button>
+                      {/* Läst / Oläst (endast i klassiskt läge) */}
+                      {appMode === 'classic' && (
+                        isArticleRead(item.id, item.is_read) ? (
+                          <button
+                            className="modern-bottombar-btn active"
+                            onClick={(e) => { e.stopPropagation(); markAsUnread(item.id, item.cluster_id, item.similar_articles); }}
+                            title="Markera som oläst"
+                          >
+                            <EyeOff size={14} />
+                            <span>Oläst</span>
+                          </button>
+                        ) : (
+                          <button
+                            className="modern-bottombar-btn"
+                            onClick={(e) => { e.stopPropagation(); markAsRead(item.id, item.cluster_id, item.similar_articles); }}
+                            title="Markera som läst"
+                          >
+                            <CheckCheck size={14} />
+                            <span>Läst</span>
+                          </button>
+                        )
                       )}
 
                       {/* Lås / Spara */}
@@ -2923,20 +3021,20 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         <button
                           className="modern-bottombar-btn active"
                           onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, true); }}
-                          title="Lås upp händelse"
+                          title={appMode === 'omni' ? "Ta bort sparad artikel" : "Lås upp händelse"}
                           style={{ backgroundColor: 'rgba(0, 0, 0, 0.38)' }}
                         >
-                          <Lock size={14} />
-                          <span>Låst</span>
+                          {appMode === 'omni' ? <Bookmark size={14} /> : <Lock size={14} />}
+                          <span>{appMode === 'omni' ? 'Sparad' : 'Låst'}</span>
                         </button>
                       ) : (
                         <button
                           className="modern-bottombar-btn"
                           onClick={(e) => { e.stopPropagation(); toggleLockState(item.id, false); }}
-                          title="Lås händelse"
+                          title={appMode === 'omni' ? "Spara artikel / Bokmärk" : "Lås händelse"}
                         >
-                          <Unlock size={14} />
-                          <span>Lås</span>
+                          {appMode === 'omni' ? <Bookmark size={14} /> : <Unlock size={14} />}
+                          <span>{appMode === 'omni' ? 'Spara' : 'Lås'}</span>
                         </button>
                       )}
 
@@ -2953,6 +3051,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   )}
                   </div>
                 </SwipeableArticleCard>
+              </React.Fragment>
               );
             };
 

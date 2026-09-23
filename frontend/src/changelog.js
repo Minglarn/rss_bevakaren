@@ -1,9 +1,36 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.01',
+    date: '2026-09-23',
+    title: 'Nyhetsbevakare (Omni-läge) och automatisk sessionsspårning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Nyhetsbevakare (Omni-läge) som standard',
+        description: 'Ett levande nyhetsflöde där du slipper inkorgsstress och manuell avprickning av lästa artiklar. Applikationen håller automatiskt koll på antalet nya artiklar sedan ditt förra besök och presenterar dem med diskreta +X-indikatorer.'
+      },
+      {
+        type: 'feature',
+        title: 'Spara och bokmärk artiklar',
+        description: 'I Omni-läget ersätts den traditionella läst/oläst-knappen med en smidig spara- och bokmärkesfunktion som gör det enkelt att spara intressanta nyheter att återkomma till.'
+      },
+      {
+        type: 'feature',
+        title: 'Automatisk sessionsnollställning och tidsavgränsare',
+        description: 'Nya artiklar markeras med en NY-bricka och en visuell avgränsare visar var du senast var i flödet. Sessionen nollställs automatiskt vid inaktivitet utan att kräva manuella knapptryck.'
+      },
+      {
+        type: 'improvement',
+        title: 'Valbart driftläge i Inställningar',
+        description: 'Under Inställningar -> Allmänt kan du när som helst växla mellan Nyhetsbevakare (Omni-läge) och Klassisk RSS-läsare.'
+      }
+    ]
+  },
+  {
     version: '2026.09.22.09',
     date: '2026-09-22',
     title: 'Fix för semantisk rankinglogg i AI-Chatten',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

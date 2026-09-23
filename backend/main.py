@@ -503,7 +503,7 @@ def get_version():
         return "unknown"
 
 VERSION = get_version()
-LAST_UPDATE = "2026-09-22"
+LAST_UPDATE = "2026-09-23"
 
 def normalize_user_categories(cats_raw: Any) -> List[Dict[str, Any]]:
     """Säkerställer att kategorier returneras som en lista av dicts: [{'name': '...', 'weight': X}, ...]."""
@@ -2370,14 +2370,26 @@ def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
     )
 
 @app.get("/feeds", response_model=List[schemas.FeedResponse])
-def get_feeds(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+def get_feeds(
+    since: Optional[int] = None,
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
     feeds = db.query(models.Feed).filter(models.Feed.user_id == current_user.id).all()
     feed_responses = []
+    effective_ts = func.coalesce(func.nullif(models.Article.published_ts, 0), models.Article.received_ts)
     for feed in feeds:
         unread_count = db.query(models.Article).filter(
             models.Article.feed_id == feed.id,
             (models.Article.is_read == 0) | (models.Article.is_read == None)
         ).count()
+        
+        new_count = 0
+        if since is not None and since > 0:
+            new_count = db.query(models.Article).filter(
+                models.Article.feed_id == feed.id,
+                effective_ts >= since
+            ).count()
         
         feed_dict = {
             "id": feed.id,
@@ -2391,7 +2403,8 @@ def get_feeds(db: Session = Depends(database.get_db), current_user: models.User 
             "clickbait_enabled": bool(getattr(feed, 'clickbait_enabled', 1) if getattr(feed, 'clickbait_enabled', 1) is not None else True),
             "max_items": getattr(feed, 'max_items', 0) or 0,
             "icon_url": get_feed_icon_url(feed),
-            "unread_count": unread_count
+            "unread_count": unread_count,
+            "new_count": new_count
         }
         feed_responses.append(feed_dict)
     return feed_responses
@@ -4887,7 +4900,8 @@ def admin_get_user_feeds(
             "clickbait_enabled": bool(getattr(feed, 'clickbait_enabled', 1) if getattr(feed, 'clickbait_enabled', 1) is not None else True),
             "max_items": getattr(feed, 'max_items', 0) or 0,
             "icon_url": get_feed_icon_url(feed),
-            "unread_count": unread_count
+            "unread_count": unread_count,
+            "new_count": 0
         })
     return feed_responses
 

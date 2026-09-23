@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.22.05-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.23.01-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -69,6 +69,8 @@ docker compose up -d
 ---
 
 ## Huvudfunktioner
+
+- **Nyhetsbevakare (Omni-läge):** Standarddriftläge som eliminerar inkorgsstress. Istället för att manuellt bocka av artiklar som lästa fungerar appen som ett levande nyhetsflöde med automatisk sessionsspårning ("+X nya sedan sist"), bokmärken och tidsavgränsare. Kan när som helst växlas till Klassisk RSS-läsare under Inställningar -> Allmänt.
 
 - **Lokal AI-sammanfattning:** Sammanfattar inkommande artiklar i realtid genom anslutning till din lokala AI-motor (t.ex. Google Gemma via LM Studio eller Ollama) – helt privat utan dataläckage till externa molntjänster.
 - **ClickBait-avslöjare:** Sensationella eller undanhållande rubriker flaggas automatiskt och AI-sammanfattningen lyfter direkt fram vad artikeln faktiskt handlar om.

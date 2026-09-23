@@ -7,6 +7,7 @@ import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
 import packageJson from '../../package.json';
 import { resolveFeedIcon } from '../utils/textUtils';
+import { getAppMode, setAppMode } from '../utils/sessionTracker';
 import RssManager from './RssManager';
 import InterestProfile from './InterestProfile';
 
@@ -98,6 +99,7 @@ const Settings = ({ onLogout, currentUser }) => {
   const [sysInfo, setSysInfo] = useState(null);
   const [dbStats, setDbStats] = useState(null);
   const [isLoadingDbStats, setIsLoadingDbStats] = useState(false);
+  const [appMode, setAppModeState] = useState(() => getAppMode());
   const [showImages, setShowImages] = useState(() => localStorage.getItem('rss_show_images') !== 'false');
   const [theme, setTheme] = useState(() => localStorage.getItem('rss_theme') || 'system');
   const [cardStyle, setCardStyle] = useState(() => localStorage.getItem('rss_card_style') || 'modern');
@@ -200,6 +202,7 @@ const Settings = ({ onLogout, currentUser }) => {
       // Samla in ALLA gränssnittspreferenser från localStorage
       const uiPreferences = {
         theme: localStorage.getItem('rss_theme') || 'system',
+        app_mode: localStorage.getItem('rss_app_mode') || 'omni',
         card_style: localStorage.getItem('rss_card_style') || 'modern',
         flow_layout: localStorage.getItem('rss_flow_layout_desktop') || localStorage.getItem('rss_flow_layout') || 'compact',
         flow_layout_desktop: localStorage.getItem('rss_flow_layout_desktop') || localStorage.getItem('rss_flow_layout') || 'compact',
@@ -262,6 +265,10 @@ const Settings = ({ onLogout, currentUser }) => {
           localStorage.setItem('rss_theme', uip.theme);
           setTheme(uip.theme);
           window.dispatchEvent(new Event('themeChanged'));
+        }
+        if (uip.app_mode) {
+          setAppMode(uip.app_mode);
+          setAppModeState(uip.app_mode);
         }
         if (uip.card_style) {
           localStorage.setItem('rss_card_style', uip.card_style);
@@ -1466,6 +1473,87 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       {activeTab === 'general' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
+          {/* Val av applikationsläge: Omni (Nyhetsbevakare) vs Klassisk RSS */}
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.85rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+            <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Sliders size={20} style={{ color: 'var(--primary)' }} /> Applikationsläge
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem', paddingLeft: '0.35rem' }}>
+              Välj hur RSS-Bevakaren ska fungera för dig. Du kan växla när som helst utan att data eller inställningar går förlorade.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+              {/* Omni-läge */}
+              <div
+                onClick={() => {
+                  setAppMode('omni');
+                  setAppModeState('omni');
+                  toast.success('Nyhetsbevakare (Omni-läge) aktiverat.');
+                }}
+                style={{
+                  padding: '1.15rem',
+                  borderRadius: '10px',
+                  border: appMode === 'omni' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                  backgroundColor: appMode === 'omni' ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-main)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.6rem'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: appMode === 'omni' ? 'var(--primary)' : 'var(--text-main)', fontSize: '1rem' }}>
+                    <Rss size={18} /> Nyhetsbevakare (Omni-läge)
+                  </div>
+                  <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '12px', backgroundColor: 'var(--primary)', color: 'white', fontWeight: 600 }}>Standard</span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                  Ett modernt och levande nyhetsflöde där artiklar inte behöver markeras som lästa. Appen håller automatiskt reda på nya artiklar sedan ditt senaste besök.
+                </p>
+                <div style={{ marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <div>· Ingen inkorgsstress – inga artiklar behöver bockas av</div>
+                  <div>· Sidomenyn visar antalet nya artiklar sedan ditt förra besök (+X nya)</div>
+                  <div>· Spara och bokmärk viktiga nyheter för att läsa senare</div>
+                </div>
+              </div>
+
+              {/* Klassiskt RSS-läge */}
+              <div
+                onClick={() => {
+                  setAppMode('classic');
+                  setAppModeState('classic');
+                  toast.success('Klassisk RSS-läsare aktiverad.');
+                }}
+                style={{
+                  padding: '1.15rem',
+                  borderRadius: '10px',
+                  border: appMode === 'classic' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                  backgroundColor: appMode === 'classic' ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-main)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.6rem'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: appMode === 'classic' ? 'var(--primary)' : 'var(--text-main)', fontSize: '1rem' }}>
+                    <List size={18} /> Klassisk RSS-läsare
+                  </div>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                  Traditionell RSS-hantering med manuell läst/oläst-status på varje enskild artikel och inkorgsräknare.
+                </p>
+                <div style={{ marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <div>· Manuell avprickning av lästa artiklar</div>
+                  <div>· Sifferbrickor visar totalt olästa artiklar i databasen</div>
+                  <div>· Möjlighet att dölja redan lästa artiklar från flödet</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '1.25rem 0.6rem', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
             <h3 style={{ marginTop: 0, paddingLeft: '0.35rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Info size={20} /> Systeminformation
