@@ -3220,6 +3220,7 @@ def preview_feed(url: str, current_user: models.User = Depends(auth.get_current_
 def get_dashboard_feeds(
     feed_id: Optional[int] = None, 
     show_read: Optional[bool] = False, 
+    app_mode: Optional[str] = None,
     search: Optional[str] = None, 
     article_id: Optional[int] = None,
     ai_mode: Optional[bool] = False,
@@ -3249,7 +3250,7 @@ def get_dashboard_feeds(
             query = query.filter(models.Article.user_vote == 1)
         elif disliked_only:
             query = query.filter(models.Article.user_vote == -1)
-        elif not show_read:
+        elif not show_read and app_mode != "omni":
             query = query.filter((models.Article.is_read == 0) | (models.Article.is_read == None))
             
         if prio_only:

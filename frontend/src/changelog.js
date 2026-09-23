@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.03',
+    date: '2026-09-23',
+    title: 'Åtgärd för artikelvisning och inaktiverade svepgester i Omni-läge',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Fullständig artikelhämtning i Omni-läge',
+        description: 'Åtgärdat en logisk tankevurpa där lästa artiklar tidigare filtrerades bort av servern i Omni-läget trots att läststatus inte används. Flöden med nya artiklar visar nu alltid samtliga artiklar som avsett.'
+      },
+      {
+        type: 'fix',
+        title: 'Inaktiverade svepgester i Omni-läge',
+        description: 'Svepgester (swipe) i sidled för att markera artiklar som lästa/olästa är nu strikt inaktiverade i Omni-läget för att förhindra oavsiktlig borttagning av artiklar ur nyhetsflödet.'
+      },
+      {
+        type: 'improvement',
+        title: 'Anpassade meddelanden för tomma flöden',
+        description: 'Meddelanden för flöden utan artiklar har anpassats för att inte referera till lästa eller olästa artiklar när applikationen körs i Omni-läge.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.02',
     date: '2026-09-23',
     title: 'Möjlighet att läsa skrapad fulltext i ultrakompakt läge',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

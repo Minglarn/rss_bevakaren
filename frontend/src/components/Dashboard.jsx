@@ -510,6 +510,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [swipeEnabled, setSwipeEnabled] = useState(() => {
     return localStorage.getItem('rss_swipe_gestures') !== 'false';
   });
+  const effectiveSwipeEnabled = appMode === 'classic' && swipeEnabled;
 
   useEffect(() => {
     const handleSwipeChange = () => {
@@ -709,7 +710,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     debouncedSearch,
     selectedCategory,
     selectedTag,
-    clusterMode
+    clusterMode,
+    appMode
   };
 
   const fetchCounter = useRef(0);
@@ -728,7 +730,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       debouncedSearch: dSearch,
       selectedCategory: sCat,
       selectedTag: sTag,
-      clusterMode: cMode
+      clusterMode: cMode,
+      appMode: aMode
     } = paramsRef.current;
 
     if (!isBackground) {
@@ -739,13 +742,14 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       const queryParts = [];
       if (fId) queryParts.push(`feed_id=${encodeURIComponent(fId)}`);
       if (aId) queryParts.push(`article_id=${encodeURIComponent(aId)}`);
+      if (aMode) queryParts.push(`app_mode=${encodeURIComponent(aMode)}`);
       if (sLocked) {
         queryParts.push('locked_only=true');
       } else if (sLiked) {
         queryParts.push('liked_only=true');
       } else if (sDisliked) {
         queryParts.push('disliked_only=true');
-      } else if (sRead) {
+      } else if (aMode === 'omni' || sRead) {
         queryParts.push('show_read=true');
       }
       if (dSearch) queryParts.push(`search=${encodeURIComponent(dSearch)}`);
@@ -911,7 +915,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
       }
     };
-  }, [feedId, articleId, showRead, showLockedOnly, showLikedOnly, showDislikedOnly, debouncedSearch, isPrioMode, selectedCategory, selectedTag, clusterMode]);
+  }, [feedId, articleId, showRead, showLockedOnly, showLikedOnly, showDislikedOnly, debouncedSearch, isPrioMode, selectedCategory, selectedTag, clusterMode, appMode]);
 
   const handleSelectCategory = (cat) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -1722,11 +1726,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', textAlign: 'center' }}>
           <p style={{ color: 'var(--text-muted)' }}>
             {showLockedOnly 
-              ? "Inga låsta artiklar hittades. Du kan spara artiklar med lås-ikonen på artikelkorten." 
+              ? (appMode === 'omni' ? "Inga sparade artiklar hittades. Du kan spara artiklar med bokmärkesikonen på artikelkorten." : "Inga låsta artiklar hittades. Du kan spara artiklar med lås-ikonen på artikelkorten.") 
               : showLikedOnly
               ? "Inga gillade artiklar hittades. Du kan gilla artiklar med tumme upp på artikelkorten för att spara dem och lära AI vad du gillar."
               : showDislikedOnly
               ? "Inga ogillade artiklar hittades. Här visas artiklar du röstat ner med tumme ner."
+              : appMode === 'omni'
+              ? "Inga nyheter att visa just nu. Uppdatera flödena för att hämta de senaste artiklarna."
               : "Inga olästa nyheter just nu. Byt till 'Visa lästa' eller uppdatera flödena."}
           </p>
         </div>
@@ -1795,7 +1801,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       key={item.id}
                       itemId={item.id}
                       isRead={isReadNow}
-                      swipeEnabled={swipeEnabled}
+                      swipeEnabled={effectiveSwipeEnabled}
                       onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
                       onMarkAsUnread={() => markAsUnread(item.id, item.cluster_id, item.similar_articles)}
                       onExpand={() => {
@@ -2041,7 +2047,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                                 rel="noopener noreferrer"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  markAsRead(item.id, item.cluster_id, item.similar_articles);
+                                  if (appMode === 'classic') {
+                                    markAsRead(item.id, item.cluster_id, item.similar_articles);
+                                  }
                                 }}
                                 style={{
                                   display: 'inline-flex',
@@ -2075,9 +2083,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                   <SwipeableArticleCard
                     key={item.id}
                     itemId={item.id}
-                  isRead={isReadNow}
-                  swipeEnabled={swipeEnabled}
-                  onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
+                    isRead={isReadNow}
+                    swipeEnabled={effectiveSwipeEnabled}
+                    onMarkAsRead={() => markAsRead(item.id, item.cluster_id, item.similar_articles)}
                   onMarkAsUnread={() => markAsUnread(item.id, item.cluster_id, item.similar_articles)}
                   onExpand={() => handleExpand(index, item.link, item.id)}
                   className={`feed-card ${cardStyle === 'modern' ? 'card-modern' : ''} ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
