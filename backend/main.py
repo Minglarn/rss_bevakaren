@@ -2377,7 +2377,7 @@ def get_feeds(
 ):
     feeds = db.query(models.Feed).filter(models.Feed.user_id == current_user.id).all()
     feed_responses = []
-    effective_ts = func.coalesce(func.nullif(models.Article.published_ts, 0), models.Article.received_ts)
+    effective_ts = func.coalesce(func.nullif(models.Article.received_ts, 0), models.Article.published_ts)
     for feed in feeds:
         unread_count = db.query(models.Article).filter(
             models.Article.feed_id == feed.id,
@@ -3285,7 +3285,10 @@ def get_dashboard_feeds(
                     models.Article.summary.ilike(f"%{search}%")
                 ))
         
-    effective_ts = func.coalesce(func.nullif(models.Article.published_ts, 0), models.Article.received_ts)
+    if app_mode == 'omni':
+        effective_ts = func.coalesce(func.nullif(models.Article.received_ts, 0), models.Article.published_ts)
+    else:
+        effective_ts = func.coalesce(func.nullif(models.Article.published_ts, 0), models.Article.received_ts)
     articles = query.order_by(effective_ts.desc(), models.Article.id.desc()).limit(150).all()
     
     # Bygg respons-artiklar

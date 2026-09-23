@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.05',
+    date: '2026-09-23',
+    title: 'Sortering efter hämtningstidpunkt i Omni-läget',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Hämtningstidpunkt styr flödet i Omni-läget',
+        description: 'I Nyhetsbevakaren (Omni-läget) sorteras artiklar nu efter tidpunkten de togs emot av systemet istället för källans publiceringstid. Nya artiklar hamnar alltid överst i flödet även om källan publicerade med äldre tidsstämpel.'
+      },
+      {
+        type: 'improvement',
+        title: 'Synkroniserade dagsgrupper och sessionsavdelare',
+        description: 'Dagsgrupperingar och tidsavgränsaren för tidigare artiklar styrs nu konsekvent av hämtningstidpunkten, vilket garanterar att alla nya artiklar samlas överst före avgränsaren.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.04',
     date: '2026-09-23',
     title: 'Återställda och mörkare avdelare i artikelflödet',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

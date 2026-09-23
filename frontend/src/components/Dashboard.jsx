@@ -590,8 +590,10 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       list = list.filter(item => !isArticleRead(item.id, item.is_read));
     }
     return [...list].sort((a, b) => {
-      const timeA = getArticlePublishedDate(a).getTime();
-      const timeB = getArticlePublishedDate(b).getTime();
+      const dateA = appMode === 'omni' ? (getArticleReceivedDate(a) || getArticlePublishedDate(a)) : getArticlePublishedDate(a);
+      const dateB = appMode === 'omni' ? (getArticleReceivedDate(b) || getArticlePublishedDate(b)) : getArticlePublishedDate(b);
+      const timeA = dateA.getTime();
+      const timeB = dateB.getTime();
       if (timeA !== timeB) {
         return timeB - timeA;
       }
@@ -604,7 +606,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     const groupsMap = new Map();
 
     visibleFeeds.forEach((item, index) => {
-      const currentD = getArticlePublishedDate(item);
+      const currentD = appMode === 'omni' 
+        ? (getArticleReceivedDate(item) || getArticlePublishedDate(item))
+        : getArticlePublishedDate(item);
       let dateLabel = '';
       let dayKey = 'all';
       let sortTimestamp = 0;
@@ -631,11 +635,13 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     const groups = Array.from(groupsMap.values());
     groups.sort((a, b) => b.sortTimestamp - a.sortTimestamp);
 
-    // Säkerställ att artiklarna inom varje dag är sorterade efter publiceringstid fallande
+    // Säkerställ att artiklarna inom varje dag är sorterade efter vald tidsordning fallande
     groups.forEach(group => {
       group.items.sort((a, b) => {
-        const timeA = getArticlePublishedDate(a.item).getTime();
-        const timeB = getArticlePublishedDate(b.item).getTime();
+        const dateA = appMode === 'omni' ? (getArticleReceivedDate(a.item) || getArticlePublishedDate(a.item)) : getArticlePublishedDate(a.item);
+        const dateB = appMode === 'omni' ? (getArticleReceivedDate(b.item) || getArticlePublishedDate(b.item)) : getArticlePublishedDate(b.item);
+        const timeA = dateA.getTime();
+        const timeB = dateB.getTime();
         if (timeA !== timeB) {
           return timeB - timeA;
         }
@@ -1749,12 +1755,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         <div className="events-flow-wrapper">
           {(() => {
             const hasNewerArticles = visibleFeeds.some(it => {
-              const ts = it.published_ts || (it.received_ts || 0);
+              const ts = appMode === 'omni' ? (it.received_ts || it.published_ts || 0) : (it.published_ts || it.received_ts || 0);
               return ts >= sessionRefTime;
             });
             const firstOlderIndex = (appMode === 'omni' && sessionRefTime > 0 && hasNewerArticles)
               ? visibleFeeds.findIndex(it => {
-                  const ts = it.published_ts || (it.received_ts || 0);
+                  const ts = appMode === 'omni' ? (it.received_ts || it.published_ts || 0) : (it.published_ts || it.received_ts || 0);
                   return ts < sessionRefTime;
                 })
               : -1;
@@ -1769,7 +1775,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               const hasDistinctReceivedTime = recDate && Math.abs(recDate.getTime() - pubDate.getTime()) > 120000;
               const isReadNow = Boolean(isArticleRead(item.id, item.is_read));
               const currentVote = getArticleVote(item.id, item.user_vote);
-              const itemEffectiveTs = item.published_ts || (pubDate && !isNaN(pubDate.getTime()) ? Math.floor(pubDate.getTime() / 1000) : (item.received_ts || 0));
+              const itemEffectiveTs = appMode === 'omni'
+                ? (item.received_ts || item.published_ts || 0)
+                : (item.published_ts || (pubDate && !isNaN(pubDate.getTime()) ? Math.floor(pubDate.getTime() / 1000) : (item.received_ts || 0)));
               const isNewSinceLastVisit = Boolean(appMode === 'omni' && sessionRefTime > 0 && itemEffectiveTs >= sessionRefTime);
               const showTimelineDivider = Boolean(firstOlderIndex !== -1 && index === firstOlderIndex);
 
@@ -1801,7 +1809,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
               // Ultrakompakt läge: extremt ren rad med rubrik, kort notissammanfattning och thumbnail
               if (activeFlowLayout === 'ultracompact') {
                 const shortSummary = item.ai_short_summary || item.ai_summary || item.summary || '';
-                const relTime = formatRelativeTimeSwedish(pubDate);
+                const displayDate = appMode === 'omni' ? (recDate || pubDate) : pubDate;
+                const relTime = formatRelativeTimeSwedish(displayDate);
 
                 return (
                   <React.Fragment key={item.id}>
