@@ -724,29 +724,172 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     setExpandedClusters(prev => ({ ...prev, [clusterId]: !prev[clusterId] }));
   };
 
-  const handleMarkClusterRead = async (clusterId, e) => {
-    if (e) e.stopPropagation();
-    if (!clusterId) return;
+  const handleMarkClusterRead = async (clusterId, e, item = null) => {
+    if (e && e.stopPropagation) e.stopPropagation();
     try {
-      await api.post(`/articles/cluster/${clusterId}/read`);
-      setAllFeeds(prev => prev.map(item => {
-        if (item.cluster_id === clusterId) {
-          const updatedSimilar = (item.similar_articles || []).map(s => ({ ...s, is_read: 1 }));
-          return { ...item, is_read: 1, similar_articles: updatedSimilar };
+      if (clusterId) {
+        await api.post(`/articles/cluster/${clusterId}/read`);
+      } else if (item && item.id) {
+        const ids = [item.id, ...(item.similar_articles || []).map(s => s.id)];
+        await Promise.all(ids.map(id => api.post(`/articles/${id}/read`)));
+      }
+      
+      const idsToMark = [];
+      if (item) {
+        idsToMark.push(item.id);
+        (item.similar_articles || []).forEach(s => idsToMark.push(s.id));
+      }
+
+      setReadItems(prev => {
+        const next = new Set(prev);
+        idsToMark.forEach(id => next.add(id));
+        return next;
+      });
+      setUnreadItems(prev => {
+        const next = new Set(prev);
+        idsToMark.forEach(id => next.delete(id));
+        return next;
+      });
+
+      setAllFeeds(prev => prev.map(art => {
+        if ((clusterId && art.cluster_id === clusterId) || (item && art.id === item.id)) {
+          const updatedSimilar = (art.similar_articles || []).map(s => ({ ...s, is_read: 1 }));
+          return { ...art, is_read: 1, similar_articles: updatedSimilar };
         }
-        return item;
+        return art;
       }));
-      setDisplayedFeeds(prev => prev.map(item => {
-        if (item.cluster_id === clusterId) {
-          const updatedSimilar = (item.similar_articles || []).map(s => ({ ...s, is_read: 1 }));
-          return { ...item, is_read: 1, similar_articles: updatedSimilar };
+      setDisplayedFeeds(prev => prev.map(art => {
+        if ((clusterId && art.cluster_id === clusterId) || (item && art.id === item.id)) {
+          const updatedSimilar = (art.similar_articles || []).map(s => ({ ...s, is_read: 1 }));
+          return { ...art, is_read: 1, similar_articles: updatedSimilar };
         }
-        return item;
+        return art;
       }));
       window.dispatchEvent(new Event('feedsUpdated'));
     } catch (err) {
       console.error("Kunde inte markera kluster som läst:", err);
     }
+  };
+
+  const renderClusterCoverage = (item, isCompact = false) => {
+    if (!item.similar_articles || item.similar_articles.length === 0) return null;
+
+    const clusterKey = item.cluster_id || item.id;
+    const isExpanded = Boolean(expandedClusters[clusterKey]);
+    const similar = item.similar_articles;
+    const totalSources = similar.length + 1;
+    const maxInitial = isCompact ? 2 : 3;
+    const displayList = isExpanded ? similar : similar.slice(0, maxInitial);
+    const hasMore = similar.length > maxInitial;
+
+    return (
+      <div 
+        className={`google-news-container ${isCompact ? 'compact' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="google-news-header">
+          <div className="google-news-badge">
+            <Layers size={isCompact ? 13 : 15} style={{ flexShrink: 0 }} />
+            <span>Full täckning · {totalSources} källor</span>
+          </div>
+
+          <div className="google-news-actions">
+            <button
+              type="button"
+              className="google-news-toggle-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMarkClusterRead(item.cluster_id, e, item);
+              }}
+              title="Markera hela händelsen inklusive alla källor som lästa"
+            >
+              <CheckCheck size={13} />
+              {!isCompact && <span>Markera händelse läst</span>}
+            </button>
+          </div>
+        </div>
+
+        <div className="google-news-list">
+          {displayList.map((sim) => {
+            const simPubDate = getArticlePublishedDate(sim);
+            const simRelTime = formatRelativeTimeSwedish(simPubDate);
+
+            return (
+              <a
+                key={sim.id}
+                href={sim.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="google-news-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (appMode === 'classic') {
+                    markAsRead(sim.id);
+                  }
+                }}
+                title={`Läs hos ${sim.source_title}: ${decodeHtmlEntities(sim.title)}`}
+              >
+                <div className="google-news-item-left">
+                  <img
+                    src={resolveFeedIcon(sim.feed_icon)}
+                    alt=""
+                    className="google-news-source-icon"
+                    onError={(e) => {
+                      if (!e.currentTarget.src.endsWith('/default-feed-icon.svg')) {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/default-feed-icon.svg';
+                      }
+                    }}
+                  />
+                  <div className="google-news-item-text">
+                    <div className="google-news-source-meta">
+                      <span className="google-news-source-name">{sim.source_title}</span>
+                      {simRelTime && (
+                        <>
+                          <span>·</span>
+                          <span className="google-news-source-time">{simRelTime}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="google-news-item-title">
+                      {decodeHtmlEntities(sim.title)}
+                    </div>
+                  </div>
+                </div>
+                <div className="google-news-item-link-btn">
+                  <ExternalLink size={13} />
+                </div>
+              </a>
+            );
+          })}
+        </div>
+
+        {hasMore && (
+          <div style={{ marginTop: '0.35rem', display: 'flex', justifyContent: 'flex-start' }}>
+            <button
+              type="button"
+              className="google-news-toggle-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleClusterExpand(clusterKey);
+              }}
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp size={13} />
+                  <span>Visa färre källor</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown size={13} />
+                  <span>Visa ytterligare {similar.length - maxInitial} källor</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -2031,6 +2174,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                         )}
                       </div>
 
+                      {/* Google News-modell för klustrade källor i ultrakompakt vy */}
+                      {renderClusterCoverage(item, true)}
+
                       {/* Expanderad vy vid klick på kortet: fördjupad sammanfattning och bild i full bredd */}
                       {isItemExpanded && (
                         <div className="feed-card-ultracompact-expanded" onClick={(e) => e.stopPropagation()}>
@@ -3105,100 +3251,8 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     )}
                   </AnimatePresence>
 
-                  {/* Klustrade källor & dubletthantering */}
-                  {item.similar_articles && item.similar_articles.length > 0 && (
-                    <div style={{
-                      margin: '0.85rem 0',
-                      padding: '0.65rem 0.85rem',
-                      backgroundColor: 'rgba(59, 130, 246, 0.05)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)',
-                      borderRadius: '8px'
-                    }}>
-                      <div 
-                        onClick={(e) => { e.stopPropagation(); toggleClusterExpand(item.cluster_id || item.id); }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          cursor: 'pointer',
-                          fontSize: '0.8rem'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontWeight: 600 }}>
-                          <Layers size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
-                          <span>
-                            Rapporteras även av:{' '}
-                            <span style={{ color: 'var(--primary)' }}>
-                              {[...new Set(item.similar_articles.map(s => s.source_title))].slice(0, 3).join(', ')}
-                              {item.similar_articles.length > 3 ? ` (+${item.similar_articles.length - 3} källor)` : ''}
-                            </span>
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)' }}>
-                          <span style={{ fontSize: '0.75rem' }}>{expandedClusters[item.cluster_id || item.id] ? 'Dölj' : 'Visa'}</span>
-                          <ChevronDown size={14} style={{ transform: expandedClusters[item.cluster_id || item.id] ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                        </div>
-                      </div>
-
-                      {expandedClusters[item.cluster_id || item.id] && (
-                        <div style={{ marginTop: '0.65rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(59, 130, 246, 0.15)' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '0.65rem' }}>
-                            {item.similar_articles.map((sim) => (
-                              <div key={sim.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', fontSize: '0.78rem' }}>
-                                <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                  <img 
-                                    src={resolveFeedIcon(sim.feed_icon)} 
-                                    alt="" 
-                                    style={{ width: 16, height: 16, borderRadius: '3px', objectFit: 'contain', flexShrink: 0, backgroundColor: '#ffffff', padding: '1px' }} 
-                                    onError={(e) => { 
-                                      if (!e.currentTarget.src.endsWith('/default-feed-icon.svg')) {
-                                        e.currentTarget.onerror = null;
-                                        e.currentTarget.src = '/default-feed-icon.svg';
-                                      }
-                                    }}
-                                  />
-                                  <span style={{ fontWeight: 600, color: 'var(--text-main)', flexShrink: 0 }}>{sim.source_title}:</span>
-                                  <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{decodeHtmlEntities(sim.title)}</span>
-                                </div>
-                                <a
-                                  href={sim.link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '2px', flexShrink: 0, textDecoration: 'none' }}
-                                  title="Läs hos källan"
-                                >
-                                  <ExternalLink size={12} />
-                                </a>
-                              </div>
-                            ))}
-                          </div>
-                          <button
-                            onClick={(e) => handleMarkClusterRead(item.cluster_id, e)}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              padding: '0.3rem 0.65rem',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              backgroundColor: 'var(--bg-card)',
-                              color: 'var(--text-muted)',
-                              border: '1px solid var(--border-color)',
-                              borderRadius: '5px',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s'
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.borderColor = 'var(--primary)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
-                          >
-                            <CheckCheck size={13} />
-                            Markera hela händelsen som läst
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* Google News-modell för klustrade källor & full täckning */}
+                  {renderClusterCoverage(item, false)}
 
                   {/* Footer för klassiskt läge */}
                   {cardStyle === 'classic' && (

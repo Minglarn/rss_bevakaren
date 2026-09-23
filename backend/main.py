@@ -3418,7 +3418,8 @@ def get_dashboard_feeds(
                 "link": other["link"],
                 "published": other["published"],
                 "published_ts": other["published_ts"],
-                "is_read": other["is_read"]
+                "is_read": other["is_read"],
+                "ai_short_summary": other.get("ai_short_summary", "")
             })
         head["similar_articles"] = similar
         final_items.append(head)

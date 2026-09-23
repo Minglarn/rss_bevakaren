@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.14',
+    date: '2026-09-23',
+    title: 'Google News-modell för klustrade artiklar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Öppen Google News-täckning i flödet',
+        description: 'Klustrade artiklar döljs inte längre i bakgrunden. Istället visas en dedikerad Google News-sektion med full täckning, källikoner, källnamn, unika rubriker och direktlänkar i både ultrakompakt och standardlayout.'
+      },
+      {
+        type: 'improvement',
+        title: 'Direkt översikt över alternativa vinklar',
+        description: 'Du ser direkt vilka andra medier och nyhetskällor som rapporterar om samma händelse utan att behöva öppna dolda menyer.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.13',
     date: '2026-09-23',
     title: 'Solid och ogenomskinlig bakgrund i bottenbaren',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
