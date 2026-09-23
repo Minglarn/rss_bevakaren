@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.12',
+    date: '2026-09-23',
+    title: 'Avlägsnad indikatorlinje i bottenbaren',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Renare bottenbar utan kolliderande topplinje',
+        description: 'Tog bort det horisontella strecket ovanför aktiva knappar i mobilens bottenbar. Detta eliminerar visuell krock med indikatorpricken (Badge Dot) och ger en ren, modern och minimalistisk navigationsupplevelse.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.11',
     date: '2026-09-23',
     title: 'Stilrena indikatorprickar och fullständig avveckling av scroll-spårning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',
