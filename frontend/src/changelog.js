@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.23.02',
+    date: '2026-09-23',
+    title: 'Möjlighet att läsa skrapad fulltext i ultrakompakt läge',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Hämtad artikeltext i expanderat läge',
+        description: 'I det ultrakompakta flödesläget kan du nu enkelt fälla ut och läsa hela den skrapade originaltexten direkt i kortet under den fördjupade sammanfattningen.'
+      },
+      {
+        type: 'improvement',
+        title: 'Direktvisning och on-demand skrapning',
+        description: 'Artiklar som redan är förskrapade visas omedelbart utan väntetid. För övriga artiklar hämtas och extraheras texten direkt vid behov med en tydlig laddningsindikator.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.01',
     date: '2026-09-23',
     title: 'Nyhetsbevakare (Omni-läge) och automatisk sessionsspårning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

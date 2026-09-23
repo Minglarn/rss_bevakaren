@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
-import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Bookmark, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, AlertTriangle, Layers, RefreshCw, FileText, Smartphone, Calendar, ThumbsUp, ThumbsDown, Info, Clock } from 'lucide-react';
+import { ExternalLink, Rss, ChevronRight, Loader2, ArrowLeft, ArrowUp, CheckCheck, Eye, EyeOff, Search, Lock, Unlock, Bookmark, Share2, Flame, Sparkles, Tag, X, Filter, ChevronDown, ChevronUp, AlertTriangle, Layers, RefreshCw, FileText, Smartphone, Calendar, ThumbsUp, ThumbsDown, Info, Clock } from 'lucide-react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
@@ -472,6 +472,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
   const [expandedItems, setExpandedItems] = useState({});
   const [scrapedContents, setScrapedContents] = useState({});
   const [scrapingUrls, setScrapingUrls] = useState({});
+  const [expandedScrapes, setExpandedScrapes] = useState({});
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [shareItem, setShareItem] = useState(null);
   const [reasoningItem, setReasoningItem] = useState(null);
@@ -1224,6 +1225,34 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
     }
   };
 
+  const toggleScrapedContent = async (item) => {
+    const isCurrentlyOpen = Boolean(expandedScrapes[item.id]);
+    setExpandedScrapes(prev => ({ ...prev, [item.id]: !isCurrentlyOpen }));
+
+    if (!isCurrentlyOpen && !scrapedContents[item.link]) {
+      if (item.content) {
+        setScrapedContents(prev => ({ ...prev, [item.link]: item.content }));
+        return;
+      }
+      const isScrapeEnabled = item.scrape_enabled !== false;
+      const feedName = item.source_title || '';
+      if (isScrapeEnabled) {
+        setScrapingUrls(prev => ({ ...prev, [item.link]: true }));
+        try {
+          const res = await api.get(`/scrape?url=${encodeURIComponent(item.link)}${feedName ? `&feed_name=${encodeURIComponent(feedName)}` : ''}`);
+          setScrapedContents(prev => ({ ...prev, [item.link]: res.data.content }));
+        } catch (err) {
+          console.error("Scrape error", err);
+          setScrapedContents(prev => ({ ...prev, [item.link]: 'Kunde inte hämta artikeltexten automatiskt. Läs hela artikeln hos originalkällan.' }));
+        } finally {
+          setScrapingUrls(prev => ({ ...prev, [item.link]: false }));
+        }
+      } else {
+        setScrapedContents(prev => ({ ...prev, [item.link]: item.summary || 'Skrapning är inaktiverad för detta flöde.' }));
+      }
+    }
+  };
+
   // Assign a color based on feed_id to keep it consistent per source
   const getBorderColor = (feedId) => {
     const colors = ['#2563eb', '#e11d48', '#0ea5e9', '#16a34a', '#d97706', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#6366f1'];
@@ -1868,6 +1897,78 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                               </div>
                             </div>
                           )}
+
+                          {/* Knapp för att läsa fullständigt hämtad/skrapad artikeltext */}
+                          <div style={{ marginBottom: '0.85rem' }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleScrapedContent(item);
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.45rem',
+                                padding: '0.45rem 0.85rem',
+                                borderRadius: '6px',
+                                border: '1px solid var(--border-color)',
+                                backgroundColor: expandedScrapes[item.id] ? 'rgba(37, 99, 235, 0.12)' : 'var(--bg-app)',
+                                color: expandedScrapes[item.id] ? 'var(--primary)' : 'var(--text-main)',
+                                fontSize: '0.82rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                              title="Läs hela den hämtade originaltexten utan att lämna appen"
+                            >
+                              <FileText size={14} style={{ color: expandedScrapes[item.id] ? 'var(--primary)' : 'var(--text-muted)' }} />
+                              <span>{expandedScrapes[item.id] ? 'Dölj hämtad artikeltext' : 'Läs hämtad artikeltext (skrapad)'}</span>
+                              {scrapingUrls[item.link] && <Loader2 size={13} className="spin" style={{ color: 'var(--primary)', marginLeft: '0.2rem' }} />}
+                              {expandedScrapes[item.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
+
+                            {expandedScrapes[item.id] && (
+                              <div
+                                style={{
+                                  marginTop: '0.65rem',
+                                  padding: '1rem',
+                                  backgroundColor: 'var(--bg-app)',
+                                  borderRadius: '8px',
+                                  border: '1px solid var(--border-color)',
+                                  fontSize: '0.92rem',
+                                  lineHeight: '1.65',
+                                  color: 'var(--text-main)'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.4rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    <FileText size={14} /> Hämtad artikeltext (original)
+                                  </div>
+                                  {item.source_title && (
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                      Källa: {decodeHtmlEntities(item.source_title)}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {scrapingUrls[item.link] ? (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', padding: '0.75rem 0' }}>
+                                    <Loader2 className="spin" size={16} style={{ color: 'var(--primary)' }} />
+                                    <span>Hämtar och extraherar artikeltext från källan...</span>
+                                  </div>
+                                ) : (scrapedContents[item.link] || item.content) ? (
+                                  <div style={{ whiteSpace: 'pre-line' }}>
+                                    {scrapedContents[item.link] || item.content}
+                                  </div>
+                                ) : (
+                                  <div style={{ color: 'var(--text-muted)' }}>
+                                    Ingen ytterligare text kunde hämtas automatiskt. Läs hela artikeln hos originalkällan.
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
