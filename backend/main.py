@@ -684,11 +684,18 @@ def _record_blocked_attempt(ip: str, method: str = "GET", path: str = "/"):
                 pass
 
 def _generate_abuse_report(ip: str, reason: str, user_agent: str, attempts_count: int, banned_at: int, request_log: list) -> dict:
-    """Genererar en AbuseIPDB-anpassad rapport med kategorier, loggar och kommentar."""
+    """Genererar en standardiserad engelsk AbuseIPDB-rapport med Common Log Format (Nginx/Apache-stil)."""
     now = int(time.time())
-    banned_time_str = datetime.fromtimestamp(banned_at).strftime("%Y-%m-%d %H:%M:%S UTC") if banned_at else "Okänd tid"
 
-    # Avgör kategorier baserat på orsak och anropslogg
+    # 1. Bestäm tidpunkter (IoA Timestamp)
+    primary_ts = banned_at if banned_at else now
+    if request_log and len(request_log) > 0 and request_log[-1].get("timestamp"):
+        primary_ts = request_log[-1].get("timestamp")
+
+    dt_primary = datetime.fromtimestamp(primary_ts)
+    ioa_timestamp = dt_primary.strftime("%Y-%m-%d %H:%M:%S")
+
+    # 2. Avgör kategorier baserat på anropslogg och orsak
     # AbuseIPDB kategorier:
     # 18 = Brute-Force (Credential Stuffing / Password Guessing)
     # 19 = Bad Web Bot (Malicious crawlers, scrapers)
@@ -697,7 +704,7 @@ def _generate_abuse_report(ip: str, reason: str, user_agent: str, attempts_count
     category_names = []
 
     is_login_attack = any("login" in (r.get("path", "").lower()) for r in request_log) or "inloggning" in reason.lower()
-    is_scan_attack = any(any(probe in r.get("path", "").lower() for probe in [".env", "gcp-cred", "firebase", "wp-login", ".git", "phpmyadmin", "sa.json"]) for r in request_log) or "honeypot" in reason.lower() or "skanning" in reason.lower()
+    is_scan_attack = any(any(probe in r.get("path", "").lower() for probe in [".env", "gcp-cred", "firebase", "wp-login", ".git", "phpmyadmin", "sa.json"]) for r in request_log) or "honeypot" in reason.lower() or "skanning" in reason.lower() or "avsökning" in reason.lower()
 
     if is_scan_attack:
         categories.extend([19, 21])
@@ -716,28 +723,46 @@ def _generate_abuse_report(ip: str, reason: str, user_agent: str, attempts_count
 
     categories_str = ",".join(str(c) for c in categories)
 
-    # Bygg kommentar / loggutdrag
-    log_lines = []
-    if request_log:
-        for entry in request_log[-12:]: # Visa upp till de 12 senaste
-            t_str = entry.get("datetime") or datetime.fromtimestamp(entry.get("timestamp", now)).strftime("%Y-%m-%d %H:%M:%S")
-            m = entry.get("method", "GET")
-            p = entry.get("path", "/")
-            log_lines.append(f"- {t_str} UTC: {m} {p} (403 Forbidden)")
+    # 3. Översätt intern orsak till ren engelska
+    r_low = reason.lower()
+    if is_scan_attack or "honeypot" in r_low:
+        english_trigger = "triggering http-sensitive-files (probing credentials / config)"
+    elif is_login_attack or "brute" in r_low:
+        english_trigger = "repeated failed authentication attempts (brute-force)"
+    elif "rate limit" in r_low or "snabb" in r_low:
+        english_trigger = "exceeding HTTP request rate limits"
     else:
-        log_lines.append(f"- {banned_time_str}: Security violation / probe detected ({reason})")
+        english_trigger = "unauthorized access violations"
 
-    log_sample = "\n".join(log_lines)
+    # 4. Bygg Common Log Format (Nginx / Apache web server log)
+    # Format: {ip} - - [{dd/Mon/yyyy:HH:mm:ss +0200}] "{method} {path} HTTP/1.1" 403 0 "-" "{user_agent}"
+    clean_ua = (user_agent or "").strip()
+    if not clean_ua or clean_ua in ("ingen-user-agent", "None", "Okänd") or "spärrad manuellt" in clean_ua.lower():
+        clean_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
 
-    comment = (
-        f"Unauthorized automated scanning / security violation detected by IP-Jail.\n"
-        f"Target host: Swedish RSS aggregation & monitoring system.\n"
-        f"Ban reason: {reason}\n"
-        f"Total blocked attempts: {attempts_count}\n"
-        f"User-Agent: {user_agent or 'None'}\n\n"
-        f"Probing / Attack activity:\n"
-        f"{log_sample}"
-    )
+    clf_lines = []
+    if request_log and len(request_log) > 0:
+        for entry in request_log[-10:]:
+            ts = entry.get("timestamp", primary_ts)
+            dt_entry = datetime.fromtimestamp(ts)
+            clf_ts = dt_entry.strftime("%d/%b/%Y:%H:%M:%S +0200")
+            method = entry.get("method", "GET")
+            path = entry.get("path", "/")
+            clf_lines.append(f'{ip} - - [{clf_ts}] "{method} {path} HTTP/1.1" 403 0 "-" "{clean_ua}"')
+    else:
+        clf_ts = dt_primary.strftime("%d/%b/%Y:%H:%M:%S +0200")
+        clf_lines.append(f'{ip} - - [{clf_ts}] "GET / HTTP/1.1" 403 0 "-" "{clean_ua}"')
+
+    single_line_log = clf_lines[-1]
+
+    # Standard AbuseIPDB kommentar i CrowdSec/Fail2ban & Nginx stil
+    events_str = f"{attempts_count} events" if attempts_count > 1 else "1 event"
+    summary_line = f"{ip} has been banned for {english_trigger} ({events_str})."
+
+    if len(clf_lines) == 1:
+        comment = f"{summary_line}\n{clf_lines[0]}"
+    else:
+        comment = f"{summary_line}\n" + "\n".join(clf_lines)
 
     return {
         "ip": ip,
@@ -745,6 +770,8 @@ def _generate_abuse_report(ip: str, reason: str, user_agent: str, attempts_count
         "categories_str": categories_str,
         "category_names": category_names,
         "comment": comment,
+        "single_line_log": single_line_log,
+        "ioa_timestamp": ioa_timestamp,
         "attempts_count": attempts_count,
         "banned_at": banned_at,
         "abuseipdb_check_url": f"https://www.abuseipdb.com/check/{ip}",

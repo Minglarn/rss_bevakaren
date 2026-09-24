@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.14',
+    date: '2026-09-24',
+    title: 'Standardiserad engelsk AbuseIPDB-rapport i webbserverformat (CLF)',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Engelskt rapportformat i Nginx/Apache CLF-stil',
+        description: 'AbuseIPDB-rapporten har anpassats till AbuseIPDB:s globala standard i 100% ren engelska. Den genererar autentiska Combined Log Format (CLF)-rader med exakta tidsstämplar, HTTP-status, anropssökvägar och User-Agents.'
+      },
+      {
+        type: 'feature',
+        title: 'IoA Timestamp och flexibel kopiering i administratörsmodalen',
+        description: 'Lagt till dedikerad IoA Timestamp (Europe/Stockholm) för direkt kopiering till AbuseIPDB:s attacktid-fält, samt snabbval för att antingen kopiera hela rapporten eller en enradig Nginx-loggrad.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.13',
     date: '2026-09-24',
     title: 'Förbättrad och träffsäker bildmatchning utan generiska felbilder',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

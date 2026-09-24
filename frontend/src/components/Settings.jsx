@@ -7877,23 +7877,36 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 </div>
 
                 {/* IP-info sammanfattning */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem', backgroundColor: 'var(--bg-app)', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                {/* IP-info och IoA Timestamp */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.65rem', backgroundColor: 'var(--bg-app)', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                   <div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Spärrad IP-adress</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-main)', marginTop: '0.15rem' }}>
+                    <div style={{ fontSize: '0.98rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-main)', marginTop: '0.15rem' }}>
                       {selectedAbuseBan.ip}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Blockerade anrop</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#ef4444', marginTop: '0.15rem' }}>
-                      {selectedAbuseBan.attempts_count} st
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>IoA Timestamp (Europe/Stockholm)</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, fontFamily: 'monospace', color: 'var(--text-main)', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      {selectedAbuseBan.abuse_report?.ioa_timestamp || formatEuropeanDateTime(selectedAbuseBan.banned_at)}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ts = selectedAbuseBan.abuse_report?.ioa_timestamp || '';
+                          navigator.clipboard.writeText(ts);
+                          toast.success('IoA Timestamp kopierad.');
+                        }}
+                        style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', padding: '0.1rem', display: 'flex' }}
+                        title="Kopiera tidpunkt för AbuseIPDB-formuläret"
+                      >
+                        <Copy size={12} />
+                      </button>
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Spärrad tidpunkt</div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '0.25rem' }}>
-                      {formatEuropeanDateTime(selectedAbuseBan.banned_at)}
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Blockerade anrop</div>
+                    <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#ef4444', marginTop: '0.15rem' }}>
+                      {selectedAbuseBan.attempts_count} st
                     </div>
                   </div>
                 </div>
@@ -7901,7 +7914,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 {/* Kategorier */}
                 <div>
                   <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                    Föreslagna AbuseIPDB-kategorier
+                    Föreslagna AbuseIPDB-kategorier (Categories)
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', alignItems: 'center' }}>
                     {(selectedAbuseBan.abuse_report?.category_names || ['19: Bad Web Bot', '21: Web App Attack']).map((catName, idx) => (
@@ -7926,80 +7939,68 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   </div>
                 </div>
 
-                {/* Detaljerad anropslogg */}
-                <div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
-                    Registrerade anropsförsök ({selectedAbuseBan.request_log?.length || 0})
-                  </div>
-                  <div style={{
-                    maxHeight: '130px',
-                    overflowY: 'auto',
-                    backgroundColor: 'var(--bg-app)',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    padding: '0.5rem',
-                    fontSize: '0.75rem',
-                    fontFamily: 'monospace',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.3rem'
-                  }}>
-                    {selectedAbuseBan.request_log && selectedAbuseBan.request_log.length > 0 ? (
-                      selectedAbuseBan.request_log.map((entry, idx) => (
-                        <div key={idx} style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', color: 'var(--text-muted)' }}>
-                          <span style={{ color: 'var(--text-muted)', opacity: 0.8 }}>
-                            {entry.datetime || formatEuropeanDateTime(entry.timestamp)}
-                          </span>
-                          <span style={{ fontWeight: 700, color: entry.method === 'POST' ? '#3b82f6' : '#10b981' }}>
-                            {entry.method || 'GET'}
-                          </span>
-                          <span style={{ color: '#ef4444', wordBreak: 'break-all' }}>
-                            {entry.path || '/'}
-                          </span>
-                          <span style={{ marginLeft: 'auto', padding: '0.05rem 0.35rem', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
-                            {entry.status || 403}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ color: 'var(--text-muted)' }}>
-                        - {formatEuropeanDateTime(selectedAbuseBan.banned_at)}: Säkerhetsöverträdelse registrerad ({selectedAbuseBan.reason})
-                      </div>
-                    )}
-                  </div>
-                </div>
-
                 {/* Färdig AbuseIPDB kommentar */}
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                     <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                      Färdig Abuse-kommentar (Engelska för AbuseIPDB)
+                      Comment (Webbserverlogg / Nginx CLF på engelska)
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const text = selectedAbuseBan.abuse_report?.comment || `Ban reason: ${selectedAbuseBan.reason}\nIP: ${selectedAbuseBan.ip}\nBlocked attempts: ${selectedAbuseBan.attempts_count}`;
-                        navigator.clipboard.writeText(text);
-                        setCopiedAbuseReport(true);
-                        toast.success('Abuse-rapport kopierad till urklipp.');
-                        setTimeout(() => setCopiedAbuseReport(false), 3000);
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        background: 'none',
-                        border: 'none',
-                        color: copiedAbuseReport ? '#10b981' : 'var(--primary-color)',
-                        fontSize: '0.78rem',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {copiedAbuseReport ? <Check size={13} /> : <Copy size={13} />}
-                      {copiedAbuseReport ? 'Kopierad!' : 'Kopiera text'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {selectedAbuseBan.abuse_report?.single_line_log && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const line = selectedAbuseBan.abuse_report?.single_line_log || '';
+                            navigator.clipboard.writeText(line);
+                            toast.success('Enradig Nginx-logg kopierad till urklipp.');
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            background: 'none',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '4px',
+                            padding: '0.15rem 0.45rem',
+                            color: 'var(--text-main)',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            cursor: 'pointer'
+                          }}
+                          title="Kopiera en enda standardiserad webbserverloggrad"
+                        >
+                          <Copy size={12} />
+                          Kopiera enradig logg
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const text = selectedAbuseBan.abuse_report?.comment || '';
+                          navigator.clipboard.writeText(text);
+                          setCopiedAbuseReport(true);
+                          toast.success('Abuse-kommentar kopierad till urklipp.');
+                          setTimeout(() => setCopiedAbuseReport(false), 3000);
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          background: 'none',
+                          border: 'none',
+                          color: copiedAbuseReport ? '#10b981' : 'var(--primary-color)',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {copiedAbuseReport ? <Check size={13} /> : <Copy size={13} />}
+                        {copiedAbuseReport ? 'Kopierad!' : 'Kopiera hela rapporten'}
+                      </button>
+                    </div>
                   </div>
+
                   <textarea
                     readOnly
                     rows={6}
@@ -8023,7 +8024,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 {/* Footer knappar */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
                   <a
-                    href={selectedAbuseBan.abuse_report?.abuseipdb_check_url || `https://www.abuseipdb.com/check/${selectedAbuseBan.ip}`}
+                    href={selectedAbuseBan.abuse_report?.abuseipdb_report_url || `https://www.abuseipdb.com/report?ip=${selectedAbuseBan.ip}`}
                     target="_blank"
                     rel="noreferrer noopener"
                     style={{
@@ -8041,7 +8042,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     }}
                   >
                     <ExternalLink size={14} />
-                    Öppna på AbuseIPDB
+                    Öppna rapportformulär på AbuseIPDB
                   </a>
 
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
