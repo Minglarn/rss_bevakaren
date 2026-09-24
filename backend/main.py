@@ -501,8 +501,22 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE push_subscriptions ADD COLUMN updated_at INTEGER DEFAULT 0"))
                     conn.commit()
                     print("[DB] Added updated_at column to push_subscriptions", flush=True)
+
+            # Skapa tabell för IP-Jail (spärrade IP-adresser)
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS banned_ips (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ip VARCHAR UNIQUE,
+                    reason VARCHAR DEFAULT '',
+                    banned_at INTEGER DEFAULT 0,
+                    expires_at INTEGER DEFAULT 0,
+                    user_agent VARCHAR DEFAULT '',
+                    attempts_count INTEGER DEFAULT 1
+                )
+            """))
+            conn.commit()
         except Exception as e:
-            print(f"[DB] Migration notice for push_subscriptions: {e}", flush=True)
+            print(f"[DB] Migration notice for push_subscriptions/banned_ips: {e}", flush=True)
 
 ensure_db_migrations()
 
@@ -516,6 +530,206 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Has-More", "X-Raw-Count"]
 )
+
+# ==========================================
+# IP-JAIL & SÄKERHETSHANTERING
+# ==========================================
+_banned_ips_cache: Dict[str, dict] = {}
+_failed_login_attempts: Dict[str, list] = {}
+
+def _extract_client_ip(request: Request) -> str:
+    """Extraherar besökarens faktiska IP-adress från proxy-headers eller direkt anslutning."""
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.split(",")[0].strip()
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "okand"
+
+def _init_banned_ips_cache():
+    """Laddar aktiva IP-spärrar från databasen till minnet vid uppstart."""
+    global _banned_ips_cache
+    now = int(time.time())
+    try:
+        db = database.SessionLocal()
+        banned = db.query(models.BannedIP).filter(
+            or_(models.BannedIP.expires_at == 0, models.BannedIP.expires_at > now)
+        ).all()
+        for b in banned:
+            _banned_ips_cache[b.ip] = {
+                "id": b.id,
+                "reason": b.reason or "Säkerhetsöverträdelse",
+                "banned_at": b.banned_at,
+                "expires_at": b.expires_at,
+                "user_agent": b.user_agent or "",
+                "attempts_count": b.attempts_count or 1
+            }
+        db.close()
+        if banned:
+            print(f"[SÄKERHET: JAIL] Läste in {len(banned)} aktiva IP-spärrar från databasen.", flush=True)
+    except Exception as e:
+        print(f"[SÄKERHET: JAIL] Kunde inte initiera IP-spärrcache: {e}", flush=True)
+
+_init_banned_ips_cache()
+
+def _is_ip_banned(ip: str) -> Optional[dict]:
+    """Kontrollerar om en IP är aktivt spärrad. Tar bort utgångna spärrar."""
+    global _banned_ips_cache
+    if not ip or ip in ("127.0.0.1", "::1", "localhost", "okand"):
+        return None
+    ban_info = _banned_ips_cache.get(ip)
+    if not ban_info:
+        return None
+    now = int(time.time())
+    expires_at = ban_info.get("expires_at", 0)
+    if expires_at > 0 and now > expires_at:
+        _banned_ips_cache.pop(ip, None)
+        return None
+    return ban_info
+
+def _record_blocked_attempt(ip: str):
+    """Ökar räknaren för blockerade anrop från en spärrad IP."""
+    global _banned_ips_cache
+    if ip in _banned_ips_cache:
+        _banned_ips_cache[ip]["attempts_count"] = _banned_ips_cache[ip].get("attempts_count", 0) + 1
+        if _banned_ips_cache[ip]["attempts_count"] % 5 == 0:
+            try:
+                db = database.SessionLocal()
+                b = db.query(models.BannedIP).filter(models.BannedIP.ip == ip).first()
+                if b:
+                    b.attempts_count = _banned_ips_cache[ip]["attempts_count"]
+                    db.commit()
+                db.close()
+            except Exception:
+                pass
+
+def _ban_ip(ip: str, reason: str, duration_minutes: int, user_agent: str = ""):
+    """Spärrar en IP-adress i angivet antal minuter (0 = permanent) och sparar i DB + cache."""
+    global _banned_ips_cache
+    if not ip or ip in ("127.0.0.1", "::1", "localhost", "okand"):
+        return
+    now = int(time.time())
+    expires_at = now + (duration_minutes * 60) if duration_minutes > 0 else 0
+    duration_str = f"{duration_minutes} minuter" if duration_minutes > 0 else "permanent"
+
+    db_id = 0
+    try:
+        db = database.SessionLocal()
+        existing = db.query(models.BannedIP).filter(models.BannedIP.ip == ip).first()
+        if existing:
+            existing.reason = reason
+            existing.banned_at = now
+            existing.expires_at = expires_at
+            existing.user_agent = user_agent
+            existing.attempts_count = (existing.attempts_count or 1) + 1
+            db.commit()
+            db_id = existing.id
+        else:
+            new_ban = models.BannedIP(
+                ip=ip,
+                reason=reason,
+                banned_at=now,
+                expires_at=expires_at,
+                user_agent=user_agent,
+                attempts_count=1
+            )
+            db.add(new_ban)
+            db.commit()
+            db.refresh(new_ban)
+            db_id = new_ban.id
+        db.close()
+    except Exception as e:
+        print(f"[SÄKERHET: JAIL] Databasfel vid spärrning av {ip}: {e}", flush=True)
+
+    _banned_ips_cache[ip] = {
+        "id": db_id,
+        "reason": reason,
+        "banned_at": now,
+        "expires_at": expires_at,
+        "user_agent": user_agent,
+        "attempts_count": _banned_ips_cache.get(ip, {}).get("attempts_count", 0) + 1
+    }
+    print(f"[SÄKERHET: BAN] IP {ip} har spärrats ({duration_str}). Orsak: {reason} | User-Agent: {user_agent}", flush=True)
+
+def _unban_ip(ip: str) -> bool:
+    """Häver en IP-spärr."""
+    global _banned_ips_cache
+    _banned_ips_cache.pop(ip, None)
+    try:
+        db = database.SessionLocal()
+        b = db.query(models.BannedIP).filter(models.BannedIP.ip == ip).first()
+        if b:
+            db.delete(b)
+            db.commit()
+        db.close()
+        print(f"[SÄKERHET: UNBAN] Spärren för IP {ip} har hävts.", flush=True)
+        return True
+    except Exception as e:
+        print(f"[SÄKERHET: JAIL] Fel vid hävning av spärr för {ip}: {e}", flush=True)
+        return False
+
+def _record_failed_login(ip: str, user_agent: str):
+    """Registrerar ett misslyckat inloggningsförsök och spärrar automatiskt vid överträdelse."""
+    global _failed_login_attempts
+    if not ip or ip in ("127.0.0.1", "::1", "localhost", "okand"):
+        return
+    now = time.time()
+    if ip not in _failed_login_attempts:
+        _failed_login_attempts[ip] = []
+    _failed_login_attempts[ip].append(now)
+
+    _failed_login_attempts[ip] = [t for t in _failed_login_attempts[ip] if t > now - 900]
+    recent_attempts = _failed_login_attempts[ip]
+
+    # Regel 1: Brute Force (5 misslyckade försök inom 10 minuter) -> 15 min ban
+    attempts_10m = [t for t in recent_attempts if t > now - 600]
+    if len(attempts_10m) >= 5:
+        _failed_login_attempts.pop(ip, None)
+        _ban_ip(
+            ip=ip,
+            reason="Upprepade misslyckade inloggningsförsök (Brute Force)",
+            duration_minutes=15,
+            user_agent=user_agent
+        )
+        return
+
+    # Regel 2: Rate Limit (3 misslyckade försök inom 10 sekunder) -> 15 min ban
+    attempts_10s = [t for t in recent_attempts if t > now - 10]
+    if len(attempts_10s) >= 3:
+        _failed_login_attempts.pop(ip, None)
+        _ban_ip(
+            ip=ip,
+            reason="För snabba inloggningsförsök (Rate Limit)",
+            duration_minutes=15,
+            user_agent=user_agent
+        )
+
+@app.middleware("http")
+async def security_ip_jail_middleware(request: Request, call_next):
+    """Avvisar omedelbart spärrade IP-adresser med HTTP 403 utan att belasta applikationen."""
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
+    client_ip = _extract_client_ip(request)
+    if client_ip not in ("127.0.0.1", "::1", "localhost", "okand"):
+        ban_info = _is_ip_banned(client_ip)
+        if ban_info:
+            _record_blocked_attempt(client_ip)
+            return Response(
+                content=json.dumps({
+                    "detail": "Din IP-adress är temporärt spärrad p.g.a. misstänkt säkerhetsaktivitet.",
+                    "ip": client_ip,
+                    "reason": ban_info.get("reason", "Säkerhetsöverträdelse"),
+                    "expires_at": ban_info.get("expires_at", 0)
+                }),
+                status_code=status.HTTP_403_FORBIDDEN,
+                media_type="application/json"
+            )
+    return await call_next(request)
+
 
 BANNER = """
 ██████  ███████ ███████                                                    
@@ -2431,19 +2645,6 @@ async def ai_processing_loop():
         await asyncio.sleep(5)
 
 
-def _extract_client_ip(request: Request) -> str:
-    """Extraherar besökarens faktiska IP-adress från proxy-headers eller anslutning."""
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.split(",")[0].strip()
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    if request.client and request.client.host:
-        return request.client.host
-    return "okand"
-
-
 @app.post("/token", response_model=schemas.Token)
 def login_for_access_token(
     request: Request,
@@ -2456,11 +2657,14 @@ def login_for_access_token(
     user = db.query(models.User).filter(models.User.username == form_data.username).first()
     if not user or not auth.verify_password(form_data.password, user.password_hash):
         print(f"[AUTH: SÄKERHET] Misslyckat inloggningsförsök för användare '{form_data.username}' från IP {client_ip} | User-Agent: {user_agent}", flush=True)
+        _record_failed_login(client_ip, user_agent)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    # Nollställ eventuella misslyckade inloggningsförsök vid lyckad autentisering
+    _failed_login_attempts.pop(client_ip, None)
     print(f"[AUTH: login] Lyckad inloggning för användare '{user.username}' från IP {client_ip}", flush=True)
     access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth.create_access_token(
@@ -2476,14 +2680,27 @@ def login_for_access_token(
 @app.api_route("/administrator", methods=["GET", "POST"])
 @app.api_route("/wp-login.php", methods=["GET", "POST"])
 @app.api_route("/api/login", methods=["GET", "POST"])
+@app.api_route("/gcp-credentials.json", methods=["GET", "POST"])
+@app.api_route("/google-credentials.json", methods=["GET", "POST"])
+@app.api_route("/sa.json", methods=["GET", "POST"])
+@app.api_route("/.env", methods=["GET", "POST"])
+@app.api_route("/firebase-admin.json", methods=["GET", "POST"])
+@app.api_route("/keys/service-account.json", methods=["GET", "POST"])
 async def honeypot_login_attempt(request: Request):
-    """Loggar och avvisar automatiska inloggningsförsök från botar och crawlers."""
+    """Loggar och avvisar automatiska inloggningsförsök samt spärrar klienten automatiskt i 60 minuter."""
     client_ip = _extract_client_ip(request)
     user_agent = request.headers.get("user-agent", "ingen-user-agent")
-    print(f"[AUTH: SÄKERHET] Misstänkt bot-inloggningsförsök mot {request.method} {request.url.path} från IP {client_ip} | User-Agent: {user_agent}", flush=True)
+    print(f"[AUTH: SÄKERHET] Misstänkt bot-aktivitet mot {request.method} {request.url.path} från IP {client_ip} | User-Agent: {user_agent}", flush=True)
+    if client_ip not in ("127.0.0.1", "::1", "localhost", "okand"):
+        _ban_ip(
+            ip=client_ip,
+            reason=f"Honeypot-avsökning mot {request.url.path}",
+            duration_minutes=60,
+            user_agent=user_agent
+        )
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Forbidden: Security violation logged"
+        detail="Forbidden: Security violation logged and IP jailed"
     )
  
 @app.post("/auth/refresh", response_model=schemas.Token)
@@ -5439,6 +5656,83 @@ def admin_set_system_ai_model(
         u_ai.selected_model = new_model
     db.commit()
     return {"status": "ok", "selected_model": new_model, "affected_users": len(users_ai)}
+
+
+# ==========================================
+# ADMIN: SÄKERHET & IP-JAIL ENDPOINTS
+# ==========================================
+@app.get("/admin/security/banned-ips", response_model=List[schemas.BannedIPResponse])
+def admin_get_banned_ips(
+    admin: models.User = Depends(auth.get_current_admin_user),
+    db: Session = Depends(database.get_db)
+):
+    """Returnerar alla spärrade IP-adresser och deras status."""
+    now = int(time.time())
+    bans = db.query(models.BannedIP).order_by(desc(models.BannedIP.banned_at)).all()
+    results = []
+    for b in bans:
+        cached = _banned_ips_cache.get(b.ip)
+        attempts = cached.get("attempts_count", b.attempts_count or 1) if cached else (b.attempts_count or 1)
+        is_active = (b.expires_at == 0 or b.expires_at > now) and (b.ip in _banned_ips_cache)
+        results.append(schemas.BannedIPResponse(
+            id=b.id,
+            ip=b.ip,
+            reason=b.reason or "Säkerhetsöverträdelse",
+            banned_at=b.banned_at or 0,
+            expires_at=b.expires_at or 0,
+            user_agent=b.user_agent or "Okänd",
+            attempts_count=attempts,
+            is_active=is_active
+        ))
+    return results
+
+@app.post("/admin/security/ban-ip")
+def admin_manual_ban_ip(
+    req: schemas.BanIPRequest,
+    admin: models.User = Depends(auth.get_current_admin_user)
+):
+    """Manuell spärrning av en IP-adress från adminpanelen."""
+    clean_ip = req.ip.strip()
+    if not clean_ip or clean_ip in ("127.0.0.1", "::1", "localhost", "okand"):
+        raise HTTPException(status_code=400, detail="Ogiltig IP-adress eller lokal adress som ej kan spärras.")
+    
+    _ban_ip(
+        ip=clean_ip,
+        reason=req.reason or "Manuell spärr av administratör",
+        duration_minutes=req.duration_minutes if req.duration_minutes is not None else 60,
+        user_agent=f"Spärrad manuellt av administratör '{admin.username}'"
+    )
+    return {"status": "ok", "message": f"IP-adressen {clean_ip} har spärrats."}
+
+@app.post("/admin/security/unban-ip")
+def admin_unban_ip(
+    payload: dict,
+    admin: models.User = Depends(auth.get_current_admin_user)
+):
+    """Häver spärren för en specifik IP-adress."""
+    target_ip = (payload.get("ip") or "").strip()
+    if not target_ip:
+        raise HTTPException(status_code=400, detail="IP-adress saknas i förfrågan.")
+    
+    success = _unban_ip(target_ip)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Kunde inte hitta eller häva spärren för {target_ip}.")
+    return {"status": "ok", "message": f"Spärren för {target_ip} har hävts framgångsrikt."}
+
+@app.get("/admin/security/stats", response_model=schemas.SecurityStatsResponse)
+def admin_get_security_stats(
+    admin: models.User = Depends(auth.get_current_admin_user),
+    db: Session = Depends(database.get_db)
+):
+    """Aggregerad säkerhetsstatistik för adminpanelen."""
+    now = int(time.time())
+    active_count = len([ip for ip, data in _banned_ips_cache.items() if data.get("expires_at", 0) == 0 or data.get("expires_at", 0) > now])
+    total_blocked = db.query(func.coalesce(func.sum(models.BannedIP.attempts_count), 0)).scalar() or 0
+    return schemas.SecurityStatsResponse(
+        active_bans_count=active_count,
+        total_blocked_attempts=int(total_blocked)
+    )
+
 
 
 @app.post("/ai/chat", response_model=schemas.ChatResponse)

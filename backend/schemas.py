@@ -262,4 +262,27 @@ class ArticleVoteRequest(BaseModel):
 class TagActionRequest(BaseModel):
     tag: str
 
+class BannedIPResponse(BaseModel):
+    id: int
+    ip: str
+    reason: str
+    banned_at: int
+    expires_at: int
+    user_agent: str
+    attempts_count: int
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+class BanIPRequest(BaseModel):
+    ip: str
+    reason: Optional[str] = "Manuell spärr av administratör"
+    duration_minutes: Optional[int] = 60 # 0 = permanent
+
+class SecurityStatsResponse(BaseModel):
+    active_bans_count: int
+    total_blocked_attempts: int
+
+
 

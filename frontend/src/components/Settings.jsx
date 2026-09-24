@@ -117,6 +117,7 @@ const Settings = ({ onLogout, currentUser }) => {
   // Kollapsade sektioner under fliken Administratör
   const [openAdminSections, setOpenAdminSections] = useState({
     users: true,
+    security: true,
     dangerZone: false,
     systemConfig: false
   });
@@ -166,6 +167,17 @@ const Settings = ({ onLogout, currentUser }) => {
   const [showClearModal, setShowClearModal] = useState(false);
   const [clearMode, setClearMode] = useState('unlocked');
   const [adminPurgeDays, setAdminPurgeDays] = useState(30);
+
+  // IP-Jail & Säkerhet State
+  const [bannedIps, setBannedIps] = useState([]);
+  const [isLoadingBannedIps, setIsLoadingBannedIps] = useState(false);
+  const [securityStats, setSecurityStats] = useState({ active_bans_count: 0, total_blocked_attempts: 0 });
+  const [manualBanIp, setManualBanIp] = useState('');
+  const [manualBanReason, setManualBanReason] = useState('');
+  const [manualBanDuration, setManualBanDuration] = useState(60);
+  const [isBanningIp, setIsBanningIp] = useState(false);
+  const [unbanningIpMap, setUnbanningIpMap] = useState({});
+
 
   const [keywords, setKeywords] = useState([]);
   const [newKeyword, setNewKeyword] = useState('');
@@ -800,8 +812,75 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       fetchAdminUsers();
       fetchDbStats();
       fetchAiConfig();
+      fetchBannedIps();
+      fetchSecurityStats();
     }
   }, [activeTab, isAdmin]);
+
+  const fetchBannedIps = async () => {
+    try {
+      setIsLoadingBannedIps(true);
+      const res = await api.get('/admin/security/banned-ips');
+      if (res.data) {
+        setBannedIps(res.data);
+      }
+    } catch (err) {
+      console.error("Kunde inte hämta spärrade IP-adresser:", err);
+    } finally {
+      setIsLoadingBannedIps(false);
+    }
+  };
+
+  const fetchSecurityStats = async () => {
+    try {
+      const res = await api.get('/admin/security/stats');
+      if (res.data) {
+        setSecurityStats(res.data);
+      }
+    } catch (err) {
+      console.error("Kunde inte hämta säkerhetsstatistik:", err);
+    }
+  };
+
+  const handleManualBanIp = async (e) => {
+    e.preventDefault();
+    const cleanIp = manualBanIp.trim();
+    if (!cleanIp) {
+      toast.error('Ange en giltig IP-adress att spärra.');
+      return;
+    }
+    try {
+      setIsBanningIp(true);
+      await api.post('/admin/security/ban-ip', {
+        ip: cleanIp,
+        reason: manualBanReason.trim() || 'Manuell spärr av administratör',
+        duration_minutes: parseInt(manualBanDuration, 10) || 60
+      });
+      toast.success(`IP-adressen ${cleanIp} har spärrats.`);
+      setManualBanIp('');
+      setManualBanReason('');
+      fetchBannedIps();
+      fetchSecurityStats();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Kunde inte spärra IP-adressen.');
+    } finally {
+      setIsBanningIp(false);
+    }
+  };
+
+  const handleUnbanIp = async (ip) => {
+    try {
+      setUnbanningIpMap(prev => ({ ...prev, [ip]: true }));
+      await api.post('/admin/security/unban-ip', { ip });
+      toast.success(`Spärren för ${ip} har hävts.`);
+      fetchBannedIps();
+      fetchSecurityStats();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Kunde inte häva spärren.');
+    } finally {
+      setUnbanningIpMap(prev => ({ ...prev, [ip]: false }));
+    }
+  };
 
   const fetchAdminUsers = async () => {
     try {
@@ -6881,7 +6960,294 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             )}
           </div>
 
-          {/* Sektion 2: Kritiska Databasåtgärder */}
+          {/* Sektion: Säkerhet & IP-Jail */}
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(234, 88, 12, 0.25)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleAdminSection('security')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '1rem 1.15rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                backgroundColor: openAdminSections.security ? 'rgba(234, 88, 12, 0.03)' : 'transparent',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', backgroundColor: 'rgba(234, 88, 12, 0.1)', flexShrink: 0 }}>
+                  <ShieldAlert size={18} style={{ color: '#ea580c' }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    Säkerhet och IP-Jail (Spärrade adresser)
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Automatiskt skydd mot botar, sårbarhetsskannrar och brute-force-intrång
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.55rem', borderRadius: '10px', backgroundColor: bannedIps.filter(b => b.is_active).length > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)', color: bannedIps.filter(b => b.is_active).length > 0 ? '#ef4444' : '#10b981', fontWeight: 600 }}>
+                  {bannedIps.filter(b => b.is_active).length} aktiva spärrar
+                </span>
+                {openAdminSections.security ? <ChevronUp size={18} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={18} style={{ color: 'var(--text-muted)' }} />}
+              </div>
+            </div>
+
+            {openAdminSections.security && (
+              <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.45, maxWidth: '750px' }}>
+                    Klienter som söker efter känsliga filer (gcp-credentials.json, .env, firebase-admin etc.) eller utför upprepade misslyckade inloggningsförsök spärras automatiskt. Spärrade förfrågningar avvisas direkt med 403 Forbidden på middleware-nivå.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { fetchBannedIps(); fetchSecurityStats(); }}
+                    disabled={isLoadingBannedIps}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.4rem 0.8rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.82rem',
+                      fontWeight: 500,
+                      cursor: isLoadingBannedIps ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <RefreshCw size={14} className={isLoadingBannedIps ? 'spin' : ''} />
+                    {isLoadingBannedIps ? 'Laddar...' : 'Uppdatera status'}
+                  </button>
+                </div>
+
+                {/* KPI-kort */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                  <div style={{ padding: '0.85rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Aktiva IP-spärrar</div>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 700, color: securityStats.active_bans_count > 0 ? '#ea580c' : 'var(--text-main)', marginTop: '0.25rem' }}>
+                      {securityStats.active_bans_count} st
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.85rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Totalt blockerade angrepp</div>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 700, color: securityStats.total_blocked_attempts > 0 ? '#ef4444' : 'var(--text-main)', marginTop: '0.25rem' }}>
+                      {securityStats.total_blocked_attempts} st
+                    </div>
+                  </div>
+                </div>
+
+                {/* Manuell spärrning av IP */}
+                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+                    Manuell spärrning av IP-adress
+                  </div>
+                  <p style={{ margin: '0 0 0.85rem 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                    Spärra en specifik IP-adress manuellt om du noterar ovälkommen aktivitet eller missbruk.
+                  </p>
+
+                  <form onSubmit={handleManualBanIp} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                          IP-adress att spärra
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="t.ex. 198.51.100.2"
+                          value={manualBanIp}
+                          onChange={(e) => setManualBanIp(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-main)',
+                            fontSize: '0.88rem',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                          Orsak till spärr
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="t.ex. Misstänkt skanning av resurser"
+                          value={manualBanReason}
+                          onChange={(e) => setManualBanReason(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-main)',
+                            fontSize: '0.88rem',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                          Spärrens varaktighet
+                        </label>
+                        <select
+                          value={manualBanDuration}
+                          onChange={(e) => setManualBanDuration(Number(e.target.value))}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-main)',
+                            fontSize: '0.88rem',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          <option value={15}>15 minuter</option>
+                          <option value={60}>1 timme</option>
+                          <option value={1440}>24 timmar</option>
+                          <option value={10080}>7 dagar</option>
+                          <option value={0}>Permanent spärr</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
+                      <button
+                        type="submit"
+                        disabled={isBanningIp || !manualBanIp.trim()}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: '#ea580c',
+                          color: 'white',
+                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                          cursor: isBanningIp || !manualBanIp.trim() ? 'not-allowed' : 'pointer',
+                          opacity: isBanningIp || !manualBanIp.trim() ? 0.6 : 1
+                        }}
+                      >
+                        {isBanningIp ? 'Spärrar IP...' : 'Spärra IP-adress'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Lista över spärrade IP-adresser */}
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.9rem', marginBottom: '0.65rem' }}>
+                    Spärrade IP-adresser ({bannedIps.length})
+                  </div>
+
+                  {isLoadingBannedIps && bannedIps.length === 0 ? (
+                    <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                      Läser in spärrade adresser...
+                    </div>
+                  ) : bannedIps.length === 0 ? (
+                    <div style={{ padding: '1.5rem', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: '8px', border: '1px dashed var(--border-color)', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                      Inga spärrade IP-adresser just nu. Systemet är säkert och inga aktiva intrångsförsök har upptäckts.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                      {bannedIps.map((ban) => {
+                        const isUnbanning = Boolean(unbanningIpMap[ban.ip]);
+                        return (
+                          <div
+                            key={ban.id || ban.ip}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '0.75rem 1rem',
+                              backgroundColor: 'var(--bg-app)',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border-color)',
+                              flexWrap: 'wrap',
+                              gap: '0.75rem'
+                            }}
+                          >
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: '220px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                                  {ban.ip}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    padding: '0.1rem 0.45rem',
+                                    borderRadius: '6px',
+                                    backgroundColor: ban.is_active ? 'rgba(239, 68, 68, 0.12)' : 'rgba(100, 116, 139, 0.12)',
+                                    color: ban.is_active ? '#ef4444' : 'var(--text-muted)'
+                                  }}
+                                >
+                                  {ban.is_active ? 'Aktiv spärr' : 'Utgången'}
+                                </span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                  · {ban.attempts_count} blockerade anrop
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                <span style={{ fontWeight: 500, color: 'var(--text-main)' }}>Orsak:</span> {ban.reason}
+                              </div>
+                              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                <span>Spärrad: {formatEuropeanDateTime(ban.banned_at)}</span>
+                                <span>
+                                  Giltig till: {ban.expires_at === 0 ? 'Permanent' : formatEuropeanDateTime(ban.expires_at)}
+                                </span>
+                              </div>
+                              {ban.user_agent && (
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', maxWidth: '500px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  Agent: {ban.user_agent}
+                                </div>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleUnbanIp(ban.ip)}
+                              disabled={isUnbanning}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                padding: '0.4rem 0.75rem',
+                                borderRadius: '6px',
+                                border: '1px solid var(--border-color)',
+                                backgroundColor: 'var(--bg-card)',
+                                color: '#10b981',
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                                cursor: isUnbanning ? 'not-allowed' : 'pointer'
+                              }}
+                            >
+                              <ShieldCheck size={14} />
+                              {isUnbanning ? 'Häver spärr...' : 'Häv spärr'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sektion 3: Kritiska Databasåtgärder */}
           <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.25)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
             <div
               onClick={() => toggleAdminSection('dangerZone')}

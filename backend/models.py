@@ -150,3 +150,14 @@ class DailyDigest(Base):
     created_at = Column(Integer, default=0)
 
     owner = relationship("User", back_populates="digests")
+
+class BannedIP(Base):
+    __tablename__ = "banned_ips"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ip = Column(String, unique=True, index=True)
+    reason = Column(String, default="")
+    banned_at = Column(Integer, default=0) # unix timestamp
+    expires_at = Column(Integer, default=0) # unix timestamp (0 = permanent)
+    user_agent = Column(String, default="")
+    attempts_count = Column(Integer, default=1)

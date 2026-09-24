@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.08',
+    date: '2026-09-24',
+    title: 'Automatiskt IP-Jail och administratörsstöd för spärrade adresser',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Automatiskt IP-Jail mot botar och sårbarhetsskannrar',
+        description: 'Implementerat automatisk spärrning (IP-Jail) som omedelbart bannlyser klienter i 60 minuter vid scanning efter känsliga filer (gcp-credentials, firebase-admin, .env m.fl.) samt vid upprepade misslyckade inloggningsförsök.'
+      },
+      {
+        type: 'feature',
+        title: 'Administratörspanel för IP-Jail & Säkerhet',
+        description: 'Ny säkerhetssektion under Administratörsfliken med realtidsöversikt över spärrade IP-adresser, orsak, återstående spärrtid, blockerade förfrågningar samt möjlighet att manuellt spärra eller häva spärrar.'
+      },
+      {
+        type: 'improvement',
+        title: 'Tidig avvisning på middleware-nivå',
+        description: 'Spärrade IP-adresser avvisas direkt i nätverkslagret med 403 Forbidden innan resurskrävande databasfrågor eller lösenordskryptering utförs, vilket skyddar serverns CPU mot överbelastning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.07',
     date: '2026-09-24',
     title: 'Avdelare för första kortet och minimerad marginal i ultrakompakt flöde',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
