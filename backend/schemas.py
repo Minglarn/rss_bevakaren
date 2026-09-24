@@ -115,6 +115,7 @@ class ArticleResponse(BaseModel):
     published_ts: Optional[int] = 0
     summary: Optional[str] = None
     image_url: Optional[str] = None
+    image_source: Optional[str] = "rss"
     categories: Optional[List[str]] = []
     source_title: Optional[str] = None
     feed_icon: Optional[str] = ""

@@ -73,6 +73,7 @@ class Article(Base):
     received_ts = Column(Integer, index=True)
     summary = Column(String)
     image_url = Column(String)
+    image_source = Column(String, default="rss") # rss, opengraph, wikimedia, unsplash
     categories = Column(String)
     is_read = Column(Integer, default=0)
     is_locked = Column(Integer, default=0)

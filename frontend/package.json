@@ -1,7 +1,7 @@
 {
   "name": "rss-reader-frontend",
   "private": true,
-  "version": "2026.09.24.14",
+  "version": "2026.09.24.17",
   "type": "module",
   "scripts": {
     "dev": "vite",

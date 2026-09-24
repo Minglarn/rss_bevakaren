@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Info, X, Clock, Tag, Flame, Sparkles, Layers, CheckCircle2, AlertTriangle, RefreshCw, ExternalLink, Rss, Cpu } from 'lucide-react';
-import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
+import { decodeHtmlEntities, resolveFeedIcon, getImageSourceLabel } from '../utils/textUtils';
 import './AIReasoningModal.css';
 
 const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = false }) => {
@@ -199,6 +199,11 @@ const AIReasoningModal = ({ item, isOpen, onClose, onReanalyze, isAnalyzing = fa
                   )}
                   <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                     {source}
+                    {getImageSourceLabel(item) && (
+                      <span style={{ opacity: 0.75, fontWeight: 400, marginLeft: '0.35rem' }}>
+                        · {getImageSourceLabel(item)}
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>

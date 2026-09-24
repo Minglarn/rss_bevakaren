@@ -20,3 +20,19 @@ export function resolveFeedIcon(iconUrl) {
   }
   return cleanUrl;
 }
+
+export function getImageSourceLabel(item) {
+  if (!item || !item.image_url) return null;
+  const src = (item.image_source || '').toLowerCase();
+  const url = (item.image_url || '').toLowerCase();
+  if (src === 'wikimedia' || url.includes('wikimedia.org') || url.includes('wikipedia.org')) {
+    return 'Bild: Wikimedia (Illustrativ)';
+  }
+  if (src === 'unsplash' || url.includes('unsplash.com')) {
+    return 'Bild: Unsplash (Illustrativ)';
+  }
+  if (src === 'opengraph') {
+    return 'Foto: Open Graph';
+  }
+  return null;
+}

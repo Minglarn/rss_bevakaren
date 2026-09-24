@@ -1,9 +1,60 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.17',
+    date: '2026-09-24',
+    title: 'Tydlig visning av bildursprung för artiklar',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Källhänvisning för kompletterande och redaktionella bilder',
+        description: 'Artiklar visar nu transparent var bilden kommer ifrån i ultrakompakt vy, standardkort samt AI-detaljmodalen (t.ex. "Polisen · Bild: Wikimedia (Illustrativ)", "Bild: Unsplash (Illustrativ)" eller "Foto: Open Graph"). Originalbilder från RSS behåller ren källvisning utan onödig text.'
+      },
+      {
+        type: 'improvement',
+        title: 'Backend-spårning och databasstöd för bildkällor',
+        description: 'Lagt till kolumnen image_source i artikeltabellen med automatiska migreringar och hantering i AI-bakgrundsprocesser och bildhämtningstjänster.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.24.16',
+    date: '2026-09-24',
+    title: 'Beständigt minne för kollapsade sektioner i inställningar',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Kollapsade och expanderade rutor sparas',
+        description: 'Sektionernas tillstånd under flikarna Administratör (inklusive Användarkonton och behörigheter), Allmänt, Databas, AI och Statistik sparas nu automatiskt i webbläsarens lokala minne så att valda fällningslägen består mellan sidladdningar och flikbyten.'
+      },
+      {
+        type: 'improvement',
+        title: 'Synkroniserad backup och hantering av alla sektioner',
+        description: 'Knapparna för att expandera och kollapsa alla sektioner synkroniseras nu direkt mot det sparade tillståndet, och inställningarna inkluderas i systemets fullständiga backupfil.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.24.15',
+    date: '2026-09-24',
+    title: 'Korrekt dygnsrytmvisualisering och visning av snitt AI-svarstid',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Korrekt timvisning och dygnsrytm',
+        description: 'Åtgärdat datastrukturen och timetiketterna för 24-timmars dygnsrytm i statistikfliken. Staplarna mappar nu korrekt timme för timme (00–23) med tydlig visning av topptimme och aktuell timmarkör.'
+      },
+      {
+        type: 'fix',
+        title: 'Snitt AI-svarstid och sparade artiklar i KPI-översikten',
+        description: 'Kopplat ihop mätvärdet för genomsnittlig AI-svarstid per artikel och antal sparade artiklar så att värdena läses in och visas korrekt i statistikens nyckeltalskort.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.14',
     date: '2026-09-24',
     title: 'Standardiserad engelsk AbuseIPDB-rapport i webbserverformat (CLF)',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

@@ -339,6 +339,10 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE articles ADD COLUMN ai_short_summary TEXT DEFAULT ''"))
                     conn.commit()
                     print("[DB] Added ai_short_summary column to articles", flush=True)
+                if "image_source" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN image_source VARCHAR DEFAULT 'rss'"))
+                    conn.commit()
+                    print("[DB] Added image_source column to articles", flush=True)
                 conn.execute(text("UPDATE articles SET allow_push = 1 WHERE allow_push IS NULL"))
                 conn.commit()
         except Exception as e:
@@ -958,7 +962,7 @@ def get_version():
         return "unknown"
 
 VERSION = get_version()
-LAST_UPDATE = "2026-09-23"
+LAST_UPDATE = "2026-09-24"
 
 def normalize_user_categories(cats_raw: Any) -> List[Dict[str, Any]]:
     """Säkerställer att kategorier returneras som en lista av dicts: [{'name': '...', 'weight': X}, ...]."""
@@ -1318,6 +1322,12 @@ def run_db_migrations(db_path: str):
         # Migration 28: Add auto_image_search to user_ai_settings
         try:
             cur.execute("ALTER TABLE user_ai_settings ADD COLUMN auto_image_search INTEGER DEFAULT 1;")
+        except sqlite3.OperationalError:
+            pass
+
+        # Migration 29: Add image_source to articles
+        try:
+            cur.execute("ALTER TABLE articles ADD COLUMN image_source VARCHAR DEFAULT 'rss';")
         except sqlite3.OperationalError:
             pass
 
@@ -2671,7 +2681,10 @@ async def ai_processing_loop():
                                     )
                                     if resolved_img:
                                         save_art.image_url = resolved_img
+                                        resolved_source = "opengraph" if img_method.startswith("opengraph") else ("wikimedia" if img_method.startswith("wikimedia") else ("unsplash" if img_method.startswith("unsplash") else "rss"))
+                                        save_art.image_source = resolved_source
                                         item["image_url"] = resolved_img
+                                        item["image_source"] = resolved_source
                                         print(f"[ImageService] Bild kopplad till #{save_art.id} ('{save_art.title[:35]}...') via {img_method}", flush=True)
                                 except Exception as e:
                                     print(f"[ImageService] Fel vid bildkomplettering: {e}", flush=True)
@@ -3901,6 +3914,7 @@ def get_dashboard_feeds(
             "published_ts": art.published_ts,
             "summary": art.summary,
             "image_url": art.image_url,
+            "image_source": getattr(art, "image_source", None) or "rss",
             "categories": cats,
             "source_title": art.feed.title or art.feed.url,
             "feed_icon": get_feed_icon_url(art.feed, art.link),
@@ -4000,6 +4014,8 @@ def get_dashboard_feeds(
                 "published": other["published"],
                 "published_ts": other["published_ts"],
                 "is_read": other["is_read"],
+                "image_url": other.get("image_url", ""),
+                "image_source": other.get("image_source", "rss"),
                 "ai_short_summary": other.get("ai_short_summary", "")
             })
         head["similar_articles"] = similar
@@ -4175,6 +4191,7 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
             )
             if resolved_img:
                 art.image_url = resolved_img
+                art.image_source = "opengraph" if img_method.startswith("opengraph") else ("wikimedia" if img_method.startswith("wikimedia") else ("unsplash" if img_method.startswith("unsplash") else "rss"))
                 print(f"[ImageService] Bild kopplad manuellt till #{art.id} ('{art.title[:35]}...') via {img_method}", flush=True)
         except Exception as e:
             print(f"[ImageService] Fel vid manuell bildkomplettering: {e}", flush=True)
@@ -4407,9 +4424,10 @@ async def fetch_article_image(
     )
     if resolved_img:
         art.image_url = resolved_img
+        art.image_source = "opengraph" if img_method.startswith("opengraph") else ("wikimedia" if img_method.startswith("wikimedia") else ("unsplash" if img_method.startswith("unsplash") else "rss"))
         db.commit()
         await manager.send_personal_message(f"AI_UPDATED:{art.id}", current_user.id)
-        return {"status": "ok", "image_url": resolved_img, "method": img_method}
+        return {"status": "ok", "image_url": resolved_img, "image_source": art.image_source, "method": img_method}
     return {"status": "no_image_found", "image_url": None}
 
 @app.post("/articles/backfill-images")
@@ -4450,6 +4468,7 @@ async def backfill_article_images(
         )
         if resolved_img:
             art.image_url = resolved_img
+            art.image_source = "opengraph" if img_method.startswith("opengraph") else ("wikimedia" if img_method.startswith("wikimedia") else ("unsplash" if img_method.startswith("unsplash") else "rss"))
             updated_count += 1
             updated_ids.append(art.id)
             print(f"[ImageService Backfill] #{art.id} ('{art.title[:30]}...') fick bild via {img_method}", flush=True)
@@ -5329,6 +5348,8 @@ def get_stats_overview(db: Session = Depends(database.get_db), current_user: mod
             all_feeds = db.query(models.Feed).all()
             user_feed_ids = [f.id for f in all_feeds]
 
+        empty_hourly = [{"hour": h, "label": f"{h:02d}", "count": 0} for h in range(24)]
+
         if not user_feed_ids:
             return {
                 "kpi": {
@@ -5343,20 +5364,24 @@ def get_stats_overview(db: Session = Depends(database.get_db), current_user: mod
                     "read_count": 0,
                     "read_pct": 0.0,
                     "locked_count": 0,
-                    "avg_ai_duration_s": 0.0
+                    "bookmarked_count": 0,
+                    "avg_ai_duration_s": 0.0,
+                    "avg_ai_response_time_ms": 0.0
                 },
                 "daily_trend": [],
-                "hourly_distribution": [0] * 24,
+                "hourly_distribution": empty_hourly,
                 "priority_distribution": {"high": 0, "medium": 0, "low": 0},
                 "top_categories": [],
                 "top_sources": []
             }
 
+        effective_ts = func.coalesce(func.nullif(models.Article.received_ts, 0), models.Article.published_ts)
+
         base_query = db.query(models.Article).filter(models.Article.feed_id.in_(user_feed_ids))
         total_articles = base_query.count()
-        articles_today = base_query.filter(models.Article.received_ts >= today_start_ts).count()
-        articles_week = base_query.filter(models.Article.received_ts >= week_start_ts).count()
-        articles_month = base_query.filter(models.Article.received_ts >= month_start_ts).count()
+        articles_today = base_query.filter(effective_ts >= today_start_ts).count()
+        articles_week = base_query.filter(effective_ts >= week_start_ts).count()
+        articles_month = base_query.filter(effective_ts >= month_start_ts).count()
 
         prio_count = base_query.filter(or_(models.Article.priority == 'high', models.Article.prio_score >= 75)).count()
         med_count = base_query.filter(and_(
@@ -5388,8 +5413,8 @@ def get_stats_overview(db: Session = Depends(database.get_db), current_user: mod
                 func.sum(case((and_(models.Article.priority != 'high', or_(models.Article.priority == 'medium', and_(models.Article.prio_score >= 40, models.Article.prio_score < 75))), 1), else_=0)).label("medium")
             ).filter(
                 models.Article.feed_id.in_(user_feed_ids),
-                models.Article.received_ts >= day_start_ts,
-                models.Article.received_ts < day_end_ts
+                effective_ts >= day_start_ts,
+                effective_ts < day_end_ts
             ).first()
 
             tot = day_stats.total or 0
@@ -5407,18 +5432,27 @@ def get_stats_overview(db: Session = Depends(database.get_db), current_user: mod
             })
 
         # Dygnsrytm (fördelning per timme 00-23 över senaste 7 dagarna)
-        hourly_distribution = [0] * 24
-        recent_ts = db.query(models.Article.received_ts).filter(
+        hourly_counts = [0] * 24
+        recent_ts = db.query(effective_ts).filter(
             models.Article.feed_id.in_(user_feed_ids),
-            models.Article.received_ts >= week_start_ts
+            effective_ts >= week_start_ts
         ).all()
         for (r_ts,) in recent_ts:
             if r_ts:
                 try:
                     dt = datetime.fromtimestamp(r_ts)
-                    hourly_distribution[dt.hour] += 1
+                    hourly_counts[dt.hour] += 1
                 except Exception:
                     pass
+
+        hourly_distribution = [
+            {
+                "hour": h,
+                "label": f"{h:02d}",
+                "count": hourly_counts[h]
+            }
+            for h in range(24)
+        ]
 
         # Topp AI-kategorier
         cat_rows = db.query(
@@ -5473,7 +5507,9 @@ def get_stats_overview(db: Session = Depends(database.get_db), current_user: mod
                 "read_count": read_count,
                 "read_pct": round((read_count / total_articles * 100), 1) if total_articles > 0 else 0.0,
                 "locked_count": locked_count,
-                "avg_ai_duration_s": round(float(avg_ai), 2)
+                "bookmarked_count": locked_count,
+                "avg_ai_duration_s": round(float(avg_ai), 2),
+                "avg_ai_response_time_ms": round(float(avg_ai) * 1000, 1)
             },
             "daily_trend": daily_trend,
             "hourly_distribution": hourly_distribution,
@@ -5500,10 +5536,12 @@ def get_stats_overview(db: Session = Depends(database.get_db), current_user: mod
                 "read_count": 0,
                 "read_pct": 0.0,
                 "locked_count": 0,
-                "avg_ai_duration_s": 0.0
+                "bookmarked_count": 0,
+                "avg_ai_duration_s": 0.0,
+                "avg_ai_response_time_ms": 0.0
             },
             "daily_trend": [],
-            "hourly_distribution": [0] * 24,
+            "hourly_distribution": empty_hourly if 'empty_hourly' in locals() else [{"hour": h, "label": f"{h:02d}", "count": 0} for h in range(24)],
             "priority_distribution": {"high": 0, "medium": 0, "low": 0},
             "top_categories": [],
             "top_sources": []

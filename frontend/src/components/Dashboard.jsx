@@ -8,7 +8,7 @@ import ShareModal from './ShareModal';
 import OnboardingWizard from './OnboardingWizard';
 import AIReasoningModal from './AIReasoningModal';
 import DashboardLoading from './DashboardLoading';
-import { decodeHtmlEntities, resolveFeedIcon } from '../utils/textUtils';
+import { decodeHtmlEntities, resolveFeedIcon, getImageSourceLabel } from '../utils/textUtils';
 import { useFeeds } from '../App';
 import { getAppMode, getSessionRefTime, resetSessionRef } from '../utils/sessionTracker';
 
@@ -2172,6 +2172,16 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                               {item.source_title && (
                                 <span style={{ fontWeight: 600, color: 'var(--text-main)', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flexShrink: 1 }}>
                                   {decodeHtmlEntities(item.source_title)}
+                                  {getImageSourceLabel(item) && (
+                                    <span style={{ fontWeight: 400, opacity: 0.8, marginLeft: '0.25rem' }}>
+                                      · {getImageSourceLabel(item)}
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                              {!item.source_title && getImageSourceLabel(item) && (
+                                <span style={{ fontWeight: 400, opacity: 0.8 }}>
+                                  {getImageSourceLabel(item)}
                                 </span>
                               )}
 
@@ -2587,6 +2597,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           />
                           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {decodeHtmlEntities(item.source_title)}
+                            {getImageSourceLabel(item) && (
+                              <span style={{ fontWeight: 400, opacity: 0.75, fontSize: '0.75rem', marginLeft: '0.35rem' }}>
+                                · {getImageSourceLabel(item)}
+                              </span>
+                            )}
                           </span>
                         </div>
 
@@ -2639,6 +2654,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             }}
                           />
                           {decodeHtmlEntities(item.source_title)}
+                          {getImageSourceLabel(item) && (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.25rem' }}>
+                              · {getImageSourceLabel(item)}
+                            </span>
+                          )}
                           {item.published && (
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.35rem' }} title="Ursprunglig publiceringstid">
                               • {formatDateLabel(item.published)} {formatTime(item.published)}

@@ -68,81 +68,184 @@ const Settings = ({ onLogout, currentUser }) => {
   };
 
   // Kollapsade sektioner under fliken Allmänt
-  const [openGeneralSections, setOpenGeneralSections] = useState({
-    appMode: false,
-    systemInfo: false,
-    changelog: false,
-    onboarding: false,
-    account: false
+  const [openGeneralSections, setOpenGeneralSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rss_expanded_general_sections');
+      if (saved) return { appMode: false, systemInfo: false, changelog: false, onboarding: false, account: false, ...JSON.parse(saved) };
+    } catch {
+      // Ignorera fel
+    }
+    return {
+      appMode: false,
+      systemInfo: false,
+      changelog: false,
+      onboarding: false,
+      account: false
+    };
   });
 
   const toggleGeneralSection = (key) => {
-    setOpenGeneralSections(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+    setOpenGeneralSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('rss_expanded_general_sections', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const setAllGeneralSections = (expand) => {
+    const next = {
+      appMode: expand,
+      systemInfo: expand,
+      changelog: expand,
+      onboarding: expand,
+      account: expand
+    };
+    setOpenGeneralSections(next);
+    localStorage.setItem('rss_expanded_general_sections', JSON.stringify(next));
   };
 
   // Kollapsade sektioner under fliken Databas & Underhåll
-  const [openDatabaseSections, setOpenDatabaseSections] = useState({
-    overview: true,
-    autoPurge: false,
-    backupRestore: false
+  const [openDatabaseSections, setOpenDatabaseSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rss_expanded_database_sections');
+      if (saved) return { overview: true, autoPurge: false, backupRestore: false, ...JSON.parse(saved) };
+    } catch {
+      // Ignorera fel
+    }
+    return {
+      overview: true,
+      autoPurge: false,
+      backupRestore: false
+    };
   });
 
   const toggleDatabaseSection = (key) => {
-    setOpenDatabaseSections(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+    setOpenDatabaseSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('rss_expanded_database_sections', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const setAllDatabaseSections = (expand) => {
+    const next = {
+      overview: expand,
+      autoPurge: expand,
+      backupRestore: expand
+    };
+    setOpenDatabaseSections(next);
+    localStorage.setItem('rss_expanded_database_sections', JSON.stringify(next));
   };
 
   // Kollapsade sektioner under fliken AI & Analys
-  const [openAiSections, setOpenAiSections] = useState({
-    prioFlow: true,
-    engineStatus: false,
-    keywords: false,
-    interestProfile: false,
-    categoryWeights: false,
-    systemPrompt: false
+  const [openAiSections, setOpenAiSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rss_expanded_ai_sections');
+      if (saved) return { prioFlow: true, engineStatus: false, keywords: false, interestProfile: false, categoryWeights: false, systemPrompt: false, ...JSON.parse(saved) };
+    } catch {
+      // Ignorera fel
+    }
+    return {
+      prioFlow: true,
+      engineStatus: false,
+      keywords: false,
+      interestProfile: false,
+      categoryWeights: false,
+      systemPrompt: false
+    };
   });
 
   const toggleAiSection = (key) => {
-    setOpenAiSections(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+    setOpenAiSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('rss_expanded_ai_sections', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const setAllAiSections = (expand) => {
+    const next = {
+      prioFlow: expand,
+      engineStatus: expand,
+      keywords: expand,
+      interestProfile: expand,
+      categoryWeights: expand,
+      systemPrompt: expand
+    };
+    setOpenAiSections(next);
+    localStorage.setItem('rss_expanded_ai_sections', JSON.stringify(next));
   };
 
   // Kollapsade sektioner under fliken Administratör
-  const [openAdminSections, setOpenAdminSections] = useState({
-    users: true,
-    security: true,
-    dangerZone: false,
-    systemConfig: false
+  const [openAdminSections, setOpenAdminSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rss_expanded_admin_sections');
+      if (saved) return { users: true, security: true, dangerZone: false, systemConfig: false, ...JSON.parse(saved) };
+    } catch {
+      // Ignorera fel
+    }
+    return {
+      users: true,
+      security: true,
+      dangerZone: false,
+      systemConfig: false
+    };
   });
 
   const toggleAdminSection = (key) => {
-    setOpenAdminSections(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+    setOpenAdminSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('rss_expanded_admin_sections', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const setAllAdminSections = (expand) => {
+    const next = {
+      users: expand,
+      security: expand,
+      dangerZone: expand,
+      systemConfig: expand
+    };
+    setOpenAdminSections(next);
+    localStorage.setItem('rss_expanded_admin_sections', JSON.stringify(next));
   };
 
   // Kollapsade sektioner under fliken Statistik
-  const [openStatsSections, setOpenStatsSections] = useState({
-    kpi: true,
-    trend: true,
-    hourly: false,
-    categories: false,
-    sources: false
+  const [openStatsSections, setOpenStatsSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rss_expanded_stats_sections');
+      if (saved) return { kpi: true, trend: true, hourly: false, categories: false, sources: false, ...JSON.parse(saved) };
+    } catch {
+      // Ignorera fel
+    }
+    return {
+      kpi: true,
+      trend: true,
+      hourly: false,
+      categories: false,
+      sources: false
+    };
   });
 
   const toggleStatsSection = (key) => {
-    setOpenStatsSections(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+    setOpenStatsSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('rss_expanded_stats_sections', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const setAllStatsSections = (expand) => {
+    const next = {
+      kpi: expand,
+      trend: expand,
+      hourly: expand,
+      categories: expand,
+      sources: expand
+    };
+    setOpenStatsSections(next);
+    localStorage.setItem('rss_expanded_stats_sections', JSON.stringify(next));
   };
 
   // Administratörspanel State
@@ -307,7 +410,12 @@ const Settings = ({ onLogout, currentUser }) => {
         show_read: localStorage.getItem('rss_show_read') === 'true',
         swipe_gestures: localStorage.getItem('rss_swipe_gestures') !== 'false',
         expanded_ui_sections: localStorage.getItem('rss_expanded_ui_sections') || null,
-        expanded_notification_sections: localStorage.getItem('rss_expanded_notification_sections') || null
+        expanded_notification_sections: localStorage.getItem('rss_expanded_notification_sections') || null,
+        expanded_admin_sections: localStorage.getItem('rss_expanded_admin_sections') || null,
+        expanded_general_sections: localStorage.getItem('rss_expanded_general_sections') || null,
+        expanded_database_sections: localStorage.getItem('rss_expanded_database_sections') || null,
+        expanded_ai_sections: localStorage.getItem('rss_expanded_ai_sections') || null,
+        expanded_stats_sections: localStorage.getItem('rss_expanded_stats_sections') || null
       };
 
       backupData.ui_preferences = uiPreferences;
@@ -407,6 +515,21 @@ const Settings = ({ onLogout, currentUser }) => {
         }
         if (uip.expanded_notification_sections) {
           localStorage.setItem('rss_expanded_notification_sections', typeof uip.expanded_notification_sections === 'string' ? uip.expanded_notification_sections : JSON.stringify(uip.expanded_notification_sections));
+        }
+        if (uip.expanded_admin_sections) {
+          localStorage.setItem('rss_expanded_admin_sections', typeof uip.expanded_admin_sections === 'string' ? uip.expanded_admin_sections : JSON.stringify(uip.expanded_admin_sections));
+        }
+        if (uip.expanded_general_sections) {
+          localStorage.setItem('rss_expanded_general_sections', typeof uip.expanded_general_sections === 'string' ? uip.expanded_general_sections : JSON.stringify(uip.expanded_general_sections));
+        }
+        if (uip.expanded_database_sections) {
+          localStorage.setItem('rss_expanded_database_sections', typeof uip.expanded_database_sections === 'string' ? uip.expanded_database_sections : JSON.stringify(uip.expanded_database_sections));
+        }
+        if (uip.expanded_ai_sections) {
+          localStorage.setItem('rss_expanded_ai_sections', typeof uip.expanded_ai_sections === 'string' ? uip.expanded_ai_sections : JSON.stringify(uip.expanded_ai_sections));
+        }
+        if (uip.expanded_stats_sections) {
+          localStorage.setItem('rss_expanded_stats_sections', typeof uip.expanded_stats_sections === 'string' ? uip.expanded_stats_sections : JSON.stringify(uip.expanded_stats_sections));
         }
       }
 
@@ -1705,13 +1828,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               type="button"
               onClick={() => {
                 const anyOpen = Object.values(openGeneralSections).some(Boolean);
-                setOpenGeneralSections({
-                  appMode: !anyOpen,
-                  systemInfo: !anyOpen,
-                  changelog: !anyOpen,
-                  onboarding: !anyOpen,
-                  account: !anyOpen
-                });
+                setAllGeneralSections(!anyOpen);
               }}
               style={{
                 fontSize: '0.78rem',
@@ -2828,13 +2945,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 type="button"
                 onClick={() => {
                   const anyOpen = Object.values(openStatsSections).some(Boolean);
-                  setOpenStatsSections({
-                    kpi: !anyOpen,
-                    trend: !anyOpen,
-                    hourly: !anyOpen,
-                    categories: !anyOpen,
-                    sources: !anyOpen
-                  });
+                  setAllStatsSections(!anyOpen);
                 }}
                 style={{
                   fontSize: '0.78rem',
@@ -2994,7 +3105,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                         <Bookmark size={13} /> Sparade bokmärken
                       </div>
                       <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                        {overviewStats?.kpi?.bookmarked_count ?? 0}
+                        {overviewStats?.kpi?.bookmarked_count ?? overviewStats?.kpi?.locked_count ?? 0}
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                         Permanent bevarade
@@ -3038,7 +3149,13 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                         <Server size={13} /> Snitt AI-svarstid
                       </div>
                       <div style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                        {overviewStats?.kpi?.avg_ai_response_time_ms ? (overviewStats.kpi.avg_ai_response_time_ms / 1000).toFixed(1) + ' s' : 'Ej tillgänglig'}
+                        {(() => {
+                          const avgSec = overviewStats?.kpi?.avg_ai_duration_s ?? (overviewStats?.kpi?.avg_ai_response_time_ms ? overviewStats.kpi.avg_ai_response_time_ms / 1000 : null);
+                          if (avgSec !== null && avgSec !== undefined && Number(avgSec) > 0) {
+                            return `${Number(avgSec).toFixed(1)} s`;
+                          }
+                          return 'Ej tillgänglig';
+                        })()}
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                         Per analyserad artikel
@@ -3243,13 +3360,47 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             {openStatsSections.hourly && (
               <div style={{ padding: '1rem 1.15rem 1.25rem 1.15rem', borderTop: '1px solid var(--border-color)' }}>
                 {(() => {
-                  const hourlyList = overviewStats?.hourly_distribution || [];
+                  const rawHourly = overviewStats?.hourly_distribution || [];
+                  const hourlyList = (Array.isArray(rawHourly) && rawHourly.length > 0)
+                    ? (typeof rawHourly[0] === 'number'
+                        ? rawHourly.map((cnt, h) => ({
+                            hour: h,
+                            label: String(h).padStart(2, '0'),
+                            count: Number(cnt) || 0
+                          }))
+                        : rawHourly.map((item, idx) => ({
+                            hour: item?.hour ?? idx,
+                            label: item?.label ?? String(item?.hour ?? idx).padStart(2, '0'),
+                            count: Number(item?.count) || 0
+                          }))
+                      )
+                    : Array.from({ length: 24 }, (_, h) => ({
+                        hour: h,
+                        label: String(h).padStart(2, '0'),
+                        count: 0
+                      }));
+
                   const maxHourlyTotal = Math.max(...hourlyList.map(h => h.count || 0), 1);
+                  const currentHour = new Date().getHours();
+                  const totalWeekArticles = hourlyList.reduce((acc, h) => acc + (h.count || 0), 0);
+                  const peakHour = hourlyList.reduce((max, h) => (h.count > (max?.count || 0) ? h : max), hourlyList[0]);
 
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                        Aktivitetsfördelning per timme (00:00–23:00). Högre staplar indikerar rusningstider då nyhetskällorna publicerar flest artiklar.
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                        <div>
+                          Aktivitetsfördelning per timme (00:00–23:00). Högre staplar indikerar rusningstider då nyhetskällorna publicerar flest artiklar.
+                        </div>
+                        {peakHour && peakHour.count > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.78rem' }}>
+                            <span>
+                              Mest aktiv tid: <strong style={{ color: '#06b6d4' }}>Kl. {peakHour.label}:00–{peakHour.label}:59</strong> ({peakHour.count} st)
+                            </span>
+                            <span>
+                              Totalt senaste 7 dagarna: <strong style={{ color: 'var(--text-main)' }}>{totalWeekArticles} st</strong>
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div style={{ 
@@ -3261,23 +3412,35 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       }}>
                         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.35rem', minWidth: '580px', height: '140px' }}>
                           {hourlyList.map((h) => {
-                            const barHeight = h.count > 0 ? Math.max(8, Math.round((h.count / maxHourlyTotal) * 100)) : 3;
+                            const isCurrentHour = h.hour === currentHour;
+                            const isPeak = peakHour && peakHour.count > 0 && h.hour === peakHour.hour;
+                            const barHeight = h.count > 0 ? Math.max(8, Math.round((h.count / maxHourlyTotal) * 95)) : 3;
 
                             return (
                               <div 
                                 key={h.hour}
-                                title={`Kl. ${h.label}:00–${h.label}:59: ${h.count} st artiklar`}
+                                title={`Kl. ${h.label}:00–${h.label}:59: ${h.count} st artiklar${isCurrentHour ? ' (Aktuell timme)' : ''}`}
                                 style={{ 
                                   flex: 1, 
                                   display: 'flex', 
                                   flexDirection: 'column', 
                                   alignItems: 'center', 
-                                  justifyContent: 'flex-end',
+                                  justifyContent: 'flex-end', 
                                   height: '100%',
-                                  cursor: 'pointer'
+                                  padding: '0 2px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  transition: 'background-color 0.15s ease'
                                 }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(6, 182, 212, 0.08)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                               >
-                                <div style={{ fontSize: '0.68rem', fontWeight: 600, color: h.count > 0 ? 'var(--text-main)' : 'transparent', marginBottom: '0.25rem' }}>
+                                <div style={{ 
+                                  fontSize: '0.68rem', 
+                                  fontWeight: isPeak ? 700 : 600, 
+                                  color: h.count > 0 ? (isPeak ? '#06b6d4' : 'var(--text-main)') : 'transparent', 
+                                  marginBottom: '0.25rem' 
+                                }}>
                                   {h.count > 0 ? h.count : ''}
                                 </div>
 
@@ -3285,13 +3448,27 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                                   width: '100%', 
                                   maxWidth: '22px', 
                                   height: `${barHeight}px`, 
-                                  backgroundColor: h.count > 0 ? 'rgba(6, 182, 212, 0.75)' : 'var(--border-color)',
+                                  backgroundColor: h.count > 0 ? (isPeak ? '#0891b2' : 'rgba(6, 182, 212, 0.75)') : 'var(--border-color)',
                                   borderRadius: '4px 4px 0 0',
-                                  transition: 'height 0.4s ease'
+                                  boxShadow: isPeak ? '0 0 8px rgba(6, 182, 212, 0.4)' : 'none',
+                                  transition: 'height 0.4s ease, background-color 0.2s ease'
                                 }} />
 
-                                <div style={{ marginTop: '0.4rem', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                                  {h.label}
+                                <div style={{ 
+                                  marginTop: '0.4rem', 
+                                  fontSize: '0.68rem', 
+                                  fontWeight: isCurrentHour ? 700 : 500,
+                                  color: isCurrentHour ? '#06b6d4' : 'var(--text-muted)',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center'
+                                }}>
+                                  <span>{h.label}</span>
+                                  {isCurrentHour && (
+                                    <span style={{ fontSize: '0.58rem', lineHeight: 1, marginTop: '2px', color: '#06b6d4' }}>
+                                      Nu
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -3980,11 +4157,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               type="button"
               onClick={() => {
                 const anyOpen = Object.values(openDatabaseSections).some(Boolean);
-                setOpenDatabaseSections({
-                  overview: !anyOpen,
-                  autoPurge: !anyOpen,
-                  backupRestore: !anyOpen
-                });
+                setAllDatabaseSections(!anyOpen);
               }}
               style={{
                 fontSize: '0.78rem',
@@ -5626,14 +5799,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
               type="button"
               onClick={() => {
                 const anyOpen = Object.values(openAiSections).some(Boolean);
-                setOpenAiSections({
-                  prioFlow: !anyOpen,
-                  engineStatus: !anyOpen,
-                  keywords: !anyOpen,
-                  interestProfile: !anyOpen,
-                  categoryWeights: !anyOpen,
-                  systemPrompt: !anyOpen
-                });
+                setAllAiSections(!anyOpen);
               }}
               style={{
                 fontSize: '0.78rem',
@@ -6495,13 +6661,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
             <button
               type="button"
               onClick={() => {
-                const allOpen = Object.values(openAdminSections).every(Boolean);
-                const nextState = !allOpen;
-                setOpenAdminSections({
-                  users: nextState,
-                  dangerZone: nextState,
-                  systemConfig: nextState
-                });
+                const anyOpen = Object.values(openAdminSections).some(Boolean);
+                setAllAdminSections(!anyOpen);
               }}
               style={{
                 background: 'none',
@@ -6514,7 +6675,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                 borderRadius: '4px'
               }}
             >
-              {Object.values(openAdminSections).every(Boolean) ? 'Kollapsa alla' : 'Expandera alla'}
+              {Object.values(openAdminSections).some(Boolean) ? 'Kollapsa alla' : 'Expandera alla'}
             </button>
           </div>
 
