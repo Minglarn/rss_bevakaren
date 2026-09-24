@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.05',
+    date: '2026-09-24',
+    title: 'Blockering av bot-skanningar och utökad säkerhetsloggning vid inloggningsförsök',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Återställning av äkta klient-IP (Real IP)',
+        description: 'Konfigurerat Nginx med real_ip för att återställa besökarens faktiska externa IP-adress bakom reverse proxies och Docker-nätverk istället för interna proxy-adresser.'
+      },
+      {
+        type: 'improvement',
+        title: 'Tyst avvisande av automatiserade bot-skanningar',
+        description: 'Implementerat skydd i Nginx som tyst svarar 404 utan loggskräp när automatiserade sårbarhetsskannrar och botar letar efter känsliga filer som .env, gcp-credentials, firebase-admin eller servicekonton.'
+      },
+      {
+        type: 'improvement',
+        title: 'Säkerhetsloggning vid inloggningsförsök',
+        description: 'Backend loggar nu strukturerade säkerhetsmeddelanden vid såväl misslyckade som lyckade inloggningsförsök med käll-IP, användarnamn och User-Agent för enkel identifiering av bot-angrepp och otillåtna intrångsförsök.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.04',
     date: '2026-09-24',
     title: 'Historisk infasning och kronologisk sortering vid import av nya flöden',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

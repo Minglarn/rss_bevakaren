@@ -2431,20 +2431,55 @@ async def ai_processing_loop():
         await asyncio.sleep(5)
 
 
+def _extract_client_ip(request: Request) -> str:
+    """Extraherar besökarens faktiska IP-adress från proxy-headers eller anslutning."""
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.split(",")[0].strip()
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "okand"
+
+
 @app.post("/token", response_model=schemas.Token)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+def login_for_access_token(
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(database.get_db)
+):
+    client_ip = _extract_client_ip(request)
+    user_agent = request.headers.get("user-agent", "ingen-user-agent")
+
     user = db.query(models.User).filter(models.User.username == form_data.username).first()
     if not user or not auth.verify_password(form_data.password, user.password_hash):
+        print(f"[AUTH: SÄKERHET] Misslyckat inloggningsförsök för användare '{form_data.username}' från IP {client_ip} | User-Agent: {user_agent}", flush=True)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    print(f"[AUTH: login] Lyckad inloggning för användare '{user.username}' från IP {client_ip}", flush=True)
     access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth.create_access_token(
         data={"sub": user.username, "is_admin": bool(user.is_admin)}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.api_route("/login", methods=["GET", "POST"])
+@app.api_route("/admin/login", methods=["GET", "POST"])
+async def honeypot_login_attempt(request: Request):
+    """Loggar och avvisar automatiska inloggningsförsök från botar och crawlers."""
+    client_ip = _extract_client_ip(request)
+    user_agent = request.headers.get("user-agent", "ingen-user-agent")
+    print(f"[AUTH: SÄKERHET] Misstänkt bot-inloggningsförsök mot {request.method} {request.url.path} från IP {client_ip} | User-Agent: {user_agent}", flush=True)
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Not found"
+    )
  
 @app.post("/auth/refresh", response_model=schemas.Token)
 def refresh_access_token(current_user: models.User = Depends(auth.get_current_user)):
