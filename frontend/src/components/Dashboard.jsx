@@ -616,6 +616,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
       if (timeA !== timeB) {
         return timeB - timeA;
       }
+      const pubA = (getArticlePublishedDate(a) || new Date(0)).getTime();
+      const pubB = (getArticlePublishedDate(b) || new Date(0)).getTime();
+      if (pubA !== pubB) {
+        return pubB - pubA;
+      }
       return (b.id || 0) - (a.id || 0);
     });
   }, [displayedFeeds, feedId, appMode, showRead, showLikedOnly, showLockedOnly, showDislikedOnly, isArticleRead]);
@@ -703,6 +708,11 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
         const timeB = dateB.getTime();
         if (timeA !== timeB) {
           return timeB - timeA;
+        }
+        const pubA = (getArticlePublishedDate(a.item) || new Date(0)).getTime();
+        const pubB = (getArticlePublishedDate(b.item) || new Date(0)).getTime();
+        if (pubA !== pubB) {
+          return pubB - pubA;
         }
         return (b.item.id || 0) - (a.item.id || 0);
       });

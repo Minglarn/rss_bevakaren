@@ -686,6 +686,21 @@ def run_db_migrations(db_path: str):
             cur.execute("CREATE INDEX IF NOT EXISTS ix_articles_received_ts ON articles (received_ts);")
         except Exception as e:
             pass
+
+        # Migration: Korrigera historiska artiklar importerade i klump där received_ts skilde sig mer än 24h från published_ts
+        try:
+            cur.execute("""
+                UPDATE articles 
+                SET received_ts = published_ts 
+                WHERE published_ts > 0 
+                  AND received_ts > published_ts + 86400 
+                  AND received_ts IN (
+                      SELECT received_ts FROM articles GROUP BY feed_id, received_ts HAVING count(*) >= 2
+                  );
+            """)
+            conn.commit()
+        except Exception:
+            pass
             
         try:
             cur.execute("ALTER TABLE feeds ADD COLUMN last_viewed_ts INTEGER DEFAULT 0;")
@@ -1567,9 +1582,10 @@ async def polling_loop():
 
                     if override_age_limit:
                         parsed_items = parsed_items[:custom_max_items]
-                    elif is_initial_poll and parsed_items and all((it.get("published_ts") or 0) == 0 for it in parsed_items[:5]):
-                        # Om flödet saknar tidsstämplar begränsar vi initial import till max 25 nyaste
-                        parsed_items = parsed_items[:25]
+                    elif is_initial_poll:
+                        # Vid initial hämtning: tillåt upp till 15 nyaste artiklar oavsett ålder så att flödet inte blir tomt
+                        parsed_items = parsed_items[:15]
+                        override_age_limit = True
 
                     for item in parsed_items:
                         pub_ts = item.get("published_ts") or 0
@@ -1604,6 +1620,12 @@ async def polling_loop():
                             elif pub_ts > 0 and (current_time - pub_ts > 86400):
                                 art_allow_push = 0
                                 
+                            # Metod A: Vid initial hämtning sätts received_ts till artikelns faktiska publiceringsdatum
+                            # så att historiska artiklar fasas in på sina riktiga historiska datum i Omni-flödet.
+                            effective_received = current_time
+                            if is_initial_poll and pub_ts > 0:
+                                effective_received = pub_ts
+
                             new_article = models.Article(
                                 feed_id=feed.id,
                                 guid=guid,
@@ -1614,7 +1636,7 @@ async def polling_loop():
                                 summary=item.get("summary"),
                                 image_url=item.get("image_url"),
                                 categories=cat_str,
-                                received_ts=current_time,
+                                received_ts=effective_received,
                                 allow_push=art_allow_push
                             )
                             db.add(new_article)
@@ -3362,9 +3384,10 @@ def get_dashboard_feeds(
         
     if app_mode == 'omni':
         effective_ts = func.coalesce(func.nullif(models.Article.received_ts, 0), models.Article.published_ts)
+        query = query.order_by(effective_ts.desc(), models.Article.published_ts.desc(), models.Article.id.desc())
     else:
         effective_ts = func.coalesce(func.nullif(models.Article.published_ts, 0), models.Article.received_ts)
-    query = query.order_by(effective_ts.desc(), models.Article.id.desc())
+        query = query.order_by(effective_ts.desc(), models.Article.received_ts.desc(), models.Article.id.desc())
     if offset and offset > 0:
         query = query.offset(offset)
     if limit and limit > 0:

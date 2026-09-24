@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.04',
+    date: '2026-09-24',
+    title: 'Historisk infasning och kronologisk sortering vid import av nya flöden',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Historisk tidsstämpling vid initial hämtning',
+        description: 'Vid första inläsningen av ett nytt flöde sätts mottagningstiden till artikelns faktiska publiceringsdatum så att historiska artiklar placeras på sina rätta historiska datum i Omni-flödet istället för att klumpas ihop under dagens datum.'
+      },
+      {
+        type: 'fix',
+        title: 'Kronologisk sortering som tie-breaker',
+        description: 'Både backend och frontend sorterar nu på publiceringsdatum i fallande ordning när mottagningstiden är identisk, vilket förhindrar att artiklar visas i omvänd tidsordning.'
+      },
+      {
+        type: 'improvement',
+        title: 'Tillåt de senaste artiklarna vid första flödeshämtning',
+        description: 'Första hämtningen av ett flöde tillåter nu de 15 senaste artiklarna oavsett ålder så att flöden med låg publiceringsfrekvens inte förblir tomma.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.03',
     date: '2026-09-24',
     title: 'Tidsangivelse synlig för flödets första händelsekort',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',
