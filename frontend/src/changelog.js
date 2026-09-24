@@ -1,9 +1,31 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.13',
+    date: '2026-09-24',
+    title: 'Förbättrad och träffsäker bildmatchning utan generiska felbilder',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Strikt filtrering av Open Graph-bilder',
+        description: 'Webbplatsers generiska delningsbanners, sidlogotyper och placeholders (t.ex. logo, default-share, placeholder) filtreras nu automatiskt bort så att endast äkta, artikelunika foton används.'
+      },
+      {
+        type: 'improvement',
+        title: 'Borttagning av generisk bildfallback',
+        description: 'Eliminerat tidigare generiska sökningar som gav orelaterade Wikimedia-bilder (t.ex. Einstein-foton och diagram). Om artikeln saknar ett tydligt bildtema eller AI-sökord lämnas den utan bild med en ren typografisk layout och källans ikon.'
+      },
+      {
+        type: 'fix',
+        title: 'Automatisk sanering av tidigare felaktiga fallback-bilder',
+        description: 'Systemet sanerar automatiskt bort tidigare generiska fallback-bilder ur databasen vid uppstart.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.12',
     date: '2026-09-24',
     title: 'AbuseIPDB-rapport för spärrade IP-adresser och expanderbar README',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

@@ -528,6 +528,23 @@ def ensure_db_migrations():
                 conn.commit()
             except Exception:
                 pass
+
+            # Sanera tidigare felaktiga fallback-bilder från Wikimedia (Albert Einstein, regionala diagram etc.)
+            try:
+                res = conn.execute(text("""
+                    UPDATE articles 
+                    SET image_url = NULL 
+                    WHERE image_url LIKE '%Albert_Einstein%' 
+                       OR image_url LIKE '%Employment_by_Region%' 
+                       OR image_url LIKE '%Employment_distributed%' 
+                       OR image_url LIKE '%President_Jimmy_Carter%' 
+                       OR image_url LIKE '%Residence_of_the_Ambassador%'
+                """))
+                conn.commit()
+                if res.rowcount and res.rowcount > 0:
+                    print(f"[ImageService] Sanerade {res.rowcount} artiklar med felaktiga generiska fallback-bilder.", flush=True)
+            except Exception:
+                pass
         except Exception as e:
             print(f"[DB] Migration notice for push_subscriptions/banned_ips: {e}", flush=True)
 

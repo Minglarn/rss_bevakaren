@@ -547,7 +547,8 @@ const Settings = ({ onLogout, currentUser }) => {
   "short_summary": "Exakt 1 till 1,5 kort mening (max 20 ord) på ren svenska för snabba mobilnotiser och låsskärmar. Ska snabbt och kärnfullt berätta vad som hänt och var.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
-  "clickbait_reason": ""
+  "clickbait_reason": "",
+  "image_search_query": "Om artikeln saknar bild: 1-2 konkreta engelska sökord som beskriver bilden bäst (t.ex. 'police car', 'firefighter truck', 'court gavel'). Lämna tomt om inget passande finns."
 }
 Riktlinjer för is_clickbait (Var mycket restriktiv):
 - Sätt ENDAST is_clickbait till true vid uppenbara Clickbaits där rubriken avsiktligt döljer själva händelsen eller ämnet med vaga formuleringar eller pronomen (t.ex. "Här slår han till", "Det här ska du aldrig göra", "Chockbeskedet", "Du anar inte vad som hände").
