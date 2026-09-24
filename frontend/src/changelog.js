@@ -1,9 +1,48 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.21',
+    date: '2026-09-24',
+    title: 'Avancerad honeypot-mönstermatchning för scanners & exploits',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'security',
+        title: 'Omedelbar permanent spärr vid exploit- och scannerförsök',
+        description: 'Förbättrat IP-Jail så att scanningar mot godtyckliga sökvägar innehållande .env (inklusive /img../.env, /static//.env m.fl.), Vite-exploits (/@fs/...), AWS-uppgifter (/.aws/credentials), PHP-filer (*.php) och Spring Actuator fångas upp och spärras permanent redan vid det allra första anropet istället för att ge 404.'
+      },
+      {
+        type: 'security',
+        title: 'Breddad Nginx-filtrering mot avsökningar',
+        description: 'Justerat omvänd proxy-reglerna i Nginx så att scanners med avvikande prefix eller query-parametrar alltid styrs direkt till backendens honeypot-jail.'
+      }
+    ]
+  },
+  {
+    version: '2026.09.24.20',
+    date: '2026-09-24',
+    title: 'Permanenta IP-spärrar & skyddat lokalt nätverk (LAN)',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Undantag för lokala LAN-adresser (192.168.1.x m.fl.)',
+        description: 'Lokala och privata IP-adresser (inklusive 192.168.1.x, loopback och RFC 1918-nät) är nu helt undantagna från automatiska IP-spärrar. Detta förhindrar att administratören någonsin blir utelåst från det interna nätverket vid misslyckade inloggningar.'
+      },
+      {
+        type: 'security',
+        title: 'Permanent spärr vid honeypot & känsliga filavsökningar',
+        description: 'Försök att scanna efter känsliga filer eller honeypots (.env, wp-login.php, sa.json, gcp-credentials.json) resulterar nu omedelbart i permanent spärr utan tidsbegränsning.'
+      },
+      {
+        type: 'feature',
+        title: 'Administrativ åtgärd: Gör spärr permanent i inställningarna',
+        description: 'Om en IP-adress har fått en temporär spärr (exempelvis 24 timmar vid upprepade inloggningsmisslyckanden) kan administratören nu med ett klick göra spärren permanent direkt från säkerhetsfliken i inställningarna.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.19',
     date: '2026-09-24',
     title: 'Korrigerad kortstruktur vid expandering i ultrakompakt vy',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'fix',

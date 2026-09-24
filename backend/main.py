@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 
 import models, schemas, database, auth, ai_service, rss_parser, mqtt_service, image_service
 import ipaddress
+import urllib.parse
 from pydantic import BaseModel
 import logging
 import builtins
@@ -587,6 +588,21 @@ def _is_trusted_proxy(ip_str: str) -> bool:
     except Exception:
         return False
 
+def _is_private_or_local_ip(ip_str: str) -> bool:
+    """Kontrollerar om en IP-adress är lokal, privat (t.ex. 192.168.1.x, 10.x.x.x, 172.16-31.x.x), loopback eller länk-lokal."""
+    if not ip_str or ip_str in ("127.0.0.1", "::1", "localhost", "okand"):
+        return True
+    try:
+        ip_obj = ipaddress.ip_address(ip_str)
+        return (
+            ip_obj.is_private
+            or ip_obj.is_loopback
+            or ip_obj.is_link_local
+            or ip_obj.is_reserved
+        )
+    except Exception:
+        return False
+
 def _extract_client_ip(request: Request) -> str:
     """Extraherar besökarens faktiska IP-adress. Litar endast på proxy-headers om anslutningen kommer från en betrodd intern proxy."""
     direct_ip = request.client.host if (request.client and request.client.host) else "okand"
@@ -638,9 +654,9 @@ def _init_banned_ips_cache():
 _init_banned_ips_cache()
 
 def _is_ip_banned(ip: str) -> Optional[dict]:
-    """Kontrollerar om en IP är aktivt spärrad. Tar bort utgångna spärrar."""
+    """Kontrollerar om en IP är aktivt spärrad. Tar bort utgångna spärrar. Lokala och privata nätverk (192.168.x.x m.fl.) spärras aldrig."""
     global _banned_ips_cache
-    if not ip or ip in ("127.0.0.1", "::1", "localhost", "okand"):
+    if not ip or _is_private_or_local_ip(ip):
         return None
     ban_info = _banned_ips_cache.get(ip)
     if not ban_info:
@@ -783,9 +799,10 @@ def _generate_abuse_report(ip: str, reason: str, user_agent: str, attempts_count
     }
 
 def _ban_ip(ip: str, reason: str, duration_minutes: int, user_agent: str = "", initial_method: str = "GET", initial_path: str = ""):
-    """Spärrar en IP-adress i angivet antal minuter (0 = permanent) och sparar i DB + cache."""
+    """Spärrar en IP-adress i angivet antal minuter (0 = permanent) och sparar i DB + cache. Privata/lokala nätverk spärras aldrig."""
     global _banned_ips_cache
-    if not ip or ip in ("127.0.0.1", "::1", "localhost", "okand"):
+    if not ip or _is_private_or_local_ip(ip):
+        print(f"[SÄKERHET: JAIL] Ignorerade spärrning av lokal/privat IP-adress: {ip}", flush=True)
         return
     now = int(time.time())
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -835,7 +852,7 @@ def _ban_ip(ip: str, reason: str, duration_minutes: int, user_agent: str = "", i
             )
             db.add(new_ban)
             db.commit()
-            db.refresh(new_ban)
+            db_refresh = db.refresh(new_ban)
             db_id = new_ban.id
         db.close()
     except Exception as e:
@@ -870,9 +887,9 @@ def _unban_ip(ip: str) -> bool:
         return False
 
 def _record_failed_login(ip: str, user_agent: str):
-    """Registrerar ett misslyckat inloggningsförsök och spärrar automatiskt vid överträdelse."""
+    """Registrerar ett misslyckat inloggningsförsök och spärrar automatiskt vid överträdelse (24 timmar vid brute-force). Lokala nätverk spärras aldrig."""
     global _failed_login_attempts
-    if not ip or ip in ("127.0.0.1", "::1", "localhost", "okand"):
+    if not ip or _is_private_or_local_ip(ip):
         return
     now = time.time()
     if ip not in _failed_login_attempts:
@@ -882,47 +899,97 @@ def _record_failed_login(ip: str, user_agent: str):
     _failed_login_attempts[ip] = [t for t in _failed_login_attempts[ip] if t > now - 900]
     recent_attempts = _failed_login_attempts[ip]
 
-    # Regel 1: Brute Force (5 misslyckade försök inom 10 minuter) -> 15 min ban
+    # Regel 1: Brute Force (5 misslyckade försök inom 10 minuter) -> 24 timmars spärr (1440 minuter)
     attempts_10m = [t for t in recent_attempts if t > now - 600]
     if len(attempts_10m) >= 5:
         _failed_login_attempts.pop(ip, None)
         _ban_ip(
             ip=ip,
             reason="Upprepade misslyckade inloggningsförsök (Brute Force)",
-            duration_minutes=15,
+            duration_minutes=1440,
             user_agent=user_agent,
             initial_method="POST",
             initial_path="/api/login"
         )
         return
 
-    # Regel 2: Rate Limit (3 misslyckade försök inom 10 sekunder) -> 15 min ban
+    # Regel 2: Rate Limit (3 misslyckade försök inom 10 sekunder) -> 24 timmars spärr (1440 minuter)
     attempts_10s = [t for t in recent_attempts if t > now - 10]
     if len(attempts_10s) >= 3:
         _failed_login_attempts.pop(ip, None)
         _ban_ip(
             ip=ip,
             reason="För snabba inloggningsförsök (Rate Limit)",
-            duration_minutes=15,
+            duration_minutes=1440,
             user_agent=user_agent,
             initial_method="POST",
             initial_path="/api/login"
         )
 
+_SCANNER_PATH_PATTERNS = (
+    ".env",
+    ".aws",
+    ".git",
+    ".ssh",
+    ".local",
+    ".config",
+    "wp-login",
+    "wp-admin",
+    "wp-content",
+    "wp-includes",
+    "xmlrpc",
+    "/actuator",
+    "/@fs/",
+    "@fs",
+    "credentials",
+    "service-account",
+    "service_account",
+    "firebase-admin",
+    "phpinfo",
+    "terminal-xhr",
+    "thinkphp",
+    "invokefunction",
+    "icecoder",
+    "setup.cgi",
+    "app_dev",
+    "secrets.json",
+    "secret.json",
+    "sa.json",
+    "gcp-"
+)
+
+def _is_suspicious_scanner_path(raw_path: str) -> Optional[str]:
+    """Kontrollerar om en förfrågan försöker avsöka känsliga filer eller exploit-vägar."""
+    try:
+        decoded = urllib.parse.unquote(urllib.parse.unquote(raw_path)).lower()
+    except Exception:
+        decoded = raw_path.lower()
+
+    # PHP-avsökningar (RSS-Bevakaren är Python/React och kör inga php-filer)
+    if decoded.endswith(".php") or ".php?" in decoded or ".php/" in decoded or "/test.php" in decoded or "/index.php" in decoded or "/info.php" in decoded or "/i.php" in decoded:
+        return "PHP-avsökning"
+
+    # Kontrollera kända exploit-mönster
+    for pattern in _SCANNER_PATH_PATTERNS:
+        if pattern in decoded:
+            return f"Avsökning mot känslig resurs ({pattern})"
+    return None
+
 @app.middleware("http")
 async def security_ip_jail_middleware(request: Request, call_next):
-    """Avvisar omedelbart spärrade IP-adresser med HTTP 403 utan att belasta applikationen."""
+    """Avvisar omedelbart spärrade IP-adresser med HTTP 403 och spärrar automatiskt scanners permanent vid första anropet."""
     if request.method == "OPTIONS":
         return await call_next(request)
 
     client_ip = _extract_client_ip(request)
-    if client_ip not in ("127.0.0.1", "::1", "localhost", "okand"):
+    if not _is_private_or_local_ip(client_ip):
+        # 1. Om IP redan är spärrad: blockera omedelbart
         ban_info = _is_ip_banned(client_ip)
         if ban_info:
             _record_blocked_attempt(client_ip, method=request.method, path=request.url.path)
             return Response(
                 content=json.dumps({
-                    "detail": "Din IP-adress är temporärt spärrad p.g.a. misstänkt säkerhetsaktivitet.",
+                    "detail": "Din IP-adress är spärrad p.g.a. misstänkt säkerhetsaktivitet.",
                     "ip": client_ip,
                     "reason": ban_info.get("reason", "Säkerhetsöverträdelse"),
                     "expires_at": ban_info.get("expires_at", 0)
@@ -930,6 +997,31 @@ async def security_ip_jail_middleware(request: Request, call_next):
                 status_code=status.HTTP_403_FORBIDDEN,
                 media_type="application/json"
             )
+
+        # 2. Kontrollera om anropet matchar skadlig scanning / honeypot
+        suspicious_reason = _is_suspicious_scanner_path(request.url.path)
+        if suspicious_reason:
+            user_agent = request.headers.get("user-agent", "ingen-user-agent")
+            print(f"[AUTH: SÄKERHET] Scanner upptäckt mot {request.method} {request.url.path} från IP {client_ip} | User-Agent: {user_agent}", flush=True)
+            _ban_ip(
+                ip=client_ip,
+                reason=f"Honeypot: {suspicious_reason} ({request.url.path})",
+                duration_minutes=0,
+                user_agent=user_agent,
+                initial_method=request.method,
+                initial_path=request.url.path
+            )
+            return Response(
+                content=json.dumps({
+                    "detail": "Din IP-adress har spärrats permanent p.g.a. otillåten systemavsökning.",
+                    "ip": client_ip,
+                    "reason": f"Honeypot: {suspicious_reason}",
+                    "expires_at": 0
+                }),
+                status_code=status.HTTP_403_FORBIDDEN,
+                media_type="application/json"
+            )
+
     return await call_next(request)
 
 
@@ -2926,15 +3018,15 @@ def login_for_access_token(
 @app.api_route("/firebase-admin.json", methods=["GET", "POST"])
 @app.api_route("/keys/service-account.json", methods=["GET", "POST"])
 async def honeypot_login_attempt(request: Request):
-    """Loggar och avvisar automatiska inloggningsförsök samt spärrar klienten automatiskt i 60 minuter."""
+    """Loggar och avvisar automatiska inloggningsförsök samt spärrar klienten permanent (0 minuter)."""
     client_ip = _extract_client_ip(request)
     user_agent = request.headers.get("user-agent", "ingen-user-agent")
     print(f"[AUTH: SÄKERHET] Misstänkt bot-aktivitet mot {request.method} {request.url.path} från IP {client_ip} | User-Agent: {user_agent}", flush=True)
-    if client_ip not in ("127.0.0.1", "::1", "localhost", "okand"):
+    if not _is_private_or_local_ip(client_ip):
         _ban_ip(
             ip=client_ip,
             reason=f"Honeypot-avsökning mot {request.url.path}",
-            duration_minutes=60,
+            duration_minutes=0,
             user_agent=user_agent,
             initial_method=request.method,
             initial_path=request.url.path
@@ -6094,8 +6186,8 @@ def admin_manual_ban_ip(
 ):
     """Manuell spärrning av en IP-adress från adminpanelen."""
     clean_ip = req.ip.strip()
-    if not clean_ip or clean_ip in ("127.0.0.1", "::1", "localhost", "okand"):
-        raise HTTPException(status_code=400, detail="Ogiltig IP-adress eller lokal adress som ej kan spärras.")
+    if not clean_ip or _is_private_or_local_ip(clean_ip):
+        raise HTTPException(status_code=400, detail="Ogiltig IP-adress eller lokal/privat adress (LAN) som inte kan spärras.")
     
     _ban_ip(
         ip=clean_ip,
@@ -6104,6 +6196,41 @@ def admin_manual_ban_ip(
         user_agent=f"Spärrad manuellt av administratör '{admin.username}'"
     )
     return {"status": "ok", "message": f"IP-adressen {clean_ip} har spärrats."}
+
+@app.post("/admin/security/ban-permanent")
+def admin_make_ban_permanent(
+    payload: dict,
+    admin: models.User = Depends(auth.get_current_admin_user),
+    db: Session = Depends(database.get_db)
+):
+    """Gör en befintlig temporär IP-spärr permanent."""
+    target_ip = (payload.get("ip") or "").strip()
+    if not target_ip:
+        raise HTTPException(status_code=400, detail="IP-adress saknas i förfrågan.")
+    
+    banned = db.query(models.BannedIP).filter(models.BannedIP.ip == target_ip).first()
+    if not banned:
+        raise HTTPException(status_code=404, detail=f"Spärrad IP {target_ip} hittades inte.")
+    
+    banned.expires_at = 0
+    db.commit()
+
+    global _banned_ips_cache
+    if target_ip in _banned_ips_cache:
+        _banned_ips_cache[target_ip]["expires_at"] = 0
+    else:
+        _banned_ips_cache[target_ip] = {
+            "id": banned.id,
+            "reason": banned.reason or "Säkerhetsöverträdelse",
+            "banned_at": banned.banned_at,
+            "expires_at": 0,
+            "user_agent": banned.user_agent or "",
+            "attempts_count": banned.attempts_count or 1,
+            "request_log": []
+        }
+
+    print(f"[SÄKERHET: PERMANENT] Spärren för IP {target_ip} är nu permanent (ändrad av '{admin.username}').", flush=True)
+    return {"status": "ok", "message": f"Spärren för {target_ip} har ändrats till permanent."}
 
 @app.post("/admin/security/unban-ip")
 def admin_unban_ip(

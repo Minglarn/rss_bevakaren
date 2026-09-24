@@ -280,6 +280,7 @@ const Settings = ({ onLogout, currentUser }) => {
   const [manualBanDuration, setManualBanDuration] = useState(60);
   const [isBanningIp, setIsBanningIp] = useState(false);
   const [unbanningIpMap, setUnbanningIpMap] = useState({});
+  const [permanentingIpMap, setPermanentingIpMap] = useState({});
   const [selectedAbuseBan, setSelectedAbuseBan] = useState(null);
   const [copiedAbuseReport, setCopiedAbuseReport] = useState(false);
 
@@ -1008,6 +1009,20 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       toast.error(err.response?.data?.detail || 'Kunde inte häva spärren.');
     } finally {
       setUnbanningIpMap(prev => ({ ...prev, [ip]: false }));
+    }
+  };
+
+  const handleMakeBanPermanent = async (ip) => {
+    try {
+      setPermanentingIpMap(prev => ({ ...prev, [ip]: true }));
+      await api.post('/admin/security/ban-permanent', { ip });
+      toast.success(`Spärren för ${ip} är nu permanent.`);
+      fetchBannedIps();
+      fetchSecurityStats();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Kunde inte ändra till permanent spärr.');
+    } finally {
+      setPermanentingIpMap(prev => ({ ...prev, [ip]: false }));
     }
   };
 
@@ -7425,6 +7440,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
                       {bannedIps.map((ban) => {
                         const isUnbanning = Boolean(unbanningIpMap[ban.ip]);
+                        const isPermanenting = Boolean(permanentingIpMap[ban.ip]);
                         return (
                           <div
                             key={ban.id || ban.ip}
@@ -7478,6 +7494,31 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                              {ban.is_active && ban.expires_at !== 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMakeBanPermanent(ban.ip)}
+                                  disabled={isPermanenting}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
+                                    padding: '0.4rem 0.75rem',
+                                    borderRadius: '6px',
+                                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                                    color: '#ef4444',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 600,
+                                    cursor: isPermanenting ? 'not-allowed' : 'pointer'
+                                  }}
+                                  title="Gör denna tidsbegränsade spärr permanent"
+                                >
+                                  <Lock size={14} />
+                                  {isPermanenting ? 'Sparar...' : 'Gör permanent'}
+                                </button>
+                              )}
+
                               <button
                                 type="button"
                                 onClick={() => {
