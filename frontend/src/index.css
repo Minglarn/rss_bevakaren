@@ -2477,8 +2477,8 @@ select:focus, input:focus {
   align-items: center !important;
   gap: 0.65rem !important;
   width: 100% !important;
-  margin-top: 0.65rem !important;
-  margin-bottom: 0.25rem !important;
+  margin-top: 0.45rem !important;
+  margin-bottom: 0.05rem !important;
   box-sizing: border-box !important;
 }
 
@@ -2513,7 +2513,7 @@ select:focus, input:focus {
   align-items: flex-start !important;
   justify-content: space-between !important;
   gap: 1rem !important;
-  padding: 0.55rem 0.25rem 0.15rem 0.25rem !important;
+  padding: 0.1rem 0.25rem 0.15rem 0.25rem !important;
   background: transparent !important;
   box-shadow: none !important;
   border: none !important;

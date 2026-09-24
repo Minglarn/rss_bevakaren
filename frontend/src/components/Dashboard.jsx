@@ -2130,12 +2130,9 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                     {sessionDivider}
                     <div 
                       className="feed-card-ultracompact-divider" 
-                      style={index === 0 ? { marginTop: '0.25rem' } : {}}
+                      style={index === 0 ? { marginTop: '0.2rem' } : {}}
                     >
-                      <div 
-                        className="feed-card-ultracompact-divider-line" 
-                        style={index === 0 ? { visibility: 'hidden' } : {}} 
-                      />
+                      <div className="feed-card-ultracompact-divider-line" />
                       {relTime && (
                         <span className="feed-card-ultracompact-divider-date">
                           {relTime}

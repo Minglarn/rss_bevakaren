@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.07',
+    date: '2026-09-24',
+    title: 'Avdelare för första kortet och minimerad marginal i ultrakompakt flöde',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Återställd avdelarlinje för första händelsekortet',
+        description: 'Det första kortet i flödet har nu en fullständig avdelarlinje till vänster om tidsangivelsen i linje med övriga kort.'
+      },
+      {
+        type: 'improvement',
+        title: 'Minimerad marginal mellan tidsavdelare och rubrik',
+        description: 'Trimmade marginaler och padding mellan avdelaren och artikelrubriken för en renare och mer sammanhållen ultrakompakt layout.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.06',
     date: '2026-09-24',
     title: 'Aktiv säkerhetsloggning av bot-skanningar och intrångsförsök',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
