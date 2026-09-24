@@ -2215,7 +2215,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                             </span>
                           )}
                         </div>
-                      </div>
 
                       {/* Google News-modell för klustrade källor i ultrakompakt vy */}
                       {renderClusterCoverage(item, true)}
@@ -2414,6 +2413,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           </div>
                         </div>
                       )}
+                    </div>
                   </SwipeableArticleCard>
                 </React.Fragment>
                 );

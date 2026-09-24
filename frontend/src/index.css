@@ -2510,9 +2510,10 @@ select:focus, input:focus {
 
 .feed-card-ultracompact {
   display: flex !important;
-  align-items: flex-start !important;
-  justify-content: space-between !important;
-  gap: 1rem !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 0.35rem !important;
   padding: 0.1rem 0.25rem 0.15rem 0.25rem !important;
   background: transparent !important;
   box-shadow: none !important;

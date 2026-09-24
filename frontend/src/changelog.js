@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.19',
+    date: '2026-09-24',
+    title: 'Korrigerad kortstruktur vid expandering i ultrakompakt vy',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Fullbreddsomslutning för expanderat kortinnehåll',
+        description: 'Åtgärdat en kapslingsavgränsning och lagt till flex-direction column på kortnivå så att fördjupad sammanfattning, skrapad artikeltext och snabbknappar läggs under kortet i full bredd vid expandering istället för att tryckas ihop som en andra parallell kolumn.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.18',
     date: '2026-09-24',
     title: 'Full bredd för bildursprung i ultrakompakt vy & åtgärdat trenddiagram',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
