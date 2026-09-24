@@ -2471,14 +2471,19 @@ def login_for_access_token(
 
 @app.api_route("/login", methods=["GET", "POST"])
 @app.api_route("/admin/login", methods=["GET", "POST"])
+@app.api_route("/auth/login", methods=["GET", "POST"])
+@app.api_route("/user/login", methods=["GET", "POST"])
+@app.api_route("/administrator", methods=["GET", "POST"])
+@app.api_route("/wp-login.php", methods=["GET", "POST"])
+@app.api_route("/api/login", methods=["GET", "POST"])
 async def honeypot_login_attempt(request: Request):
     """Loggar och avvisar automatiska inloggningsförsök från botar och crawlers."""
     client_ip = _extract_client_ip(request)
     user_agent = request.headers.get("user-agent", "ingen-user-agent")
     print(f"[AUTH: SÄKERHET] Misstänkt bot-inloggningsförsök mot {request.method} {request.url.path} från IP {client_ip} | User-Agent: {user_agent}", flush=True)
     raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Not found"
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Forbidden: Security violation logged"
     )
  
 @app.post("/auth/refresh", response_model=schemas.Token)

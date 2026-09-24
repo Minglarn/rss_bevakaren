@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.06',
+    date: '2026-09-24',
+    title: 'Aktiv säkerhetsloggning av bot-skanningar och intrångsförsök',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Synlig säkerhetsloggning i Nginx för alla sårbarhetsskanningar',
+        description: 'Nginx loggar nu alla bot-skanningar och försök att komma åt känsliga filer (.env, gcp-credentials, certifikat och skript) direkt till stdout med besökarens faktiska IP-adress och statuskod 403 Forbidden.'
+      },
+      {
+        type: 'improvement',
+        title: 'Utökade honeypot-endpoints i backend',
+        description: 'Lagt till bevakning för vanliga bot-vägar såsom /login, /admin/login, /wp-login.php och /administrator i backend med omedelbar säkerhetsloggning av klient-IP och User-Agent samt nekad åtkomst (403 Forbidden).'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.05',
     date: '2026-09-24',
     title: 'Blockering av bot-skanningar och utökad säkerhetsloggning vid inloggningsförsök',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
