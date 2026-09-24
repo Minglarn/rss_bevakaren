@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.24.09-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.24.10-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -91,6 +91,7 @@ docker compose up -d
 - **Interaktiv AI-chatt (RAG):** Ställ frågor på naturligt språk till ditt samlade nyhetsarkiv med källhänvisningar och direktlänkar.
 - **Inbyggd svensk RSS-katalog:** Över 300 förkonfigurerade svenska nyhetskällor, lokaltidningar, myndighetsflöden och branschtidskrifter redo för ett-klicks-prenumeration.
 - **Bred flödeskompatibilitet (RSS, Atom & WordPress):** Fullt stöd för standard RSS 2.0, Atom samt alla WordPress-baserade webbplatser (ange webbplatsens URL eller `/feed`). Parsern extraherar automatiskt omslagsbilder, mediainnehåll och redaktionella taggar.
+- **Inbyggt IP-Jail & Bot-skydd:** Automatiskt skydd mot crawlers, sårbarhetsskannrar och brute-force-attacker med omedelbar bannlysning av illasinnade anrop och fullständig administratörspanel.
 - **PWA & Web Push:** Installera som app på mobil eller dator med stöd för direkta pushnotiser vid viktiga larm.
 - **Fleranvändarstöd:** Flera användare kan dela samma instans med fullständig isolering av flöden, filter och notiser.
 
@@ -365,6 +366,40 @@ Varje publicerat MQTT-meddelande innehåller en komplett JSON-nyttolast:
 - **Frontend:** Single Page Application (SPA) byggd med React, Vite, Framer Motion, Tailwind/Vanilla CSS och Lucide-ikoner.
 - **Drift:** Docker-containrar via GitHub Container Registry (GHCR).
 </details>
+
+---
+
+## Säkerhet & Skydd mot Botar (IP-Jail)
+
+RSS-Bevakaren har ett inbyggt, flerlagrat skyddssystem (likt Fail2ban men direkt integrerat i backend och webbgränssnittet) för att automatiskt hantera internetbotar, sårbarhetsskannrar och brute-force-attacker.
+
+### 1. Automatiska Honeypots (Omedelbar IP-bannlysning)
+Om en extern reverse proxy (t.ex. Nginx eller Traefik) vidarebefordrar kända skanningsförfrågningar till backend, fångas dessa upp direkt av dedikerade honeypot-endpoints:
+- Sökvägar som `.env`, `.git`, `wp-login.php`, `firebase-admin`, `gcp-credentials.json`, `phpmyadmin` med flera.
+- **Åtgärd:** IP-adressen spärras omedelbart i 60 minuter och händelsen loggas i realtid som ett intrångsförsök.
+
+### 2. Skydd mot Brute Force & Snabb scanning
+För att skydda mot automatiserade lösenordsgissningar på `/api/login` eller andra känsliga endpoints tillämpas strikt hastighetsbegränsning:
+- **Max 5 misslyckade inloggningsförsök** inom ett rullande fönster på 10 minuter.
+- **Snabbspärr:** Mer än 3 misslyckade försök inom 10 sekunder triggar en omedelbar spärr i 15 minuter.
+- **Progressiv strafftid:** Återkommande förseelser förlänger automatiskt spärrtiden.
+
+### 3. Blixtsnabb avvisning via Middleware (CPU-skydd)
+- Kontrollen sker i ett asynkront middleware direkt när en HTTP-förfrågan tas emot.
+- En spärrad IP-adress får omedelbart `403 Forbidden` direkt från minnet.
+- Inga databasfrågor, sessionsvalideringar eller kostsamma lösenordshashningar (bcrypt/argon2) tillåts köra för spärrade adresser, vilket skyddar serverns CPU mot överbelastningsattacker (DoS).
+
+### 4. Skydd mot Header-Spoofing & Nätverksisolering
+För att förhindra att angripare manipulerar HTTP-headrar (`X-Forwarded-For` eller `X-Real-IP`) för att lura honeypotten att spärra legitima adresser:
+- Backend-containern binds internt till loopback-gränssnittet (`127.0.0.1:8094:8000`), vilket gör att omvärlden aldrig kan anropa backend direkt utan måste passera din reverse proxy.
+- FastAPI validerar anroparens nätverksadress mot betrodda subnät (`127.0.0.1`, `172.16.0.0/12`, `10.0.0.0/8`, `192.168.0.0/16`). Endast förfrågningar från dessa betrodda proxys tillåts specificera klientens verkliga IP via headrar.
+
+### 5. Fullständig kontroll i Administratörspanelen
+Inloggade administratörer har full insyn och kontroll under **Inställningar -> Administratör -> Säkerhet och IP-Jail**:
+- **Realtidsstatistik:** Se totalt antal blockerade anrop, aktiva spärrar och nyligen loggade intrångsförsök.
+- **Spärrlista:** Detaljerad tabell med spärrade IP-adresser, orsak (t.ex. *Honeypot: Skanning efter credentials/bots*, *Brute force på inloggning*), tidpunkt och när spärren upphör.
+- **Ett-klicks-hävning:** Häv felaktiga spärrar direkt med knappen "Häv spärr".
+- **Manuell spärrning:** Lägg till egna IP-adresser med valfri varaktighet och anledning vid behov.
 
 ---
 

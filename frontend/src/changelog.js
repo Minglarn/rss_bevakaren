@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.10',
+    date: '2026-09-24',
+    title: 'Dokumentation av bot-skydd och säkerhetsarkitektur i README',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'documentation',
+        title: 'Omfattande säkerhetsavsnitt i README',
+        description: 'Lagt till en detaljerad genomgång av applikationens skydd mot botar, crawlers och sårbarhetsskannrar, inklusive honeypots, automatisk IP-bannlysning (IP-Jail), rate limiting och administratörsfunktioner.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.09',
     date: '2026-09-24',
     title: 'Nätverksisolering och skydd mot header-spoofing',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
