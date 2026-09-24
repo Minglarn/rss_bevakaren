@@ -1591,24 +1591,22 @@ select:focus, input:focus {
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.22) 70%, transparent 100%);
 }
 
-/* Sömlös och modern callout för AI-sammanfattning (minimerad ruta-i-ruta-effekt) */
+/* Återställd enhetlig ram runt AI-sammanfattning (optimerad padding för full bredd/höjd) */
 .ai-summary-well {
-  background: rgba(249, 115, 22, 0.04);
-  border: none;
-  border-left: 3.5px solid #f97316;
-  box-shadow: none;
-  border-radius: 0 6px 6px 0;
-  padding: 0.65rem 0.95rem;
-  margin: 0.35rem 0 0.65rem 0;
+  background: rgba(0, 0, 0, 0.025);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  margin: 0.25rem 0 0.65rem 0;
   box-sizing: border-box;
 }
 
 [data-theme='dark'] .ai-summary-well,
 .dark .ai-summary-well {
-  background: rgba(249, 115, 22, 0.06);
-  border: none;
-  border-left: 3.5px solid #f97316;
-  box-shadow: none;
+  background: rgba(15, 23, 42, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* --- RSS MANAGER CLASSES --- */
@@ -2473,14 +2471,14 @@ select:focus, input:focus {
   background-color: var(--bg-card) !important;
 }
 
-/* Avdelare med inbäddat datum i botten av ultrakompakt kort */
+/* Avdelare med inbäddat datum ovanför ultrakompakt kort */
 .feed-card-ultracompact-divider {
   display: flex !important;
   align-items: center !important;
   gap: 0.65rem !important;
   width: 100% !important;
-  margin-top: 0.5rem !important;
-  margin-bottom: 0 !important;
+  margin-top: 0.65rem !important;
+  margin-bottom: 0.25rem !important;
   box-sizing: border-box !important;
 }
 
@@ -2602,16 +2600,10 @@ select:focus, input:focus {
 
 .feed-card-ultracompact-expanded {
   margin-top: 0.45rem;
-  padding-top: 0.35rem;
-  padding-bottom: 0.65rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
-  margin-bottom: 0.45rem;
+  padding-top: 0;
+  padding-bottom: 0.5rem;
   width: 100% !important;
   box-sizing: border-box !important;
-}
-
-.theme-dark .feed-card-ultracompact-expanded {
-  border-bottom-color: rgba(255, 255, 255, 0.12);
 }
 
 .feed-card-ultracompact-expanded-image {

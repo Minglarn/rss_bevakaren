@@ -2118,6 +2118,16 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                 return (
                   <React.Fragment key={item.id}>
                     {sessionDivider}
+                    {index > 0 && (
+                      <div className="feed-card-ultracompact-divider">
+                        <div className="feed-card-ultracompact-divider-line" />
+                        {relTime && (
+                          <span className="feed-card-ultracompact-divider-date">
+                            {relTime}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <SwipeableArticleCard
                       key={item.id}
                       itemId={item.id}
@@ -2187,16 +2197,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       {/* Google News-modell för klustrade källor i ultrakompakt vy */}
                       {renderClusterCoverage(item, true)}
 
-                      {/* Horisontell avdelare med inbäddat datum till höger (inuti kortet) */}
-                      <div className="feed-card-ultracompact-divider">
-                        <div className="feed-card-ultracompact-divider-line" />
-                        {relTime && (
-                          <span className="feed-card-ultracompact-divider-date">
-                            {relTime}
-                          </span>
-                        )}
-                      </div>
-
                       {/* Expanderad vy vid klick på kortet: fördjupad sammanfattning och bild i full bredd */}
                       {isItemExpanded && (
                         <div className="feed-card-ultracompact-expanded" onClick={(e) => e.stopPropagation()}>
@@ -2213,12 +2213,12 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
                           {/* Fördjupad sammanfattning */}
                           {(item.ai_summary || item.summary) && (
-                            <div className="ai-summary-well" style={{ marginBottom: '0.85rem', fontSize: '0.92rem' }}>
-                              <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#f97316', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <div className="ai-summary-well" style={{ marginBottom: '0.65rem', fontSize: '0.92rem' }}>
+                              <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#f97316', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                 <Sparkles size={14} />
                                 <span>Fördjupad sammanfattning</span>
                               </div>
-                              <div style={{ lineHeight: '1.6', color: 'var(--text-main)', whiteSpace: 'pre-line' }}>
+                              <div style={{ lineHeight: '1.45', color: 'var(--text-main)', whiteSpace: 'pre-line', width: '100%' }}>
                                 {item.ai_summary || item.summary}
                               </div>
                             </div>

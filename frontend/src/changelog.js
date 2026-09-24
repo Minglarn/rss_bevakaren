@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.02',
+    date: '2026-09-24',
+    title: 'Optimerad marginal och utnyttjad bredd för fördjupad sammanfattning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Minimerad marginal under tidsavdelaren',
+        description: 'Minskat avståndet mellan den inre tidsavdelaren och det expanderade innehållet för ett renare och mer kompakt utseende utan onödig tom yta.'
+      },
+      {
+        type: 'improvement',
+        title: 'Återställd enhetlig ram och optimerad textbredd',
+        description: 'Tog bort den kraftiga vänsterbården och återställde en diskret enhetlig ram runt sammanfattningsrutan, samtidigt som intern padding trimmats så att texten fyller ut hela boxens bredd och höjd.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.01',
     date: '2026-09-24',
     title: 'Förbättrad placering av tidsavdelare och sömlös fördjupad sammanfattning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
