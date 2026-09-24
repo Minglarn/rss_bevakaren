@@ -2187,6 +2187,16 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       {/* Google News-modell för klustrade källor i ultrakompakt vy */}
                       {renderClusterCoverage(item, true)}
 
+                      {/* Horisontell avdelare med inbäddat datum till höger (inuti kortet) */}
+                      <div className="feed-card-ultracompact-divider">
+                        <div className="feed-card-ultracompact-divider-line" />
+                        {relTime && (
+                          <span className="feed-card-ultracompact-divider-date">
+                            {relTime}
+                          </span>
+                        )}
+                      </div>
+
                       {/* Expanderad vy vid klick på kortet: fördjupad sammanfattning och bild i full bredd */}
                       {isItemExpanded && (
                         <div className="feed-card-ultracompact-expanded" onClick={(e) => e.stopPropagation()}>
@@ -2203,7 +2213,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
 
                           {/* Fördjupad sammanfattning */}
                           {(item.ai_summary || item.summary) && (
-                            <div className="ai-summary-well" style={{ marginBottom: '0.85rem', padding: '0.85rem 1rem', fontSize: '0.92rem', borderRadius: '8px' }}>
+                            <div className="ai-summary-well" style={{ marginBottom: '0.85rem', fontSize: '0.92rem' }}>
                               <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#f97316', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                 <Sparkles size={14} />
                                 <span>Fördjupad sammanfattning</span>
@@ -2381,16 +2391,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           </div>
                         </div>
                       )}
-
-                      {/* Horisontell avdelare med inbäddat datum till höger */}
-                      <div className="feed-card-ultracompact-divider">
-                        <div className="feed-card-ultracompact-divider-line" />
-                        {relTime && (
-                          <span className="feed-card-ultracompact-divider-date">
-                            {relTime}
-                          </span>
-                        )}
-                      </div>
                     </div>
                   </SwipeableArticleCard>
                 </React.Fragment>

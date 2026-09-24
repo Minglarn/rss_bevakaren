@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.01',
+    date: '2026-09-24',
+    title: 'Förbättrad placering av tidsavdelare och sömlös fördjupad sammanfattning',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Tidsavdelare flyttad inuti kortet i ultrakompakt läge',
+        description: 'Tid och datum placeras nu konsekvent på den inre avdelaren direkt under kortets ingress och källa, så att tidsangivelsen inte trycks ner under åtgärdsknapparna när kortet expanderas.'
+      },
+      {
+        type: 'improvement',
+        title: 'Minimerad ruta-i-ruta-effekt för fördjupad sammanfattning',
+        description: 'Fördjupad sammanfattning har omdesignats från en sluten låda med ramar och inre skuggor till en modern och sömlös callout med elegant vänsteraccent i orange och luftig typografi.'
+      }
+    ]
+  },
+  {
     version: '2026.09.23.25',
     date: '2026-09-23',
     title: 'Städning och optimering av projektstruktur',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',
