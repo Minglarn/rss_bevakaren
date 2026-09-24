@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.24.10-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.24.11-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -92,6 +92,7 @@ docker compose up -d
 - **Inbyggd svensk RSS-katalog:** Över 300 förkonfigurerade svenska nyhetskällor, lokaltidningar, myndighetsflöden och branschtidskrifter redo för ett-klicks-prenumeration.
 - **Bred flödeskompatibilitet (RSS, Atom & WordPress):** Fullt stöd för standard RSS 2.0, Atom samt alla WordPress-baserade webbplatser (ange webbplatsens URL eller `/feed`). Parsern extraherar automatiskt omslagsbilder, mediainnehåll och redaktionella taggar.
 - **Inbyggt IP-Jail & Bot-skydd:** Automatiskt skydd mot crawlers, sårbarhetsskannrar och brute-force-attacker med omedelbar bannlysning av illasinnade anrop och fullständig administratörspanel.
+- **Automatisk bildkomplettering:** Saknar en artikel bild i RSS-flödet hämtas officiellt pressfoto via Open Graph (t.ex. SVT Nyheter) eller så genererar lokal AI sökord och hämtar en matchande öppen nyhetsbild från Wikimedia Commons (t.ex. för Polisens textnotiser).
 - **PWA & Web Push:** Installera som app på mobil eller dator med stöd för direkta pushnotiser vid viktiga larm.
 - **Fleranvändarstöd:** Flera användare kan dela samma instans med fullständig isolering av flöden, filter och notiser.
 
@@ -369,7 +370,8 @@ Varje publicerat MQTT-meddelande innehåller en komplett JSON-nyttolast:
 
 ---
 
-## Säkerhet & Skydd mot Botar (IP-Jail)
+<details>
+<summary><b>Klicka för att läsa: Säkerhet & Skydd mot Botar (IP-Jail)</b></summary>
 
 RSS-Bevakaren har ett inbyggt, flerlagrat skyddssystem (likt Fail2ban men direkt integrerat i backend och webbgränssnittet) för att automatiskt hantera internetbotar, sårbarhetsskannrar och brute-force-attacker.
 
@@ -400,6 +402,7 @@ Inloggade administratörer har full insyn och kontroll under **Inställningar ->
 - **Spärrlista:** Detaljerad tabell med spärrade IP-adresser, orsak (t.ex. *Honeypot: Skanning efter credentials/bots*, *Brute force på inloggning*), tidpunkt och när spärren upphör.
 - **Ett-klicks-hävning:** Häv felaktiga spärrar direkt med knappen "Häv spärr".
 - **Manuell spärrning:** Lägg till egna IP-adresser med valfri varaktighet och anledning vid behov.
+</details>
 
 ---
 

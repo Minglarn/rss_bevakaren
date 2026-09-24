@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.11',
+    date: '2026-09-24',
+    title: 'Automatisk bildkomplettering via Open Graph och lokal AI / Wikimedia',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Automatisk bildassociering för artiklar utan bild',
+        description: 'Artiklar som saknar bild i RSS-flödet berikas nu automatiskt. Steg 1 hämtar artikelns redaktionella foto via Open Graph direkt från källan (t.ex. SVT Nyheter). Steg 2 använder lokal AI för att generera sökord och hämta en matchande fri nyhetsbild från Wikimedia Commons (t.ex. för Polisens händelserapporter).'
+      },
+      {
+        type: 'feature',
+        title: 'Styrning och retroaktiv bildkomplettering i Inställningar',
+        description: 'Lagt till inställning för att slå på/av automatisk bildkomplettering samt en knapp under Inställningar -> AI för att direkt söka och koppla bilder till befintliga artiklar som saknar bild.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.10',
     date: '2026-09-24',
     title: 'Dokumentation av bot-skydd och säkerhetsarkitektur i README',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'documentation',

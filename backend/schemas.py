@@ -168,6 +168,7 @@ class AIConfigUpdate(BaseModel):
     auto_purge_enabled: Optional[bool] = None
     auto_purge_days: Optional[int] = None
     auto_scrape_article_text: Optional[bool] = None
+    auto_image_search: Optional[bool] = None
     max_article_age_hours: Optional[int] = None
     notify_ai_offline: Optional[bool] = None
     push_summary_type: Optional[str] = None
@@ -196,6 +197,7 @@ class AIConfigResponse(BaseModel):
     auto_purge_enabled: bool = True
     auto_purge_days: int = 30
     auto_scrape_article_text: bool = True
+    auto_image_search: bool = True
     max_article_age_hours: int = 24
     notify_ai_offline: bool = True
     push_summary_type: str = "short"

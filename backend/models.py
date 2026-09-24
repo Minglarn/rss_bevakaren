@@ -128,6 +128,7 @@ class UserAISettings(Base):
     auto_purge_enabled = Column(Integer, default=1) # 1 = automatisk nattlig rensning aktiv, 0 = avstängd
     auto_purge_days = Column(Integer, default=30) # Antal dagar att spara olåsta artiklar innan rensning
     auto_scrape_article_text = Column(Integer, default=1) # 1 = skrapa brödtext före AI-analys, 0 = enbart RSS-ingress
+    auto_image_search = Column(Integer, default=1) # 1 = automatisk bildkomplettering för artiklar utan bild, 0 = avstängd
     max_article_age_hours = Column(Integer, default=24) # Maximal ålder i timmar för AI-analys av artiklar (default 24h)
     notify_ai_offline = Column(Integer, default=1) # 1 = skicka driftnotis till admin vid AI-avbrott, 0 = avstängd
     push_summary_type = Column(String, default="short") # "short" = 1-1.5 meningar, "long" = upp till 3 meningar

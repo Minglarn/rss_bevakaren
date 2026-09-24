@@ -506,8 +506,11 @@ const Settings = ({ onLogout, currentUser }) => {
     short_summary_max_words: 20,
     short_summary_max_sentences: 1,
     auto_purge_enabled: true,
-    auto_purge_days: 30
+    auto_purge_days: 30,
+    auto_scrape_article_text: true,
+    auto_image_search: true
   });
+  const [isBackfillingImages, setIsBackfillingImages] = useState(false);
   const [showAdvancedPrompt, setShowAdvancedPrompt] = useState(false);
   const [isCustomPromptEdited, setIsCustomPromptEdited] = useState(false);
   const [newAiCategory, setNewAiCategory] = useState('');
@@ -1270,6 +1273,7 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       auto_purge_enabled: aiConfig.auto_purge_enabled !== false,
       auto_purge_days: purgeDays,
       auto_scrape_article_text: aiConfig.auto_scrape_article_text !== false,
+      auto_image_search: aiConfig.auto_image_search !== false,
       max_article_age_hours: aiConfig.max_article_age_hours || 24,
       notify_ai_offline: aiConfig.notify_ai_offline ?? true,
       ...overrides
@@ -1447,6 +1451,42 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
       toast.error('Kunde inte spara inställningen.');
     } finally {
       setIsSavingAi(false);
+    }
+  };
+
+  const handleToggleAutoImageSearch = async () => {
+    const currentVal = aiConfig.auto_image_search !== false;
+    const nextVal = !currentVal;
+    try {
+      setIsSavingAi(true);
+      const res = await api.put('/ai/config', getFullAiPayload({ auto_image_search: nextVal }));
+      if (res.data) setAiConfig(res.data);
+      toast.success(nextVal ? 'Automatisk bildkomplettering för artiklar är nu aktiverad.' : 'Automatisk bildkomplettering är nu inaktiverad.');
+      window.dispatchEvent(new Event('aiConfigUpdated'));
+    } catch (err) {
+      console.error(err);
+      toast.error('Kunde inte spara inställningen.');
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
+
+  const handleBackfillImages = async () => {
+    try {
+      setIsBackfillingImages(true);
+      const res = await api.post('/articles/backfill-images', null, { params: { limit: 40 } });
+      const updated = res.data?.updated_count || 0;
+      if (updated > 0) {
+        toast.success(`Hämtade och associerade bilder till ${updated} artiklar!`);
+        window.dispatchEvent(new Event('feedsUpdated'));
+      } else {
+        toast.info('Inga artiklar saknade bild eller kunde kompletteras just nu.');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Kunde inte genomföra bildkomplettering.');
+    } finally {
+      setIsBackfillingImages(false);
     }
   };
 
@@ -2688,6 +2728,58 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                       />
                       <span className="toggle-slider"></span>
                     </label>
+                  </div>
+
+                  {/* Automatisk bildkomplettering för artiklar utan bild */}
+                  <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: '240px' }}>
+                        <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <ImageIcon size={15} style={{ color: 'var(--primary)' }} />
+                          Automatisk bildkomplettering för artiklar utan bild
+                        </div>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.45, marginTop: '0.2rem' }}>
+                          Hämtar automatiskt redaktionella foton från artikellänken (Open Graph) eller relevanta nyhetsbilder via lokal AI och Wikimedia Commons när en artikel saknar bild. Gör flödet visuellt komplett även för rena textnotiser som Polisen Händelser.
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={handleBackfillImages}
+                          disabled={isBackfillingImages}
+                          style={{
+                            fontSize: '0.8rem',
+                            padding: '0.45rem 0.75rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            whiteSpace: 'nowrap'
+                          }}
+                          title="Sök och associera bilder till de senaste artiklarna som saknar bild"
+                        >
+                          {isBackfillingImages ? (
+                            <>
+                              <Loader2 size={13} className="spin" />
+                              Hämtar bilder...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles size={13} />
+                              Komplettera saknade bilder nu
+                            </>
+                          )}
+                        </button>
+                        <label className="toggle-switch" style={{ flexShrink: 0, margin: 0 }}>
+                          <input
+                            type="checkbox"
+                            checked={aiConfig.auto_image_search !== false}
+                            onChange={handleToggleAutoImageSearch}
+                          />
+                          <span className="toggle-slider"></span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

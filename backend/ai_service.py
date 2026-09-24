@@ -46,7 +46,8 @@ DEFAULT_SYSTEM_PROMPT = f"""Du är en neutral nyhetsanalytiker och klassificerar
   "short_summary": "Exakt 1 till 1,5 korta meningar på svenska (max 20 ord) som ultrakompakt anger kärnhändelsen och platsen för korta mobilnotiser och låsskärmar.",
   "tags": ["tagg1", "tagg2"],
   "is_clickbait": false,
-  "clickbait_reason": "Om is_clickbait är true: Beskriv kortfattat vad rubriken undanhåller och bekräfta att fakta har lyfts fram i sammanfattningen (t.ex. 'Rubriken undanhåller vad de nya priserna är för att locka klick. Fakta har lyfts fram i sammanfattningen ovan.'). Lämna tomt om false."
+  "clickbait_reason": "Om is_clickbait är true: Beskriv kortfattat vad rubriken undanhåller och bekräfta att fakta har lyfts fram i sammanfattningen (t.ex. 'Rubriken undanhåller vad de nya priserna är för att locka klick. Fakta har lyfts fram i sammanfattningen ovan.'). Lämna tomt om false.",
+  "image_search_query": "Om artikeln saknar bild: 1-2 generella engelska sökord som bäst beskriver en bild till artikeln (t.ex. 'police car', 'firefighter truck', 'court gavel', 'school building', 'hospital', 'riksdagen'). Lämna tomt om irrelevant."
 }}
 Riktlinjer för poängsättning:
 - urgency_score (Heltal 1-10): Hur akut, omvälvande eller brådskande är händelsen/nyhetsvärdet?
@@ -1047,6 +1048,9 @@ def analyze_article(
             max_sentences=short_summary_max_sentences
         )
 
+        raw_img_q = parsed.get("image_search_query")
+        image_search_query = str(raw_img_q).strip() if raw_img_q else ""
+
         return {
             "category": category,
             "priority": priority,
@@ -1059,6 +1063,7 @@ def analyze_article(
             "tags": tags,
             "is_clickbait": 1 if is_clickbait else 0,
             "clickbait_reason": clickbait_reason,
+            "image_search_query": image_search_query,
             "duration_s": dur,
             "ai_model": model
         }

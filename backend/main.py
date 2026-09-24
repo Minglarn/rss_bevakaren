@@ -13,7 +13,7 @@ import json
 import requests
 from bs4 import BeautifulSoup
 
-import models, schemas, database, auth, ai_service, rss_parser, mqtt_service
+import models, schemas, database, auth, ai_service, rss_parser, mqtt_service, image_service
 import ipaddress
 from pydantic import BaseModel
 import logging
@@ -217,6 +217,10 @@ def ensure_db_migrations():
                     conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN auto_scrape_article_text INTEGER DEFAULT 1"))
                     conn.commit()
                     print("[DB] Added auto_scrape_article_text column to user_ai_settings", flush=True)
+                if "auto_image_search" not in cols:
+                    conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN auto_image_search INTEGER DEFAULT 1"))
+                    conn.commit()
+                    print("[DB] Added auto_image_search column to user_ai_settings", flush=True)
                 if "max_article_age_hours" not in cols:
                     conn.execute(text("ALTER TABLE user_ai_settings ADD COLUMN max_article_age_hours INTEGER DEFAULT 24"))
                     conn.commit()
@@ -253,6 +257,7 @@ def ensure_db_migrations():
                 conn.execute(text("UPDATE user_ai_settings SET auto_purge_enabled = 1 WHERE auto_purge_enabled IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET auto_purge_days = 30 WHERE auto_purge_days IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET auto_scrape_article_text = 1 WHERE auto_scrape_article_text IS NULL"))
+                conn.execute(text("UPDATE user_ai_settings SET auto_image_search = 1 WHERE auto_image_search IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET max_article_age_hours = 24 WHERE max_article_age_hours IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET notify_ai_offline = 1 WHERE notify_ai_offline IS NULL"))
                 conn.execute(text("UPDATE user_ai_settings SET push_summary_type = 'short' WHERE push_summary_type IS NULL"))
@@ -1136,6 +1141,12 @@ def run_db_migrations(db_path: str):
         # Migration 27: Add max_items to feeds
         try:
             cur.execute("ALTER TABLE feeds ADD COLUMN max_items INTEGER DEFAULT 0;")
+        except sqlite3.OperationalError:
+            pass
+
+        # Migration 28: Add auto_image_search to user_ai_settings
+        try:
+            cur.execute("ALTER TABLE user_ai_settings ADD COLUMN auto_image_search INTEGER DEFAULT 1;")
         except sqlite3.OperationalError:
             pass
 
@@ -2326,12 +2337,14 @@ async def ai_processing_loop():
                         user_model = user_ai.selected_model if user_ai.selected_model else None
                         if user_ai.auto_scrape_article_text is not None:
                             auto_scrape_active = (user_ai.auto_scrape_article_text != 0)
+                        auto_image_active = bool(user_ai.auto_image_search if user_ai.auto_image_search is not None else 1)
 
                         kws = db_item.query(models.Keyword).filter(models.Keyword.user_id == user_id).all()
                         matched_kw_candidates = [k.keyword for k in kws if k.keyword]
                         liked_tags, disliked_tags = get_user_interest_profile(db_item, user_id)
                     else:
                         liked_tags, disliked_tags = [], []
+                        auto_image_active = True
                         push_summary_type = "short"
 
                     u_rec = db_item.query(models.User).filter(models.User.id == user_id).first() if user_id else None
@@ -2358,6 +2371,7 @@ async def ai_processing_loop():
                         "user_cats": user_cats,
                         "user_model": user_model,
                         "auto_scrape_active": auto_scrape_active,
+                        "auto_image_active": auto_image_active,
                         "feed_allows_scrape": feed_allows_scrape,
                         "matched_kw_candidates": matched_kw_candidates,
                         "liked_tags": liked_tags,
@@ -2472,6 +2486,25 @@ async def ai_processing_loop():
                         save_art = db_save.query(models.Article).filter(models.Article.id == item["id"]).first()
                         feed_obj_save = db_save.query(models.Feed).filter(models.Feed.id == item["feed_id"]).first() if item["feed_id"] else None
                         if save_art:
+                            # Automatisk bildkomplettering om artikel saknar bild
+                            if (not save_art.image_url or not save_art.image_url.strip()) and item.get("auto_image_active", True):
+                                try:
+                                    resolved_img, img_method = await asyncio.to_thread(
+                                        image_service.resolve_article_image,
+                                        link=item.get("link", ""),
+                                        title=item.get("title", ""),
+                                        summary=item.get("summary", ""),
+                                        source=item.get("source", ""),
+                                        category=category,
+                                        ai_query=analysis.get("image_search_query", "")
+                                    )
+                                    if resolved_img:
+                                        save_art.image_url = resolved_img
+                                        item["image_url"] = resolved_img
+                                        print(f"[ImageService] Bild kopplad till #{save_art.id} ('{save_art.title[:35]}...') via {img_method}", flush=True)
+                                except Exception as e:
+                                    print(f"[ImageService] Fel vid bildkomplettering: {e}", flush=True)
+
                             save_art.ai_processed = 1
                             save_art.category = category
                             save_art.priority = priority
@@ -3953,6 +3986,26 @@ async def trigger_article_analysis(article_id: int, db: Session = Depends(databa
         
     art.ai_processed = 1
     art.category = analysis.get("category", "Övrigt")
+
+    # Automatisk bildkomplettering om artikeln saknar bild
+    auto_image = bool(user_ai.auto_image_search if user_ai and user_ai.auto_image_search is not None else 1)
+    if (not art.image_url or not art.image_url.strip()) and auto_image:
+        try:
+            resolved_img, img_method = await asyncio.to_thread(
+                image_service.resolve_article_image,
+                link=art.link or "",
+                title=art.title or "",
+                summary=art.summary or "",
+                source=source,
+                category=art.category or "",
+                ai_query=analysis.get("image_search_query", "")
+            )
+            if resolved_img:
+                art.image_url = resolved_img
+                print(f"[ImageService] Bild kopplad manuellt till #{art.id} ('{art.title[:35]}...') via {img_method}", flush=True)
+        except Exception as e:
+            print(f"[ImageService] Fel vid manuell bildkomplettering: {e}", flush=True)
+
     art.priority = analysis.get("priority", "low")
     art.prio_score = analysis.get("prio_score", 10)
     art.prio_reason = analysis.get("prio_reason", "")
@@ -4155,6 +4208,86 @@ def get_prio_unread_count(
 
     return {"unread_count": unread_count, "new_count": new_count}
 
+@app.post("/articles/{article_id}/fetch-image")
+async def fetch_article_image(
+    article_id: int, 
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Hämtar och associerar en bild till en artikel via Open Graph eller bildbank."""
+    art = db.query(models.Article).join(models.Feed).filter(
+        models.Article.id == article_id, 
+        models.Feed.user_id == current_user.id
+    ).first()
+    if not art:
+        raise HTTPException(status_code=404, detail="Artikeln hittades inte.")
+
+    source = art.feed.title if art.feed else ""
+    resolved_img, img_method = await asyncio.to_thread(
+        image_service.resolve_article_image,
+        link=art.link or "",
+        title=art.title or "",
+        summary=art.summary or "",
+        source=source,
+        category=art.category or "",
+        ai_query=""
+    )
+    if resolved_img:
+        art.image_url = resolved_img
+        db.commit()
+        await manager.send_personal_message(f"AI_UPDATED:{art.id}", current_user.id)
+        return {"status": "ok", "image_url": resolved_img, "method": img_method}
+    return {"status": "no_image_found", "image_url": None}
+
+@app.post("/articles/backfill-images")
+async def backfill_article_images(
+    limit: int = 40,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Kompletterar saknade bilder för användarens senaste artiklar utan bild."""
+    user_feeds = db.query(models.Feed.id).filter(models.Feed.user_id == current_user.id).all()
+    feed_ids = [f[0] for f in user_feeds]
+    if not feed_ids:
+        return {"status": "ok", "updated_count": 0, "scanned_count": 0}
+
+    articles_without_image = (
+        db.query(models.Article)
+        .filter(
+            models.Article.feed_id.in_(feed_ids),
+            or_(models.Article.image_url == None, models.Article.image_url == "")
+        )
+        .order_by(models.Article.id.desc())
+        .limit(limit)
+        .all()
+    )
+
+    updated_count = 0
+    updated_ids = []
+    for art in articles_without_image:
+        source = art.feed.title if art.feed else ""
+        resolved_img, img_method = await asyncio.to_thread(
+            image_service.resolve_article_image,
+            link=art.link or "",
+            title=art.title or "",
+            summary=art.summary or "",
+            source=source,
+            category=art.category or "",
+            ai_query=""
+        )
+        if resolved_img:
+            art.image_url = resolved_img
+            updated_count += 1
+            updated_ids.append(art.id)
+            print(f"[ImageService Backfill] #{art.id} ('{art.title[:30]}...') fick bild via {img_method}", flush=True)
+
+    if updated_count > 0:
+        db.commit()
+        for aid in updated_ids:
+            await manager.send_personal_message(f"AI_UPDATED:{aid}", current_user.id)
+
+    return {"status": "ok", "updated_count": updated_count, "scanned_count": len(articles_without_image)}
+
 @app.get("/ai/config", response_model=schemas.AIConfigResponse)
 def get_ai_config(
     db: Session = Depends(database.get_db),
@@ -4190,6 +4323,7 @@ def get_ai_config(
             auto_purge_enabled=True,
             auto_purge_days=30,
             auto_scrape_article_text=True,
+            auto_image_search=True,
             notify_ai_offline=True
         )
         
@@ -4232,6 +4366,7 @@ def get_ai_config(
         auto_purge_enabled=bool(user_ai.auto_purge_enabled if user_ai.auto_purge_enabled is not None else 1),
         auto_purge_days=int(user_ai.auto_purge_days or 30),
         auto_scrape_article_text=bool(user_ai.auto_scrape_article_text if user_ai.auto_scrape_article_text is not None else 1),
+        auto_image_search=bool(user_ai.auto_image_search if user_ai.auto_image_search is not None else 1),
         max_article_age_hours=int(user_ai.max_article_age_hours or 24),
         notify_ai_offline=bool(user_ai.notify_ai_offline if user_ai.notify_ai_offline is not None else 1)
     )
@@ -4294,6 +4429,8 @@ def update_ai_config(
         user_ai.auto_purge_days = max(1, min(365, config.auto_purge_days))
     if config.auto_scrape_article_text is not None:
         user_ai.auto_scrape_article_text = 1 if config.auto_scrape_article_text else 0
+    if config.auto_image_search is not None:
+        user_ai.auto_image_search = 1 if config.auto_image_search else 0
     if config.max_article_age_hours is not None:
         user_ai.max_article_age_hours = max(1, min(168, config.max_article_age_hours))
     if config.notify_ai_offline is not None:
@@ -4345,6 +4482,7 @@ def update_ai_config(
         auto_purge_enabled=bool(user_ai.auto_purge_enabled if user_ai.auto_purge_enabled is not None else 1),
         auto_purge_days=int(user_ai.auto_purge_days or 30),
         auto_scrape_article_text=bool(user_ai.auto_scrape_article_text if user_ai.auto_scrape_article_text is not None else 1),
+        auto_image_search=bool(user_ai.auto_image_search if user_ai.auto_image_search is not None else 1),
         max_article_age_hours=int(user_ai.max_article_age_hours or 24),
         notify_ai_offline=bool(user_ai.notify_ai_offline if user_ai.notify_ai_offline is not None else 1)
     )
