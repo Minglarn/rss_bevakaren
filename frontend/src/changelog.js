@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.18',
+    date: '2026-09-24',
+    title: 'Full bredd för bildursprung i ultrakompakt vy & åtgärdat trenddiagram',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Metainformation utnyttjar hela ytan under artikelbilden',
+        description: 'I den ultrakompakta vyn har metaraden (källa, bildursprung och ClickBait-indikator) flyttats så att den sträcker sig över hela kortets bredd direkt under rubrik och artikelbild. Detta eliminerar att långa källnamn och bildkällor klipps av med ellips på mobila skärmar.'
+      },
+      {
+        type: 'fix',
+        title: 'Korrigerat stapeldiagram för daglig trend och inflöde',
+        description: 'Åtgärdat datastrukturen och beräkningen för 14-dagarsdiagrammet i statistikfliken så att staplarna med prio-nyheter, normala artiklar och ClickBait ritas ut fullständigt med korrekta höjder och veckodagar.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.17',
     date: '2026-09-24',
     title: 'Tydlig visning av bildursprung för artiklar',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

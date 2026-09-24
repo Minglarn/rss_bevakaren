@@ -2156,7 +2156,7 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                       className={`feed-card feed-card-ultracompact ${(showRead && isReadNow) ? 'read' : ''} ${isClickbait ? 'is-clickbait' : ''}`}
                     >
                       <div style={{ width: '100%', boxSizing: 'border-box' }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.85rem', width: '100%' }}>
                           <div className="feed-card-ultracompact-content" style={{ flex: '1 1 auto', minWidth: 0 }}>
                             <h3 className="feed-card-ultracompact-title">
                               {decodeHtmlEntities(item.title)}
@@ -2167,52 +2167,54 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                                 {shortSummary}
                               </div>
                             )}
-
-                            <div className="feed-card-ultracompact-meta">
-                              {item.source_title && (
-                                <span style={{ fontWeight: 600, color: 'var(--text-main)', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flexShrink: 1 }}>
-                                  {decodeHtmlEntities(item.source_title)}
-                                  {getImageSourceLabel(item) && (
-                                    <span style={{ fontWeight: 400, opacity: 0.8, marginLeft: '0.25rem' }}>
-                                      · {getImageSourceLabel(item)}
-                                    </span>
-                                  )}
-                                </span>
-                              )}
-                              {!item.source_title && getImageSourceLabel(item) && (
-                                <span style={{ fontWeight: 400, opacity: 0.8 }}>
-                                  {getImageSourceLabel(item)}
-                                </span>
-                              )}
-
-                            {isClickbait && (
-                              <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                backgroundColor: '#ef4444',
-                                color: '#ffffff',
-                                padding: '0.1rem 0.4rem',
-                                borderRadius: '4px',
-                                fontSize: '0.7rem',
-                                fontWeight: 700,
-                                marginLeft: '0.25rem'
-                              }}>
-                                <AlertTriangle size={11} /> ClickBait
-                              </span>
-                            )}
                           </div>
+
+                          {showImages && item.image_url && !isItemExpanded && (
+                            <div className="feed-card-ultracompact-thumb">
+                              <img 
+                                src={item.image_url} 
+                                alt="" 
+                                onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
+                              />
+                            </div>
+                          )}
                         </div>
 
-                        {showImages && item.image_url && !isItemExpanded && (
-                          <div className="feed-card-ultracompact-thumb">
-                            <img 
-                              src={item.image_url} 
-                              alt="" 
-                              onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
-                            />
-                          </div>
-                        )}
+                        {/* Metainformation i full bredd under innehåll och bild */}
+                        <div className="feed-card-ultracompact-meta" style={{ marginTop: '0.45rem', width: '100%' }}>
+                          {item.source_title && (
+                            <span style={{ fontWeight: 600, color: 'var(--text-main)', opacity: 0.85, minWidth: 0, wordBreak: 'break-word' }}>
+                              {decodeHtmlEntities(item.source_title)}
+                              {getImageSourceLabel(item) && (
+                                <span style={{ fontWeight: 400, opacity: 0.8, marginLeft: '0.25rem' }}>
+                                  · {getImageSourceLabel(item)}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                          {!item.source_title && getImageSourceLabel(item) && (
+                            <span style={{ fontWeight: 400, opacity: 0.8, wordBreak: 'break-word' }}>
+                              {getImageSourceLabel(item)}
+                            </span>
+                          )}
+
+                          {isClickbait && (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              backgroundColor: '#ef4444',
+                              color: '#ffffff',
+                              padding: '0.1rem 0.4rem',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              marginLeft: '0.25rem'
+                            }}>
+                              <AlertTriangle size={11} /> ClickBait
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Google News-modell för klustrade källor i ultrakompakt vy */}
@@ -2412,7 +2414,6 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                           </div>
                         </div>
                       )}
-                    </div>
                   </SwipeableArticleCard>
                 </React.Fragment>
                 );

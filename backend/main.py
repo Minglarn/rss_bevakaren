@@ -5402,6 +5402,7 @@ def get_stats_overview(db: Session = Depends(database.get_db), current_user: mod
         # Daglig trend för de senaste 14 dagarna
         daily_trend = []
         swedish_months = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
+        swedish_weekdays = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"]
         for i in range(13, -1, -1):
             day_date = (now - timedelta(days=i)).date()
             day_start_ts = int(datetime(day_date.year, day_date.month, day_date.day, 0, 0, 0).timestamp())
@@ -5410,6 +5411,7 @@ def get_stats_overview(db: Session = Depends(database.get_db), current_user: mod
             day_stats = db.query(
                 func.count(models.Article.id).label("total"),
                 func.sum(case((or_(models.Article.priority == 'high', models.Article.prio_score >= 75), 1), else_=0)).label("high"),
+                func.sum(case((models.Article.is_clickbait == 1, 1), else_=0)).label("clickbait"),
                 func.sum(case((and_(models.Article.priority != 'high', or_(models.Article.priority == 'medium', and_(models.Article.prio_score >= 40, models.Article.prio_score < 75))), 1), else_=0)).label("medium")
             ).filter(
                 models.Article.feed_id.in_(user_feed_ids),
@@ -5419,13 +5421,18 @@ def get_stats_overview(db: Session = Depends(database.get_db), current_user: mod
 
             tot = day_stats.total or 0
             hi = day_stats.high or 0
+            cb = day_stats.clickbait or 0
             md = day_stats.medium or 0
             lo = max(0, tot - hi - md)
 
             daily_trend.append({
                 "date": day_date.strftime("%Y-%m-%d"),
                 "label": f"{day_date.day} {swedish_months[day_date.month - 1]}",
+                "weekday": swedish_weekdays[day_date.weekday()],
                 "total": tot,
+                "prio": hi,
+                "clickbait": cb,
+                "normal": max(0, tot - hi - cb),
                 "high": hi,
                 "medium": md,
                 "low": lo

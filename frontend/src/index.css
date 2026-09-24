@@ -2575,7 +2575,7 @@ select:focus, input:focus {
   font-size: 0.78rem;
   color: var(--text-muted);
   font-weight: 500;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   min-width: 0;
   max-width: 100%;
 }

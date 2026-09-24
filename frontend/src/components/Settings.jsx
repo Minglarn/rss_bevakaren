@@ -3247,14 +3247,19 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                           {dailyTrendList.map((d, idx) => {
                             const barHeight = d.total > 0 ? Math.max(12, Math.round((d.total / maxDailyTotal) * 125)) : 4;
                             const isToday = idx === dailyTrendList.length - 1;
-                            const prioPct = d.total > 0 ? (d.prio / d.total) * 100 : 0;
-                            const cbPct = d.total > 0 ? (d.clickbait / d.total) * 100 : 0;
-                            const normPct = Math.max(0, 100 - prioPct - cbPct);
+                            const totalCount = Number(d.total || 0);
+                            const prioCount = Number(d.prio ?? d.high ?? 0);
+                            const cbCount = Number(d.clickbait ?? 0);
+                            const normCount = Math.max(0, totalCount - prioCount - cbCount);
+
+                            const prioPct = totalCount > 0 ? (prioCount / totalCount) * 100 : 0;
+                            const cbPct = totalCount > 0 ? (cbCount / totalCount) * 100 : 0;
+                            const normPct = totalCount > 0 ? Math.max(0, 100 - prioPct - cbPct) : 0;
 
                             return (
                               <div 
                                 key={d.date} 
-                                title={`${d.weekday} ${d.label}: ${d.total} st artiklar (${d.prio} prio, ${d.clickbait} ClickBait)`}
+                                title={`${d.weekday ? d.weekday + ' ' : ''}${d.label}: ${totalCount} st artiklar (${prioCount} prio, ${normCount} normala, ${cbCount} ClickBait)`}
                                 style={{ 
                                   flex: 1, 
                                   display: 'flex', 
@@ -3266,8 +3271,8 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                                 }}
                               >
                                 {/* Siffra ovanför stapel */}
-                                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: d.total > 0 ? 'var(--text-main)' : 'var(--text-muted)', marginBottom: '0.35rem' }}>
-                                  {d.total > 0 ? d.total : ''}
+                                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: totalCount > 0 ? 'var(--text-main)' : 'var(--text-muted)', marginBottom: '0.35rem' }}>
+                                  {totalCount > 0 ? totalCount : ''}
                                 </div>
 
                                 {/* Själva stapeln */}
@@ -3275,18 +3280,18 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                                   width: '100%', 
                                   maxWidth: '32px', 
                                   height: `${barHeight}px`, 
-                                  backgroundColor: d.total === 0 ? 'var(--border-color)' : 'transparent',
+                                  backgroundColor: totalCount === 0 ? 'var(--border-color)' : 'transparent',
                                   borderRadius: '5px 5px 0 0',
                                   overflow: 'hidden',
                                   display: 'flex',
                                   flexDirection: 'column-reverse',
                                   transition: 'height 0.4s ease'
                                 }}>
-                                  {d.total > 0 && (
+                                  {totalCount > 0 && (
                                     <>
-                                      <div style={{ height: `${prioPct}%`, backgroundColor: '#f97316' }} />
-                                      <div style={{ height: `${normPct}%`, backgroundColor: 'var(--primary)' }} />
-                                      <div style={{ height: `${cbPct}%`, backgroundColor: '#ef4444' }} />
+                                      {prioPct > 0 && <div style={{ width: '100%', height: `${prioPct}%`, backgroundColor: '#f97316' }} />}
+                                      {normPct > 0 && <div style={{ width: '100%', height: `${normPct}%`, backgroundColor: 'var(--primary)' }} />}
+                                      {cbPct > 0 && <div style={{ width: '100%', height: `${cbPct}%`, backgroundColor: '#ef4444' }} />}
                                     </>
                                   )}
                                 </div>
