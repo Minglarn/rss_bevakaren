@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.24.08-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.24.09-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -20,7 +20,8 @@ services:
   backend:
     image: ghcr.io/minglarn/rss_bevakaren_backend:latest
     ports:
-      - "8094:8000"
+      # Isolerad till localhost för att förhindra direktåtkomst och header-spoofing från internet
+      - "127.0.0.1:8094:8000"
     volumes:
       # Lagra databasen och nycklar persistent på hosten
       - ./data:/data

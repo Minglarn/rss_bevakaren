@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.09',
+    date: '2026-09-24',
+    title: 'Nätverksisolering och skydd mot header-spoofing',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'improvement',
+        title: 'Nätverksisolering av backend i Docker Compose',
+        description: 'Backend-porten har isolerats till 127.0.0.1:8094 för att förhindra direktåtkomst från externa internet-klienter. All extern trafik styrs därmed säkert via Nginx reverse proxy.'
+      },
+      {
+        type: 'improvement',
+        title: 'Skydd mot header-spoofing med Trusted Proxies',
+        description: 'FastAPI accepterar nu endast X-Real-IP och proxy-headers från betrodda interna nätverk och proxys. Direkta anslutningar från opålitliga nätverk tvingas använda sin faktiska socket-adress, vilket omöjliggör IP-förfalskning.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.08',
     date: '2026-09-24',
     title: 'Automatiskt IP-Jail och administratörsstöd för spärrade adresser',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

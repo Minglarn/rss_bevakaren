@@ -2,7 +2,8 @@ services:
   backend:
     image: ghcr.io/minglarn/rss_bevakaren_backend:main
     ports:
-      - "8094:8000"
+      # Isolerad till localhost för att förhindra direktåtkomst och header-spoofing från internet
+      - "127.0.0.1:8094:8000"
     volumes:
       # Lagra databasen och nycklar i en dedikerad data-mapp på hosten så den överlever omstarter
       - ./data:/data

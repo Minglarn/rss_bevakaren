@@ -14,6 +14,7 @@ import requests
 from bs4 import BeautifulSoup
 
 import models, schemas, database, auth, ai_service, rss_parser, mqtt_service
+import ipaddress
 from pydantic import BaseModel
 import logging
 import builtins
@@ -537,17 +538,38 @@ app.add_middleware(
 _banned_ips_cache: Dict[str, dict] = {}
 _failed_login_attempts: Dict[str, list] = {}
 
+_TRUSTED_PROXIES = [
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7")
+]
+
+def _is_trusted_proxy(ip_str: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(ip_str)
+        return any(ip in net for net in _TRUSTED_PROXIES)
+    except Exception:
+        return False
+
 def _extract_client_ip(request: Request) -> str:
-    """Extraherar besökarens faktiska IP-adress från proxy-headers eller direkt anslutning."""
+    """Extraherar besökarens faktiska IP-adress. Litar endast på proxy-headers om anslutningen kommer från en betrodd intern proxy."""
+    direct_ip = request.client.host if (request.client and request.client.host) else "okand"
+    
+    # Om anropet INTE kommer från en betrodd intern proxy ignoreras alla headers för att förhindra header-spoofing
+    if not _is_trusted_proxy(direct_ip):
+        return direct_ip
+
     real_ip = request.headers.get("x-real-ip")
     if real_ip:
         return real_ip.split(",")[0].strip()
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         return forwarded.split(",")[0].strip()
-    if request.client and request.client.host:
-        return request.client.host
-    return "okand"
+    return direct_ip
+
 
 def _init_banned_ips_cache():
     """Laddar aktiva IP-spärrar från databasen till minnet vid uppstart."""
