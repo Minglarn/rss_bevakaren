@@ -273,6 +273,8 @@ class BannedIPResponse(BaseModel):
     user_agent: str
     attempts_count: int
     is_active: bool
+    request_log: Optional[List[Dict[str, Any]]] = []
+    abuse_report: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True

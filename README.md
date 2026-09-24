@@ -1,6 +1,6 @@
 # RSS-Bevakaren
 
-![Version](https://img.shields.io/badge/version-2026.09.24.11-blue.svg)
+![Version](https://img.shields.io/badge/version-2026.09.24.12-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Minglarn/rss_bevakaren)
 ![GitHub issues](https://img.shields.io/github/issues/Minglarn/rss_bevakaren)
 ![GitHub stars](https://img.shields.io/github/stars/Minglarn/rss_bevakaren?style=social)
@@ -11,7 +11,8 @@ RSS-Bevakaren är en modern, självhostad nyhetsaggregator för RSS-, Atom- och 
 
 ---
 
-## Snabbstart med Docker Compose
+<details>
+<summary><b>Klicka för att läsa: Snabbstart med Docker Compose</b></summary>
 
 Skapa en `docker-compose.yml` på din server:
 
@@ -75,6 +76,7 @@ docker compose up -d
 ```
 
 Öppna `http://din-server-ip:8093` i webbläsaren för att logga in.
+</details>
 
 ---
 
@@ -98,7 +100,8 @@ docker compose up -d
 
 ---
 
-## Anslut lokal AI: Ollama & LM Studio
+<details>
+<summary><b>Klicka för att läsa: Anslut lokal AI: Ollama & LM Studio</b></summary>
 
 RSS-Bevakaren använder OpenAIs standardiserade API-specifikation (`/v1/chat/completions`, `/v1/models`, `/v1/embeddings`), vilket innebär full kompatibilitet med både **Ollama**, **LM Studio** eller valfri annan lokal OpenAI-kompatibel motor.
 
@@ -176,10 +179,12 @@ LM Studio kör sin lokala inferensserver på standardporten `1234`.
 
 ### Bakåtkompatibilitet
 Om du har en befintlig installation med `LM_STUDIO_URL`, `LM_STUDIO_MODEL` eller `LM_STUDIO_TIMEOUT` fortsätter dessa att fungera utan att du behöver ändra något.
+</details>
 
 ---
 
-## Home Assistant Integration
+<details>
+<summary><b>Klicka för att läsa: Home Assistant Integration</b></summary>
 
 RSS-Bevakaren har fullt stöd för **MQTT Auto-Discovery**. När `MQTT_ENABLED=true` är aktiverat skapas och uppdateras alla sensorer automatiskt i Home Assistant utan behov av manuell YAML-konfiguration.
 
@@ -292,6 +297,7 @@ custom_fields:
       `;
     ]]]
 ```
+</details>
 </details>
 
 ---

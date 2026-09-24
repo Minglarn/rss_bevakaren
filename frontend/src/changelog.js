@@ -1,9 +1,26 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.12',
+    date: '2026-09-24',
+    title: 'AbuseIPDB-rapport för spärrade IP-adresser och expanderbar README',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'feature',
+        title: 'AbuseIPDB-rapportunderlag för spärrade IP-adresser',
+        description: 'Under Inställningar -> Säkerhet och IP-Jail finns nu knappen "Abuse-rapport" för varje spärrad IP. Den visar detaljerad historik över blockerade anrop (metod, sökväg och tidsstämpel), föreslagna AbuseIPDB-kategorier (t.ex. 18: Brute-Force, 19: Bad Web Bot, 21: Web App Attack), en färdigt formaterad kommentarstext för AbuseIPDB samt direktlänk till rapportformuläret.'
+      },
+      {
+        type: 'documentation',
+        title: 'Expanderbara sektioner i README',
+        description: 'Hela Snabbstart med Docker Compose, Anslut lokal AI (Ollama & LM Studio) samt Home Assistant Integration har gjorts expanderbara för en renare och mer lättöverskådlig projektdokumentation.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.11',
     date: '2026-09-24',
     title: 'Automatisk bildkomplettering via Open Graph och lokal AI / Wikimedia',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'feature',

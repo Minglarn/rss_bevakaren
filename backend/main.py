@@ -517,10 +517,17 @@ def ensure_db_migrations():
                     banned_at INTEGER DEFAULT 0,
                     expires_at INTEGER DEFAULT 0,
                     user_agent VARCHAR DEFAULT '',
-                    attempts_count INTEGER DEFAULT 1
+                    attempts_count INTEGER DEFAULT 1,
+                    request_log TEXT DEFAULT '[]'
                 )
             """))
             conn.commit()
+
+            try:
+                conn.execute(text("ALTER TABLE banned_ips ADD COLUMN request_log TEXT DEFAULT '[]'"))
+                conn.commit()
+            except Exception:
+                pass
         except Exception as e:
             print(f"[DB] Migration notice for push_subscriptions/banned_ips: {e}", flush=True)
 
@@ -586,13 +593,20 @@ def _init_banned_ips_cache():
             or_(models.BannedIP.expires_at == 0, models.BannedIP.expires_at > now)
         ).all()
         for b in banned:
+            req_log = []
+            if getattr(b, "request_log", None):
+                try:
+                    req_log = json.loads(b.request_log)
+                except Exception:
+                    req_log = []
             _banned_ips_cache[b.ip] = {
                 "id": b.id,
                 "reason": b.reason or "Säkerhetsöverträdelse",
                 "banned_at": b.banned_at,
                 "expires_at": b.expires_at,
                 "user_agent": b.user_agent or "",
-                "attempts_count": b.attempts_count or 1
+                "attempts_count": b.attempts_count or 1,
+                "request_log": req_log
             }
         db.close()
         if banned:
@@ -617,30 +631,129 @@ def _is_ip_banned(ip: str) -> Optional[dict]:
         return None
     return ban_info
 
-def _record_blocked_attempt(ip: str):
-    """Ökar räknaren för blockerade anrop från en spärrad IP."""
+def _record_blocked_attempt(ip: str, method: str = "GET", path: str = "/"):
+    """Ökar räknaren för blockerade anrop och loggar anropet för AbuseIPDB-rapport."""
     global _banned_ips_cache
     if ip in _banned_ips_cache:
-        _banned_ips_cache[ip]["attempts_count"] = _banned_ips_cache[ip].get("attempts_count", 0) + 1
-        if _banned_ips_cache[ip]["attempts_count"] % 5 == 0:
+        cached = _banned_ips_cache[ip]
+        cached["attempts_count"] = cached.get("attempts_count", 0) + 1
+        
+        # Spara detaljerad anropshistorik (max 30 senaste)
+        req_log = cached.get("request_log") or []
+        now_ts = int(time.time())
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        req_log.append({
+            "timestamp": now_ts,
+            "datetime": now_str,
+            "method": method,
+            "path": path,
+            "status": 403
+        })
+        if len(req_log) > 30:
+            req_log = req_log[-30:]
+        cached["request_log"] = req_log
+
+        # Synkronisera till databasen
+        if cached["attempts_count"] <= 2 or cached["attempts_count"] % 3 == 0:
             try:
                 db = database.SessionLocal()
                 b = db.query(models.BannedIP).filter(models.BannedIP.ip == ip).first()
                 if b:
-                    b.attempts_count = _banned_ips_cache[ip]["attempts_count"]
+                    b.attempts_count = cached["attempts_count"]
+                    b.request_log = json.dumps(req_log, ensure_ascii=False)
                     db.commit()
                 db.close()
             except Exception:
                 pass
 
-def _ban_ip(ip: str, reason: str, duration_minutes: int, user_agent: str = ""):
+def _generate_abuse_report(ip: str, reason: str, user_agent: str, attempts_count: int, banned_at: int, request_log: list) -> dict:
+    """Genererar en AbuseIPDB-anpassad rapport med kategorier, loggar och kommentar."""
+    now = int(time.time())
+    banned_time_str = datetime.fromtimestamp(banned_at).strftime("%Y-%m-%d %H:%M:%S UTC") if banned_at else "Okänd tid"
+
+    # Avgör kategorier baserat på orsak och anropslogg
+    # AbuseIPDB kategorier:
+    # 18 = Brute-Force (Credential Stuffing / Password Guessing)
+    # 19 = Bad Web Bot (Malicious crawlers, scrapers)
+    # 21 = Web App Attack (Probing for .env, credentials, exploits)
+    categories = []
+    category_names = []
+
+    is_login_attack = any("login" in (r.get("path", "").lower()) for r in request_log) or "inloggning" in reason.lower()
+    is_scan_attack = any(any(probe in r.get("path", "").lower() for probe in [".env", "gcp-cred", "firebase", "wp-login", ".git", "phpmyadmin", "sa.json"]) for r in request_log) or "honeypot" in reason.lower() or "skanning" in reason.lower()
+
+    if is_scan_attack:
+        categories.extend([19, 21])
+        category_names.extend(["19: Bad Web Bot", "21: Web App Attack"])
+    if is_login_attack:
+        if 18 not in categories:
+            categories.append(18)
+            category_names.append("18: Brute-Force")
+        if 19 not in categories:
+            categories.append(19)
+            category_names.append("19: Bad Web Bot")
+
+    if not categories:
+        categories = [19, 21]
+        category_names = ["19: Bad Web Bot", "21: Web App Attack"]
+
+    categories_str = ",".join(str(c) for c in categories)
+
+    # Bygg kommentar / loggutdrag
+    log_lines = []
+    if request_log:
+        for entry in request_log[-12:]: # Visa upp till de 12 senaste
+            t_str = entry.get("datetime") or datetime.fromtimestamp(entry.get("timestamp", now)).strftime("%Y-%m-%d %H:%M:%S")
+            m = entry.get("method", "GET")
+            p = entry.get("path", "/")
+            log_lines.append(f"- {t_str} UTC: {m} {p} (403 Forbidden)")
+    else:
+        log_lines.append(f"- {banned_time_str}: Security violation / probe detected ({reason})")
+
+    log_sample = "\n".join(log_lines)
+
+    comment = (
+        f"Unauthorized automated scanning / security violation detected by IP-Jail.\n"
+        f"Target host: Swedish RSS aggregation & monitoring system.\n"
+        f"Ban reason: {reason}\n"
+        f"Total blocked attempts: {attempts_count}\n"
+        f"User-Agent: {user_agent or 'None'}\n\n"
+        f"Probing / Attack activity:\n"
+        f"{log_sample}"
+    )
+
+    return {
+        "ip": ip,
+        "categories": categories,
+        "categories_str": categories_str,
+        "category_names": category_names,
+        "comment": comment,
+        "attempts_count": attempts_count,
+        "banned_at": banned_at,
+        "abuseipdb_check_url": f"https://www.abuseipdb.com/check/{ip}",
+        "abuseipdb_report_url": f"https://www.abuseipdb.com/report?ip={ip}"
+    }
+
+def _ban_ip(ip: str, reason: str, duration_minutes: int, user_agent: str = "", initial_method: str = "GET", initial_path: str = ""):
     """Spärrar en IP-adress i angivet antal minuter (0 = permanent) och sparar i DB + cache."""
     global _banned_ips_cache
     if not ip or ip in ("127.0.0.1", "::1", "localhost", "okand"):
         return
     now = int(time.time())
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     expires_at = now + (duration_minutes * 60) if duration_minutes > 0 else 0
     duration_str = f"{duration_minutes} minuter" if duration_minutes > 0 else "permanent"
+
+    req_log = []
+    if initial_path:
+        req_log.append({
+            "timestamp": now,
+            "datetime": now_str,
+            "method": initial_method,
+            "path": initial_path,
+            "status": 403,
+            "detail": reason
+        })
 
     db_id = 0
     try:
@@ -652,6 +765,14 @@ def _ban_ip(ip: str, reason: str, duration_minutes: int, user_agent: str = ""):
             existing.expires_at = expires_at
             existing.user_agent = user_agent
             existing.attempts_count = (existing.attempts_count or 1) + 1
+            if existing.request_log:
+                try:
+                    old_log = json.loads(existing.request_log)
+                    if isinstance(old_log, list):
+                        req_log = (old_log + req_log)[-30:]
+                except Exception:
+                    pass
+            existing.request_log = json.dumps(req_log, ensure_ascii=False)
             db.commit()
             db_id = existing.id
         else:
@@ -661,7 +782,8 @@ def _ban_ip(ip: str, reason: str, duration_minutes: int, user_agent: str = ""):
                 banned_at=now,
                 expires_at=expires_at,
                 user_agent=user_agent,
-                attempts_count=1
+                attempts_count=1,
+                request_log=json.dumps(req_log, ensure_ascii=False)
             )
             db.add(new_ban)
             db.commit()
@@ -677,7 +799,8 @@ def _ban_ip(ip: str, reason: str, duration_minutes: int, user_agent: str = ""):
         "banned_at": now,
         "expires_at": expires_at,
         "user_agent": user_agent,
-        "attempts_count": _banned_ips_cache.get(ip, {}).get("attempts_count", 0) + 1
+        "attempts_count": _banned_ips_cache.get(ip, {}).get("attempts_count", 0) + 1,
+        "request_log": req_log
     }
     print(f"[SÄKERHET: BAN] IP {ip} har spärrats ({duration_str}). Orsak: {reason} | User-Agent: {user_agent}", flush=True)
 
@@ -719,7 +842,9 @@ def _record_failed_login(ip: str, user_agent: str):
             ip=ip,
             reason="Upprepade misslyckade inloggningsförsök (Brute Force)",
             duration_minutes=15,
-            user_agent=user_agent
+            user_agent=user_agent,
+            initial_method="POST",
+            initial_path="/api/login"
         )
         return
 
@@ -731,7 +856,9 @@ def _record_failed_login(ip: str, user_agent: str):
             ip=ip,
             reason="För snabba inloggningsförsök (Rate Limit)",
             duration_minutes=15,
-            user_agent=user_agent
+            user_agent=user_agent,
+            initial_method="POST",
+            initial_path="/api/login"
         )
 
 @app.middleware("http")
@@ -744,7 +871,7 @@ async def security_ip_jail_middleware(request: Request, call_next):
     if client_ip not in ("127.0.0.1", "::1", "localhost", "okand"):
         ban_info = _is_ip_banned(client_ip)
         if ban_info:
-            _record_blocked_attempt(client_ip)
+            _record_blocked_attempt(client_ip, method=request.method, path=request.url.path)
             return Response(
                 content=json.dumps({
                     "detail": "Din IP-adress är temporärt spärrad p.g.a. misstänkt säkerhetsaktivitet.",
@@ -2751,7 +2878,9 @@ async def honeypot_login_attempt(request: Request):
             ip=client_ip,
             reason=f"Honeypot-avsökning mot {request.url.path}",
             duration_minutes=60,
-            user_agent=user_agent
+            user_agent=user_agent,
+            initial_method=request.method,
+            initial_path=request.url.path
         )
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -5834,6 +5963,27 @@ def admin_get_banned_ips(
         cached = _banned_ips_cache.get(b.ip)
         attempts = cached.get("attempts_count", b.attempts_count or 1) if cached else (b.attempts_count or 1)
         is_active = (b.expires_at == 0 or b.expires_at > now) and (b.ip in _banned_ips_cache)
+
+        req_log = []
+        if cached and cached.get("request_log"):
+            req_log = cached["request_log"]
+        elif b.request_log:
+            try:
+                parsed = json.loads(b.request_log)
+                if isinstance(parsed, list):
+                    req_log = parsed
+            except Exception:
+                req_log = []
+
+        abuse_rep = _generate_abuse_report(
+            ip=b.ip,
+            reason=b.reason or "Säkerhetsöverträdelse",
+            user_agent=b.user_agent or "Okänd",
+            attempts_count=attempts,
+            banned_at=b.banned_at or 0,
+            request_log=req_log
+        )
+
         results.append(schemas.BannedIPResponse(
             id=b.id,
             ip=b.ip,
@@ -5842,7 +5992,9 @@ def admin_get_banned_ips(
             expires_at=b.expires_at or 0,
             user_agent=b.user_agent or "Okänd",
             attempts_count=attempts,
-            is_active=is_active
+            is_active=is_active,
+            request_log=req_log,
+            abuse_report=abuse_rep
         ))
     return results
 

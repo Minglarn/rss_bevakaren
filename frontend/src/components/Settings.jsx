@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Bell, BellOff, Plus, Trash2, ShieldAlert, ShieldCheck, UserPlus, Users, Key, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, ArrowUpRight, AlertTriangle, ExternalLink, Search, Download, Upload, Compass, Rss } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, BellOff, Plus, Trash2, ShieldAlert, ShieldCheck, UserPlus, Users, Key, Hash, ToggleLeft, ToggleRight, Info, Server, Database, FileText, Image as ImageIcon, Sparkles, Check, RefreshCw, X, Tag, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Sliders, Flame, Send, Smartphone, Laptop, Type, Layers, HardDrive, Calendar, Clock, Lock, Bookmark, Loader2, LogOut, List, Palette, BarChart2, Activity, TrendingUp, AlertOctagon, Award, ArrowDown, ArrowUp, ArrowUpRight, AlertTriangle, ExternalLink, Search, Download, Upload, Compass, Rss, Copy } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import { requestNotificationPermission, sendNotification, subscribeToWebPush, checkPushSubscriptionStatus } from '../utils/notifications';
@@ -177,6 +177,8 @@ const Settings = ({ onLogout, currentUser }) => {
   const [manualBanDuration, setManualBanDuration] = useState(60);
   const [isBanningIp, setIsBanningIp] = useState(false);
   const [unbanningIpMap, setUnbanningIpMap] = useState({});
+  const [selectedAbuseBan, setSelectedAbuseBan] = useState(null);
+  const [copiedAbuseReport, setCopiedAbuseReport] = useState(false);
 
 
   const [keywords, setKeywords] = useState([]);
@@ -7308,27 +7310,54 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                               )}
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleUnbanIp(ban.ip)}
-                              disabled={isUnbanning}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.35rem',
-                                padding: '0.4rem 0.75rem',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border-color)',
-                                backgroundColor: 'var(--bg-card)',
-                                color: '#10b981',
-                                fontSize: '0.8rem',
-                                fontWeight: 600,
-                                cursor: isUnbanning ? 'not-allowed' : 'pointer'
-                              }}
-                            >
-                              <ShieldCheck size={14} />
-                              {isUnbanning ? 'Häver spärr...' : 'Häv spärr'}
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAbuseBan(ban);
+                                  setCopiedAbuseReport(false);
+                                }}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                  padding: '0.4rem 0.75rem',
+                                  borderRadius: '6px',
+                                  border: '1px solid rgba(234, 88, 12, 0.35)',
+                                  backgroundColor: 'rgba(234, 88, 12, 0.08)',
+                                  color: '#ea580c',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer'
+                                }}
+                                title="Visa och förbered AbuseIPDB-rapport"
+                              >
+                                <FileText size={14} />
+                                Abuse-rapport
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleUnbanIp(ban.ip)}
+                                disabled={isUnbanning}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                  padding: '0.4rem 0.75rem',
+                                  borderRadius: '6px',
+                                  border: '1px solid var(--border-color)',
+                                  backgroundColor: 'var(--bg-card)',
+                                  color: '#10b981',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 600,
+                                  cursor: isUnbanning ? 'not-allowed' : 'pointer'
+                                }}
+                              >
+                                <ShieldCheck size={14} />
+                                {isUnbanning ? 'Häver spärr...' : 'Häv spärr'}
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
@@ -7774,6 +7803,291 @@ Riktlinjer för is_clickbait (Var mycket restriktiv):
                   >
                     {isClearingArticles ? 'Tömmer...' : 'Bekräfta och töm nu'}
                   </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {/* Modal för AbuseIPDB-rapport */}
+          {selectedAbuseBan && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: '1rem',
+              backdropFilter: 'blur(4px)'
+            }}>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                style={{
+                  backgroundColor: 'var(--bg-card)',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  maxWidth: '680px',
+                  width: '100%',
+                  maxHeight: '90vh',
+                  overflowY: 'auto',
+                  border: '1px solid rgba(234, 88, 12, 0.35)',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.35)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem'
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'rgba(234, 88, 12, 0.12)', color: '#ea580c' }}>
+                      <ShieldAlert size={18} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.05rem', fontWeight: 700 }}>
+                        AbuseIPDB Rapport
+                      </h3>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        Färdigt underlag för att rapportera fientlig aktivitet till AbuseIPDB
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAbuseBan(null)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '0.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      borderRadius: '4px'
+                    }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* IP-info sammanfattning */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem', backgroundColor: 'var(--bg-app)', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Spärrad IP-adress</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-main)', marginTop: '0.15rem' }}>
+                      {selectedAbuseBan.ip}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Blockerade anrop</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#ef4444', marginTop: '0.15rem' }}>
+                      {selectedAbuseBan.attempts_count} st
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Spärrad tidpunkt</div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '0.25rem' }}>
+                      {formatEuropeanDateTime(selectedAbuseBan.banned_at)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Kategorier */}
+                <div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
+                    Föreslagna AbuseIPDB-kategorier
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', alignItems: 'center' }}>
+                    {(selectedAbuseBan.abuse_report?.category_names || ['19: Bad Web Bot', '21: Web App Attack']).map((catName, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          fontSize: '0.76rem',
+                          fontWeight: 600,
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '6px',
+                          backgroundColor: 'rgba(234, 88, 12, 0.12)',
+                          color: '#ea580c',
+                          border: '1px solid rgba(234, 88, 12, 0.25)'
+                        }}
+                      >
+                        {catName}
+                      </span>
+                    ))}
+                    <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginLeft: '0.35rem' }}>
+                      (Koder: <strong style={{ color: 'var(--text-main)' }}>{selectedAbuseBan.abuse_report?.categories_str || '19,21'}</strong>)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Detaljerad anropslogg */}
+                <div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>
+                    Registrerade anropsförsök ({selectedAbuseBan.request_log?.length || 0})
+                  </div>
+                  <div style={{
+                    maxHeight: '130px',
+                    overflowY: 'auto',
+                    backgroundColor: 'var(--bg-app)',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    padding: '0.5rem',
+                    fontSize: '0.75rem',
+                    fontFamily: 'monospace',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.3rem'
+                  }}>
+                    {selectedAbuseBan.request_log && selectedAbuseBan.request_log.length > 0 ? (
+                      selectedAbuseBan.request_log.map((entry, idx) => (
+                        <div key={idx} style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', color: 'var(--text-muted)' }}>
+                          <span style={{ color: 'var(--text-muted)', opacity: 0.8 }}>
+                            {entry.datetime || formatEuropeanDateTime(entry.timestamp)}
+                          </span>
+                          <span style={{ fontWeight: 700, color: entry.method === 'POST' ? '#3b82f6' : '#10b981' }}>
+                            {entry.method || 'GET'}
+                          </span>
+                          <span style={{ color: '#ef4444', wordBreak: 'break-all' }}>
+                            {entry.path || '/'}
+                          </span>
+                          <span style={{ marginLeft: 'auto', padding: '0.05rem 0.35rem', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+                            {entry.status || 403}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ color: 'var(--text-muted)' }}>
+                        - {formatEuropeanDateTime(selectedAbuseBan.banned_at)}: Säkerhetsöverträdelse registrerad ({selectedAbuseBan.reason})
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Färdig AbuseIPDB kommentar */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                      Färdig Abuse-kommentar (Engelska för AbuseIPDB)
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const text = selectedAbuseBan.abuse_report?.comment || `Ban reason: ${selectedAbuseBan.reason}\nIP: ${selectedAbuseBan.ip}\nBlocked attempts: ${selectedAbuseBan.attempts_count}`;
+                        navigator.clipboard.writeText(text);
+                        setCopiedAbuseReport(true);
+                        toast.success('Abuse-rapport kopierad till urklipp.');
+                        setTimeout(() => setCopiedAbuseReport(false), 3000);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        background: 'none',
+                        border: 'none',
+                        color: copiedAbuseReport ? '#10b981' : 'var(--primary-color)',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {copiedAbuseReport ? <Check size={13} /> : <Copy size={13} />}
+                      {copiedAbuseReport ? 'Kopierad!' : 'Kopiera text'}
+                    </button>
+                  </div>
+                  <textarea
+                    readOnly
+                    rows={6}
+                    value={selectedAbuseBan.abuse_report?.comment || ''}
+                    style={{
+                      width: '100%',
+                      fontFamily: 'monospace',
+                      fontSize: '0.78rem',
+                      lineHeight: 1.45,
+                      padding: '0.65rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-main)',
+                      boxSizing: 'border-box',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+                {/* Footer knappar */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                  <a
+                    href={selectedAbuseBan.abuse_report?.abuseipdb_check_url || `https://www.abuseipdb.com/check/${selectedAbuseBan.ip}`}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.5rem 0.85rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-app)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.84rem',
+                      fontWeight: 600,
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <ExternalLink size={14} />
+                    Öppna på AbuseIPDB
+                  </a>
+
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const text = selectedAbuseBan.abuse_report?.comment || '';
+                        navigator.clipboard.writeText(text);
+                        setCopiedAbuseReport(true);
+                        toast.success('Abuse-rapport kopierad till urklipp.');
+                        setTimeout(() => setCopiedAbuseReport(false), 3000);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        padding: '0.5rem 0.95rem',
+                        borderRadius: '6px',
+                        border: 'none',
+                        backgroundColor: '#ea580c',
+                        color: 'white',
+                        fontSize: '0.84rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {copiedAbuseReport ? <Check size={14} /> : <Copy size={14} />}
+                      {copiedAbuseReport ? 'Kopierad' : 'Kopiera rapport'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAbuseBan(null)}
+                      style={{
+                        padding: '0.5rem 0.95rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-app)',
+                        color: 'var(--text-main)',
+                        fontSize: '0.84rem',
+                        fontWeight: 500,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Stäng
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             </div>

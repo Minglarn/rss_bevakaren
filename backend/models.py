@@ -162,3 +162,4 @@ class BannedIP(Base):
     expires_at = Column(Integer, default=0) # unix timestamp (0 = permanent)
     user_agent = Column(String, default="")
     attempts_count = Column(Integer, default=1)
+    request_log = Column(String, default="[]") # JSON-lista med registrerade anropsförsök
