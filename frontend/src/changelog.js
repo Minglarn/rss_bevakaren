@@ -1,9 +1,21 @@
 export const CHANGELOG_DATA = [
   {
+    version: '2026.09.24.03',
+    date: '2026-09-24',
+    title: 'Tidsangivelse synlig för flödets första händelsekort',
+    badge: 'Senaste',
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Tidsvisning för första händelsen',
+        description: 'Säkerställt att tiden visas konsekvent till höger ovanför det första kortet i flödet utan att rita ut en överflödig avdelarlinje mot sidans topp.'
+      }
+    ]
+  },
+  {
     version: '2026.09.24.02',
     date: '2026-09-24',
     title: 'Optimerad marginal och utnyttjad bredd för fördjupad sammanfattning',
-    badge: 'Senaste',
     highlights: [
       {
         type: 'improvement',

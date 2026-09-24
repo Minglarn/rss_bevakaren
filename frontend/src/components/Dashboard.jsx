@@ -2118,16 +2118,20 @@ const Dashboard = ({ isPrioModeProp = false, prioEnabled = false }) => {
                 return (
                   <React.Fragment key={item.id}>
                     {sessionDivider}
-                    {index > 0 && (
-                      <div className="feed-card-ultracompact-divider">
-                        <div className="feed-card-ultracompact-divider-line" />
-                        {relTime && (
-                          <span className="feed-card-ultracompact-divider-date">
-                            {relTime}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    <div 
+                      className="feed-card-ultracompact-divider" 
+                      style={index === 0 ? { marginTop: '0.25rem' } : {}}
+                    >
+                      <div 
+                        className="feed-card-ultracompact-divider-line" 
+                        style={index === 0 ? { visibility: 'hidden' } : {}} 
+                      />
+                      {relTime && (
+                        <span className="feed-card-ultracompact-divider-date">
+                          {relTime}
+                        </span>
+                      )}
+                    </div>
                     <SwipeableArticleCard
                       key={item.id}
                       itemId={item.id}
